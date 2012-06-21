@@ -47,6 +47,9 @@ def check_dependencies():
     sys.exit(-1)
 
 
+SCRIPTS = ['bin/sff_extract', 'bin/seq_head', 'bin/guess_seq_format']
+
+
 setup_args = {
               'name': 'seq_crumbs',
               'version': __version__,
@@ -55,7 +58,7 @@ setup_args = {
               'author_email': 'jblanca@upv.es',
               'url': 'http://bioinf.comav.upv.es/seq_crumbs/',
               'packages': ['crumbs'],
-              'scripts': ['bin/sff_extract'],
+              'scripts': SCRIPTS,
               'license': 'AGPL'
               }
 
