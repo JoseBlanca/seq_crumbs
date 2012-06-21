@@ -3,15 +3,22 @@ Created on 21/06/2012
 
 @author: jose
 '''
+from itertools import chain
+
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio import SeqIO
 
 from crumbs.utils.exceptions import UnknownFormatError
 
 
-def write_seqrecords(fhand, seqs):
+def write_seqrecords(fhand, seqs, file_format='fastq'):
     'It writes a stream of sequences to a file'
-    SeqIO.write(seqs, fhand, 'fastq')
+    SeqIO.write(seqs, fhand, file_format)
+
+
+def read_seqrecords(fhands):
+    'it returns an iterator of seqrecords'
+    return chain(*[SeqIO.parse(fhand, guess_format(fhand)) for fhand in fhands])
 
 
 def _guess_fastq_format(fhand):

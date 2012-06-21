@@ -5,9 +5,15 @@ Created on 21/06/2012
 '''
 
 import sys
+import os
 
 from crumbs.utils import cgitb
 from crumbs.utils.exceptions import UnknownFormatError, FileNotFoundError
+
+STDIN = 'stdin'
+STDOUT = 'stdout'
+INFILES = 'infiles'
+OUTFILE = 'output'
 
 
 def main(funct):
@@ -46,3 +52,29 @@ def main(funct):
         fhand.write('\nThe command was:\n' + ' '.join(sys.argv) + '\n')
         fhand.close()
         raise
+
+
+def get_inputs_from_args(parsed_args):
+    'It returns the input fhand'
+    in_fpaths = getattr(parsed_args, INFILES)
+    if in_fpaths == STDIN:
+        in_fhands = [sys.stdin]
+    else:
+        in_fhands = []
+        for in_fpath in in_fpaths:
+            if os.path.exists(in_fpath):
+                in_fhand = open(in_fpath, 'rt')
+            else:
+                raise FileNotFoundError('A file was not found: ' + in_fpath)
+            in_fhands.append(in_fhand)
+    return in_fhands
+
+
+def get_output_from_args(parsed_args):
+    'It returns the out_fhand'
+    out_fpath = getattr(parsed_args, OUTFILE)
+    if out_fpath == STDOUT:
+        out_fhand = sys.stdout
+    else:
+        out_fhand = open(out_fpath, 'w')
+    return out_fhand
