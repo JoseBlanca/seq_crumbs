@@ -9,13 +9,10 @@ import os.path
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
-from crumbs.tests.utils import TEST_DATA_DIR
+from crumbs.tests.utils import TEST_DATA_DIR, BIN_DIR
 
 # pylint: disable=R0201
 # pylint: disable=R0904
-
-
-BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 
 class SffExtractBinTest(unittest.TestCase):

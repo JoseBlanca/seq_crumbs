@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+
+import sys
+import os.path
+import argparse
+
+from crumbs.utils import main
+from crumbs.exceptions import FileNotFoundError
+from crumbs.seqio import guess_format
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It guesses the format of the sequence input file.'
+    epilog = 'This program ignores the possibility of the old solexa fastq '
+    epilog += 'format'
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
+    parser.add_argument('input', help="Sequence input file to process")
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    in_fpath = parsed_args.input
+    if os.path.exists(in_fpath):
+        in_fhand = open(in_fpath, 'rb')
+    else:
+        raise FileNotFoundError('The file was not found: ' + in_fpath)
+    args = {'in_fhand': in_fhand}
+    return args
+
+
+def guess_seq_format():
+    'It guesses the file format of a file'
+
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    fmt = guess_format(args['in_fhand'])
+    sys.stdout.write(fmt + '\n')
+
+if __name__ == '__main__':
+    sys.exit(main(guess_seq_format))

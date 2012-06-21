@@ -6,13 +6,10 @@ import sys
 import os.path
 import argparse
 
-from crumbs import cgitb
 from crumbs.sff_extract import SffExtractor
-from crumbs.seq_output import write_seqrecords
-
-
-class FileNotFoundError(Exception):
-    pass
+from crumbs.seqio import write_seqrecords
+from crumbs.exceptions import FileNotFoundError
+from crumbs.utils import main
 
 
 def _setup_argparse():
@@ -93,33 +90,4 @@ def extract_sff():
     return an_error_apeared
 
 if __name__ == '__main__':
-
-    if len(sys.argv) == 1:
-        sys.argv = sys.argv + ['-h']
-
-    argv = sys.argv
-    if '--error_log' in argv:
-        error_fpath_index = argv.index('--error_log') + 1
-        error_fpath = argv[error_fpath_index]
-    else:
-        error_fpath = 'sff_extract.error'
-
-    stderr = sys.stderr
-    try:
-        sys.exit(extract_sff())
-    except FileNotFoundError, error:
-        stderr.write(str(error) + '\n')
-        sys.exit(2)
-    except Exception as error:
-        msg = 'An unexpected error happened.\n'
-        msg += 'The seq crumbs developers would appreciate your feedback\n'
-        msg += 'Please send them the error log: '
-        msg += error_fpath + '\n\n'
-        msg += str(error)
-        stderr.write(msg)
-        hook = cgitb.Hook(display=0, format='text', logfpath=error_fpath)
-        hook.handle()
-        fhand = open(error_fpath, 'a')
-        fhand.write('\nThe command was:\n' + ' '.join(sys.argv) + '\n')
-        fhand.close()
-        raise
+    sys.exit(main(extract_sff))
