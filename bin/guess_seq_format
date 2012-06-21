@@ -4,8 +4,8 @@ import sys
 import os.path
 import argparse
 
-from crumbs.utils import main
-from crumbs.exceptions import FileNotFoundError
+from crumbs.utils.utils import main
+from crumbs.utils.exceptions import FileNotFoundError
 from crumbs.seqio import guess_format
 
 

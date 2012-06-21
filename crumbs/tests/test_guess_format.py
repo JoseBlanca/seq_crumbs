@@ -8,7 +8,7 @@ import unittest
 from StringIO import StringIO
 
 from crumbs.seqio import guess_format
-from crumbs.exceptions import UnknownFormatError
+from crumbs.utils.exceptions import UnknownFormatError
 
 # pylint: disable=R0201
 # pylint: disable=R0904

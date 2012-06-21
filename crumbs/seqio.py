@@ -6,7 +6,7 @@ Created on 21/06/2012
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio import SeqIO
 
-from crumbs.exceptions import UnknownFormatError
+from crumbs.utils.exceptions import UnknownFormatError
 
 
 def write_seqrecords(fhand, seqs):
