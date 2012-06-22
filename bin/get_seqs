@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+'''
+Created on 2012 eka 22
+
+@author: peio
+'''
+import sys
+import argparse
+import random
+
+from crumbs.utils.utils import (main, STDIN, STDOUT, get_inputs_from_args,
+                                get_output_from_args, INFILES, OUTFILE)
+from crumbs.seqio import guess_format, write_seqrecords, read_seqrecords
+import itertools
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'Get first seqs from file[s]'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(INFILES, default=STDIN, nargs='*',
+                        help="Sequence input file to process")
+    parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
+                        help="Sequence output file to process")
+    parser.add_argument('-n', '--num_seqs', default=10, type=int,
+                        dest='num_seqs', help='Number of sequendes to print')
+    parser.add_argument('-t', '--type', default='head',
+                        dest='kind', choices=SELECTION_ALGORITHM.keys(),
+                        help='Type of selection algorithm')
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    num_seqs = parsed_args.num_seqs
+    kind = parsed_args.kind
+    in_fhands = get_inputs_from_args(parsed_args)
+    out_fhand = get_output_from_args(parsed_args)
+
+    return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
+            'num_seqs': num_seqs, 'kind': kind}
+
+
+def _get_random_seqs(fhands, num_seqs):
+    'it gets the random seqs'
+
+    seqs = read_seqrecords(fhands)
+    seqs, seqs2 = itertools.tee(seqs, 2)
+    total_seqs = len(list(seqs2))
+
+    selected = [random.randint(0, total_seqs - 1) for num in range(num_seqs)]
+    print selected
+    count = 0
+    while selected:
+        try:
+            seq = seqs.next()
+        except StopIteration:
+            break
+        if count in selected:
+            yield seq
+            selected.pop(selected.index(count))
+        count += 1
+
+
+def _get_first_seqs(fhands, num_seqs):
+    'It gets the first num_seqs sequences from the file'
+    counter = 0
+    for seq in read_seqrecords(fhands):
+        yield seq
+        counter += 1
+        if counter >= num_seqs:
+            break
+
+
+SELECTION_ALGORITHM = {'head': _get_first_seqs,
+                       'random': _get_random_seqs}
+
+
+def get_seqs():
+    'The main function of the head binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    num_seqs = args['num_seqs']
+    kind = args['kind']
+
+    seqs = SELECTION_ALGORITHM[kind](in_fhands, num_seqs)
+
+    write_seqrecords(out_fhand, seqs, guess_format(in_fhands[0]))
+
+
+if __name__ == '__main__':
+    sys.exit(main(get_seqs))
