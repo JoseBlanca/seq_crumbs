@@ -22,3 +22,8 @@ class FileNotFoundError(Exception):
 
 class TooManyFiles(Exception):
     pass
+
+
+class MalformedFile(Exception):
+    'The input file is malformed'
+    pass

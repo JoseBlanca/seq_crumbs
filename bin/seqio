@@ -8,7 +8,7 @@ from crumbs.seqio import guess_format, seqio
 from crumbs.utils.exceptions import TooManyFiles, WrongFormatError
 
 
-SUPPORTED_FORMATS = ['fasta', 'fastaq', 'fastq-illumina']
+SUPPORTED_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
 
 def _setup_argparse():
@@ -18,7 +18,7 @@ def _setup_argparse():
     parser.add_argument(INFILES, default=STDIN, nargs='*',
                         help="Sequence input file to process")
     parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
-                        ngars='*', help="Sequence output file to process")
+                        nargs='*', help="Sequence output file to process")
     parser.add_argument('-f', '--format', dest='format', help='Output format',
                         required=True, choices=SUPPORTED_FORMATS)
 

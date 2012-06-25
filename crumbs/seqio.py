@@ -5,10 +5,12 @@ Created on 21/06/2012
 '''
 from itertools import chain
 
+from shutil import copyfileobj
+
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio import SeqIO
 
-from crumbs.utils.exceptions import UnknownFormatError
+from crumbs.utils.exceptions import UnknownFormatError, MalformedFile
 
 
 def write_seqrecords(fhand, seqs, file_format='fastq'):
@@ -78,22 +80,46 @@ def seqio(in_fhands, out_fhands, out_format):
     in_formats = [guess_format(fhand) for fhand in in_fhands]
 
     if len(in_fhands) == 1 and len(out_fhands) == 1:
-        SeqIO.convert(in_fhands[0].name, in_formats[0],
-                      out_fhands[0].name, out_format)
+        try:
+            SeqIO.convert(in_fhands[0].name, in_formats[0],
+                          out_fhands[0].name, out_format)
+        except ValueError as error:
+            msg = 'Lengths of sequence and quality values differs'
+            if msg in str(error):
+                raise MalformedFile(str(error))
+            raise
     elif (len(in_fhands) == 1 and len(out_fhands) == 2 and
           out_format == 'fasta'):
-        SeqIO.convert(in_fhands[0].name, in_formats[0],
-                      out_fhands[0].name, 'fasta')
-        SeqIO.convert(in_fhands[0].name, in_formats[0],
-                      out_fhands[1].name, 'qual')
+        try:
+            SeqIO.convert(in_fhands[0].name, in_formats[0],
+                          out_fhands[0].name, 'fasta')
+            SeqIO.convert(in_fhands[0].name, in_formats[0],
+                          out_fhands[1].name, 'qual')
+        except ValueError as error:
+            msg = 'Lengths of sequence and quality values differs'
+            if msg in str(error):
+                raise MalformedFile(str(error))
+            raise
 
-    if len(in_fhands) == 2 and in_formats == ('fasta', 'qual'):
-        seq_records = SeqIO.QualityIO.PairedFastaQualIterator(in_fhands[1],
-                                                              in_fhands[2])
+    elif (len(in_fhands) == 2 and len(out_fhands) == 1 and
+          in_formats == ['fasta', 'qual']):
+        seq_records = SeqIO.QualityIO.PairedFastaQualIterator(in_fhands[0],
+                                                              in_fhands[1])
+        try:
+            SeqIO.write(seq_records, out_fhands[0].name, out_format)
+        except ValueError, error:
+            msg = 'Sequence length and number of quality scores disagree'
+            if msg in str(error):
+                raise MalformedFile(str(error))
+            raise
+    elif (len(in_fhands) == 2 and len(out_fhands) == 2 and
+          in_formats == ['fasta', 'qual'] and out_format == 'fasta'):
+        #out_fhands[0].write(in_fhands[0].read())
+        copyfileobj(in_fhands[0], out_fhands[0])
+        copyfileobj(in_fhands[1], out_fhands[1])
+
     else:
         raise RuntimeError('Please fixme, we should not be here')
 
-    if len(out_fhands) == 1:
-        write_seqrecords(out_fhands[0], seq_records, out_format)
-    else:
-        raise RuntimeError('Please fixme, we should not be here')
+    for out_fhand in out_fhands:
+        out_fhand.flush()
