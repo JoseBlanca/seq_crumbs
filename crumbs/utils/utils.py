@@ -8,7 +8,8 @@ import sys
 import os
 
 from crumbs.utils import cgitb
-from crumbs.utils.exceptions import UnknownFormatError, FileNotFoundError
+from crumbs.utils.exceptions import (UnknownFormatError, FileNotFoundError,
+                                     WrongFormatError, TooManyFiles)
 
 STDIN = 'stdin'
 STDOUT = 'stdout'
@@ -38,6 +39,12 @@ def main(funct):
     except UnknownFormatError, error:
         stderr.write(str(error) + '\n')
         return 3
+    except WrongFormatError, error:
+        stderr.write(str(error) + '\n')
+        return 4
+    except TooManyFiles, error:
+        stderr.write(str(error) + '\n')
+        return 5
 
     except Exception as error:
         msg = 'An unexpected error happened.\n'

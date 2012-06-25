@@ -22,6 +22,10 @@ class GuessFormatTest(unittest.TestCase):
         fhand = StringIO('>seq\nACTC\n')
         assert guess_format(fhand) == 'fasta'
 
+        # qual
+        fhand = StringIO('>seq\n10 20\n')
+        assert guess_format(fhand) == 'qual'
+
     def test_unkown(self):
         'It tests unkown formats'
         fhand = StringIO('xseq\nACTC\n')

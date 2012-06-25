@@ -58,7 +58,11 @@ def guess_format(fhand):
         if lines[1].startswith('>'):
             raise UnknownFormatError('Malformed fasta')
         else:
-            return 'fasta'
+            first_item = lines[1].strip().split()[0]
+            if first_item.isdigit():
+                return 'qual'
+            else:
+                return 'fasta'
     elif chunk.startswith('@'):
         return _guess_fastq_format(fhand)
     elif chunk.startswith('LOCUS'):
@@ -66,3 +70,30 @@ def guess_format(fhand):
     elif chunk.startswith('ID'):
         return 'embl'
     raise UnknownFormatError('Sequence file of unknown format.')
+
+
+def seqio(in_fhands, out_fhands, out_format):
+    'It converts sequence files between formats'
+
+    in_formats = [guess_format(fhand) for fhand in in_fhands]
+
+    if len(in_fhands) == 1 and len(out_fhands) == 1:
+        SeqIO.convert(in_fhands[0].name, in_formats[0],
+                      out_fhands[0].name, out_format)
+    elif (len(in_fhands) == 1 and len(out_fhands) == 2 and
+          out_format == 'fasta'):
+        SeqIO.convert(in_fhands[0].name, in_formats[0],
+                      out_fhands[0].name, 'fasta')
+        SeqIO.convert(in_fhands[0].name, in_formats[0],
+                      out_fhands[1].name, 'qual')
+
+    if len(in_fhands) == 2 and in_formats == ('fasta', 'qual'):
+        seq_records = SeqIO.QualityIO.PairedFastaQualIterator(in_fhands[1],
+                                                              in_fhands[2])
+    else:
+        raise RuntimeError('Please fixme, we should not be here')
+
+    if len(out_fhands) == 1:
+        write_seqrecords(out_fhands[0], seq_records, out_format)
+    else:
+        raise RuntimeError('Please fixme, we should not be here')
