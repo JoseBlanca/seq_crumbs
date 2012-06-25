@@ -32,7 +32,6 @@ class GuessFormat(unittest.TestCase):
         assert check_output([guess_bin, fasta_fhand.name]).startswith('fasta')
 
         # Unknown_format
-        stderr = NamedTemporaryFile()
         bad_fhand = NamedTemporaryFile()
         bad_fhand.write('bad file')
         bad_fhand.flush()

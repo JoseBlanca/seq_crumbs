@@ -10,6 +10,15 @@ class UnknownFormatError(Exception):
     pass
 
 
+class WrongFormatError(Exception):
+    'Raised when the file have an unexpected format'
+    pass
+
+
 class FileNotFoundError(Exception):
     'The file does not exists'
+    pass
+
+
+class TooManyFiles(Exception):
     pass
