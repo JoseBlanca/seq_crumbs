@@ -11,6 +11,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio import SeqIO
 
 from crumbs.utils.exceptions import UnknownFormatError, MalformedFile
+from crumbs.utils.iterutils import length
 
 
 def write_seqrecords(fhand, seqs, file_format='fastq'):
@@ -123,3 +124,28 @@ def seqio(in_fhands, out_fhands, out_format):
 
     for out_fhand in out_fhands:
         out_fhand.flush()
+
+
+def _count_seqs_in_fasta(fhand):
+    'It counts the seqs in a fasta file'
+    count = 0
+    for line in fhand:
+        if line[0] == '>':
+            count += 1
+    return count
+
+
+def count_seqs_in_files(fhands):
+    'It counts the seqs in the given files'
+    count = 0
+    for fhand in fhands:
+        fhand.seek(0)
+        file_format = guess_format(fhand)
+        if file_format == 'fasta':
+            count += _count_seqs_in_fasta(fhand)
+        elif 'fastq' in file_format:
+            count += length(FastqGeneralIterator(fhand))
+        else:
+            count += length(read_seqrecords([fhand]))
+        fhand.seek(0)
+    return count

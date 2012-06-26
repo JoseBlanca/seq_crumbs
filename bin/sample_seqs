@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+'''
+Created on 2012 eka 22
+
+@author: peio
+'''
+import sys
+
+from crumbs.utils.utils import main
+from crumbs.sample import (get_random_seqs, sample_setup_argparse,
+                           sample_parse_args)
+from crumbs.seqio import write_seqrecords, guess_format
+from crumbs.utils.exceptions import SampleSizeError
+
+
+def sample_seqs():
+    'The main function of the head binary'
+    parser = sample_setup_argparse()
+    args = sample_parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    num_seqs = args['num_seqs']
+    try:
+        seqs = get_random_seqs(in_fhands, num_seqs)
+    except ValueError as error:
+        if str(error) == "sample larger than population":
+            raise SampleSizeError("sample larger than population")
+
+    write_seqrecords(out_fhand, seqs, guess_format(in_fhands[0]))
+
+if __name__ == '__main__':
+    sys.exit(main(sample_seqs))

@@ -10,7 +10,7 @@ import os
 from crumbs.utils import cgitb
 from crumbs.utils.exceptions import (UnknownFormatError, FileNotFoundError,
                                      WrongFormatError, TooManyFiles,
-                                     MalformedFile)
+                                     MalformedFile, SampleSizeError)
 
 STDIN = 'stdin'
 STDOUT = 'stdout'
@@ -49,6 +49,9 @@ def main(funct):
     except MalformedFile, error:
         stderr.write(str(error) + '\n')
         return 6
+    except SampleSizeError, error:
+        stderr.write(str(error) + '\n')
+        return 7
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq crumbs developers would appreciate your feedback\n'

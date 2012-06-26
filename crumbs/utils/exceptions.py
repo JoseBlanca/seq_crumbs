@@ -27,3 +27,8 @@ class TooManyFiles(Exception):
 class MalformedFile(Exception):
     'The input file is malformed'
     pass
+
+
+class SampleSizeError(Exception):
+    'The asked sample size is bigger than the population'
+    pass

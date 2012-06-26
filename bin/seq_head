@@ -1,40 +1,14 @@
 #!/usr/bin/env python
 '''
-Created on 2012 eka 21
+Created on 2012 eka 22
 
 @author: peio
 '''
 import sys
-import argparse
 
-from crumbs.utils.utils import (main, STDIN, STDOUT, get_inputs_from_args,
-                                get_output_from_args, INFILES, OUTFILE)
-from crumbs.seqio import guess_format, write_seqrecords, read_seqrecords
-
-
-def _setup_argparse():
-    'It prepares the command line argument parsing.'
-    description = 'Get first seqs from file[s]'
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument(INFILES, default=STDIN, nargs='*',
-                        help="Sequence input file to process")
-    parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
-                        help="Sequence output file to process")
-    parser.add_argument('-n', '--num_seqs', default=10, type=int,
-                        dest='num_seqs', help='Number of sequendes to print')
-
-    return parser
-
-
-def _parse_args(parser):
-    '''It parses the command line and it returns a dict with the arguments.'''
-    parsed_args = parser.parse_args()
-    num_seqs = parsed_args.num_seqs
-    in_fhands = get_inputs_from_args(parsed_args)
-    out_fhand = get_output_from_args(parsed_args)
-
-    return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'num_seqs': num_seqs}
+from crumbs.utils.utils import main
+from crumbs.sample import (sample_setup_argparse, sample_parse_args)
+from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
 
 
 def _get_first_seqs(fhands, num_seqs):
@@ -47,10 +21,10 @@ def _get_first_seqs(fhands, num_seqs):
             break
 
 
-def head():
+def get_seqs():
     'The main function of the head binary'
-    parser = _setup_argparse()
-    args = _parse_args(parser)
+    parser = sample_setup_argparse()
+    args = sample_parse_args(parser)
 
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
@@ -61,4 +35,4 @@ def head():
     write_seqrecords(out_fhand, seqs, guess_format(in_fhands[0]))
 
 if __name__ == '__main__':
-    sys.exit(main(head))
+    sys.exit(main(get_seqs))
