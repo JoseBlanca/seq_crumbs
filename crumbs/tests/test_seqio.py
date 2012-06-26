@@ -9,7 +9,7 @@ from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 
 from crumbs.seqio import guess_format, seqio
-from crumbs.utils.exceptions import UnknownFormatError
+from crumbs.exceptions import UnknownFormatError
 
 
 FASTA = ">seq1\natctagtc\n>seq2\natctagtc\n>seq3\natctagtc\n"

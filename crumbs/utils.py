@@ -7,8 +7,8 @@ Created on 21/06/2012
 import sys
 import os
 
-from crumbs.utils import cgitb
-from crumbs.utils.exceptions import (UnknownFormatError, FileNotFoundError,
+from crumbs.third_party import cgitb
+from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                      WrongFormatError, TooManyFiles,
                                      MalformedFile, SampleSizeError)
 

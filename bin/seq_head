@@ -6,7 +6,7 @@ Created on 2012 eka 22
 '''
 import sys
 
-from crumbs.utils.utils import main
+from crumbs.utils import main
 from crumbs.sample import (sample_setup_argparse, sample_parse_args)
 from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
 

@@ -6,8 +6,8 @@ Created on 2012 eka 25
 
 import argparse
 
-from crumbs.utils.iterutils import sample, length
-from crumbs.utils.utils import (STDIN, STDOUT, get_inputs_from_args,
+from crumbs.iterutils import sample, length
+from crumbs.utils import (STDIN, STDOUT, get_inputs_from_args,
                                 get_output_from_args, INFILES, OUTFILE)
 from crumbs.seqio import (guess_format, write_seqrecords, read_seqrecords,
                           count_seqs_in_files)

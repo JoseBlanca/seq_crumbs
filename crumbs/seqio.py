@@ -10,8 +10,8 @@ from shutil import copyfileobj
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio import SeqIO
 
-from crumbs.utils.exceptions import UnknownFormatError, MalformedFile
-from crumbs.utils.iterutils import length
+from crumbs.exceptions import UnknownFormatError, MalformedFile
+from crumbs.iterutils import length
 
 
 def write_seqrecords(fhand, seqs, file_format='fastq'):

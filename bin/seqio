@@ -2,10 +2,10 @@
 import sys
 import argparse
 
-from crumbs.utils.utils import (main, STDIN, STDOUT, get_inputs_from_args,
+from crumbs.utils import (main, STDIN, STDOUT, get_inputs_from_args,
                                 INFILES, OUTFILE)
 from crumbs.seqio import guess_format, seqio
-from crumbs.utils.exceptions import TooManyFiles, WrongFormatError
+from crumbs.exceptions import TooManyFiles, WrongFormatError
 
 
 SUPPORTED_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
