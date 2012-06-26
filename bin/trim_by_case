@@ -1,15 +1,17 @@
+#!/usr/bin/env python
 '''
-Created on 2012 eka 25
+Created on 2012 eka 26
 
 @author: peio
 '''
 
 import argparse
+import sys
 
-from crumbs.iterutils import sample
 from crumbs.utils import (STDIN, STDOUT, get_inputs_from_args,
-                          get_output_from_args, INFILES, OUTFILE)
-from crumbs.seqio import read_seqrecords, count_seqs_in_files
+                          get_output_from_args, INFILES, OUTFILE, main)
+from crumbs.seqio import read_seqrecords, write_seqrecords, guess_format
+from crumbs.trim import trim_lowercased_seqs
 
 
 def sample_setup_argparse():
@@ -20,25 +22,29 @@ def sample_setup_argparse():
                         help="Sequence input file to process")
     parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
                         help="Sequence output file to process")
-    parser.add_argument('-n', '--num_seqs', default=10, type=int,
-                        dest='num_seqs', help='Number of sequendes to print')
     return parser
 
 
 def sample_parse_args(parser):
     '''It parses the command line and it returns a dict with the arguments.'''
     parsed_args = parser.parse_args()
-    num_seqs = parsed_args.num_seqs
     in_fhands = get_inputs_from_args(parsed_args)
     out_fhand = get_output_from_args(parsed_args)
 
-    return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'num_seqs': num_seqs}
+    return {'out_fhand': out_fhand, 'in_fhands': in_fhands}
 
 
-def get_random_seqs(fhands, num_seqs):
-    'it gets the random seqs'
-    total_seqs = count_seqs_in_files(fhands)
-    seqs = read_seqrecords(fhands)
-    return sample(seqs, total_seqs, num_seqs)
+def trim_by_case():
+    'The main function of the head binary'
+    parser = sample_setup_argparse()
+    args = sample_parse_args(parser)
 
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+
+    seqs = read_seqrecords(in_fhands)
+    seqs = trim_lowercased_seqs(seqs)
+    write_seqrecords(out_fhand, seqs, guess_format(in_fhands[0]))
+
+if __name__ == '__main__':
+    sys.exit(main(trim_by_case))

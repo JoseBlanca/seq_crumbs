@@ -16,6 +16,7 @@ QUAL = ">seq1\n30 30 30 30 30 30 30 30\n>seq2\n30 30 30 30 30 30 30 30\n"
 QUAL += ">seq3\n30 30 30 30 30 30 30 30\n"
 FASTQ = '@seq1\natcgt\n+\n?????\n@seq2\natcgt\n+\n?????\n@seq3\natcgt\n+\n?????\n'
 
+
 class SeqioBinTest(unittest.TestCase):
     'It test the seqio binary'
 
@@ -88,9 +89,6 @@ class SeqioBinTest(unittest.TestCase):
             self.fail('error expected')
         except CalledProcessError:
             assert 'Lengths of sequence and qualit' in open(stderr.name).read()
-
-
-
 
 
 if __name__ == '__main__':
