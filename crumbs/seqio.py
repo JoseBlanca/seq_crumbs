@@ -27,6 +27,7 @@ from Bio import SeqIO
 
 from crumbs.exceptions import UnknownFormatError, MalformedFile
 from crumbs.iterutils import length
+from crumbs.utils import rel_symlink
 
 
 def write_seqrecords(fhand, seqs, file_format='fastq'):
@@ -90,12 +91,19 @@ def guess_format(fhand):
     raise UnknownFormatError('Sequence file of unknown format.')
 
 
-def seqio(in_fhands, out_fhands, out_format):
+def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
     'It converts sequence files between formats'
 
     in_formats = [guess_format(fhand) for fhand in in_fhands]
 
-    if len(in_fhands) == 1 and len(out_fhands) == 1:
+    if (len(in_formats) == 1 and in_formats[0] == out_format and
+        hasattr(in_fhands[0], 'name')):
+        if copy_if_same_format:
+            copyfileobj(in_fhands[0], out_fhands[0])
+        else:
+            rel_symlink(in_fhands[0].name, out_fhands[0].name)
+
+    elif len(in_fhands) == 1 and len(out_fhands) == 1:
         try:
             SeqIO.convert(in_fhands[0].name, in_formats[0],
                           out_fhands[0].name, out_format)
@@ -130,10 +138,12 @@ def seqio(in_fhands, out_fhands, out_format):
             raise
     elif (len(in_fhands) == 2 and len(out_fhands) == 2 and
           in_formats == ['fasta', 'qual'] and out_format == 'fasta'):
-        #out_fhands[0].write(in_fhands[0].read())
-        copyfileobj(in_fhands[0], out_fhands[0])
-        copyfileobj(in_fhands[1], out_fhands[1])
-
+        if copy_if_same_format:
+            copyfileobj(in_fhands[0], out_fhands[0])
+            copyfileobj(in_fhands[1], out_fhands[1])
+        else:
+            rel_symlink(in_fhands[0].name, out_fhands[0].name)
+            rel_symlink(in_fhands[1].name, out_fhands[1].name)
     else:
         raise RuntimeError('Please fixme, we should not be here')
 

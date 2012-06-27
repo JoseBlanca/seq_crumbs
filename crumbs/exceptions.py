@@ -47,3 +47,14 @@ class MalformedFile(Exception):
 class SampleSizeError(Exception):
     'The asked sample size is bigger than the population'
     pass
+
+
+class ExternalBinaryError(Exception):
+    'A call to an external binary failed'
+    pass
+
+
+class MissingBinaryError(Exception):
+    'A call to an external binary failed becase the binary is not in the path'
+    pass
+

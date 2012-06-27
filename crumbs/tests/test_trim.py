@@ -13,18 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 2012 eka 26
-
-@author: peio
-'''
 from StringIO import StringIO
 import unittest
 
 from crumbs.trim import (_get_uppercase_segments, _get_longest_segment,
                          trim_lowercased_seqs)
 from crumbs.seqio import read_seqrecords
-
 
 
 class TrimTest(unittest.TestCase):

@@ -7,6 +7,10 @@ Files: *
 Copyright: 2012 Universidad Politecnica de Valencia
 License: GPL-3+
 
+Files: crumbs/third_party/*/*blast*
+Copyright: National Center for Biotechnology Information
+License: Public Domain
+
 Files: crumbs/third_party/cgitb.py
 Copyright: Python Software Foundation
 License: PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
