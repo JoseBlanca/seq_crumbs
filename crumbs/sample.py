@@ -56,4 +56,3 @@ def get_random_seqs(fhands, num_seqs):
     total_seqs = count_seqs_in_files(fhands)
     seqs = read_seqrecords(fhands)
     return sample(seqs, total_seqs, num_seqs)
-
