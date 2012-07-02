@@ -13,28 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 2012 eka 25
-
-@author: peio
-'''
-
-import argparse
-
 from crumbs.iterutils import sample
-from crumbs.utils import (STDIN, STDOUT, get_inputs_from_args,
-                          get_output_from_args, INFILES, OUTFILE)
+from crumbs.utils import (get_inputs_from_args, get_output_from_args,
+                          io_setup_argparse)
 from crumbs.seqio import read_seqrecords, count_seqs_in_files
 
 
 def sample_setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'Get first seqs from file[s]'
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument(INFILES, default=STDIN, nargs='*',
-                        help="Sequence input file to process")
-    parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
-                        help="Sequence output file to process")
+    parser = io_setup_argparse()
+    parser.description = description
     parser.add_argument('-n', '--num_seqs', default=10, type=int,
                         dest='num_seqs', help='Number of sequendes to print')
     return parser

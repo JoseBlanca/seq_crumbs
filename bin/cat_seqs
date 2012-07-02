@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils import (main, get_inputs_from_args, get_output_from_args,
+                          io_setup_argparse)
+from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
+from crumbs.exceptions import IncompatibleFormatError
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    parser = io_setup_argparse()
+    parser.description = 'cat seqs from various files to one file'
+    parser.add_argument('-f', '--out_format', dest='out_format',
+                        help='format of the output file',
+                        choices=['fasta', 'fastq', 'fastq-illumina'])
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+    in_fhands = get_inputs_from_args(parsed_args)
+    out_fhand = get_output_from_args(parsed_args)
+    out_format = parsed_args.out_format
+    return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
+            'out_format': out_format}
+
+
+def check_format_incompatibilities(in_fhands, out_format):
+    'It checks for incompatible formats when doing a cat'
+    if out_format == 'fasta':
+        return
+
+    in_formats = set([guess_format(in_fhand) for in_fhand in in_fhands])
+    msg = 'output format is incompatible with input file formats'
+    if 'fastq' in out_format:
+        if 'fasta' in in_formats:
+            raise IncompatibleFormatError(msg)
+
+
+def cat_seqs():
+    'it cats the sequences of all input files in one file'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    out_format = args['out_format']
+
+    check_format_incompatibilities(in_fhands, out_format)
+
+    seqs = read_seqrecords(in_fhands)
+    write_seqrecords(out_fhand, seqs, out_format)
+
+
+if __name__ == '__main__':
+    sys.exit(main(cat_seqs))
