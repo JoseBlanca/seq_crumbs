@@ -62,7 +62,6 @@ from math import log10
 from operator import itemgetter
 
 from Bio.Blast import NCBIXML
-from Bio.Seq import UnknownSeq
 
 
 def _text_blasts_in_file(fhand):
@@ -1040,12 +1039,39 @@ def _match_length(match, length_from_query):
     return length
 
 
+def _match_part_length(match_part, length_in_query):
+    'It calculates the length of the match part'
+    if length_in_query:
+        return abs(match_part['query_end'] - match_part['query_start'])
+    else:
+        return abs(match_part['subject_end'] - match_part['subject_start'])
+
+
+def _match_long_enough(match_length, total_length, min_num_residues,
+                       min_percentage, length_in_query):
+    'It returns a boolean if the criteria is met'
+    if min_num_residues is not None:
+        if match_length >= min_num_residues:
+            match_ok = True
+        else:
+            match_ok = False
+    else:
+        percentage = (match_length / total_length) * 100.0
+        if percentage >= min_percentage:
+            match_ok = True
+        else:
+            match_ok = False
+    return match_ok
+
+
 def _create_min_length_mapper(length_in_query, min_num_residues=None,
-                              min_percentage=None):
+                              min_percentage=None, filter_match_parts=False):
     '''It creates a mapper that removes short matches.
 
     The length can be given in percentage or in number of residues.
     The length can be from the query or the subject
+    filter_match_parts determines if every individual match_part is to be
+    filtered against the length requirement
     '''
     if not isinstance(length_in_query, bool):
         raise ValueError('length_in_query should be a boolean')
@@ -1064,24 +1090,40 @@ def _create_min_length_mapper(length_in_query, min_num_residues=None,
         filtered_matches = []
         query = alignment.get('query', None)
         for match in alignment['matches']:
-            match_length = _match_length(match, length_in_query)
-            if min_num_residues is not None:
-                if match_length >= min_num_residues:
-                    match_ok = True
-                else:
-                    match_ok = False
-            else:
+            if match is None:
+                continue
+            if min_num_residues is None:
                 if length_in_query:
-                    percentage = (match_length / query['length']) * 100.0
+                    mol_length = query['length']
                 else:
-                    subject = match['subject']
-                    percentage = (match_length / subject['length']) * 100.0
-                if percentage >= min_percentage:
-                    match_ok = True
-                else:
-                    match_ok = False
-            if match_ok:
+                    mol_length = match['subject']['length']
+            else:
+                mol_length = None   # it doesn't matter because we're after an
+                                    # absolute value
+            if filter_match_parts:
+                filtered_match_parts = []
+                for match_part in match['match_parts']:
+                    match_part_length = _match_part_length(match_part,
+                                                           length_in_query)
+                    match_part_ok = _match_long_enough(match_part_length,
+                                                       mol_length,
+                                                       min_num_residues,
+                                                       min_percentage,
+                                                       length_in_query)
+                    if match_part_ok:
+                        filtered_match_parts.append(match_part)
+                match['match_parts'] = filtered_match_parts
+                if not len(match['match_parts']):
+                    continue
                 filtered_matches.append(match)
+            else:
+                match_length = _match_length(match, length_in_query)
+                match_ok = _match_long_enough(match_length, mol_length,
+                                                  min_num_residues,
+                                                  min_percentage,
+                                                  length_in_query)
+                if match_ok:
+                    filtered_matches.append(match)
         alignment['matches'] = filtered_matches
         return alignment
     return map_

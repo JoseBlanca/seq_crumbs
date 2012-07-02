@@ -627,7 +627,11 @@ class AlignmentFilters(unittest.TestCase):
         align1 = {'matches': [{'match_parts':[{'query_start':0,
                                                'query_end':100,
                                                'subject_start':0,
-                                               'subject_end':100, }]},
+                                               'subject_end':100},
+                                              {'query_start':0,
+                                               'query_end':50,
+                                               'subject_start':0,
+                                               'subject_end':50}, ]},
                               {'match_parts':[{'query_start':0, 'query_end':50,
                                                'subject_start':0,
                                                'subject_end':100, }]},
@@ -644,6 +648,24 @@ class AlignmentFilters(unittest.TestCase):
                           }
         _check_blast(filtered_alignments[0], expected_align1)
         assert len(filtered_alignments) == 1
+        assert len(filtered_alignments[0]['matches'][0]['match_parts']) == 2
+
+        # Now filtering every match part
+        filter1 = {'kind': 'min_length',
+                   'min_num_residues': 100,
+                   'length_in_query': True,
+                   'filter_match_parts': True
+                   }
+        filtered_alignments = list(filter_alignments(alignments,
+                                                     config=[filter1]))
+        expected_align1 = {'matches': [{'start':0, 'end':100,
+                                        'subject_start':0,
+                                        'subject_end':100, },
+                                      ]
+                          }
+        _check_blast(filtered_alignments[0], expected_align1)
+        assert len(filtered_alignments) == 1
+        assert len(filtered_alignments[0]['matches'][0]['match_parts']) == 1
 
         filter_ = {'kind': 'min_length',
                     'min_num_residues': 100,
