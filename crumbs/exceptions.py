@@ -58,3 +58,7 @@ class MissingBinaryError(Exception):
     'A call to an external binary failed becase the binary is not in the path'
     pass
 
+
+class IncompatibleFormatError(Exception):
+    'Asked output format is incompatible with input file formats'
+    pass

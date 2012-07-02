@@ -25,12 +25,14 @@ import tempfile
 import shutil
 from subprocess import check_call, Popen
 import platform
+import argparse
 
 from crumbs.third_party import cgitb
 from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
-                                     WrongFormatError, TooManyFiles,
-                                     MalformedFile, SampleSizeError,
-                                     ExternalBinaryError, MissingBinaryError)
+                               WrongFormatError, TooManyFiles,
+                               MalformedFile, SampleSizeError,
+                               ExternalBinaryError, MissingBinaryError,
+                               IncompatibleFormatError)
 
 STDIN = 'stdin'
 STDOUT = 'stdout'
@@ -78,6 +80,9 @@ def main(funct):
     except MissingBinaryError, error:
         stderr.write(str(error) + '\n')
         return 9
+    except IncompatibleFormatError, error:
+        stderr.write(str(error) + '\n')
+        return 10
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq crumbs developers would appreciate your feedback\n'
@@ -258,3 +263,13 @@ def get_binary_path(binary_name):
     # At this point there is not available binary for the working platform
     msg = '{} not available for this platform: {}'.format(binary_name, system)
     raise MissingBinaryError(msg)
+
+
+def io_setup_argparse():
+    'It prepares the command line arguments. Input and output'
+    parser = argparse.ArgumentParser()
+    parser.add_argument(INFILES, default=STDIN, nargs='*',
+                        help="Sequence input file to process")
+    parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
+                        help="Sequence output file to process")
+    return parser
