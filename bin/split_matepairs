@@ -17,19 +17,22 @@
 
 import sys
 
-from crumbs.utils import (main, get_inputs_from_args, get_output_from_args,
-                          io_setup_argparse)
-from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
-from crumbs.exceptions import IncompatibleFormatError
+from crumbs.utils import (main, io_setup_argparse, get_inputs_from_args,
+                          get_output_from_args)
+from crumbs.split_mates import FWD_454_LINKERS, split_mates
+from crumbs.seqio import guess_format, write_seqrecords
 
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     parser = io_setup_argparse()
-    parser.description = 'cat seqs from various files to one file'
+    parser.description = 'It splits mate pair sequences'
     parser.add_argument('-f', '--out_format', dest='out_format',
                         help='format of the output file',
                         choices=['fasta', 'fastq'])
+    hlp = 'platform or linker sequence (several can be given) (default 454)'
+    parser.add_argument('-l', '--linker', dest='linkers', help=hlp,
+                        action='append', required=True)
     return parser
 
 
@@ -38,37 +41,31 @@ def _parse_args(parser):
     parsed_args = parser.parse_args()
     in_fhands = get_inputs_from_args(parsed_args)
     out_fhand = get_output_from_args(parsed_args)
-    out_format = parsed_args.out_format
+
+    linkers = parsed_args.linkers
+    new_linkers = []
+    for linker in linkers:
+        if linker == '454':
+            new_linkers.extend(FWD_454_LINKERS)
+        else:
+            new_linkers.append(linker)
+
+    out_fmt = parsed_args.out_format
+    if not out_fmt:
+        out_fmt = guess_format(in_fhands[0])
+
     return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'out_format': out_format}
+            'linkers': new_linkers, 'out_format': out_fmt}
 
 
-def check_format_incompatibilities(in_fhands, out_format):
-    'It checks for incompatible formats when doing a cat'
-    if out_format == 'fasta':
-        return
-
-    in_formats = set([guess_format(in_fhand) for in_fhand in in_fhands])
-    msg = 'output format is incompatible with input file formats'
-    if 'fastq' in out_format:
-        if 'fasta' in in_formats:
-            raise IncompatibleFormatError(msg)
-
-
-def cat_seqs():
-    'it cats the sequences of all input files in one file'
+def split_matepairs():
+    'It splits the mate pair sequences'
     parser = _setup_argparse()
     args = _parse_args(parser)
 
-    in_fhands = args['in_fhands']
-    out_fhand = args['out_fhand']
-    out_format = args['out_format']
-
-    check_format_incompatibilities(in_fhands, out_format)
-
-    seqs = read_seqrecords(in_fhands)
-    write_seqrecords(out_fhand, seqs, out_format)
+    seqs = split_mates(seq_fhands=args['in_fhands'], linkers=args['linkers'])
+    write_seqrecords(args['out_fhand'], seqs, args['out_format'])
 
 
 if __name__ == '__main__':
-    sys.exit(main(cat_seqs))
+    sys.exit(main(split_matepairs))

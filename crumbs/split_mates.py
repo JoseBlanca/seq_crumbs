@@ -15,6 +15,8 @@ from crumbs.alignment_result import (TabularBlastParser, filter_alignments,
 FLX_LINKER = 'GTTGGAACCGAAAGGGTTTGAATTCAAACCCTTTCGGTTCCAAC'
 # The titanium linker can be forward or reverse
 TITANIUM_LINKER = 'TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACG'
+FWD_454_LINKERS = [FLX_LINKER, TITANIUM_LINKER]
+
 TITANIUM_LINKER_REV = 'CGTAATAACTTCGTATAGCATACATTATACGAAGTTATACGA'
 
 LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
@@ -38,7 +40,7 @@ def _do_blast(seq_fhand, oligos_fhand):
     return TabularBlastParser(open(blast_fhand.name), blast_format)
 
 
-def look_for_matching_segments(seq_fhand, oligos_fhand):
+def _look_for_matching_segments(seq_fhand, oligos_fhand):
     'It looks for the oligos in the given sequence files'
     blasts = _do_blast(oligos_fhand, seq_fhand)
     min_identity = 87.0
@@ -71,7 +73,7 @@ def look_for_matching_segments(seq_fhand, oligos_fhand):
         yield read, segments, elongated_match
 
 
-def split_by_mate_linker(seqrec, (segments, is_partial)):
+def _split_by_mate_linker(seqrec, (segments, is_partial)):
     'It splits the seqs using segments'
 
     if not segments:
@@ -121,10 +123,8 @@ def split_by_mate_linker(seqrec, (segments, is_partial)):
         return seqrecords
 
 
-def split_mates(seq_fhands, out_fhand, linkers=None):
+def split_mates(seq_fhands, linkers=None):
     'It splits the input sequences with the provided linkers.'
-
-    out_seq_fmt = guess_format(seq_fhands[0])
 
     if linkers is None:
         linkers = LINKERS
@@ -141,12 +141,13 @@ def split_mates(seq_fhands, out_fhand, linkers=None):
     write_seqrecords(linkers_fhand, LINKERS, file_format='fasta')
 
     for seq_fhand in seq_fhands:
-        linker_segments = look_for_matching_segments(seq_fhand, linkers_fhand)
+        linker_segments = _look_for_matching_segments(seq_fhand, linkers_fhand)
         segments = get_next_segment(linker_segments)
         for seqrec in read_seqrecords([seq_fhand]):
             if segments is not None and segments[0]['name'] == seqrec.id:
-                split_seqs = split_by_mate_linker(seqrec, segments[1:])
+                split_seqs = _split_by_mate_linker(seqrec, segments[1:])
                 segments = get_next_segment(linker_segments)
             else:
                 split_seqs = [seqrec]
-            write_seqrecords(out_fhand, split_seqs, out_seq_fmt)
+            for seq in split_seqs:
+                yield seq
