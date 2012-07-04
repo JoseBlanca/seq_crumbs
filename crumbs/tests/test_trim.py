@@ -13,12 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-from StringIO import StringIO
 import unittest
+import os.path
+from StringIO import StringIO
+from tempfile import NamedTemporaryFile
+from subprocess import check_output
 
 from crumbs.trim import (_get_uppercase_segments, _get_longest_segment,
                          trim_lowercased_seqs)
 from crumbs.seqio import read_seqrecords
+from crumbs.tests.utils import BIN_DIR
+
+FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 
 
 class TrimTest(unittest.TestCase):
@@ -58,6 +64,29 @@ class TrimTest(unittest.TestCase):
         seqs = read_seqrecords([StringIO(fasta)])
         seqs = [str(seq.seq) for seq in trim_lowercased_seqs(seqs)]
         assert seqs == ['CTTTC', 'CTTC', 'CTC']
+
+
+class TrimByCaseTest(unittest.TestCase):
+    'It tests the trim_by_case binary'
+    @staticmethod
+    def _make_fhand(content=None):
+        'It makes temporary fhands'
+        if content is None:
+            content = ''
+        fhand = NamedTemporaryFile()
+        fhand.write(content)
+        fhand.flush()
+        return fhand
+
+    def test_trim_case_bin(self):
+        'It tests the trim seqs binary'
+        trim_bin = os.path.join(BIN_DIR, 'trim_by_case')
+        assert check_output([trim_bin]).startswith('usage')
+
+        fastq_fhand = self._make_fhand(FASTQ)
+
+        result = check_output([trim_bin, fastq_fhand.name])
+        assert '@seq1\nTC\n+' in result
 
 
 if __name__ == '__main__':
