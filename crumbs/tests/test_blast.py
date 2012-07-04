@@ -34,7 +34,8 @@ class BlastTest(unittest.TestCase):
         seq_fpath = os.path.join(TEST_DATA_DIR, db_name)
         db_dir = TemporaryDir(prefix='blast_dbs_')
         try:
-            db_path1 = get_blast_db(seq_fpath, db_dir.name, 'nucl')
+            db_path1 = get_blast_db(seq_fpath, directory=db_dir.name,
+                                    dbtype='nucl')
             db_path = os.path.join(db_dir.name, db_name)
             assert 'CATAGGGTCACCAATGGC' in open(db_path1).read(100)
             assert db_path1 == db_path
@@ -42,7 +43,8 @@ class BlastTest(unittest.TestCase):
             index_fpath = os.path.join(db_dir.name, db_name + '.nsq')
             assert os.path.exists(index_fpath)
 
-            db_path2 = get_blast_db(seq_fpath, db_dir.name, 'nucl')
+            db_path2 = get_blast_db(seq_fpath, directory=db_dir.name,
+                                    dbtype='nucl')
             assert db_path1 == db_path2
         finally:
             db_dir.close()
@@ -53,7 +55,8 @@ class BlastTest(unittest.TestCase):
         seq_fpath = os.path.join(TEST_DATA_DIR, db_name)
         db_dir = TemporaryDir(prefix='blast_dbs_')
         try:
-            db_fpath = get_blast_db(seq_fpath, db_dir.name, 'nucl')
+            db_fpath = get_blast_db(seq_fpath, directory=db_dir.name,
+                                    dbtype='nucl')
             query_fhand = NamedTemporaryFile()
             query_fhand.write(open(seq_fpath).read(200))
             query_fhand.flush()
