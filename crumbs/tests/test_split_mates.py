@@ -26,8 +26,8 @@ import os.path
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.split_mates import (LINKERS, TITANIUM_LINKER, split_mates,
-                                _look_for_matching_segments,
+from crumbs.split_mates import (LINKERS, TITANIUM_LINKER, FLX_LINKER,
+                                split_mates, _look_for_matching_segments,
                                 _split_by_mate_linker)
 from crumbs.seqio import write_seqrecords
 from crumbs.tests.utils import BIN_DIR
@@ -121,7 +121,8 @@ class MateSplitterTest(unittest.TestCase):
         mate_fhand.write('>seq3\n' + seq5 + linker[2:25] + seq3 + '\n')
         # the linker is 5 prima
         mate_fhand.write('>seq4\n' + linker[10:] + seq3 + '\n')
-
+        # two linkers
+        mate_fhand.write('>seq5\n' + linker + seq3 + FLX_LINKER + seq5 + '\n')
         mate_fhand.flush()
 
         out_fhand = StringIO()
@@ -141,6 +142,13 @@ class MateSplitterTest(unittest.TestCase):
         xpect += 'TGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq4.fn\n'
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
+        xpect += '>seq5_mlc.part1\n'
+        xpect += 'TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACGATCGATCATGTTGTAT'
+        xpect += 'TG\n'
+        xpect += 'TGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
+        xpect += '>seq5_mlc.part2\n'
+        xpect += 'ACCTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
+        xpect += '\n'
         assert xpect == result
 
 
