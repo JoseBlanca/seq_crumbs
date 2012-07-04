@@ -30,6 +30,7 @@ import math
 from crumbs.alignment_result import (BlastParser, TabularBlastParser,
                                      alignment_results_scores, ExonerateParser,
                                      filter_alignments, covered_segments,
+                                     elongate_match_parts_till_global,
                                      TextBlastParser)
 
 
@@ -992,6 +993,50 @@ class MergeMatchesTests(unittest.TestCase):
         assert covered_segs == [(80, 110), (190, 200)]
         covered_segs = covered_segments(mparts)
         assert covered_segs == [(80, 85), (90, 110), (190, 200)]
+
+    def test_match_part_elongation(self):
+        'The alignments get elongated till they are like global alignments'
+        # elongate on the rigth
+        match_part = {'query_start': 10, 'query_end': 13,
+                      'subject_start': 0, 'subject_end': 3}
+        elongate_match_parts_till_global([match_part], subject_length=5,
+                                         query_length=20)
+        assert match_part == {'query_start': 10, 'query_end': 14,
+                              'subject_start': 0, 'subject_end': 4,
+                              'elongated': 1}
+        # elongate on the left
+        match_part = {'query_start': 3, 'query_end': 5,
+                      'subject_start': 3, 'subject_end': 5}
+        elongate_match_parts_till_global([match_part], subject_length=7,
+                                         query_length=20)
+        assert match_part == {'subject_start': 0, 'query_start': 0,
+                              'query_end': 6, 'subject_end': 6, 'elongated': 4}
+
+        # reversed
+        match_part = {'query_end': 3, 'query_start': 5,
+                      'subject_end': 3, 'subject_start': 5}
+        elongate_match_parts_till_global([match_part], subject_length=7,
+                                         query_length=20)
+        assert match_part == {'subject_end': 0, 'query_end': 0,
+                              'query_start': 6, 'subject_start': 6,
+                              'elongated': 4}
+
+        # partial elongation
+        match_part = {'query_start': 1, 'query_end': 3,
+                      'subject_start': 2, 'subject_end': 4}
+        elongate_match_parts_till_global([match_part], subject_length=7,
+                                         query_length=5)
+        assert match_part == {'subject_start': 1, 'query_start': 0,
+                              'query_end': 4, 'subject_end': 5, 'elongated': 2}
+
+        # No elongation
+        match_part = {'query_start': 1, 'query_end': 3,
+                      'subject_start': 0, 'subject_end': 2}
+        elongate_match_parts_till_global([match_part], subject_length=3,
+                                         query_length=30)
+        assert match_part == {'subject_start': 0, 'query_start': 1,
+                              'query_end': 3, 'subject_end': 2}
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'BlastParserTest.test_blast_tab_parser']

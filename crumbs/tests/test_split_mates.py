@@ -1,0 +1,137 @@
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+
+# pylint: disable=R0201
+# pylint: disable=R0904
+
+import unittest
+from tempfile import NamedTemporaryFile
+from StringIO import StringIO
+
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+
+from crumbs.split_mates import (LINKERS, TITANIUM_LINKER, split_mates,
+                                look_for_matching_segments,
+                                split_by_mate_linker)
+from crumbs.seqio import write_seqrecords
+
+# pylint: disable=R0201
+# pylint: disable=R0904
+
+
+class MateSplitterTest(unittest.TestCase):
+    'It tests the splitting of mate pairs'
+    def test_matching_segments(self):
+        'It tests the detection of oligos in sequence files'
+
+        seq_5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
+        seq_3 = 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT'
+        mate_seq = seq_5 + TITANIUM_LINKER + seq_3
+        mate_fhand = NamedTemporaryFile(suffix='.fasta')
+        mate_fhand.write('>seq1\n' + mate_seq + '\n')
+        mate_fhand.flush()
+
+        linkers_fhand = NamedTemporaryFile(prefix='linkers.', suffix='.fasta')
+        write_seqrecords(linkers_fhand, LINKERS, file_format='fasta')
+
+        expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
+        linker_region = list(look_for_matching_segments(mate_fhand,
+                                                        linkers_fhand))[0][1]
+        assert [expected_region] == linker_region
+
+    def test_split_mate(self):
+        'It tests the function that splits seqs using segments'
+        seq = 'aaatttccctt'
+        seqrecord = SeqRecord(Seq(seq), id='seq')
+
+        # segment beginnig
+        seqs = split_by_mate_linker(seqrecord, ([(0, 3)], False))
+        assert str(seqs[0].seq) == 'ttccctt'
+        assert seqs[0].id == 'seq.fn'
+
+        # segment at end
+        seqs = split_by_mate_linker(seqrecord, ([(7, 10)], False))
+        assert  str(seqs[0].seq) == 'aaatttc'
+        assert seqs[0].id == 'seq.fn'
+
+        # segmnet in the middle
+        seqs = split_by_mate_linker(seqrecord, ([(4, 7)], True))
+        assert str(seqs[0].seq) == 'aaat'
+        assert str(seqs[1].seq) == 'ctt'
+        assert seqs[0].id == 'seq_pl.part1'
+        assert seqs[1].id == 'seq_pl.part2'
+
+        seqs = split_by_mate_linker(seqrecord, ([(4, 7)], False))
+        assert seqs[0].id == 'seq.f'
+        assert seqs[1].id == 'seq.r'
+
+        seqs = split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)], False))
+        assert str(seqs[0].seq) == 'aaat'
+        assert str(seqs[1].seq) == 'c'
+        assert str(seqs[2].seq) == 't'
+        assert seqs[0].id == 'seq_mlc.part1'
+
+        # all sequence is linker
+        seqs = split_by_mate_linker(seqrecord, ([(0, 10)], False))
+        assert not str(seqs[0].seq)
+
+        # there's no segments
+        seqs = split_by_mate_linker(seqrecord, ([], False))
+        assert seqrecord.id == seqs[0].id
+        assert str(seqrecord.seq) == str(seqs[0].seq)
+
+    def test_split_mates(self):
+        'It tests the detection of oligos in sequence files'
+
+        mate_fhand = NamedTemporaryFile(suffix='.fasta')
+        linker = TITANIUM_LINKER
+
+        # a complete linker
+        seq5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
+        seq3 = 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT'
+
+        mate_fhand.write('>seq1\n' + seq5 + linker + seq3 + '\n')
+        # no linker
+        mate_fhand.write('>seq2\n' + seq5 + '\n')
+        # a partial linker
+        mate_fhand.write('>seq3\n' + seq5 + linker[2:25] + seq3 + '\n')
+        # the linker is 5 prima
+        mate_fhand.write('>seq4\n' + linker[10:] + seq3 + '\n')
+
+        mate_fhand.flush()
+
+        out_fhand = StringIO()
+        split_mates([mate_fhand], out_fhand)
+
+        result = out_fhand.getvalue()
+        xpect = '>seq1.f\n'
+        xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
+        xpect += '>seq1.r\n'
+        xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
+        xpect += '>seq2\n'
+        xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
+        xpect += '>seq3_pl.part1\n'
+        xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTG\n'
+        xpect += '>seq3_pl.part2\n'
+        xpect += 'TGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
+        xpect += '>seq4.fn\n'
+        xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
+        assert xpect == result
+
+if __name__ == "__main__":
+    #import sys;sys.argv = ['', 'BlastParserTest.test_blast_tab_parser']
+    unittest.main()

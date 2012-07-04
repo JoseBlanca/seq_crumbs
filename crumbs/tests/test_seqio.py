@@ -13,19 +13,19 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 2012 eka 25
-
-@author: peio
-'''
 
 import unittest
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 
-from crumbs.seqio import guess_format, seqio
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+
+from crumbs.seqio import guess_format, seqio, write_seqrecords, read_seqrecords
 from crumbs.exceptions import UnknownFormatError
 
+# pylint: disable=R0201
+# pylint: disable=R0904
 
 FASTA = ">seq1\natctagtc\n>seq2\natctagtc\n>seq3\natctagtc\n"
 QUAL = ">seq1\n30 30 30 30 30 30 30 30\n>seq2\n30 30 30 30 30 30 30 30\n"
@@ -103,7 +103,7 @@ class SeqIOTest(unittest.TestCase):
 
         #fasta-qual to fastq
         in_fhands = (self._make_fhand(FASTA), self._make_fhand(QUAL))
-        out_fhands = (self._make_fhand(), )
+        out_fhands = (self._make_fhand(),)
         out_format = 'fastq'
         seqio(in_fhands, out_fhands, out_format)
         assert "@seq1\natctagtc\n+\n???????" in open(out_fhands[0].name).read()
@@ -132,7 +132,22 @@ class SeqIOTest(unittest.TestCase):
         assert FASTA == open(out_fhands[0].name).read()
         assert QUAL == open(out_fhands[1].name).read()
 
+
+class ReadWriteSeqsTest(unittest.TestCase):
+    'It writes seqrecords in a file'
+    def test_write_empy_seq(self):
+        'It does not write an empty sequence'
+        seq1 = SeqRecord(Seq('ACTG'), id='seq1')
+        fhand = StringIO()
+        write_seqrecords(fhand, [seq1, None, SeqRecord(Seq(''), id='seq2')],
+                         file_format='fasta')
+        assert fhand.getvalue() == '>seq1\nACTG\n'
+
+    def test_read_fasta(self):
+        'It tests the reading of a fasta file'
+        fhand = StringIO('>seq1\nACTG\n')
+        assert not list(read_seqrecords([fhand]))[0].description
+
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'class.fuanction']
     unittest.main()
-

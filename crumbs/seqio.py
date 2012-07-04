@@ -18,26 +18,71 @@ Created on 21/06/2012
 
 @author: jose
 '''
-from itertools import chain
-
+from itertools import chain, ifilter
 from shutil import copyfileobj
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio import SeqIO
+from Bio.SeqIO import FastaIO
+from Bio.SeqIO import QualityIO
 
 from crumbs.exceptions import UnknownFormatError, MalformedFile
 from crumbs.iterutils import length
 from crumbs.utils import rel_symlink
 
 
+def clean_seq_stream(seqs):
+    'It removes the empty seqs and fixes the descriptions.'
+    for seq in seqs:
+        if seq and str(seq.seq):
+            if seq.description == '<unknown description>':
+                seq.description = ''
+            yield seq
+
+
 def write_seqrecords(fhand, seqs, file_format='fastq'):
     'It writes a stream of sequences to a file'
+    seqs = clean_seq_stream(seqs)
     SeqIO.write(seqs, fhand, file_format)
+    fhand.flush()
+
+
+def title2ids(title):
+    '''It returns the id, name and description as a tuple.
+
+    It takes the title of the FASTA file (without the beginning >)
+    '''
+    items = title.strip().split()
+    name = items[0]
+    id_ = name
+    if len(items) > 1:
+        desc = ' '.join(items[1:])
+    else:
+        desc = ''
+    return id_, name, desc
 
 
 def read_seqrecords(fhands):
     'it returns an iterator of seqrecords'
-    return chain(*[SeqIO.parse(fhand, guess_format(fhand)) for fhand in fhands])
+    seq_iters = []
+    for fhand in fhands:
+        fmt = guess_format(fhand)
+        if fmt in ('fasta', 'qual') or 'fastq' in fmt:
+            title = title2ids
+        if fmt == 'fasta':
+            seq_iter = FastaIO.FastaIterator(fhand, title2ids=title)
+        elif fmt == 'qual':
+            seq_iter = QualityIO.QualPhredIterator(fhand, title2ids=title)
+        elif fmt == 'fastq' or fmt == 'fastq-sanger':
+            seq_iter = QualityIO.FastqPhredIterator(fhand, title2ids=title)
+        elif fmt == 'fastq-solexa':
+            seq_iter = QualityIO.FastqSolexaIterator(fhand, title2ids=title)
+        elif fmt == 'fastq-illumina':
+            seq_iter = QualityIO.FastqIlluminaIterator(fhand, title2ids=title)
+        else:
+            seq_iter = SeqIO.parse(fhand, fmt)
+        seq_iters.append(seq_iter)
+    return chain(*seq_iters)
 
 
 def _guess_fastq_format(fhand):

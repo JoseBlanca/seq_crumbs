@@ -210,48 +210,66 @@ class TextBlastParser(object):
         return self._gen.next()
 
 
-TABBLAST_OUTFMT = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qframe sframe"
+DEFAULT_TABBLAST_FORMAT = ['query', 'subject', 'identity', 'alignment_length',
+                           'mismatches', 'gap_open', 'query_start',
+                           'query_end', 'subject_start', 'subject_end',
+                           'expect', 'score']
 
 
-def _lines_for_every_tab_blast(fhand):
+def _lines_for_every_tab_blast(fhand, line_format):
     'It returns the lines for every query in the tabular blast'
+
     ongoing_query = None
     match_parts = []
     for line in fhand:
         items = line.strip().split()
-        if len(items) == 14:
-            (query, subject, identity, ali_len, mis, gap_opens,
-             query_start, query_end, subject_start, subject_end, expect, score,
-             qstrand, sstrand) = items
+        if len(line_format) != len(items):
+            msg = 'Malformed line. The line has an unexpected number of items.'
+            msg += '\nExpected format was: ' + ' '.join(line_format) + '\n'
+            msg += 'Line was: ' + line + '\n'
+            raise RuntimeError(msg)
+        items = dict(zip(line_format, items))
+
+        query = items['query']
+        subject = items['subject']
+        if 'query_length' in items:
+            query_len = int(items['query_length'])
         else:
-            (query, subject, identity, ali_len, mis, gap_opens, query_start,
-             query_end, subject_start, subject_end, expect, score) = items
-        query_start = int(query_start) - 1
-        query_end = int(query_end) - 1
-        subject_start = int(subject_start) - 1
-        subject_end = int(subject_end) - 1
-        expect = float(expect)
-        score = float(score)
-        identity = float(identity)
-        match_part = {'subject_start': subject_start,
-                      'subject_end': subject_end,
-                      'query_start': query_start,
-                      'query_end': query_end,
-                      'scores': {'expect': expect, 'identity': identity}}
-        if len(items) == 14:
-            match_part['subject_strand'] = sstrand
-            match_part['query_strand'] = qstrand
+            query_len = None
+        if 'subject_length' in items:
+            subject_len = int(items['subject_length'])
+        else:
+            subject_len = None
+
+        locations = ('query_start', 'query_end', 'subject_start',
+                     'subject_end')
+        match_part = {}
+        for field in locations:
+            if field in items:
+                match_part[field] = int(items[field]) - 1
+
+        score_fields = ('expect', 'score', 'identity')
+        scores = {}
+        for field in score_fields:
+            if field in items:
+                scores[field] = float(items[field])
+        if scores:
+            match_part['scores'] = scores
+
         if ongoing_query is None:
             ongoing_query = query
-            match_parts.append({'subject': subject, 'match_part': match_part})
+            match_parts.append({'subject': subject, 'match_part': match_part,
+                                'subject_length': subject_len})
         elif query == ongoing_query:
-            match_parts.append({'subject': subject, 'match_part': match_part})
+            match_parts.append({'subject': subject, 'match_part': match_part,
+                                'subject_length': subject_len})
         else:
-            yield ongoing_query, match_parts
-            match_parts = [{'subject':subject, 'match_part':match_part}]
+            yield ongoing_query, query_len, match_parts
+            match_parts = [{'subject':subject, 'match_part':match_part,
+                            'subject_length': subject_len}]
             ongoing_query = query
     if ongoing_query:
-        yield ongoing_query, match_parts
+        yield ongoing_query, query_len, match_parts
 
 
 def _group_match_parts_by_subject(match_parts):
@@ -260,26 +278,28 @@ def _group_match_parts_by_subject(match_parts):
     ongoing_subject = None
     for match_part in match_parts:
         subject = match_part['subject']
+        subject_length = match_part['subject_length']
         if ongoing_subject is None:
             parts.append(match_part['match_part'])
             ongoing_subject = subject
         elif ongoing_subject == subject:
             parts.append(match_part['match_part'])
         else:
-            yield ongoing_subject, parts
+            yield ongoing_subject, subject_length, parts
             parts = [match_part['match_part']]
             ongoing_subject = subject
     else:
-        yield ongoing_subject, parts
+        yield ongoing_subject, subject_length, parts
 
 
-def _tabular_blast_parser(fhand):
+def _tabular_blast_parser(fhand, line_format):
     'Parses the tabular output of a blast result and yields Alignment result'
     fhand.seek(0)
 
-    for query, match_parts in _lines_for_every_tab_blast(fhand):
+    for qname, qlen, match_parts in _lines_for_every_tab_blast(fhand,
+                                                               line_format):
         matches = []
-        for subject, match_parts in _group_match_parts_by_subject(match_parts):
+        for sname, slen, match_parts in _group_match_parts_by_subject(match_parts):
             #match start and end
             match_start, match_end = None, None
             match_subject_start, match_subject_end = None, None
@@ -295,7 +315,10 @@ def _tabular_blast_parser(fhand):
                 if (match_subject_end is None or
                    match_part['subject_end'] > match_subject_end):
                     match_subject_end = match_part['subject_end']
-            match = {'subject': {'name': subject},
+            subject = {'name': sname}
+            if slen:
+                subject['length'] = slen
+            match = {'subject': subject,
                      'start': match_start,
                      'end': match_end,
                      'subject_start': match_subject_start,
@@ -304,14 +327,17 @@ def _tabular_blast_parser(fhand):
                      'match_parts': match_parts}
             matches.append(match)
         if matches:
-            yield {'query': {'name': query}, 'matches': matches}
+            query = {'name': qname}
+            if qlen:
+                query['length'] = qlen
+            yield {'query': query, 'matches': matches}
 
 
 class TabularBlastParser(object):
     'It parses the tabular output of a blast result'
-    def __init__(self, fhand):
+    def __init__(self, fhand, line_format=DEFAULT_TABBLAST_FORMAT):
         'The init requires a file to be parsed'
-        self._gen = _tabular_blast_parser(fhand)
+        self._gen = _tabular_blast_parser(fhand, line_format)
 
     def __iter__(self):
         'Part of the iterator protocol'
@@ -1024,6 +1050,80 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
                 segment = (segment_start, limit[1])
                 segments.append(segment)
     return segments
+
+
+ELONGATED = 'elongated'
+
+
+def elongate_match_part_till_global(match_part, query_length, subject_length):
+    '''It streches the match_part to convert it in a global alignment.
+
+    We asume that the subject should be completely aligned and we strech the
+    match part to do it.
+    The elongated match_parts will be marked unless the segment added is
+    shorter than the mark_strech_longer integer.
+
+    '''
+    if match_part['subject_start'] <= match_part['subject_end']:
+        subject_start = match_part['subject_start']
+        subject_end = match_part['subject_end']
+        subject_rev = False
+    else:
+        subject_start = match_part['subject_end']
+        subject_end = match_part['subject_start']
+        subject_rev = True
+    if match_part['query_start'] <= match_part['query_end']:
+        query_start = match_part['query_start']
+        query_end = match_part['query_end']
+        query_rev = False
+    else:
+        query_start = match_part['query_end']
+        query_end = match_part['query_start']
+        query_rev = True
+
+    stretch_left = subject_start
+    if stretch_left > query_start:
+        stretch_left = query_start
+    if subject_rev:
+        match_part['subject_end'] -= stretch_left
+    else:
+        match_part['subject_start'] -= stretch_left
+    if query_rev:
+        match_part['query_end'] -= stretch_left
+    else:
+        match_part['query_start'] -= stretch_left
+
+    stretch_right = subject_length - subject_end - 1
+    max_query_stretch = query_length - query_end - 1
+    if stretch_right > max_query_stretch:
+        stretch_right = max_query_stretch
+    if subject_rev:
+        match_part['subject_start'] += stretch_right
+    else:
+        match_part['subject_end'] += stretch_right
+    if query_rev:
+        match_part['query_start'] += stretch_right
+    else:
+        match_part['query_end'] += stretch_right
+
+    # The taggin
+    streched_length = stretch_left + stretch_right
+    if streched_length:
+        match_part[ELONGATED] = streched_length
+    # reverse
+
+
+def elongate_match_parts_till_global(match_parts, query_length,
+                                     subject_length):
+    '''It streches the match_part to convert it in a global alignment.
+
+    We asume that the subject should be completely aligned and we strech the
+    match part to do it.
+    The elongated match_parts will be marked unless the segment added is
+    shorter than the mark_strech_longer integer.
+
+    '''
+    return [elongate_match_part_till_global(mp, query_length, subject_length) for mp in match_parts]
 
 
 def _match_length(match, length_from_query):
