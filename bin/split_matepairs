@@ -19,7 +19,8 @@ import sys
 
 from crumbs.utils import (main, io_setup_argparse, get_inputs_from_args,
                           get_output_from_args)
-from crumbs.split_mates import FWD_454_LINKERS, split_mates
+from crumbs.split_mates import (FWD_454_LINKERS, split_mates, FLX_LINKER,
+                                TITANIUM_LINKER)
 from crumbs.seqio import guess_format, write_seqrecords
 
 
@@ -47,7 +48,12 @@ def _parse_args(parser):
     for linker in linkers:
         if linker == '454':
             new_linkers.extend(FWD_454_LINKERS)
+        elif linker.lower() == 'flx':
+            new_linkers.append(FLX_LINKER)
+        elif linker.lower() == 'titanium':
+            new_linkers.append(TITANIUM_LINKER)
         else:
+            # TODO, check that the linker is a DNA sequence
             new_linkers.append(linker)
 
     out_fmt = parsed_args.out_format
