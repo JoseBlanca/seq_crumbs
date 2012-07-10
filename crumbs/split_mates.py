@@ -6,9 +6,9 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.blast import get_blast_db, do_blast, generate_tabblast_format
-from crumbs.seqio import write_seqrecords, read_seqrecords, guess_format
+from crumbs.seqio import write_seqrecords, read_seqrecords
 from crumbs.alignment_result import (TabularBlastParser, filter_alignments,
-                                     covered_segments, ELONGATED,
+                                     covered_segments, ELONGATED, QUERY,
                                      elongate_match_parts_till_global)
 
 
@@ -23,54 +23,90 @@ LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
            SeqRecord(Seq(TITANIUM_LINKER), id='titanium_linker')]
 
 
-def _do_blast(seq_fhand, oligos_fhand):
+def _do_blast(seq_fhand, oligos):
     'It returns an alignment result with the blast.'
-    # TODO check if it matters if the oligo or the sequences are used to build
-    # the database. Usually there will be only one linker.
+
+    oligos_fhand = NamedTemporaryFile(prefix='oligo.', suffix='.fasta')
+    write_seqrecords(oligos_fhand, oligos, file_format='fasta')
+
     blastdb = get_blast_db(seq_fhand.name, dbtype='nucl')
 
-    blast_format = ['query', 'query_length', 'subject', 'subject_length',
+    blast_format = ['query', 'subject', 'query_length', 'subject_length',
                     'query_start', 'query_end', 'subject_start',
                     'subject_end', 'expect', 'identity']
     fmt = generate_tabblast_format(blast_format)
     params = {'task': 'blastn-short', 'outfmt': fmt}
 
-    blast_fhand = NamedTemporaryFile(prefix='oligos_vs_seqs.', suffix='.blast')
+    blast_fhand = NamedTemporaryFile(prefix='oligos_vs_reads.',
+                                     suffix='.blast')
     do_blast(oligos_fhand.name, blastdb, 'blastn', blast_fhand.name, params)
-    return TabularBlastParser(open(blast_fhand.name), blast_format)
+
+    return TabularBlastParser(blast_fhand, blast_format)
 
 
-def _look_for_matching_segments(seq_fhand, oligos_fhand):
-    'It looks for the oligos in the given sequence files'
-    blasts = _do_blast(oligos_fhand, seq_fhand)
-    min_identity = 87.0
-    min_len = 17
-    ignore_elongation_shorter = 3
-    filters = [{'kind': 'min_length', 'min_num_residues': min_len,
-                'length_in_query': True, 'filter_match_parts': True},
-               {'kind': 'score_threshold', 'score_key': 'identity',
-               'min_score': min_identity}]
-    blasts = filter_alignments(blasts, config=filters)
+class _BlastMatcher(object):
+    'It matches the given oligos against the reads using Blast'
+    def __init__(self, reads_fhand, oligos):
+        'It inits the class.'
+        self._match_parts = self._look_for_blast_matches(reads_fhand, oligos)
+        self._oligos = oligos
 
-    # Which are the regions covered in each sequence?
-    for blast in blasts:
-        read = blast['query']
-        for match in blast['matches']:
-            oligo = match['subject']
-            elongate_match_parts_till_global(match['match_parts'],
-                                             query_length=read['length'],
-                                             subject_length=oligo['length'])
+    @staticmethod
+    def _look_for_blast_matches(seq_fhand, oligos):
+        'It looks for the oligos in the given sequence files'
+        # we need to keep the blast_fhands, because they're temp files and
+        # otherwise they might be removed
+        blasts = _do_blast(seq_fhand, oligos)
+        min_identity = 87.0
+        min_len = 17
+        filters = [{'kind': 'min_length', 'min_num_residues': min_len,
+                    'length_in_query': False, 'filter_match_parts': True},
+                   {'kind': 'score_threshold', 'score_key': 'identity',
+                   'min_score': min_identity}]
+        blasts = filter_alignments(blasts, config=filters)
 
-        match_parts = [m['match_parts'] for m in blast['matches']]
-        match_parts = [item for sublist in match_parts for item in sublist]
+        # Which are the regions covered in each sequence?
+        indexed_match_parts = {}
+        one_oligo = True if len(oligos) == 1 else False
+        for blast in blasts:
+            oligo = blast['query']
+            for match in blast['matches']:
+                read = match['subject']
+                elongate_match_parts_till_global(match['match_parts'],
+                                                 query_length=oligo['length'],
+                                                 subject_length=read['length'],
+                                                 align_completely=QUERY)
+
+                #match_parts = [m['match_parts'] for m in blast['matches']]
+                match_parts = match['match_parts']
+                if one_oligo:
+                    indexed_match_parts[read['name']] = match_parts
+                else:
+                    try:
+                        indexed_match_parts[read['name']].extend(match_parts)
+                    except KeyError:
+                        indexed_match_parts[read['name']] = match_parts
+        return indexed_match_parts
+
+    def get_matched_segments_for_read(self, read_name):
+        'It returns the matched segments for any oligo'
+        ignore_elongation_shorter = 3
+
+        try:
+            match_parts = self._match_parts[read_name]
+            if read_name == 'seq5':
+                pass
+        except KeyError:
+            # There was no match in the blast
+            return None
+
         # Any of the match_parts has been elongated?
         elongated_match = False
         for m_p in match_parts:
             if ELONGATED in m_p and m_p[ELONGATED] > ignore_elongation_shorter:
                 elongated_match = True
-
-        segments = covered_segments(match_parts)
-        yield read, segments, elongated_match
+        segments = covered_segments(match_parts, in_query=False)
+        return segments, elongated_match
 
 
 def _split_by_mate_linker(seqrec, (segments, is_partial)):
@@ -129,24 +165,12 @@ def split_mates(seq_fhands, linkers=None):
     if linkers is None:
         linkers = LINKERS
 
-    def get_next_segment(linker_segments):
-        'It returns the next segments available'
-        try:
-            segments = linker_segments.next()
-        except StopIteration:
-            segments = None
-        return segments
-
-    linkers_fhand = NamedTemporaryFile(prefix='linkers.', suffix='.fasta')
-    write_seqrecords(linkers_fhand, LINKERS, file_format='fasta')
-
     for seq_fhand in seq_fhands:
-        linker_segments = _look_for_matching_segments(seq_fhand, linkers_fhand)
-        segments = get_next_segment(linker_segments)
+        matcher = _BlastMatcher(seq_fhand, linkers)
         for seqrec in read_seqrecords([seq_fhand]):
-            if segments is not None and segments[0]['name'] == seqrec.id:
-                split_seqs = _split_by_mate_linker(seqrec, segments[1:])
-                segments = get_next_segment(linker_segments)
+            segments = matcher.get_matched_segments_for_read(seqrec.id)
+            if segments is not None:
+                split_seqs = _split_by_mate_linker(seqrec, segments)
             else:
                 split_seqs = [seqrec]
             for seq in split_seqs:

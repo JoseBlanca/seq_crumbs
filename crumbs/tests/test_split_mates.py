@@ -27,7 +27,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.split_mates import (LINKERS, TITANIUM_LINKER, FLX_LINKER,
-                                split_mates, _look_for_matching_segments,
+                                split_mates, _BlastMatcher,
                                 _split_by_mate_linker)
 from crumbs.seqio import write_seqrecords
 from crumbs.tests.utils import BIN_DIR
@@ -55,12 +55,9 @@ class MateSplitterTest(unittest.TestCase):
         seq_5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
         mate_fhand = create_a_matepair_file()
 
-        linkers_fhand = NamedTemporaryFile(prefix='linkers.', suffix='.fasta')
-        write_seqrecords(linkers_fhand, LINKERS, file_format='fasta')
-
         expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
-        linker_region = list(_look_for_matching_segments(mate_fhand,
-                                                         linkers_fhand))[0][1]
+        matcher = _BlastMatcher(mate_fhand, LINKERS)
+        linker_region = matcher.get_matched_segments_for_read('seq1')[0]
         assert [expected_region] == linker_region
 
     def test_split_mate(self):
@@ -126,7 +123,7 @@ class MateSplitterTest(unittest.TestCase):
         mate_fhand.flush()
 
         out_fhand = StringIO()
-        seqs = split_mates([mate_fhand], out_fhand)
+        seqs = split_mates([mate_fhand])
         write_seqrecords(out_fhand, seqs, file_format='fasta')
 
         result = out_fhand.getvalue()
@@ -139,7 +136,7 @@ class MateSplitterTest(unittest.TestCase):
         xpect += '>seq3_pl.part1\n'
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTG\n'
         xpect += '>seq3_pl.part2\n'
-        xpect += 'TGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
+        xpect += 'GTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq4.fn\n'
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq5_mlc.part1\n'
@@ -170,6 +167,7 @@ class SplitMatesBinTest(unittest.TestCase):
         result = open(out_fhand.name).read()
         assert result.startswith('>seq1.f\n')
 
+
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'BlastParserTest.test_blast_tab_parser']
+    #import sys;sys.argv = ['', 'MateSplitterTest']
     unittest.main()

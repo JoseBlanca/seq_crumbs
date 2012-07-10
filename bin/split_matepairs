@@ -17,6 +17,9 @@
 
 import sys
 
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from crumbs.utils import (main, io_setup_argparse, get_inputs_from_args,
                           get_output_from_args)
 from crumbs.split_mates import (FWD_454_LINKERS, split_mates, FLX_LINKER,
@@ -56,12 +59,14 @@ def _parse_args(parser):
             # TODO, check that the linker is a DNA sequence
             new_linkers.append(linker)
 
+    linkers = [SeqRecord(Seq(l), id='linker' + str(i)) for i, l in enumerate(new_linkers)]
+
     out_fmt = parsed_args.out_format
     if not out_fmt:
         out_fmt = guess_format(in_fhands[0])
 
     return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'linkers': new_linkers, 'out_format': out_fmt}
+            'linkers': linkers, 'out_format': out_fmt}
 
 
 def split_matepairs():

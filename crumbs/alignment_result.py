@@ -282,19 +282,22 @@ def _group_match_parts_by_subject(match_parts):
         if ongoing_subject is None:
             parts.append(match_part['match_part'])
             ongoing_subject = subject
+            ongoing_subject_length = subject_length
         elif ongoing_subject == subject:
             parts.append(match_part['match_part'])
         else:
-            yield ongoing_subject, subject_length, parts
+            yield ongoing_subject, ongoing_subject_length, parts
             parts = [match_part['match_part']]
             ongoing_subject = subject
+            ongoing_subject_length = subject_length
     else:
-        yield ongoing_subject, subject_length, parts
+        yield ongoing_subject, ongoing_subject_length, parts
 
 
 def _tabular_blast_parser(fhand, line_format):
     'Parses the tabular output of a blast result and yields Alignment result'
-    fhand.seek(0)
+    if hasattr(fhand, 'seek'):
+        fhand.seek(0)
 
     for qname, qlen, match_parts in _lines_for_every_tab_blast(fhand,
                                                                line_format):
@@ -986,6 +989,13 @@ def _create_fix_matches_mapper():
     return _fix_matches
 
 
+ELONGATED = 'elongated'
+SUBJECT = 'subject'
+QUERY = 'query'
+START = 0
+END = 1
+
+
 def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
     '''Given a list of match_parts it returns the coverd segments.
 
@@ -998,8 +1008,6 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
     '''
 
     #we collect all start and ends
-    START = 0
-    END = 1
     limits = []     # all hsp starts and ends
     for match_part in match_parts:
         if in_query:
@@ -1008,6 +1016,8 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
         else:
             start = match_part['subject_start']
             end = match_part['subject_end']
+        if start > end:     # a revesed item
+            start, end = end, start
         limit_1 = (START, start)
         limit_2 = (END, end)
         limits.append(limit_1)
@@ -1052,18 +1062,18 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
     return segments
 
 
-ELONGATED = 'elongated'
-
-
-def elongate_match_part_till_global(match_part, query_length, subject_length):
+def elongate_match_part_till_global(match_part, query_length, subject_length,
+                                    align_completely):
     '''It streches the match_part to convert it in a global alignment.
 
-    We asume that the subject should be completely aligned and we strech the
-    match part to do it.
+    We asume that the subject or the query should be completely aligned and we
+    strech the match part to do it.
     The elongated match_parts will be marked unless the segment added is
     shorter than the mark_strech_longer integer.
 
     '''
+    assert align_completely in (SUBJECT, QUERY)
+    # start and ends
     if match_part['subject_start'] <= match_part['subject_end']:
         subject_start = match_part['subject_start']
         subject_end = match_part['subject_end']
@@ -1081,9 +1091,26 @@ def elongate_match_part_till_global(match_part, query_length, subject_length):
         query_end = match_part['query_start']
         query_rev = True
 
-    stretch_left = subject_start
-    if stretch_left > query_start:
+    # how much do we elongate?
+    if align_completely == SUBJECT:
+        stretch_left = subject_start
+        max_left_strecth = query_start
+
+        stretch_right = subject_length - subject_end - 1
+        max_right_stretch = query_length - query_end - 1
+    else:
         stretch_left = query_start
+        max_left_strecth = subject_start
+
+        stretch_right = query_length - query_end - 1
+        max_right_stretch = subject_length - subject_end - 1
+
+    if stretch_left > max_left_strecth:
+        stretch_left = max_left_strecth
+    if stretch_right > max_right_stretch:
+        stretch_right = max_right_stretch
+
+    # The elongation
     if subject_rev:
         match_part['subject_end'] -= stretch_left
     else:
@@ -1093,10 +1120,6 @@ def elongate_match_part_till_global(match_part, query_length, subject_length):
     else:
         match_part['query_start'] -= stretch_left
 
-    stretch_right = subject_length - subject_end - 1
-    max_query_stretch = query_length - query_end - 1
-    if stretch_right > max_query_stretch:
-        stretch_right = max_query_stretch
     if subject_rev:
         match_part['subject_start'] += stretch_right
     else:
@@ -1114,7 +1137,7 @@ def elongate_match_part_till_global(match_part, query_length, subject_length):
 
 
 def elongate_match_parts_till_global(match_parts, query_length,
-                                     subject_length):
+                                     subject_length, align_completely):
     '''It streches the match_part to convert it in a global alignment.
 
     We asume that the subject should be completely aligned and we strech the
@@ -1123,7 +1146,7 @@ def elongate_match_parts_till_global(match_parts, query_length,
     shorter than the mark_strech_longer integer.
 
     '''
-    return [elongate_match_part_till_global(mp, query_length, subject_length) for mp in match_parts]
+    return [elongate_match_part_till_global(mp, query_length, subject_length, align_completely=align_completely) for mp in match_parts]
 
 
 def _match_length(match, length_from_query):
