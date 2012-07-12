@@ -26,6 +26,10 @@ import shutil
 from subprocess import check_call, Popen
 import platform
 import argparse
+import io
+from StringIO import StringIO
+
+from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from crumbs.third_party import cgitb
 from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
@@ -38,13 +42,11 @@ STDIN = 'stdin'
 STDOUT = 'stdout'
 INFILES = 'infiles'
 OUTFILE = 'output'
+SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
 
 def main(funct):
     'The main function of a script'
-    if len(sys.argv) == 1:
-        sys.argv = sys.argv + ['-h']
-
     argv = sys.argv
     if '--error_log' in argv:
         error_fpath_index = argv.index('--error_log') + 1
@@ -96,32 +98,6 @@ def main(funct):
         fhand.write('\nThe command was:\n' + ' '.join(sys.argv) + '\n')
         fhand.close()
         raise
-
-
-def get_inputs_from_args(parsed_args):
-    'It returns the input fhand'
-    in_fpaths = getattr(parsed_args, INFILES)
-    if in_fpaths == STDIN:
-        in_fhands = [sys.stdin]
-    else:
-        in_fhands = []
-        for in_fpath in in_fpaths:
-            if os.path.exists(in_fpath):
-                in_fhand = open(in_fpath, 'rt')
-            else:
-                raise FileNotFoundError('A file was not found: ' + in_fpath)
-            in_fhands.append(in_fhand)
-    return in_fhands
-
-
-def get_output_from_args(parsed_args):
-    'It returns the out_fhand'
-    out_fpath = getattr(parsed_args, OUTFILE)
-    if out_fpath == STDOUT:
-        out_fhand = sys.stdout
-    else:
-        out_fhand = open(out_fpath, 'w')
-    return out_fhand
 
 
 class TemporaryDir(object):
@@ -265,11 +241,120 @@ def get_binary_path(binary_name):
     raise MissingBinaryError(msg)
 
 
-def io_setup_argparse():
-    'It prepares the command line arguments. Input and output'
-    parser = argparse.ArgumentParser()
-    parser.add_argument(INFILES, default=STDIN, nargs='*',
-                        help="Sequence input file to process")
-    parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
-                        help="Sequence output file to process")
+def create_io_argparse(**kwargs):
+    'It returns a parser with several inputs and one output'
+    parser = argparse.ArgumentParser(**kwargs)
+
+    parser.add_argument('input', help='Sequence input files to process',
+                        default=sys.stdin, nargs='*',
+                        type=argparse.FileType('rt'))
+
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+                        help='Sequence output file to process',
+                        type=argparse.FileType('wt'))
     return parser
+
+
+def create_basic_argparse(**kwargs):
+    'It returns a cmd parser with inputs, output and format'
+    parser = create_io_argparse(**kwargs)
+    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
+    parser.add_argument('-f', '--out_format', dest='out_format',
+                        help='format of the output file',
+                        choices=SUPPORTED_OUTPUT_FORMATS)
+    return parser
+
+
+def parse_basic_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+    # we have to wrap the file in a BufferedReader to allow peeking into stdin
+    wrapped_fhands = []
+    in_fhands = parsed_args.input
+    for fhand in in_fhands:
+        fhand = wrap_in_buffered_reader(fhand)
+        wrapped_fhands.append(fhand)
+
+    out_fhand = getattr(parsed_args, OUTFILE)
+
+    out_format = parsed_args.out_format
+    # The default format is the same as the first file
+    if not out_format:
+        out_format = guess_format(wrapped_fhands[0])
+    # The original fhands should be stored, because otherwise they would be
+    # closed
+    args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
+            'out_format': out_format, 'original_in_fhands': in_fhands}
+    return args, parsed_args
+
+
+def wrap_in_buffered_reader(fhand):
+    'It wraps the given file in a peekable BufferedReader'
+    fhand = io.open(fhand.fileno(), mode='rb')  # with text there's no peek
+
+    return fhand
+
+
+def _guess_fastq_format(fhand):
+    '''It guesses the format of fastq files.
+
+    It ignores the solexa fastq version.
+    '''
+    chunk_size = 50000
+    chunk = _peek_chunk_from_file(fhand, chunk_size)
+
+    fmt_fhand = StringIO(chunk)
+    try:
+        for seq in FastqGeneralIterator(fmt_fhand):
+            qual = seq[2]
+            for letter in qual:
+                num = ord(letter)
+                if num < 64:
+                    return 'fastq'
+                elif num > 73:
+                    return 'fastq-illumina'
+    except ValueError:
+        raise UnknownFormatError('Malformed fastq')
+    msg = 'It is fastq file, but we do not know if sanger or illumina'
+    raise UnknownFormatError(msg)
+
+
+def _peek_chunk_from_file(fhand, chunk_size):
+    'It returns the begining of a file without moving the pointer'
+    peekable = True if hasattr(fhand, 'peek') else False
+    if peekable:
+        chunk = fhand.peek(chunk_size)
+    else:
+        fhand.seek(0)
+        chunk = fhand.read(chunk_size)
+        fhand.seek(0)
+    return chunk
+
+
+def guess_format(fhand):
+    '''It guesses the format of the sequence file.
+
+    It does ignore the solexa fastq version.
+    '''
+    chunk_size = 1024
+    chunk = _peek_chunk_from_file(fhand, chunk_size)
+
+    if not chunk:
+        raise UnknownFormatError('The file is empty')
+    lines = chunk.splitlines()
+    if chunk.startswith('>'):
+        if lines[1].startswith('>'):
+            raise UnknownFormatError('Malformed fasta')
+        else:
+            first_item = lines[1].strip().split()[0]
+            if first_item.isdigit():
+                return 'qual'
+            else:
+                return 'fasta'
+    elif chunk.startswith('@'):
+        return _guess_fastq_format(fhand)
+    elif chunk.startswith('LOCUS'):
+        return 'genbank'
+    elif chunk.startswith('ID'):
+        return 'embl'
+    raise UnknownFormatError('Sequence file of unknown format.')

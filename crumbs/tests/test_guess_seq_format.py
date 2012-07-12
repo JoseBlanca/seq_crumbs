@@ -36,15 +36,15 @@ class GuessFormat(unittest.TestCase):
     def test_guess_format(self):
         'It tests guess_seq_format'
 
-        # no arguments
         guess_bin = os.path.join(BIN_DIR, 'guess_seq_format')
-        assert check_output([guess_bin]).startswith('usage')
+
+        assert 'usage' in check_output([guess_bin, '-h'])
 
         # a fasta file
         fasta_fhand = NamedTemporaryFile()
         fasta_fhand.write('>seq\nACTA\n')
         fasta_fhand.flush()
-        assert check_output([guess_bin, fasta_fhand.name]).startswith('fasta')
+        assert check_output([guess_bin, fasta_fhand.name]) == 'fasta\n'
 
         # Unknown_format
         bad_fhand = NamedTemporaryFile()
@@ -56,6 +56,15 @@ class GuessFormat(unittest.TestCase):
             self.fail('Error expected')
         except CalledProcessError:
             assert open(stderr.name).read().startswith('Sequence file of unkn')
+
+    def test_stdin(self):
+        'It works with stdin'
+        guess_bin = os.path.join(BIN_DIR, 'guess_seq_format')
+        fasta_fhand = NamedTemporaryFile()
+        fasta_fhand.write('>seq\nACTA\n')
+        fasta_fhand.flush()
+        fmt = check_output([guess_bin], stdin=open(fasta_fhand.name))
+        assert fmt == 'fasta\n'
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

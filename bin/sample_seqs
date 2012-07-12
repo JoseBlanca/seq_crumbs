@@ -17,17 +17,40 @@
 
 import sys
 
-from crumbs.utils import main
-from crumbs.sample import (get_random_seqs, sample_setup_argparse,
-                           sample_parse_args)
-from crumbs.seqio import write_seqrecords, guess_format
+from crumbs.iterutils import sample
+from crumbs.utils import main, create_basic_argparse, parse_basic_args
+from crumbs.seqio import (write_seqrecords, guess_format, read_seqrecords,
+                          count_seqs_in_files)
 from crumbs.exceptions import SampleSizeError
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    dsc = 'It selects some random sequences from the given files'
+    parser = create_basic_argparse(description=dsc)
+    parser.add_argument('-n', '--num_seqs', default=10, type=int,
+                        dest='num_seqs', help='Number of sequences to print')
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['num_seqs'] = parsed_args.num_seqs
+    return args
+
+
+def get_random_seqs(fhands, num_seqs):
+    'it gets the random seqs'
+    total_seqs = count_seqs_in_files(fhands)
+    seqs = read_seqrecords(fhands)
+    return sample(seqs, total_seqs, num_seqs)
 
 
 def sample_seqs():
     'The main function of the head binary'
-    parser = sample_setup_argparse()
-    args = sample_parse_args(parser)
+    parser = _setup_argparse()
+    args = _parse_args(parser)
 
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']

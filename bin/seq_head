@@ -17,9 +17,24 @@
 
 import sys
 
-from crumbs.utils import main
-from crumbs.sample import (sample_setup_argparse, sample_parse_args)
+from crumbs.utils import main, create_basic_argparse, parse_basic_args
 from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Get first seqs from file[s]'
+    parser = create_basic_argparse(description=description)
+    parser.add_argument('-n', '--num_seqs', default=10, type=int,
+                        dest='num_seqs', help='Number of sequences to print')
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['num_seqs'] = parsed_args.num_seqs
+    return args
 
 
 def _get_first_seqs(fhands, num_seqs):
@@ -34,8 +49,8 @@ def _get_first_seqs(fhands, num_seqs):
 
 def get_seqs():
     'The main function of the head binary'
-    parser = sample_setup_argparse()
-    args = sample_parse_args(parser)
+    parser = _setup_argparse()
+    args = _parse_args(parser)
 
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']

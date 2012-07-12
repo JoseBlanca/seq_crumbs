@@ -16,11 +16,9 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import os.path
 import argparse
 
-from crumbs.utils import main
-from crumbs.exceptions import FileNotFoundError
+from crumbs.utils import main, wrap_in_buffered_reader
 from crumbs.seqio import guess_format
 
 
@@ -28,22 +26,22 @@ def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It guesses the format of the sequence input file.'
     epilog = 'This program ignores the possibility of the old solexa fastq '
-    epilog += 'format'
+    epilog += 'format.'
+    hlp = 'Sequence input file to process (default stdin)'
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument('input', help="Sequence input file to process")
-
+    parser.add_argument('input', help=hlp, default=sys.stdin, nargs='?',
+                        type=argparse.FileType('r'))
     return parser
 
 
 def _parse_args(parser):
     '''It parses the command line and it returns a dict with the arguments.'''
     parsed_args = parser.parse_args()
-    in_fpath = parsed_args.input
-    if os.path.exists(in_fpath):
-        in_fhand = open(in_fpath, 'rb')
-    else:
-        raise FileNotFoundError('The file was not found: ' + in_fpath)
-    args = {'in_fhand': in_fhand}
+    in_fhand = parsed_args.input
+
+    fhand = wrap_in_buffered_reader(in_fhand)
+
+    args = {'in_fhand': fhand, 'original_in_fhand': in_fhand}
     return args
 
 
@@ -52,7 +50,6 @@ def guess_seq_format():
 
     parser = _setup_argparse()
     args = _parse_args(parser)
-
     fmt = guess_format(args['in_fhand'])
     sys.stdout.write(fmt + '\n')
 

@@ -26,7 +26,7 @@ from crumbs.seqio import count_seqs_in_files
 # pylint: disable=R0904
 
 
-class CatHeadTest(unittest.TestCase):
+class CatTest(unittest.TestCase):
     'It tests the cat seqsbinary'
     counter = 1
 
@@ -41,9 +41,11 @@ class CatHeadTest(unittest.TestCase):
     def test_cat_seqs(self):
         'It test the cat seqs'
         cat_bin = os.path.join(BIN_DIR, 'cat_seqs')
-        assert check_output([cat_bin]).startswith('usage')
 
-        #fasta to fasta
+        # help
+        assert check_output([cat_bin, '-h']).startswith('usage')
+
+        # fasta to fasta
         in_fhand1 = self.make_fasta()
         in_fhand2 = self.make_fasta()
         result = check_output([cat_bin, '-f', 'fasta', in_fhand1.name,
@@ -59,6 +61,31 @@ class CatHeadTest(unittest.TestCase):
         except CalledProcessError:
             assert 'output format is incompatible'  in open(stderr.name).read()
 
+        # from fastq to fasta
+        fhand = NamedTemporaryFile()
+        fhand.write('@seq1\nACTA\n+\nqqqq\n')
+        fhand.flush()
+        result = check_output([cat_bin, '-f', 'fasta', fhand.name])
+        assert result == '>seq1\nACTA\n'
+
+        # No input
+        fhand = NamedTemporaryFile()
+        fhand.write('')
+        fhand.flush()
+        try:
+            stderr = NamedTemporaryFile()
+            result = check_output([cat_bin, '-f', 'fasta', fhand.name],
+                                  stderr=stderr)
+            self.fail()
+        except CalledProcessError:
+            assert 'The file is empty'  in open(stderr.name).read()
+
+        # No format
+        in_fhand1 = self.make_fasta()
+        in_fhand2 = self.make_fasta()
+        result = check_output([cat_bin, in_fhand1.name, in_fhand2.name])
+        assert '>seq3\nACTATCATGGCAGATA\n>seq4\nACTATCATGGCAGATA' in result
+
 
 class SeqHeadTest(unittest.TestCase):
     'It tests the seq head binary'
@@ -66,7 +93,7 @@ class SeqHeadTest(unittest.TestCase):
     def test_seq_head(self):
         'It tests the seq head'
         head_bin = os.path.join(BIN_DIR, 'seq_head')
-        assert check_output([head_bin]).startswith('usage')
+        #assert check_output([head_bin, '-h']).startswith('usage')
 
         #get one seq
         fasta_fhand = NamedTemporaryFile()
@@ -83,7 +110,7 @@ class SampleSeqTest(unittest.TestCase):
     def test_sample_seq(self):
         'It tests the seq head'
         sample_seq = os.path.join(BIN_DIR, 'sample_seqs')
-        assert check_output([sample_seq]).startswith('usage')
+        assert check_output([sample_seq, '-h']).startswith('usage')
 
         fasta_fhand = NamedTemporaryFile()
         fasta_fhand.write('>seq\nACTA\n>seq2\nACTA\n>seq3\nACTA\n')
@@ -91,12 +118,12 @@ class SampleSeqTest(unittest.TestCase):
 
         #random sample
         result = check_output([sample_seq, '-n', '1', fasta_fhand.name])
-        assert count_seqs_in_files([StringIO(result)]) == 1
+        assert count_seqs_in_files([StringIO(result)], ['fasta']) == 1
 
         #random sample
         result = check_output([sample_seq, '-n', '2', fasta_fhand.name])
-        assert count_seqs_in_files([StringIO(result)]) == 2
+        assert count_seqs_in_files([StringIO(result)], ['fasta']) == 2
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    #import sys;sys.argv = ['', 'CatTest']
     unittest.main()

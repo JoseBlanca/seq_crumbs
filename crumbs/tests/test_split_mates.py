@@ -155,7 +155,7 @@ class SplitMatesBinTest(unittest.TestCase):
     def test_matepair_bin(self):
         'It tests the sff_extract binary'
         mate_bin = os.path.join(BIN_DIR, 'split_matepairs')
-        stdout = check_output([mate_bin])
+        stdout = check_output([mate_bin, '-h'])
         assert stdout.startswith('usage')
 
         mate_fhand = create_a_matepair_file()

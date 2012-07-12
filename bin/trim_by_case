@@ -15,46 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-import argparse
 import sys
 
-from crumbs.utils import (STDIN, STDOUT, get_inputs_from_args,
-                          get_output_from_args, INFILES, OUTFILE, main)
-from crumbs.seqio import read_seqrecords, write_seqrecords, guess_format
+from crumbs.utils import main, create_basic_argparse, parse_basic_args
+from crumbs.seqio import read_seqrecords, write_seqrecords
 from crumbs.trim import trim_lowercased_seqs
-
-
-def sample_setup_argparse():
-    'It prepares the command line argument parsing.'
-    description = 'Get first seqs from file[s]'
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument(INFILES, default=STDIN, nargs='*',
-                        help="Sequence input file to process")
-    parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
-                        help="Sequence output file to process")
-    return parser
-
-
-def sample_parse_args(parser):
-    '''It parses the command line and it returns a dict with the arguments.'''
-    parsed_args = parser.parse_args()
-    in_fhands = get_inputs_from_args(parsed_args)
-    out_fhand = get_output_from_args(parsed_args)
-
-    return {'out_fhand': out_fhand, 'in_fhands': in_fhands}
 
 
 def trim_by_case():
     'The main function of the head binary'
-    parser = sample_setup_argparse()
-    args = sample_parse_args(parser)
+    description = 'Get first seqs from file[s]'
+    parser = create_basic_argparse(description=description)
+    args = parse_basic_args(parser)[0]
 
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
     seqs = read_seqrecords(in_fhands)
     seqs = trim_lowercased_seqs(seqs)
-    write_seqrecords(out_fhand, seqs, guess_format(in_fhands[0]))
+    write_seqrecords(out_fhand, seqs, args['out_format'])
 
 if __name__ == '__main__':
     sys.exit(main(trim_by_case))

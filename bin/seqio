@@ -18,34 +18,62 @@
 import sys
 import argparse
 
-from crumbs.utils import (main, STDIN, STDOUT, get_inputs_from_args,
-                                INFILES, OUTFILE)
+from crumbs.utils import (main, OUTFILE, wrap_in_buffered_reader,
+                          SUPPORTED_OUTPUT_FORMATS)
 from crumbs.seqio import guess_format, seqio
 from crumbs.exceptions import TooManyFiles, WrongFormatError
-
-
-SUPPORTED_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'Get first seqs from file[s]'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument(INFILES, default=STDIN, nargs='*',
-                        help="Sequence input file to process")
-    parser.add_argument('-o', '--outfile', default=STDOUT, dest=OUTFILE,
-                        nargs='*', help="Sequence output file to process")
-    parser.add_argument('-f', '--format', dest='format', help='Output format',
-                        required=True, choices=SUPPORTED_FORMATS)
+
+    parser.add_argument('input', help='Sequence input files to process',
+                        default=sys.stdin, nargs='*',
+                        type=argparse.FileType('rt'))
+
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+                        help='Sequence output file', nargs='*',
+                        type=argparse.FileType('wt'))
+
+    parser.add_argument('-f', '--out_format', dest='out_format',
+                        help='format of the output file',
+                        choices=SUPPORTED_OUTPUT_FORMATS)
 
     return parser
 
 
+def _parse_basic_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+    # we have to wrap the file in a BufferedReader to allow peeking into stdin
+    wrapped_fhands = []
+    in_fhands = parsed_args.input
+    for fhand in in_fhands:
+        fhand = wrap_in_buffered_reader(fhand)
+        wrapped_fhands.append(fhand)
+
+    out_fhands = getattr(parsed_args, OUTFILE)
+    if not isinstance(out_fhands, list):
+        out_fhands = [out_fhands]
+
+    out_format = parsed_args.out_format
+    # The default format is the same as the first file
+    if not out_format:
+        out_format = guess_format(wrapped_fhands[0])
+    # The original fhands should be stored, because otherwise they would be
+    # closed
+    args = {'out_fhands': out_fhands, 'in_fhands': wrapped_fhands,
+            'out_format': out_format, 'original_in_fhands': in_fhands}
+    return args
+
+
 def _parse_args(parser):
     '''It parses the command line and it returns a dict with the arguments.'''
-    parsed_args = parser.parse_args()
+    args = _parse_basic_args(parser)
 
-    in_fhands = get_inputs_from_args(parsed_args)
+    in_fhands = args['in_fhands']
     if len(in_fhands) == 2:
         # 2 for fasta + qual and 1 for everything else
         formats = [guess_format(fhand) for fhand in in_fhands]
@@ -59,14 +87,10 @@ def _parse_args(parser):
         msg %= str(len(in_fhands))
         raise TooManyFiles(msg)
 
-    fmt = parsed_args.format
-
+    fmt = args['out_format']
     # output fhands
-    out_fpaths = getattr(parsed_args, OUTFILE)
-    if out_fpaths == STDOUT:
-        out_fhands = [sys.stdout]
-    else:
-        out_fhands = [open(out_fpath, 'w') for out_fpath in out_fpaths]
+
+    out_fhands = args['out_fhands']
     if len(out_fhands) > 2:
         msg = 'This command accepts, 0 output files (stout), 2 files (fasta + '
         msg += 'qual) or 1 file (all other output formats, %s were given.'
@@ -78,7 +102,7 @@ def _parse_args(parser):
         raise WrongFormatError(msg)
 
     return {'out_fhands': out_fhands, 'in_fhands': in_fhands,
-            'format': fmt}
+            'format': fmt, 'original_in_fhands': args['original_in_fhands']}
 
 
 def main_seqio():

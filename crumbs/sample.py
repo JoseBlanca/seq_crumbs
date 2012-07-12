@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-from crumbs.iterutils import sample
+
 from crumbs.utils import (get_inputs_from_args, get_output_from_args,
                           io_setup_argparse)
 from crumbs.seqio import read_seqrecords, count_seqs_in_files
@@ -40,8 +40,4 @@ def sample_parse_args(parser):
             'num_seqs': num_seqs}
 
 
-def get_random_seqs(fhands, num_seqs):
-    'it gets the random seqs'
-    total_seqs = count_seqs_in_files(fhands)
-    seqs = read_seqrecords(fhands)
-    return sample(seqs, total_seqs, num_seqs)
+

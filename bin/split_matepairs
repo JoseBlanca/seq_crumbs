@@ -20,8 +20,7 @@ import sys
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.utils import (main, io_setup_argparse, get_inputs_from_args,
-                          get_output_from_args)
+from crumbs.utils import (main, parse_basic_args, create_basic_argparse)
 from crumbs.split_mates import (FWD_454_LINKERS, split_mates, FLX_LINKER,
                                 TITANIUM_LINKER)
 from crumbs.seqio import guess_format, write_seqrecords
@@ -29,11 +28,9 @@ from crumbs.seqio import guess_format, write_seqrecords
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
-    parser = io_setup_argparse()
-    parser.description = 'It splits mate pair sequences'
-    parser.add_argument('-f', '--out_format', dest='out_format',
-                        help='format of the output file',
-                        choices=['fasta', 'fastq'])
+    description = 'It splits mate pair sequences'
+    parser = create_basic_argparse(description=description)
+
     hlp = 'platform or linker sequence (several can be given) (default 454)'
     parser.add_argument('-l', '--linker', dest='linkers', help=hlp,
                         action='append', required=True)
@@ -42,9 +39,7 @@ def _setup_argparse():
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
-    parsed_args = parser.parse_args()
-    in_fhands = get_inputs_from_args(parsed_args)
-    out_fhand = get_output_from_args(parsed_args)
+    args, parsed_args = parse_basic_args(parser)
 
     linkers = parsed_args.linkers
     new_linkers = []
@@ -61,12 +56,9 @@ def _parse_args(parser):
 
     linkers = [SeqRecord(Seq(l), id='linker' + str(i)) for i, l in enumerate(new_linkers)]
 
-    out_fmt = parsed_args.out_format
-    if not out_fmt:
-        out_fmt = guess_format(in_fhands[0])
+    args['linkers'] = linkers
 
-    return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'linkers': linkers, 'out_format': out_fmt}
+    return args
 
 
 def split_matepairs():
@@ -76,7 +68,6 @@ def split_matepairs():
 
     seqs = split_mates(seq_fhands=args['in_fhands'], linkers=args['linkers'])
     write_seqrecords(args['out_fhand'], seqs, args['out_format'])
-
 
 if __name__ == '__main__':
     sys.exit(main(split_matepairs))

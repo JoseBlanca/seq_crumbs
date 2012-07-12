@@ -23,8 +23,7 @@ from subprocess import check_output, CalledProcessError
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.seqio import guess_format, seqio, write_seqrecords, read_seqrecords
-from crumbs.exceptions import UnknownFormatError
+from crumbs.seqio import seqio, write_seqrecords, read_seqrecords
 from crumbs.tests.utils import BIN_DIR
 
 # pylint: disable=R0201
@@ -34,58 +33,6 @@ FASTA = ">seq1\natctagtc\n>seq2\natctagtc\n>seq3\natctagtc\n"
 QUAL = ">seq1\n30 30 30 30 30 30 30 30\n>seq2\n30 30 30 30 30 30 30 30\n"
 QUAL += ">seq3\n30 30 30 30 30 30 30 30\n"
 FASTQ = '@seq1\natcgt\n+\n?????\n@seq2\natcgt\n+\n?????\n@seq3\natcgt\n+\n?????\n'
-
-
-class GuessFormatTest(unittest.TestCase):
-    'It tests the function that guess the sequence format'
-
-    def test_fasta(self):
-        'It guess fasta formats'
-        fhand = StringIO('>seq\nACTC\n')
-        assert guess_format(fhand) == 'fasta'
-
-        # qual
-        fhand = StringIO('>seq\n10 20\n')
-        assert guess_format(fhand) == 'qual'
-
-        # qual
-        fhand = StringIO(QUAL)
-        assert guess_format(fhand) == 'qual'
-
-    def test_unkown(self):
-        'It tests unkown formats'
-        fhand = StringIO('xseq\nACTC\n')
-        try:
-            guess_format(fhand)
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
-            pass
-
-    def test_empty_file(self):
-        'It guesses the format of an empty file'
-        fhand = StringIO()
-        try:
-            guess_format(fhand)
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
-            pass
-
-    def test_fastq(self):
-        'It guesses the format for the solexa and illumina fastq'
-
-        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
-        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
-        fhand = StringIO(txt)
-        assert guess_format(fhand) == 'fastq-illumina'
-
-        fhand = StringIO('@HWI-EAS209\n@')
-        try:
-            assert guess_format(fhand) == 'fasta'
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
-            pass
 
 
 class SeqIOTest(unittest.TestCase):
@@ -168,7 +115,7 @@ class SeqioBinTest(unittest.TestCase):
     def test_seqio_bin(self):
         'It test the seqio binary'
         seqio_bin = os.path.join(BIN_DIR, 'seqio')
-        assert check_output([seqio_bin]).startswith('usage')
+        assert 'usage' in check_output([seqio_bin, '-h'])
 
         #get one se
         fasta_fhand = self._make_fhand(FASTA)
@@ -181,7 +128,7 @@ class SeqioBinTest(unittest.TestCase):
                       fasta_fhand.name, qual_fhand.name])
         assert "@seq1\natctagtc\n+" in  open(out_fhand.name).read()
 
-        #fastq to fast-qual
+        # fastq to fast-qual
         fasta_out_fhand = NamedTemporaryFile()
         qual_out_fhand = NamedTemporaryFile()
         check_output([seqio_bin, '-o', fasta_out_fhand.name,

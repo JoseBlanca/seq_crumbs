@@ -17,35 +17,14 @@
 
 import sys
 
-from crumbs.utils import (main, get_inputs_from_args, get_output_from_args,
-                          io_setup_argparse)
+from crumbs.utils import (main, create_basic_argparse, parse_basic_args)
 from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
 from crumbs.exceptions import IncompatibleFormatError
 
 
-def _setup_argparse():
-    'It prepares the command line argument parsing.'
-    parser = io_setup_argparse()
-    parser.description = 'cat seqs from various files to one file'
-    parser.add_argument('-f', '--out_format', dest='out_format',
-                        help='format of the output file',
-                        choices=['fasta', 'fastq'])
-    return parser
-
-
-def _parse_args(parser):
-    'It parses the command line and it returns a dict with the arguments.'
-    parsed_args = parser.parse_args()
-    in_fhands = get_inputs_from_args(parsed_args)
-    out_fhand = get_output_from_args(parsed_args)
-    out_format = parsed_args.out_format
-    return {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'out_format': out_format}
-
-
 def check_format_incompatibilities(in_fhands, out_format):
     'It checks for incompatible formats when doing a cat'
-    if out_format == 'fasta':
+    if out_format == 'fasta' or out_format is None:
         return
 
     in_formats = set([guess_format(in_fhand) for in_fhand in in_fhands])
@@ -57,8 +36,9 @@ def check_format_incompatibilities(in_fhands, out_format):
 
 def cat_seqs():
     'it cats the sequences of all input files in one file'
-    parser = _setup_argparse()
-    args = _parse_args(parser)
+    dsc = 'concatenate seqs from various files to one file'
+    parser = create_basic_argparse(description=dsc)
+    args = parse_basic_args(parser)[0]
 
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
