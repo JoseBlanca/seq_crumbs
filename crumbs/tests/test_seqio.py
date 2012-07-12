@@ -172,6 +172,14 @@ class SeqioBinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'Lengths of sequence and qualit' in open(stderr.name).read()
 
+        #test stdin
+        fasta_out_fhand = NamedTemporaryFile()
+        check_output([seqio_bin, '-o', fasta_out_fhand.name, '-f', 'fasta'],
+                      stdin=open(fastq_fhand.name))
+        assert ">seq1\natcgt" in  open(fasta_out_fhand.name).read()
+        assert ">seq1\n30 30 30 30 30" in  open(qual_out_fhand.name).read()
+
+
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'class.fuanction']
     unittest.main()

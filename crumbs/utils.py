@@ -270,13 +270,16 @@ def parse_basic_args(parser):
     parsed_args = parser.parse_args()
     # we have to wrap the file in a BufferedReader to allow peeking into stdin
     wrapped_fhands = []
+    # if input is stdin it will be a fhand not a list of fhands.
+    # we have to convert to a list
     in_fhands = parsed_args.input
+    if not isinstance(in_fhands, list):
+        in_fhands = [in_fhands]
     for fhand in in_fhands:
         fhand = wrap_in_buffered_reader(fhand)
         wrapped_fhands.append(fhand)
 
     out_fhand = getattr(parsed_args, OUTFILE)
-
     out_format = parsed_args.out_format
     # The default format is the same as the first file
     if not out_format:
@@ -338,7 +341,6 @@ def guess_format(fhand):
     '''
     chunk_size = 1024
     chunk = _peek_chunk_from_file(fhand, chunk_size)
-
     if not chunk:
         raise UnknownFormatError('The file is empty')
     lines = chunk.splitlines()
