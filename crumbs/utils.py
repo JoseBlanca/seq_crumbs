@@ -325,14 +325,16 @@ def _guess_fastq_format(fhand):
 
 def fhand_is_seekable(fhand):
     'It returns True if the fhand is seekable'
-    #StringIO is seekable but has no seekable attribute
-    print
-    if (hasattr(fhand, 'seekable') and fhand.seekable() or
-        isinstance(fhand, StringIO.StringIO) or
-        isinstance(fhand, io.StringIO) or
-        hasattr(fhand, 'getvalue')):
-        return True
-    else:
+    try:
+        fhand.seek
+        try:
+            if fhand.seekable():
+                return True
+            else:
+                return False
+        except AttributeError:
+            return True
+    except AttributeError:
         return False
 
 

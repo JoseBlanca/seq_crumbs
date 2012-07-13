@@ -82,4 +82,3 @@ class group_in_packets(object):
                 self._current_count += 1
             else:
                 raise StopIteration
-

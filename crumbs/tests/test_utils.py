@@ -17,10 +17,11 @@ import unittest
 import os
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
-from StringIO import StringIO
+from cStringIO import StringIO
 
 from crumbs.utils import (TemporaryDir, rel_symlink, wrap_in_buffered_reader,
-                          check_process_finishes, popen, guess_format)
+                          check_process_finishes, popen, guess_format,
+                          fhand_is_seekable)
 from crumbs.exceptions import (ExternalBinaryError, MissingBinaryError,
                                UnknownFormatError)
 
@@ -153,6 +154,37 @@ class GuessFormatTest(unittest.TestCase):
             self.fail('UnknownFormatError expected')
         except UnknownFormatError:
             pass
+
+    def test_is_seekable(self):
+        'It tests wether the fhands are seekable or not'
+
+        # StringIO
+        fhand = StringIO('hola')
+        assert fhand_is_seekable(fhand)
+
+        # standard file
+        fhand = NamedTemporaryFile()
+        fhand.seek(0)
+        assert fhand_is_seekable(fhand)
+
+        # a wrapped BufferedReader
+        fhand2 = wrap_in_buffered_reader(fhand)
+        assert fhand_is_seekable(fhand2)
+
+        class NonSeekable(object):
+            'Just for testing'
+            pass
+
+        assert not fhand_is_seekable(NonSeekable())
+
+        class NonSeekable2(object):
+            def seek(self):
+                pass
+
+            def seekable(self):
+                return False
+
+        assert not fhand_is_seekable(NonSeekable2())
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
