@@ -45,13 +45,22 @@ def _parse_args(parser):
 
 def get_random_seqs(fhands, num_seqs):
     'it gets the random seqs'
-    if len(fhands) == 1 and not fhand_is_seekable(fhands[0]):
-        fhand = NamedTemporaryFile()
-        copyfileobj(fhands[0], fhand)
-        fhand.flush()
-        fhand.seek(0)
-        fhands = [fhand]
+    seekable_fhands = []
+    for fhand in fhands:
+        if not fhand_is_seekable(fhand):
+            fhand = NamedTemporaryFile()
+            copyfileobj(fhands[0], fhand)
+            fhand.flush()
+            fhand.seek(0)
+        seekable_fhands.append(fhand)
+    fhands = seekable_fhands
+
     total_seqs = count_seqs_in_files(fhands)
+
+    #we go to the start of every file
+    for fhand in fhands:
+        fhand.seek(0)
+
     seqs = read_seqrecords(fhands)
     return sample(seqs, total_seqs, num_seqs)
 

@@ -175,5 +175,4 @@ def count_seqs_in_files(fhands, file_formats=None):
             count += length(QualityIO.FastqGeneralIterator(fhand))
         else:
             count += length(read_seqrecords([fhand]))
-        fhand.seek(0)
     return count
