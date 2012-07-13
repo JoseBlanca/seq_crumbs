@@ -97,7 +97,7 @@ class UtilsTest(unittest.TestCase):
         fhand.write('hola')
         fhand.flush()
         fhand2 = open(fhand.name)
-        fhand3 = wrap_in_buffered_reader(fhand2)
+        fhand3 = wrap_in_buffered_reader(fhand2, force_wrap=True)
         assert fhand3.peek(10) == 'hola'
 
 

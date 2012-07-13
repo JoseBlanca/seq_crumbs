@@ -17,6 +17,7 @@
 
 import sys
 from tempfile import NamedTemporaryFile
+from shutil import copyfileobj
 
 from crumbs.iterutils import sample
 from crumbs.utils import (main, create_basic_argparse, parse_basic_args,
@@ -46,7 +47,7 @@ def get_random_seqs(fhands, num_seqs):
     'it gets the random seqs'
     if len(fhands) == 1 and not fhand_is_seekable(fhands[0]):
         fhand = NamedTemporaryFile()
-        fhand.write(fhands[0].read())
+        copyfileobj(fhands[0], fhand)
         fhand.flush()
         fhand.seek(0)
         fhands = [fhand]

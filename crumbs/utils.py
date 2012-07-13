@@ -292,9 +292,15 @@ def parse_basic_args(parser):
     return args, parsed_args
 
 
-def wrap_in_buffered_reader(fhand):
-    'It wraps the given file in a peekable BufferedReader'
-    fhand = io.open(fhand.fileno(), mode='rb')  # with text there's no peek
+def wrap_in_buffered_reader(fhand, force_wrap=False):
+    '''It wraps the given file in a peekable BufferedReader.
+
+    If the file is seekable it doesn't do anything.
+    '''
+    if not force_wrap and fhand_is_seekable(fhand):
+        return fhand
+    else:
+        fhand = io.open(fhand.fileno(), mode='rb')  # with text there's no peek
 
     return fhand
 
@@ -326,7 +332,11 @@ def _guess_fastq_format(fhand):
 def fhand_is_seekable(fhand):
     'It returns True if the fhand is seekable'
     try:
-        fhand.seek
+        try:
+            # The stdin stream in some instances has seek, has no seekable
+            fhand.tell()
+        except IOError:
+            return False
         try:
             if fhand.seekable():
                 return True
