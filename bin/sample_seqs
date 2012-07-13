@@ -19,8 +19,9 @@ import sys
 from tempfile import NamedTemporaryFile
 
 from crumbs.iterutils import sample
-from crumbs.utils import main, create_basic_argparse, parse_basic_args
-from crumbs.seqio import (write_seqrecords, guess_format, read_seqrecords,
+from crumbs.utils import (main, create_basic_argparse, parse_basic_args,
+                          fhand_is_seekable)
+from crumbs.seqio import (write_seqrecords, read_seqrecords,
                           count_seqs_in_files)
 from crumbs.exceptions import SampleSizeError
 
@@ -43,7 +44,7 @@ def _parse_args(parser):
 
 def get_random_seqs(fhands, num_seqs):
     'it gets the random seqs'
-    if len(fhands) == 1 and not fhands[0].seekable():
+    if len(fhands) == 1 and not fhand_is_seekable(fhands[0]):
         fhand = NamedTemporaryFile()
         fhand.write(fhands[0].read())
         fhand.flush()

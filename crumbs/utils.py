@@ -27,7 +27,8 @@ from subprocess import check_call, Popen
 import platform
 import argparse
 import io
-from StringIO import StringIO
+import cStringIO
+import StringIO
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
@@ -306,7 +307,7 @@ def _guess_fastq_format(fhand):
     chunk_size = 50000
     chunk = _peek_chunk_from_file(fhand, chunk_size)
 
-    fmt_fhand = StringIO(chunk)
+    fmt_fhand = cStringIO.StringIO(chunk)
     try:
         for seq in FastqGeneralIterator(fmt_fhand):
             qual = seq[2]
@@ -322,15 +323,27 @@ def _guess_fastq_format(fhand):
     raise UnknownFormatError(msg)
 
 
+def fhand_is_seekable(fhand):
+    'It returns True if the fhand is seekable'
+    #StringIO is seekable but has no seekable attribute
+    print
+    if (hasattr(fhand, 'seekable') and fhand.seekable() or
+        isinstance(fhand, StringIO.StringIO) or
+        isinstance(fhand, io.StringIO) or
+        hasattr(fhand, 'getvalue')):
+        return True
+    else:
+        return False
+
+
 def _peek_chunk_from_file(fhand, chunk_size):
     'It returns the begining of a file without moving the pointer'
-    peekable = True if hasattr(fhand, 'peek') else False
-    if peekable:
-        chunk = fhand.peek(chunk_size)
-    else:
+    if fhand_is_seekable(fhand):
         fhand.seek(0)
         chunk = fhand.read(chunk_size)
         fhand.seek(0)
+    else:
+        chunk = fhand.peek(chunk_size)
     return chunk
 
 
