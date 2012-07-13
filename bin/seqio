@@ -50,6 +50,8 @@ def _parse_basic_args(parser):
     # we have to wrap the file in a BufferedReader to allow peeking into stdin
     wrapped_fhands = []
     in_fhands = parsed_args.input
+    if not isinstance(in_fhands, list):
+        in_fhands = [in_fhands]
     for fhand in in_fhands:
         fhand = wrap_in_buffered_reader(fhand)
         wrapped_fhands.append(fhand)

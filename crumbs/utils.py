@@ -27,7 +27,8 @@ from subprocess import check_call, Popen
 import platform
 import argparse
 import io
-from StringIO import StringIO
+import cStringIO
+import StringIO
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
@@ -270,13 +271,16 @@ def parse_basic_args(parser):
     parsed_args = parser.parse_args()
     # we have to wrap the file in a BufferedReader to allow peeking into stdin
     wrapped_fhands = []
+    # if input is stdin it will be a fhand not a list of fhands.
+    # we have to convert to a list
     in_fhands = parsed_args.input
+    if not isinstance(in_fhands, list):
+        in_fhands = [in_fhands]
     for fhand in in_fhands:
         fhand = wrap_in_buffered_reader(fhand)
         wrapped_fhands.append(fhand)
 
     out_fhand = getattr(parsed_args, OUTFILE)
-
     out_format = parsed_args.out_format
     # The default format is the same as the first file
     if not out_format:
@@ -303,7 +307,7 @@ def _guess_fastq_format(fhand):
     chunk_size = 50000
     chunk = _peek_chunk_from_file(fhand, chunk_size)
 
-    fmt_fhand = StringIO(chunk)
+    fmt_fhand = cStringIO.StringIO(chunk)
     try:
         for seq in FastqGeneralIterator(fmt_fhand):
             qual = seq[2]
@@ -319,15 +323,27 @@ def _guess_fastq_format(fhand):
     raise UnknownFormatError(msg)
 
 
+def fhand_is_seekable(fhand):
+    'It returns True if the fhand is seekable'
+    #StringIO is seekable but has no seekable attribute
+    print
+    if (hasattr(fhand, 'seekable') and fhand.seekable() or
+        isinstance(fhand, StringIO.StringIO) or
+        isinstance(fhand, io.StringIO) or
+        hasattr(fhand, 'getvalue')):
+        return True
+    else:
+        return False
+
+
 def _peek_chunk_from_file(fhand, chunk_size):
     'It returns the begining of a file without moving the pointer'
-    peekable = True if hasattr(fhand, 'peek') else False
-    if peekable:
-        chunk = fhand.peek(chunk_size)
-    else:
+    if fhand_is_seekable(fhand):
         fhand.seek(0)
         chunk = fhand.read(chunk_size)
         fhand.seek(0)
+    else:
+        chunk = fhand.peek(chunk_size)
     return chunk
 
 
@@ -338,7 +354,6 @@ def guess_format(fhand):
     '''
     chunk_size = 1024
     chunk = _peek_chunk_from_file(fhand, chunk_size)
-
     if not chunk:
         raise UnknownFormatError('The file is empty')
     lines = chunk.splitlines()

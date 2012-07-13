@@ -43,7 +43,7 @@ class CatTest(unittest.TestCase):
         cat_bin = os.path.join(BIN_DIR, 'cat_seqs')
 
         # help
-        assert check_output([cat_bin, '-h']).startswith('usage')
+        assert 'usage' in check_output([cat_bin, '-h'])
 
         # fasta to fasta
         in_fhand1 = self.make_fasta()
@@ -110,7 +110,7 @@ class SampleSeqTest(unittest.TestCase):
     def test_sample_seq(self):
         'It tests the seq head'
         sample_seq = os.path.join(BIN_DIR, 'sample_seqs')
-        assert check_output([sample_seq, '-h']).startswith('usage')
+        assert 'usage' in check_output([sample_seq, '-h'])
 
         fasta_fhand = NamedTemporaryFile()
         fasta_fhand.write('>seq\nACTA\n>seq2\nACTA\n>seq3\nACTA\n')
@@ -124,6 +124,11 @@ class SampleSeqTest(unittest.TestCase):
         result = check_output([sample_seq, '-n', '2', fasta_fhand.name])
         assert count_seqs_in_files([StringIO(result)], ['fasta']) == 2
 
+        #random sample with stdin
+        result = check_output([sample_seq, '-n', '2'],
+                              stdin=open(fasta_fhand.name))
+        assert count_seqs_in_files([StringIO(result)], ['fasta']) == 2
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'CatTest']
+#    import sys;sys.argv = ['', 'SampleSeqTest']
     unittest.main()

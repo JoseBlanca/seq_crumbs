@@ -16,10 +16,12 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+from tempfile import NamedTemporaryFile
 
 from crumbs.iterutils import sample
-from crumbs.utils import main, create_basic_argparse, parse_basic_args
-from crumbs.seqio import (write_seqrecords, guess_format, read_seqrecords,
+from crumbs.utils import (main, create_basic_argparse, parse_basic_args,
+                          fhand_is_seekable)
+from crumbs.seqio import (write_seqrecords, read_seqrecords,
                           count_seqs_in_files)
 from crumbs.exceptions import SampleSizeError
 
@@ -42,6 +44,12 @@ def _parse_args(parser):
 
 def get_random_seqs(fhands, num_seqs):
     'it gets the random seqs'
+    if len(fhands) == 1 and not fhand_is_seekable(fhands[0]):
+        fhand = NamedTemporaryFile()
+        fhand.write(fhands[0].read())
+        fhand.flush()
+        fhand.seek(0)
+        fhands = [fhand]
     total_seqs = count_seqs_in_files(fhands)
     seqs = read_seqrecords(fhands)
     return sample(seqs, total_seqs, num_seqs)
@@ -60,8 +68,7 @@ def sample_seqs():
     except ValueError as error:
         if str(error) == "sample larger than population":
             raise SampleSizeError("sample larger than population")
-
-    write_seqrecords(out_fhand, seqs, guess_format(in_fhands[0]))
+    write_seqrecords(out_fhand, seqs, args['out_format'])
 
 if __name__ == '__main__':
     sys.exit(main(sample_seqs))
