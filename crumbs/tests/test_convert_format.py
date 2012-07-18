@@ -114,7 +114,7 @@ class SeqioBinTest(unittest.TestCase):
 
     def test_seqio_bin(self):
         'It test the seqio binary'
-        seqio_bin = os.path.join(BIN_DIR, 'seqio')
+        seqio_bin = os.path.join(BIN_DIR, 'convert_format')
         assert 'usage' in check_output([seqio_bin, '-h'])
 
         #get one se
