@@ -27,9 +27,8 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.split_mates import (LINKERS, TITANIUM_LINKER, FLX_LINKER,
-                                split_mates, _BlastMatcher,
-                                _split_by_mate_linker)
-from crumbs.seqio import write_seqrecords
+                                _BlastMatcher, MatePairSplitter)
+from crumbs.seqio import read_seqrecords_in_packets, write_seqrecord_packets
 from crumbs.tests.utils import BIN_DIR
 
 # pylint: disable=R0201
@@ -64,40 +63,41 @@ class MateSplitterTest(unittest.TestCase):
         'It tests the function that splits seqs using segments'
         seq = 'aaatttccctt'
         seqrecord = SeqRecord(Seq(seq), id='seq')
-
-        # segment beginnig
-        seqs = _split_by_mate_linker(seqrecord, ([(0, 3)], False))
+        #fake class to test
+        splitter = MatePairSplitter([seqrecord])
+        # segment beginning
+        seqs = splitter._split_by_mate_linker(seqrecord, ([(0, 3)], False))
         assert str(seqs[0].seq) == 'ttccctt'
         assert seqs[0].id == 'seq.fn'
 
         # segment at end
-        seqs = _split_by_mate_linker(seqrecord, ([(7, 10)], False))
+        seqs = splitter._split_by_mate_linker(seqrecord, ([(7, 10)], False))
         assert  str(seqs[0].seq) == 'aaatttc'
         assert seqs[0].id == 'seq.fn'
 
         # segmnet in the middle
-        seqs = _split_by_mate_linker(seqrecord, ([(4, 7)], True))
+        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], True))
         assert str(seqs[0].seq) == 'aaat'
         assert str(seqs[1].seq) == 'ctt'
         assert seqs[0].id == 'seq_pl.part1'
         assert seqs[1].id == 'seq_pl.part2'
 
-        seqs = _split_by_mate_linker(seqrecord, ([(4, 7)], False))
+        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], False))
         assert seqs[0].id == 'seq.f'
         assert seqs[1].id == 'seq.r'
 
-        seqs = _split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)], False))
+        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)], False))
         assert str(seqs[0].seq) == 'aaat'
         assert str(seqs[1].seq) == 'c'
         assert str(seqs[2].seq) == 't'
         assert seqs[0].id == 'seq_mlc.part1'
 
         # all sequence is linker
-        seqs = _split_by_mate_linker(seqrecord, ([(0, 10)], False))
+        seqs = splitter._split_by_mate_linker(seqrecord, ([(0, 10)], False))
         assert not str(seqs[0].seq)
 
         # there's no segments
-        seqs = _split_by_mate_linker(seqrecord, ([], False))
+        seqs = splitter._split_by_mate_linker(seqrecord, ([], False))
         assert seqrecord.id == seqs[0].id
         assert str(seqrecord.seq) == str(seqs[0].seq)
 
@@ -122,9 +122,13 @@ class MateSplitterTest(unittest.TestCase):
         mate_fhand.write('>seq5\n' + linker + seq3 + FLX_LINKER + seq5 + '\n')
         mate_fhand.flush()
 
+        splitter = MatePairSplitter()
+        new_seqs = []
+        for packet in read_seqrecords_in_packets([mate_fhand], 2):
+            new_seqs.append(splitter(packet))
+
         out_fhand = StringIO()
-        seqs = split_mates([mate_fhand])
-        write_seqrecords(out_fhand, seqs, file_format='fasta')
+        write_seqrecord_packets(out_fhand, new_seqs, file_format='fasta')
 
         result = out_fhand.getvalue()
         xpect = '>seq1.f\n'
@@ -156,7 +160,7 @@ class SplitMatesBinTest(unittest.TestCase):
         'It tests the sff_extract binary'
         mate_bin = os.path.join(BIN_DIR, 'split_matepairs')
         stdout = check_output([mate_bin, '-h'])
-        assert stdout.startswith('usage')
+        assert 'usage' in stdout
 
         mate_fhand = create_a_matepair_file()
         out_fhand = NamedTemporaryFile(suffix='.fasta')
@@ -167,7 +171,17 @@ class SplitMatesBinTest(unittest.TestCase):
         result = open(out_fhand.name).read()
         assert result.startswith('>seq1.f\n')
 
+        # in parallel
+        mate_fhand.seek(0)
+        out_fhand = NamedTemporaryFile(suffix='.fasta')
+
+        cmd = [mate_bin, '-o', out_fhand.name, '-l', TITANIUM_LINKER,
+               mate_fhand.name, '-p', '2']
+        check_output(cmd)
+        result = open(out_fhand.name).read()
+        assert result.startswith('>seq1.f\n')
+
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'MateSplitterTest']
+#    import sys;sys.argv = ['', 'TestPool']
     unittest.main()

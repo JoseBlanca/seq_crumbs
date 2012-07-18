@@ -27,8 +27,10 @@ from Bio.SeqIO import FastaIO
 from Bio.SeqIO import QualityIO
 
 from crumbs.exceptions import MalformedFile
-from crumbs.iterutils import length
+from crumbs.iterutils import length, group_in_packets
 from crumbs.utils import rel_symlink, guess_format
+
+PACKET_SIZE = 10000
 
 
 def clean_seq_stream(seqs):
@@ -47,6 +49,12 @@ def write_seqrecords(fhand, seqs, file_format='fastq'):
     fhand.flush()
 
 
+def write_seqrecord_packets(fhand, seq_packets, file_format='fastq'):
+    'It writes to file a stream of seqcuence lists'
+    write_seqrecords(fhand, chain.from_iterable(seq_packets),
+                     file_format=file_format)
+
+
 def title2ids(title):
     '''It returns the id, name and description as a tuple.
 
@@ -60,6 +68,13 @@ def title2ids(title):
     else:
         desc = ''
     return id_, name, desc
+
+
+def read_seqrecords_in_packets(fhands, size=PACKET_SIZE):
+    '''it returns the sequences in packets of the given size. It returns a
+    iterator of seq iterators'''
+    seqs = read_seqrecords(fhands)
+    return group_in_packets(seqs, size)
 
 
 def read_seqrecords(fhands):

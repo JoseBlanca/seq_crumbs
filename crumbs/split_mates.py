@@ -6,7 +6,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.blast import get_blast_db, do_blast, generate_tabblast_format
-from crumbs.seqio import write_seqrecords, read_seqrecords
+from crumbs.seqio import write_seqrecords
 from crumbs.alignment_result import (TabularBlastParser, filter_alignments,
                                      covered_segments, ELONGATED, QUERY,
                                      elongate_match_parts_till_global)
@@ -21,6 +21,10 @@ TITANIUM_LINKER_REV = 'CGTAATAACTTCGTATAGCATACATTATACGAAGTTATACGA'
 
 LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
            SeqRecord(Seq(TITANIUM_LINKER), id='titanium_linker')]
+
+PROCESSED_SEQS = 'processed_seqs'
+PROCESSED_PACKETS = 'processed_packets'
+YIELDED_SEQS = 'yielded_seqs'
 
 
 def _do_blast(seq_fhand, oligos):
@@ -109,69 +113,86 @@ class _BlastMatcher(object):
         return segments, elongated_match
 
 
-def _split_by_mate_linker(seqrec, (segments, is_partial)):
-    'It splits the seqs using segments'
-
-    if not segments:
-        return [seqrec]
-
-    elongated_match = is_partial
-    if len(segments) == 1:
-        segment_start = segments[0][0]
-        segment_end = segments[0][1]
-        if segment_start == 0:
-            new_seqrec = seqrec[segment_end + 1:]
-            new_seqrec.id = seqrec.id + '.fn'
-            return [new_seqrec]
-        elif segment_end == len(seqrec) - 1:
-            new_seqrec = seqrec[:segment_start]
-            new_seqrec.id = seqrec.id + '.fn'
-            return [new_seqrec]
-        else:
-            new_seqrec1 = seqrec[:segment_start]
-            new_seqrec2 = seqrec[segment_end + 1:]
-            id_ = seqrec.id
-            if elongated_match:
-                id_ = seqrec.id + '_pl'
-                new_seqrec1.id = id_ + '.part1'
-                new_seqrec2.id = id_ + '.part2'
-            else:
-                new_seqrec1.id = id_ + '.f'
-                new_seqrec2.id = id_ + '.r'
-            return [new_seqrec1, new_seqrec2]
-    else:
-        seqrecords = []
-        counter = 1
-        seq_start = 0
-        for segment_start, segment_end in segments:
-            if segment_start == 0:
-                continue
-            seqrecord = seqrec[seq_start:segment_start]
-            seqrecord.id = seqrec.id + '_mlc.part{0:d}'.format(counter)
-            seqrecords.append(seqrecord)
-            counter += 1
-            seq_start = segment_end + 1
-        else:
-            if segment_end != len(seqrec) + 1:
-                seqrecord = seqrec[segment_end + 1:]
-                seqrecord.id = seqrec.id + '_mlc.part{0:d}'.format(counter)
-                seqrecords.append(seqrecord)
-        return seqrecords
-
-
-def split_mates(seq_fhands, linkers=None):
+class MatePairSplitter(object):
     'It splits the input sequences with the provided linkers.'
 
-    if linkers is None:
-        linkers = LINKERS
+    def __init__(self, linkers=None):
+        'The initiator'
+        self.linkers = LINKERS if linkers is None else linkers
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
 
-    for seq_fhand in seq_fhands:
-        matcher = _BlastMatcher(seq_fhand, linkers)
-        for seqrec in read_seqrecords([seq_fhand]):
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqs):
+        'It split a list of sequences with the provided linkers'
+        stats = self._stats
+        stats[PROCESSED_PACKETS] += 1
+        seq_fhand = NamedTemporaryFile(suffix='.fasta')
+        write_seqrecords(seq_fhand, seqs, 'fasta')
+        matcher = _BlastMatcher(open(seq_fhand.name), self.linkers)
+        new_seqs = []
+        for seqrec in seqs:
+            stats[PROCESSED_SEQS] += 1
             segments = matcher.get_matched_segments_for_read(seqrec.id)
             if segments is not None:
-                split_seqs = _split_by_mate_linker(seqrec, segments)
+                split_seqs = self._split_by_mate_linker(seqrec, segments)
             else:
                 split_seqs = [seqrec]
             for seq in split_seqs:
-                yield seq
+                new_seqs.append(seq)
+                stats[YIELDED_SEQS] += 1
+        return new_seqs
+
+    def _split_by_mate_linker(self, seqrec, (segments, is_partial)):
+        'It splits the seqs using segments'
+
+        if not segments:
+            return [seqrec]
+
+        elongated_match = is_partial
+        if len(segments) == 1:
+            segment_start = segments[0][0]
+            segment_end = segments[0][1]
+            if segment_start == 0:
+                new_seqrec = seqrec[segment_end + 1:]
+                new_seqrec.id = seqrec.id + '.fn'
+                return [new_seqrec]
+            elif segment_end == len(seqrec) - 1:
+                new_seqrec = seqrec[:segment_start]
+                new_seqrec.id = seqrec.id + '.fn'
+                return [new_seqrec]
+            else:
+                new_seqrec1 = seqrec[:segment_start]
+                new_seqrec2 = seqrec[segment_end + 1:]
+                id_ = seqrec.id
+                if elongated_match:
+                    id_ = seqrec.id + '_pl'
+                    new_seqrec1.id = id_ + '.part1'
+                    new_seqrec2.id = id_ + '.part2'
+                else:
+                    new_seqrec1.id = id_ + '.f'
+                    new_seqrec2.id = id_ + '.r'
+                return [new_seqrec1, new_seqrec2]
+        else:
+            seqrecords = []
+            counter = 1
+            seq_start = 0
+            for segment_start, segment_end in segments:
+                if segment_start == 0:
+                    continue
+                seqrecord = seqrec[seq_start:segment_start]
+                seqrecord.id = seqrec.id + '_mlc.part{0:d}'.format(counter)
+                seqrecords.append(seqrecord)
+                counter += 1
+                seq_start = segment_end + 1
+            else:
+                if segment_end != len(seqrec) + 1:
+                    seqrecord = seqrec[segment_end + 1:]
+                    seqrecord.id = seqrec.id + '_mlc.part{0:d}'.format(counter)
+                    seqrecords.append(seqrecord)
+            return seqrecords

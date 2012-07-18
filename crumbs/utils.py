@@ -28,7 +28,8 @@ import platform
 import argparse
 import io
 import cStringIO
-import StringIO
+import itertools
+from multiprocessing import Pool
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
@@ -385,3 +386,18 @@ def guess_format(fhand):
     elif chunk.startswith('ID'):
         return 'embl'
     raise UnknownFormatError('Sequence file of unknown format.')
+
+
+def process_sequences(seq_packets, map_functions, processes=1,
+                      keep_order=False):
+    'It processes de sequences. It can do it in parallel'
+    if processes > 1:
+        pool = Pool(processes=processes)
+        mapper = pool.imap if keep_order else pool.imap_unordered
+    else:
+        mapper = itertools.imap
+
+    for map_function in map_functions:
+        seq_packets = mapper(map_function, seq_packets)
+
+    return seq_packets
