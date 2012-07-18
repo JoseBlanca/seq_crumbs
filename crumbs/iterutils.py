@@ -55,10 +55,8 @@ class group_in_packets(object):
     '''
     def __init__(self, iterable, packet_size):
         'It inits the class'
-        self._packet_size = packet_size - 1
+        self._packet_size = packet_size
         self._iterable = iter(iterable)
-        self._current_count = 0
-        self._current_item = None
 
     def __iter__(self):
         'Part of the iterator interface'
@@ -66,19 +64,16 @@ class group_in_packets(object):
 
     def next(self):
         'It returns a packet'
-        self._current_item = next(self._iterable)    # Exit on StopIteration
-        self._current_count = 0
-        return self._grouper()
-
-    def _grouper(self):
-        'It yields a packet_size number of items'
-        while True:
-            if self._current_count < self._packet_size:
-                yield self._current_item    # Exit on StopIteration
-                self._current_item = next(self._iterable)
-                self._current_count += 1
-            elif self._current_count == self._packet_size:
-                yield self._current_item    # Exit on StopIteration
-                self._current_count += 1
-            else:
-                raise StopIteration
+        # We are returning lists and not generators (as before) because
+        # otherwise we would not be able to use multiproces.Pool
+        packet = []
+        count = 0
+        size = self._packet_size
+        for item in self._iterable:
+            packet.append(item)
+            count += 1
+            if count >= size:
+                break
+        if not packet:
+            raise StopIteration
+        return packet
