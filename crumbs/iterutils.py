@@ -43,6 +43,7 @@ def sample(iterator, length, sample_size):
 def length(iterator):
     'It counts the items in an iterator. It consumes the iterator'
     count = 0
+    # pylint: disable=W0612
     for item in iterator:
         count += 1
     return count

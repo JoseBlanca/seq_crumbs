@@ -61,6 +61,7 @@ class MateSplitterTest(unittest.TestCase):
 
     def test_split_mate(self):
         'It tests the function that splits seqs using segments'
+        # pylint: disable=W0212
         seq = 'aaatttccctt'
         seqrecord = SeqRecord(Seq(seq), id='seq')
         #fake class to test
@@ -86,7 +87,8 @@ class MateSplitterTest(unittest.TestCase):
         assert seqs[0].id == 'seq.f'
         assert seqs[1].id == 'seq.r'
 
-        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)], False))
+        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)],
+                                                          False))
         assert str(seqs[0].seq) == 'aaat'
         assert str(seqs[1].seq) == 'c'
         assert str(seqs[2].seq) == 't'

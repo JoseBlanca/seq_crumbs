@@ -36,12 +36,12 @@ class IterutilsTest(unittest.TestCase):
 
     def test_sample(self):
         'We can sample an iterator'
-        length = 100
-        items = range(length)
+        length_ = 100
+        items = range(length_)
 
         num_sampled_items = 10
         for num_sampled_items in (10, 90):
-            sampled_items = list(sample(items, length, num_sampled_items))
+            sampled_items = list(sample(items, length_, num_sampled_items))
             self.check_sampled_items(items, sampled_items, num_sampled_items)
 
     def test_length(self):

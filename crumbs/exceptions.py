@@ -19,6 +19,9 @@ Created on 21/06/2012
 @author: jose
 '''
 
+# pylint: disable=W0232
+# pylint: disable=R0903
+
 
 class UnknownFormatError(Exception):
     'Raised when the format of a sequence file cannot be guessed'
@@ -34,12 +37,14 @@ class UndecidedFastqVersionError(Exception):
     'The file is Fastq, but the version is difficult to guess'
     pass
 
+
 class FileNotFoundError(Exception):
     'The file does not exists'
     pass
 
 
 class TooManyFiles(Exception):
+    'Too many files given'
     pass
 
 

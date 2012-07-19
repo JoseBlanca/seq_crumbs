@@ -30,6 +30,7 @@ FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 # pylint: disable=R0201
 # pylint: disable=R0904
 
+
 class TrimTest(unittest.TestCase):
     'It tests the rim functions'
 
