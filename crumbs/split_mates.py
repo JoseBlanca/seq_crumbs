@@ -2,29 +2,14 @@
 # similar software SffToCA
 from tempfile import NamedTemporaryFile
 
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
 from crumbs.blast import get_blast_db, do_blast, generate_tabblast_format
 from crumbs.seqio import write_seqrecords
 from crumbs.alignment_result import (TabularBlastParser, filter_alignments,
                                      covered_segments, ELONGATED, QUERY,
                                      elongate_match_parts_till_global)
-
-
-FLX_LINKER = 'GTTGGAACCGAAAGGGTTTGAATTCAAACCCTTTCGGTTCCAAC'
-# The titanium linker can be forward or reverse
-TITANIUM_LINKER = 'TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACG'
-FWD_454_LINKERS = [FLX_LINKER, TITANIUM_LINKER]
-
-TITANIUM_LINKER_REV = 'CGTAATAACTTCGTATAGCATACATTATACGAAGTTATACGA'
-
-LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
-           SeqRecord(Seq(TITANIUM_LINKER), id='titanium_linker')]
-
-PROCESSED_SEQS = 'processed_seqs'
-PROCESSED_PACKETS = 'processed_packets'
-YIELDED_SEQS = 'yielded_seqs'
+from crumbs.settings import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
+                             LINKERS)
 
 
 def _do_blast(seq_fhand, oligos):

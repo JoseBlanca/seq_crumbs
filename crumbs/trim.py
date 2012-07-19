@@ -59,7 +59,7 @@ def _get_longest_segment(segments):
 
 
 def trim_lowercased_seqs(seqrecords):
-    'It trims the masked seqments of the seqrecords'
+    'It trims the masked segments of the seqrecords'
     for seqrecord in seqrecords:
         seq = str(seqrecord.seq)
         unmasked_segments = _get_uppercase_segments(seq)

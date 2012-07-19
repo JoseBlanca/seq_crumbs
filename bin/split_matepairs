@@ -22,8 +22,8 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils import (main, parse_basic_args, create_basic_argparse,
                           process_sequences)
-from crumbs.split_mates import (FWD_454_LINKERS, FLX_LINKER,
-                                TITANIUM_LINKER, MatePairSplitter)
+from crumbs.settings import FWD_454_LINKERS, FLX_LINKER, TITANIUM_LINKER
+from crumbs.split_mates import MatePairSplitter
 from crumbs.seqio import read_seqrecords_in_packets, write_seqrecord_packets
 
 

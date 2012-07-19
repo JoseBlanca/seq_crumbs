@@ -26,8 +26,8 @@ import os.path
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.split_mates import (LINKERS, TITANIUM_LINKER, FLX_LINKER,
-                                _BlastMatcher, MatePairSplitter)
+from crumbs.split_mates import _BlastMatcher, MatePairSplitter
+from crumbs.settings import LINKERS, TITANIUM_LINKER, FLX_LINKER
 from crumbs.seqio import read_seqrecords_in_packets, write_seqrecord_packets
 from crumbs.tests.utils import BIN_DIR
 
@@ -157,7 +157,7 @@ class SplitMatesBinTest(unittest.TestCase):
     'It tests the sff_extract binary'
 
     def test_matepair_bin(self):
-        'It tests the sff_extract binary'
+        'It tests the split mate pairs binary'
         mate_bin = os.path.join(BIN_DIR, 'split_matepairs')
         stdout = check_output([mate_bin, '-h'])
         assert 'usage' in stdout
