@@ -30,7 +30,7 @@ from crumbs.exceptions import MalformedFile
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils import rel_symlink, guess_format
 
-PACKET_SIZE = 10000
+PACKET_SIZE = 1000
 
 
 def clean_seq_stream(seqs):
