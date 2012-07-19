@@ -116,7 +116,7 @@ class SffExtractBinTest(unittest.TestCase):
     def test_extract_sff(self):
         'It tests the sff_extract binary'
         sff_bin = os.path.join(BIN_DIR, 'sff_extract')
-        assert check_output([sff_bin, '-h']).startswith('usage')
+        assert 'usage' in check_output([sff_bin, '-h'])
 
         # clipping warning
         sff_fpath = os.path.join(TEST_DATA_DIR, '10_454_reads.sff')
@@ -128,6 +128,12 @@ class SffExtractBinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'Countermeasures' in open(stderr.name).read()
 
+        #warning avoided
+        sff_fpath = os.path.join(TEST_DATA_DIR, '10_454_reads.sff')
+        cmd = [sff_bin, '--max_percentage', '70.0', sff_fpath]
+        stderr = NamedTemporaryFile()
+        check_output(cmd, stderr=stderr)
+
         # min left clip
         cmd = [sff_bin, '--min_left_clip', '5', sff_fpath]
         check_output(cmd)
@@ -135,7 +141,7 @@ class SffExtractBinTest(unittest.TestCase):
         # clip
         cmd = [sff_bin, '--min_left_clip', '5', '--clip', sff_fpath]
         stdout = check_output(cmd)
-        assert stdout.startswith('@E3MFGYR02JWQ7T\nGTCTACATGTTG')
+        assert '@E3MFGYR02JWQ7T\nGTCTACATGTTG' in stdout
 
         # file does not exist
         cmd = [sff_bin, 'no_file']
@@ -145,8 +151,6 @@ class SffExtractBinTest(unittest.TestCase):
             self.fail('Error expected')
         except CalledProcessError:
             assert 'A file was not found: no_file' in open(stderr.name).read()
-
-        #version
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

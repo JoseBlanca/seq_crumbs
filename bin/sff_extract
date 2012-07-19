@@ -45,8 +45,8 @@ def _setup_argparse():
                         help=msg, default=0)
     msg = 'consider a SFF file as "strange" if too many reads start with the '
     msg += 'same word  (default 50)'
-    parser.add_argument('--min_frequency', dest='min_freq', type=int,
-                     help=msg, default=50)
+    parser.add_argument('--max_percentage', dest='max_percent', type=float,
+                     help=msg, default=50.0)
     return parser
 
 
@@ -71,7 +71,7 @@ def _parse_args(parser):
 
     args['clip'] = parsed_args.clip
     args['min_left_clip'] = parsed_args.min_left_clip
-    args['min_freq'] = parsed_args.min_freq / 100
+    args['max_percent'] = parsed_args.max_percent / 100
     return args
 
 
@@ -82,7 +82,7 @@ def extract_sff():
 
     extractor = SffExtractor(sff_fhands=args['sff_fhands'], trim=args['clip'],
                              min_left_clip=args['min_left_clip'],
-                             max_nucl_freq_threshold=args['min_freq'])
+                             max_nucl_freq_threshold=args['max_percent'])
     seqs = extractor.seqs
     write_seqrecords(args['out_fhand'], seqs)
 
@@ -93,12 +93,17 @@ def extract_sff():
             msg = "\n" + "*" * 80
             msg += "\nWARNING: "
             msg += "weird sequences in file " + fpath + "\n\n"
-            msg += "After applying left clips too many reads start with:\n" + advice[1]
+            msg += "After applying left clips too many reads start with:\n"
+            msg += advice[1]
             msg += "\n\nThis does not look sane.\n\n"
             msg += "Countermeasures you *probably* must take:\n"
-            msg += "1) Make your sequence provider aware of that problem and ask whether this can be\n    corrected in the SFF.\n"
-            msg += "2) If you decide that this is not normal and your sequence provider does not\n    react, use the --min_left_clip of sff_extract.\n"
-            msg += "    (Probably '--min_left_clip=" + str(advice[0]) + "' but you should cross-check that)\n"
+            msg += "1) Make your sequence provider aware of that problem and"
+            msg += "ask whether this can be\n    corrected in the SFF.\n"
+            msg += "2) If you decide that this is not normal and your sequence"
+            msg += " provider does not\n"
+            msg += "    react, use the --min_left_clip of sff_extract.\n"
+            msg += "    (Probably '--max_percentage " + str(advice[0])
+            msg += "' but you should cross-check that)\n"
             msg += "*" * 80 + "\n"
             stderr.write(msg)
             an_error_apeared = 1
