@@ -114,7 +114,7 @@ class MatePairSplitter(object):
         return self._stats
 
     def __call__(self, seqs):
-        'It split a list of sequences with the provided linkers'
+        'It splits a list of sequences with the provided linkers'
         stats = self._stats
         stats[PROCESSED_PACKETS] += 1
         seq_fhand = NamedTemporaryFile(suffix='.fasta')

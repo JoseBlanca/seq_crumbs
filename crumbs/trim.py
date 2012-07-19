@@ -21,6 +21,8 @@ Created on 2012 eka 26
 import random
 import itertools
 
+from crumbs.settings import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
+
 
 def _get_uppercase_segments(string):
     '''It detects the unmasked regions of a sequence
@@ -58,11 +60,31 @@ def _get_longest_segment(segments):
         return random.choice(longest)
 
 
-def trim_lowercased_seqs(seqrecords):
-    'It trims the masked segments of the seqrecords'
-    for seqrecord in seqrecords:
-        seq = str(seqrecord.seq)
-        unmasked_segments = _get_uppercase_segments(seq)
-        segment = _get_longest_segment(unmasked_segments)
-        if segment is not None:
-            yield seqrecord[segment[0]:segment[1] + 1]
+class TrimLowercasedLetters(object):
+    'It trims the masked segments of the seqrecords.'
+
+    def __init__(self):
+        'The initiator'
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It trims the masked segments of the seqrecords.'
+        stats = self._stats
+        stats[PROCESSED_PACKETS] += 1
+        trimmed_seqs = []
+        for seqrecord in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            seq = str(seqrecord.seq)
+            unmasked_segments = _get_uppercase_segments(seq)
+            segment = _get_longest_segment(unmasked_segments)
+            if segment is not None:
+                stats[YIELDED_SEQS] += 1
+                trimmed_seqs.append(seqrecord[segment[0]:segment[1] + 1])
+        return trimmed_seqs

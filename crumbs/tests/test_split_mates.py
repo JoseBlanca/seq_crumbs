@@ -171,8 +171,12 @@ class SplitMatesBinTest(unittest.TestCase):
         result = open(out_fhand.name).read()
         assert result.startswith('>seq1.f\n')
 
-        # in parallel
+    def test_parallel_bin(self):
+        'The mate pairs binary runs in parallel'
+        mate_bin = os.path.join(BIN_DIR, 'split_matepairs')
+        mate_fhand = create_a_matepair_file()
         mate_fhand.seek(0)
+
         out_fhand = NamedTemporaryFile(suffix='.fasta')
 
         cmd = [mate_bin, '-o', out_fhand.name, '-l', TITANIUM_LINKER,

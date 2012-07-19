@@ -20,7 +20,8 @@ import sys
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.utils import (main, parse_basic_args, create_basic_argparse,
+from crumbs.utils import (main, parse_basic_process_args,
+                          create_basic_process_argparse,
                           process_sequences)
 from crumbs.settings import FWD_454_LINKERS, FLX_LINKER, TITANIUM_LINKER
 from crumbs.split_mates import MatePairSplitter
@@ -30,19 +31,17 @@ from crumbs.seqio import read_seqrecords_in_packets, write_seqrecord_packets
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It splits mate pair sequences'
-    parser = create_basic_argparse(description=description)
+    parser = create_basic_process_argparse(description=description)
 
     hlp = 'platform or linker sequence (several can be given) (default 454)'
     parser.add_argument('-l', '--linker', dest='linkers', help=hlp,
                         action='append', required=True)
-    parser.add_argument('-p', '--processes', dest='processes', type=int,
-                        help='Num of processes to use', default=1)
     return parser
 
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
-    args, parsed_args = parse_basic_args(parser)
+    args, parsed_args = parse_basic_process_args(parser)
 
     linkers = parsed_args.linkers
     new_linkers = []
@@ -61,7 +60,6 @@ def _parse_args(parser):
         linkers.append(SeqRecord(Seq(l), id='linker' + str(i)))
 
     args['linkers'] = linkers
-    args['processes'] = parsed_args.processes
     return args
 
 

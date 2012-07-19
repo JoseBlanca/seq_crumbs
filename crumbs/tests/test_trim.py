@@ -18,14 +18,17 @@ import os.path
 from StringIO import StringIO
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
+from itertools import chain
 
 from crumbs.trim import (_get_uppercase_segments, _get_longest_segment,
-                         trim_lowercased_seqs)
-from crumbs.seqio import read_seqrecords
+                         TrimLowercasedLetters)
+from crumbs.seqio import read_seqrecords_in_packets
 from crumbs.tests.utils import BIN_DIR
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 
+# pylint: disable=R0201
+# pylint: disable=R0904
 
 class TrimTest(unittest.TestCase):
     'It tests the rim functions'
@@ -61,8 +64,11 @@ class TrimTest(unittest.TestCase):
     def test_trim_seqs():
         'it tests the trim seq function'
         fasta = '>seq1\naaCTTTC\n>seq2\nCTTCaa\n>seq3\naaCTCaa\n>s\nactg\n'
-        seqs = read_seqrecords([StringIO(fasta)])
-        seqs = [str(seq.seq) for seq in trim_lowercased_seqs(seqs)]
+        seq_packets = read_seqrecords_in_packets([StringIO(fasta)])
+        trim_lowercased_seqs = TrimLowercasedLetters()
+        # pylint: disable=W0141
+        seq_packets = map(trim_lowercased_seqs, seq_packets)
+        seqs = [str(s.seq) for s in chain.from_iterable(seq_packets)]
         assert seqs == ['CTTTC', 'CTTC', 'CTC']
 
 
@@ -87,6 +93,15 @@ class TrimByCaseTest(unittest.TestCase):
 
         result = check_output([trim_bin, fastq_fhand.name])
         assert '@seq1\nTC\n+' in result
+
+    def test_trim_in_parallel(self):
+        'It trims sequences in parallel'
+        trim_bin = os.path.join(BIN_DIR, 'trim_by_case')
+        fastq_fhand = self._make_fhand(FASTQ)
+
+        result = check_output([trim_bin, '-p', '2', fastq_fhand.name])
+        assert '@seq1\nTC\n+' in result
+
 
 
 if __name__ == '__main__':
