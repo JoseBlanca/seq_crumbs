@@ -43,8 +43,8 @@ def _setup_argparse():
     msg += 'override it'
     parser.add_argument('--min_left_clip', dest='min_left_clip', type=int,
                         help=msg, default=0)
-    msg = 'consider a SFF file as "strange" if it is more frequent than this '
-    msg += 'percentage (default 50)'
+    msg = 'consider a SFF file as "strange" if too many reads start with the '
+    msg += 'same word  (default 50)'
     parser.add_argument('--min_frequency', dest='min_freq', type=int,
                      help=msg, default=50)
     return parser
