@@ -31,7 +31,7 @@ def trim_by_case():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seqs = read_seqrecords(in_fhands)
+    seqs = read_seqrecords(in_fhands, file_format=args['in_format'])
     seqs = trim_lowercased_seqs(seqs)
     write_seqrecords(out_fhand, seqs, args['out_format'])
 

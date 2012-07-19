@@ -43,7 +43,7 @@ def _parse_args(parser):
     return args
 
 
-def get_random_seqs(fhands, num_seqs):
+def get_random_seqs(fhands, num_seqs, file_format):
     'it gets the random seqs'
     seekable_fhands = []
     for fhand in fhands:
@@ -55,13 +55,13 @@ def get_random_seqs(fhands, num_seqs):
         seekable_fhands.append(fhand)
     fhands = seekable_fhands
 
-    total_seqs = count_seqs_in_files(fhands)
+    total_seqs = count_seqs_in_files(fhands, file_format=file_format)
 
     #we go to the start of every file
     for fhand in fhands:
         fhand.seek(0)
 
-    seqs = read_seqrecords(fhands)
+    seqs = read_seqrecords(fhands, file_format=file_format)
     return sample(seqs, total_seqs, num_seqs)
 
 
@@ -74,7 +74,8 @@ def sample_seqs():
     out_fhand = args['out_fhand']
     num_seqs = args['num_seqs']
     try:
-        seqs = get_random_seqs(in_fhands, num_seqs)
+        seqs = get_random_seqs(in_fhands, num_seqs,
+                               file_format=args['in_format'])
     except ValueError as error:
         if str(error) == "sample larger than population":
             raise SampleSizeError("sample larger than population")

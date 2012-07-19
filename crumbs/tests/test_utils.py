@@ -21,9 +21,9 @@ from cStringIO import StringIO
 
 from crumbs.utils import (TemporaryDir, rel_symlink, wrap_in_buffered_reader,
                           check_process_finishes, popen, guess_format,
-                          fhand_is_seekable)
+                          fhand_is_seekable, _guess_format)
 from crumbs.exceptions import (ExternalBinaryError, MissingBinaryError,
-                               UnknownFormatError)
+                               UnknownFormatError, UndecidedFastqVersionError)
 
 
 # pylint: disable=R0201
@@ -155,6 +155,14 @@ class GuessFormatTest(unittest.TestCase):
         except UnknownFormatError:
             pass
 
+        # sanger
+        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
+        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += '000000000000000000000000000000000000000000000000000000000000\n'
+        fhand = StringIO(txt)
+        assert guess_format(fhand) == 'fastq'
+
     def test_is_seekable(self):
         'It tests wether the fhands are seekable or not'
 
@@ -185,6 +193,43 @@ class GuessFormatTest(unittest.TestCase):
                 return False
 
         assert not fhand_is_seekable(NonSeekable2())
+
+    def test_long_illumina(self):
+        'The qualities seem illumina, but the reads are too lengthly'
+        txt = '@read\n'
+        txt += 'T' * 400 + '\n'
+        txt += '+\n'
+        txt += '@' * 400 + '\n'
+        fhand = StringIO(txt)
+        try:
+            guess_format(fhand)
+            self.fail('UndecidedFastqVersionError expected')
+        except UndecidedFastqVersionError:
+            pass
+
+    def test_non_seekable(self):
+        'Fastq version guessing using the non-seekable route'
+        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
+        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
+        fhand = StringIO(txt)
+        assert _guess_format(fhand, True) == 'fastq-illumina'
+
+        fhand = StringIO('@HWI-EAS209\n@')
+        try:
+            assert _guess_format(fhand, True) == 'fasta'
+            self.fail('UnknownFormatError expected')
+        except UnknownFormatError:
+            pass
+
+        # sanger
+        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
+        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += '000000000000000000000000000000000000000000000000000000000000\n'
+        fhand = StringIO(txt)
+        assert _guess_format(fhand, True) == 'fastq'
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

@@ -30,6 +30,10 @@ class WrongFormatError(Exception):
     pass
 
 
+class UndecidedFastqVersionError(Exception):
+    'The file is Fastq, but the version is difficult to guess'
+    pass
+
 class FileNotFoundError(Exception):
     'The file does not exists'
     pass

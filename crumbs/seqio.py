@@ -29,6 +29,7 @@ from Bio.SeqIO import QualityIO
 from crumbs.exceptions import MalformedFile
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils import rel_symlink, guess_format
+from crumbs.settings import GUESS_FORMAT
 
 PACKET_SIZE = 1000
 
@@ -70,18 +71,22 @@ def title2ids(title):
     return id_, name, desc
 
 
-def read_seqrecords_in_packets(fhands, size=PACKET_SIZE):
+def read_seqrecords_in_packets(fhands, size=PACKET_SIZE,
+                               file_format=GUESS_FORMAT):
     '''it returns the sequences in packets of the given size. It returns a
     iterator of seq iterators'''
-    seqs = read_seqrecords(fhands)
+    seqs = read_seqrecords(fhands, file_format=file_format)
     return group_in_packets(seqs, size)
 
 
-def read_seqrecords(fhands):
+def read_seqrecords(fhands, file_format=GUESS_FORMAT):
     'it returns an iterator of seqrecords'
     seq_iters = []
     for fhand in fhands:
-        fmt = guess_format(fhand)
+        if file_format == GUESS_FORMAT or file_format is None:
+            fmt = guess_format(fhand)
+        else:
+            fmt = file_format
         if fmt in ('fasta', 'qual') or 'fastq' in fmt:
             title = title2ids
         if fmt == 'fasta':
@@ -97,7 +102,7 @@ def read_seqrecords(fhands):
         else:
             seq_iter = SeqIO.parse(fhand, fmt)
         seq_iters.append(seq_iter)
-    return chain(*seq_iters)
+    return chain.from_iterable(seq_iters)
 
 
 def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
@@ -176,14 +181,15 @@ def _count_seqs_in_fasta(fhand):
     return count
 
 
-def count_seqs_in_files(fhands, file_formats=None):
+def count_seqs_in_files(fhands, file_format=GUESS_FORMAT):
     'It counts the seqs in the given files'
     count = 0
-    for index, fhand in enumerate(fhands):
-        if file_formats:
-            file_format = file_formats[index]
-        else:
+    for fhand in fhands:
+        if file_format == GUESS_FORMAT or file_format is None:
             file_format = guess_format(fhand)
+        else:
+            file_format = file_format
+
         if file_format == 'fasta':
             count += _count_seqs_in_fasta(fhand)
         elif 'fastq' in file_format:

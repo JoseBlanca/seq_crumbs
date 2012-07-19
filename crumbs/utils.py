@@ -28,6 +28,7 @@ import platform
 import argparse
 import io
 import cStringIO
+from array import array
 import itertools
 from multiprocessing import Pool
 
@@ -38,13 +39,12 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                WrongFormatError, TooManyFiles,
                                MalformedFile, SampleSizeError,
                                ExternalBinaryError, MissingBinaryError,
-                               IncompatibleFormatError)
-
-STDIN = 'stdin'
-STDOUT = 'stdout'
-INFILES = 'infiles'
-OUTFILE = 'output'
-SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
+                               IncompatibleFormatError,
+                               UndecidedFastqVersionError)
+from crumbs.settings import (OUTFILE, SUPPORTED_OUTPUT_FORMATS, GUESS_FORMAT,
+                             CHUNK_TO_GUESS_FASTQ_VERSION,
+                             SEQS_TO_GUESS_FASTQ_VERSION,
+                             LONGEST_EXPECTED_ILLUMINA_READ)
 
 
 def main(funct):
@@ -87,6 +87,9 @@ def main(funct):
     except IncompatibleFormatError, error:
         stderr.write(str(error) + '\n')
         return 10
+    except UndecidedFastqVersionError, error:
+        stderr.write(str(error) + '\n')
+        return 11
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq crumbs developers would appreciate your feedback\n'
@@ -223,7 +226,7 @@ def get_binary_path(binary_name):
     module_path = os.path.split(__file__)[0]
     third_party_path = join(module_path, 'third_party', 'bin')
     if not os.path.exists(third_party_path):
-        msg = 'Third party bin directory not found, please fixme.'
+        msg = 'Third party bin directory not found, please fix me.'
         raise MissingBinaryError(msg)
 
     binary_path = os.path.abspath(join(third_party_path, system, arch,
@@ -250,6 +253,9 @@ def create_io_argparse(**kwargs):
     parser.add_argument('input', help='Sequence input files to process',
                         default=sys.stdin, nargs='*',
                         type=argparse.FileType('rt'))
+
+    parser.add_argument('-t', '--in_format', help='Format of the input files',
+                        default=GUESS_FORMAT)
 
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
                         help='Sequence output file to process',
@@ -281,15 +287,21 @@ def parse_basic_args(parser):
         fhand = wrap_in_buffered_reader(fhand)
         wrapped_fhands.append(fhand)
 
+    in_format = parsed_args.in_format
+
     out_fhand = getattr(parsed_args, OUTFILE)
     out_format = parsed_args.out_format
     # The default format is the same as the first file
     if not out_format:
-        out_format = guess_format(wrapped_fhands[0])
+        if in_format == GUESS_FORMAT:
+            out_format = guess_format(wrapped_fhands[0])
+        else:
+            out_format = in_format
     # The original fhands should be stored, because otherwise they would be
     # closed
     args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
-            'out_format': out_format, 'original_in_fhands': in_fhands}
+            'out_format': out_format, 'original_in_fhands': in_fhands,
+            'in_format': in_format}
     return args, parsed_args
 
 
@@ -304,30 +316,6 @@ def wrap_in_buffered_reader(fhand, force_wrap=False):
         fhand = io.open(fhand.fileno(), mode='rb')  # with text there's no peek
 
     return fhand
-
-
-def _guess_fastq_format(fhand):
-    '''It guesses the format of fastq files.
-
-    It ignores the solexa fastq version.
-    '''
-    chunk_size = 50000
-    chunk = _peek_chunk_from_file(fhand, chunk_size)
-
-    fmt_fhand = cStringIO.StringIO(chunk)
-    try:
-        for seq in FastqGeneralIterator(fmt_fhand):
-            qual = seq[2]
-            for letter in qual:
-                num = ord(letter)
-                if num < 64:
-                    return 'fastq'
-                elif num > 73:
-                    return 'fastq-illumina'
-    except ValueError:
-        raise UnknownFormatError('Malformed fastq')
-    msg = 'It is fastq file, but we do not know if sanger or illumina'
-    raise UnknownFormatError(msg)
 
 
 def fhand_is_seekable(fhand):
@@ -360,9 +348,75 @@ def _peek_chunk_from_file(fhand, chunk_size):
     return chunk
 
 
+def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
+    'It returns the quality characters and the lengths'
+    seqs_to_peek = SEQS_TO_GUESS_FASTQ_VERSION
+    chunk_size = CHUNK_TO_GUESS_FASTQ_VERSION
+
+    lengths = array('I')
+    seqs_analyzed = 0
+    if fhand_is_seekable(fhand) and not force_file_as_non_seek:
+        fmt_fhand = fhand
+    else:
+        chunk = _peek_chunk_from_file(fhand, chunk_size)
+        fmt_fhand = cStringIO.StringIO(chunk)
+
+    try:
+        for seq in FastqGeneralIterator(fmt_fhand):
+            qual = [ord(char) for char in seq[2]]
+            sanger_chars = [q for q in qual if q < 64]
+            if sanger_chars:
+                fhand.seek(0)
+                return None, True     # no quals, no lengths, is_sanger
+            lengths.append(len(qual))
+            seqs_analyzed += 1
+            if seqs_analyzed > seqs_to_peek:
+                break
+    except ValueError:
+        raise UnknownFormatError('Malformed fastq')
+    finally:
+        fhand.seek(0)
+    return lengths, None     # quals, lengths, don't know if it's sanger
+
+
+def _guess_fastq_version(fhand, force_file_as_non_seek):
+    '''It guesses the format of fastq files.
+
+    It ignores the solexa fastq version.
+    '''
+    lengths, is_sanger = _get_some_qual_and_lengths(fhand,
+                                                    force_file_as_non_seek)
+    if is_sanger:
+        return 'fastq'
+    elif is_sanger is False:
+        return 'fastq-illumina'
+    n_long_seqs = [l for l in lengths if l > LONGEST_EXPECTED_ILLUMINA_READ]
+    if n_long_seqs:
+        msg = 'It was not possible to guess the format of '
+        if hasattr(fhand, 'name'):
+            msg += 'the file ' + fhand.name
+        else:
+            msg += 'a file '
+        msg = '\n. The quality values could be Illumina, but there are '
+        msg += 'sequences longer than %i bp.'
+        msg %= LONGEST_EXPECTED_ILLUMINA_READ
+        raise UndecidedFastqVersionError(msg)
+    else:
+        return 'fastq-illumina'
+
+
 def guess_format(fhand):
     '''It guesses the format of the sequence file.
 
+    It does ignore the solexa fastq version.
+    '''
+    return _guess_format(fhand, force_file_as_non_seek=False)
+
+
+def _guess_format(fhand, force_file_as_non_seek):
+    '''It guesses the format of the sequence file.
+
+    This function is just for testing forcing the fhand as non-seekable.
     It does ignore the solexa fastq version.
     '''
     chunk_size = 1024
@@ -380,7 +434,7 @@ def guess_format(fhand):
             else:
                 return 'fasta'
     elif chunk.startswith('@'):
-        return _guess_fastq_format(fhand)
+        return _guess_fastq_version(fhand, force_file_as_non_seek)
     elif chunk.startswith('LOCUS'):
         return 'genbank'
     elif chunk.startswith('ID'):
