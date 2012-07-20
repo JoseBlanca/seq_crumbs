@@ -1,0 +1,85 @@
+features generales
+------------------
+
+Leer y escribir ficheros comprimidos
+
+
+
+mask_blast_matches
+------------------
+
+Enmascara las regiones que tienen un match_part contra una base de datos
+
+mask_librería_búsqueda cutadapt
+--------------------------------
+
+mask regiones baja calidad
+----------------------------
+
+mask con el lucy vectores
+----------------
+
+mask con el lucy calidad
+----------------
+
+mask un número fijo de bases
+-----------------------------
+con opción para que al menos sean X bases o para que al menos se añadan X bases más enmascaradas
+
+mask quality by n
+------------------
+
+mask poli A
+-----------
+
+mask low complexity
+--------------------
+
+
+
+
+filter with blast
+-----------------
+
+elimina o deja las secuencias que dan match en una base de datos
+
+filter with re en título
+------------------------
+grep en el nombre y la descripción
+
+filter con logitud de las secuencias
+------------------------------------
+
+filter por calidad media
+-------------------------
+con opción de que sea en una región de la secuencia (primeras bases, últimas bases)
+
+filter según la región enmascarada
+----------------------------------
+
+
+
+umask seqeuences
+-----------------
+pasar toda la secuencia a mayúsculas
+
+trim longest fragemnt trim all fragments
+------------------
+
+a lo mejor el mismo ejecutable con una opción de método
+
+
+separar flags
+-------------
+
+
+seq stats
+----------
+
+
+crumbs_catalog
+-------
+
+lista los que hay disponibles
+
+
