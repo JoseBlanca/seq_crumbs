@@ -18,6 +18,7 @@ import os
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
+from gzip import GzipFile
 
 from crumbs.tests.utils import BIN_DIR
 from crumbs.seqio import count_seqs_in_files
@@ -85,6 +86,44 @@ class CatTest(unittest.TestCase):
         in_fhand2 = self.make_fasta()
         result = check_output([cat_bin, in_fhand1.name, in_fhand2.name])
         assert '>seq3\nACTATCATGGCAGATA\n>seq4\nACTATCATGGCAGATA' in result
+
+    def test_gziped_output(self):
+        'It writes a gziped file'
+        in_fhand = self.make_fasta()
+        cat_bin = os.path.join(BIN_DIR, 'cat_seqs')
+
+        # bgzf does not work with STDOUT
+        try:
+            stderr = NamedTemporaryFile()
+            check_output([cat_bin, '-Z', in_fhand.name], stderr=stderr)
+            self.fail('CalledProcessError expected')
+        except CalledProcessError:
+            msg = 'bgzf is incompatible with STDOUT'
+            assert msg in open(stderr.name).read()
+
+        # bgzf
+        out_fhand = NamedTemporaryFile()
+        check_output([cat_bin, '-Z', '-o', out_fhand.name, in_fhand.name])
+        result = GzipFile(out_fhand.name).read()
+        assert '\nACTATCATGGCAGATA\n' in  result
+
+        # gzip
+        result = check_output([cat_bin, '-z', in_fhand.name])
+        result = GzipFile(fileobj=StringIO(result)).read()
+        assert '\nACTATCATGGCAGATA\n' in  result
+
+    def test_compressed_input(self):
+        'It can read compressed files'
+        # we need a compressed file
+        in_fhand = self.make_fasta()
+        cat_bin = os.path.join(BIN_DIR, 'cat_seqs')
+        out_fhand = NamedTemporaryFile()
+        check_output([cat_bin, '-Z', '-o', out_fhand.name, in_fhand.name])
+        result = GzipFile(out_fhand.name).read()
+        assert '\nACTATCATGGCAGATA\n' in  result
+
+        result = check_output([cat_bin, out_fhand.name])
+        assert '>seq1\nACTATCATGGCAGATA\n' in  result
 
 
 class SeqHeadTest(unittest.TestCase):

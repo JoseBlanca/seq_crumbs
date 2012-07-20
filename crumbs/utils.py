@@ -31,8 +31,10 @@ import cStringIO
 from array import array
 import itertools
 from multiprocessing import Pool
+from gzip import GzipFile
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from Bio.bgzf import BgzfWriter
 
 from crumbs.third_party import cgitb
 from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
@@ -62,34 +64,34 @@ def main(funct):
         return(funct())
     except FileNotFoundError, error:
         stderr.write(str(error) + '\n')
-        return 2
+        return 3
     except UnknownFormatError, error:
         stderr.write(str(error) + '\n')
-        return 3
+        return 4
     except WrongFormatError, error:
         stderr.write(str(error) + '\n')
-        return 4
+        return 5
     except TooManyFiles, error:
         stderr.write(str(error) + '\n')
-        return 5
+        return 6
     except MalformedFile, error:
         stderr.write(str(error) + '\n')
-        return 6
+        return 7
     except SampleSizeError, error:
         stderr.write(str(error) + '\n')
-        return 7
+        return 8
     except ExternalBinaryError, error:
         stderr.write(str(error) + '\n')
-        return 8
+        return 9
     except MissingBinaryError, error:
         stderr.write(str(error) + '\n')
-        return 9
+        return 10
     except IncompatibleFormatError, error:
         stderr.write(str(error) + '\n')
-        return 10
+        return 11
     except UndecidedFastqVersionError, error:
         stderr.write(str(error) + '\n')
-        return 11
+        return 12
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq crumbs developers would appreciate your feedback\n'
@@ -260,6 +262,11 @@ def create_io_argparse(**kwargs):
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
                         help='Sequence output file to process',
                         type=argparse.FileType('wt'))
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-z ', '--gzip', action='store_true',
+                       help='Compress the output in gzip format')
+    group.add_argument('-Z ', '--bgzf', action='store_true',
+                       help='Compress the output in bgzf format')
     return parser
 
 
@@ -293,12 +300,22 @@ def parse_basic_args(parser):
     if not isinstance(in_fhands, list):
         in_fhands = [in_fhands]
     for fhand in in_fhands:
-        fhand = wrap_in_buffered_reader(fhand)
+        fhand = _wrap_in_buffered_reader(fhand)
+        fhand = _uncompress_if_required(fhand)
         wrapped_fhands.append(fhand)
 
     in_format = parsed_args.in_format
 
     out_fhand = getattr(parsed_args, OUTFILE)
+
+    if parsed_args.bgzf:
+        if fhand_is_seekable(out_fhand):
+            out_fhand = BgzfWriter(fileobj=out_fhand)
+        else:
+            parser.error('bgzf is incompatible with STDOUT.')
+    elif parsed_args.gzip:
+        out_fhand = GzipFile(fileobj=out_fhand)
+
     out_format = parsed_args.out_format
     # The default format is the same as the first file
     if not out_format:
@@ -314,6 +331,14 @@ def parse_basic_args(parser):
     return args, parsed_args
 
 
+def _uncompress_if_required(fhand):
+    'It returns a uncompressed handle if required'
+    magic = _peek_chunk_from_file(fhand, 2)
+    if magic == '\037\213':
+        fhand = GzipFile(fileobj=fhand)
+    return fhand
+
+
 def parse_basic_process_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_args(parser)
@@ -321,7 +346,7 @@ def parse_basic_process_args(parser):
     return args, parsed_args
 
 
-def wrap_in_buffered_reader(fhand, force_wrap=False):
+def _wrap_in_buffered_reader(fhand, force_wrap=False):
     '''It wraps the given file in a peekable BufferedReader.
 
     If the file is seekable it doesn't do anything.
@@ -354,7 +379,7 @@ def fhand_is_seekable(fhand):
 
 
 def _peek_chunk_from_file(fhand, chunk_size):
-    'It returns the begining of a file without moving the pointer'
+    'It returns the beginning of a file without moving the pointer'
     if fhand_is_seekable(fhand):
         fhand.seek(0)
         chunk = fhand.read(chunk_size)
