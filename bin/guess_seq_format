@@ -18,7 +18,8 @@
 import sys
 import argparse
 
-from crumbs.utils import main, wrap_in_buffered_reader
+from crumbs.utils import (main, wrap_in_buffered_reader,
+                          uncompress_if_required)
 from crumbs.seqio import guess_format
 
 
@@ -40,6 +41,7 @@ def _parse_args(parser):
     in_fhand = parsed_args.input
 
     fhand = wrap_in_buffered_reader(in_fhand)
+    fhand = uncompress_if_required(fhand)
 
     args = {'in_fhand': fhand, 'original_in_fhand': in_fhand}
     return args

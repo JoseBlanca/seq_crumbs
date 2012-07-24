@@ -300,8 +300,8 @@ def parse_basic_args(parser):
     if not isinstance(in_fhands, list):
         in_fhands = [in_fhands]
     for fhand in in_fhands:
-        fhand = _wrap_in_buffered_reader(fhand)
-        fhand = _uncompress_if_required(fhand)
+        fhand = wrap_in_buffered_reader(fhand)
+        fhand = uncompress_if_required(fhand)
         wrapped_fhands.append(fhand)
 
     in_format = parsed_args.in_format
@@ -331,7 +331,7 @@ def parse_basic_args(parser):
     return args, parsed_args
 
 
-def _uncompress_if_required(fhand):
+def uncompress_if_required(fhand):
     'It returns a uncompressed handle if required'
     magic = _peek_chunk_from_file(fhand, 2)
     if magic == '\037\213':
@@ -346,7 +346,7 @@ def parse_basic_process_args(parser):
     return args, parsed_args
 
 
-def _wrap_in_buffered_reader(fhand, force_wrap=False):
+def wrap_in_buffered_reader(fhand, force_wrap=False):
     '''It wraps the given file in a peekable BufferedReader.
 
     If the file is seekable it doesn't do anything.
