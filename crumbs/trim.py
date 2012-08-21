@@ -23,6 +23,8 @@ import itertools
 
 from crumbs.settings import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
 
+# pylint: disable=R0903
+
 
 def _get_uppercase_segments(string):
     '''It detects the unmasked regions of a sequence
@@ -88,3 +90,62 @@ class TrimLowercasedLetters(object):
                 stats[YIELDED_SEQS] += 1
                 trimmed_seqs.append(seqrecord[segment[0]:segment[1] + 1])
         return trimmed_seqs
+
+
+class TrimEdges(object):
+    'It trims a fixed number of bases from the seqrecords.'
+    def __init__(self, left=0, right=0, mask=False):
+        '''The initiator.
+
+        left - number of bases to trim from the left side
+        right - number of bases to trim from the right side
+        mask - if True it will mask by lowercasing instead of trimming.
+        '''
+        self.left = left
+        self.right = right
+        self.mask = mask
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It trims the edges of the given seqrecords.'
+        stats = self._stats
+        left = self.left
+        mask = self.mask
+        stats[PROCESSED_PACKETS] += 1
+        processed_seqs = []
+        for seqrecord in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            right = self.right
+            if mask:
+                seq = str(seqrecord.seq)
+                new_seq = []
+                if left:
+                    new_seq.append(seq[:left].lower())
+                max_right = len(seq) - left
+                if right > max_right:
+                    right = max_right
+                if right:
+                    new_seq.append(seq[left:-right])
+                    new_seq.append(seq[-right:].lower())
+                else:
+                    new_seq.append(seq[left:])
+                annots = seqrecord.letter_annotations
+                seqrecord.letter_annotations = {}
+                seqrecord.seq = ''.join(new_seq)
+                seqrecord.letter_annotations = annots
+            else:
+                if right:
+                    seqrecord = seqrecord[left:-right]
+                else:
+                    seqrecord = seqrecord[left:]
+            if len(seqrecord.seq):
+                processed_seqs.append(seqrecord)
+                stats[YIELDED_SEQS] += 1
+        return processed_seqs

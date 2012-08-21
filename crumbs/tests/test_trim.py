@@ -20,12 +20,16 @@ from tempfile import NamedTemporaryFile
 from subprocess import check_output
 from itertools import chain
 
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from crumbs.trim import (_get_uppercase_segments, _get_longest_segment,
-                         TrimLowercasedLetters)
+                         TrimLowercasedLetters, TrimEdges)
 from crumbs.seqio import read_seqrecords_in_packets
 from crumbs.tests.utils import BIN_DIR
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
+FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -76,10 +80,8 @@ class TrimTest(unittest.TestCase):
 class TrimByCaseTest(unittest.TestCase):
     'It tests the trim_by_case binary'
     @staticmethod
-    def _make_fhand(content=None):
+    def _make_fhand(content=''):
         'It makes temporary fhands'
-        if content is None:
-            content = ''
         fhand = NamedTemporaryFile()
         fhand.write(content)
         fhand.flush()
@@ -103,6 +105,82 @@ class TrimByCaseTest(unittest.TestCase):
         result = check_output([trim_bin, '-p', '2', fastq_fhand.name])
         assert '@seq1\nTC\n+' in result
 
+
+class TrimEdgesTest(unittest.TestCase):
+    'It test the fixed number of bases trimming'
+    @staticmethod
+    def _make_fhand(content=''):
+        'It makes temporary fhands'
+        fhand = NamedTemporaryFile()
+        fhand.write(content)
+        fhand.flush()
+        return fhand
+
+    def _some_seqs(self):
+        'It returns some seqrecords.'
+        seqs = []
+        seqs.append(SeqRecord(Seq('ACCG'),
+                              letter_annotations={'dummy': 'dddd'}))
+        seqs.append(SeqRecord(Seq('AAACCCGGG')))
+        return seqs
+
+    def test_edge_trimming(self):
+        'It trims the edges'
+        trim_edges = TrimEdges(left=1)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['CCG', 'AACCCGGG']
+
+        trim_edges = TrimEdges(right=1)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['ACC', 'AAACCCGG']
+
+        trim_edges = TrimEdges(left=1, right=1)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['CC', 'AACCCGG']
+
+        trim_edges = TrimEdges(left=2, right=2)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['ACCCG']
+
+        trim_edges = TrimEdges(left=3, right=3)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['CCC']
+
+        trim_edges = TrimEdges(left=1, mask=True)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['aCCG', 'aAACCCGGG']
+
+        trim_edges = TrimEdges(right=1, mask=True)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['ACCg', 'AAACCCGGg']
+
+        trim_edges = TrimEdges(left=1, right=1, mask=True)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['aCCg', 'aAACCCGGg']
+
+        trim_edges = TrimEdges(left=2, right=2, mask=True)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['accg', 'aaACCCGgg']
+
+        trim_edges = TrimEdges(left=3, right=3, mask=True)
+        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        assert res == ['accg', 'aaaCCCggg']
+
+    def test_trim_edges_bin(self):
+        'It tests the trim_edges binary'
+        trim_bin = os.path.join(BIN_DIR, 'trim_edges')
+        assert 'usage' in check_output([trim_bin, '-h'])
+
+        fastq_fhand = self._make_fhand(FASTQ2)
+        result = check_output([trim_bin, fastq_fhand.name])
+        assert '@seq1\nATCGT\n+' in result
+
+        result = check_output([trim_bin, '-l', '1', '-r', '1',
+                               fastq_fhand.name])
+        assert '@seq1\nTCG\n+\n???\n' in result
+        result = check_output([trim_bin, '-l', '1', '-r', '1', '-m',
+                               fastq_fhand.name])
+        assert '@seq1\naTCGt\n+\nA???A\n' in result
 
 
 if __name__ == '__main__':
