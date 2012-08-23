@@ -1,9 +1,11 @@
-features generales
-------------------
 
-Leer y escribir ficheros comprimidos
+TODO
+-----
 
-
+- process_sequences -> process_seq_packets
+- order of sequences when in parallel. (by default not in the same order)
+- trimming infrastructure
+- PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS not in settings
 
 mask_blast_matches
 ------------------
@@ -47,16 +49,21 @@ filter with re en título
 ------------------------
 grep en el nombre y la descripción
 
-filter con logitud de las secuencias
-------------------------------------
 
-filter por calidad media
+filter_by_quality
 -------------------------
 con opción de que sea en una región de la secuencia (primeras bases, últimas bases)
+--threshold
+--ignore_masked_region (default False)
+--sbegin (start of the sequence to be used)
+--send (end of the sequence to be used)
+--reverse -v 
 
-filter según la región enmascarada
-----------------------------------
-
+filter_by_length
+----------------
+--ignore_masked_region (default False)
+--threshold
+--reverse -v
 
 
 umask seqeuences

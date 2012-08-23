@@ -275,7 +275,7 @@ def create_basic_argparse(**kwargs):
     parser = create_io_argparse(**kwargs)
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
     parser.add_argument('-f', '--out_format', dest='out_format',
-                        help='format of the output file',
+                        help='output file format',
                         choices=SUPPORTED_OUTPUT_FORMATS)
     return parser
 

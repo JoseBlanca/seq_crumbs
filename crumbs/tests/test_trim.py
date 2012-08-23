@@ -35,8 +35,16 @@ FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
 # pylint: disable=R0904
 
 
+def _make_fhand(content=''):
+    'It makes temporary fhands'
+    fhand = NamedTemporaryFile()
+    fhand.write(content)
+    fhand.flush()
+    return fhand
+
+
 class TrimTest(unittest.TestCase):
-    'It tests the rim functions'
+    'It tests the trim functions'
 
     @staticmethod
     def test_masked_locations():
@@ -67,7 +75,7 @@ class TrimTest(unittest.TestCase):
 
     @staticmethod
     def test_trim_seqs():
-        'it tests the trim seq function'
+        'It tests the trim seq function'
         fasta = '>seq1\naaCTTTC\n>seq2\nCTTCaa\n>seq3\naaCTCaa\n>s\nactg\n'
         seq_packets = read_seqrecords_in_packets([StringIO(fasta)])
         trim_lowercased_seqs = TrimLowercasedLetters()
@@ -79,20 +87,13 @@ class TrimTest(unittest.TestCase):
 
 class TrimByCaseTest(unittest.TestCase):
     'It tests the trim_by_case binary'
-    @staticmethod
-    def _make_fhand(content=''):
-        'It makes temporary fhands'
-        fhand = NamedTemporaryFile()
-        fhand.write(content)
-        fhand.flush()
-        return fhand
 
     def test_trim_case_bin(self):
         'It tests the trim seqs binary'
         trim_bin = os.path.join(BIN_DIR, 'trim_by_case')
         assert 'usage' in check_output([trim_bin, '-h'])
 
-        fastq_fhand = self._make_fhand(FASTQ)
+        fastq_fhand = _make_fhand(FASTQ)
 
         result = check_output([trim_bin, fastq_fhand.name])
         assert '@seq1\nTC\n+' in result
@@ -100,7 +101,7 @@ class TrimByCaseTest(unittest.TestCase):
     def test_trim_in_parallel(self):
         'It trims sequences in parallel'
         trim_bin = os.path.join(BIN_DIR, 'trim_by_case')
-        fastq_fhand = self._make_fhand(FASTQ)
+        fastq_fhand = _make_fhand(FASTQ)
 
         result = check_output([trim_bin, '-p', '2', fastq_fhand.name])
         assert '@seq1\nTC\n+' in result
@@ -108,13 +109,6 @@ class TrimByCaseTest(unittest.TestCase):
 
 class TrimEdgesTest(unittest.TestCase):
     'It test the fixed number of bases trimming'
-    @staticmethod
-    def _make_fhand(content=''):
-        'It makes temporary fhands'
-        fhand = NamedTemporaryFile()
-        fhand.write(content)
-        fhand.flush()
-        return fhand
 
     def _some_seqs(self):
         'It returns some seqrecords.'
@@ -171,7 +165,7 @@ class TrimEdgesTest(unittest.TestCase):
         trim_bin = os.path.join(BIN_DIR, 'trim_edges')
         assert 'usage' in check_output([trim_bin, '-h'])
 
-        fastq_fhand = self._make_fhand(FASTQ2)
+        fastq_fhand = _make_fhand(FASTQ2)
         result = check_output([trim_bin, fastq_fhand.name])
         assert '@seq1\nATCGT\n+' in result
 

@@ -25,7 +25,7 @@ from crumbs.trim import TrimLowercasedLetters
 
 
 def trim_by_case():
-    'The main function of the head binary'
+    'The main function of the trim binary'
     description = 'It trims the lowercased regions of the sequences.'
     parser = create_basic_process_argparse(description=description)
     args = parse_basic_process_args(parser)[0]
