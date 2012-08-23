@@ -18,8 +18,8 @@
 import sys
 
 from crumbs.utils import (main, parse_basic_args, create_basic_argparse,
-                          process_sequences)
-from crumbs.seqio import read_seqrecords_in_packets, write_seqrecord_packets
+                          process_seq_packets)
+from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.filters import FilterByLength
 
 
@@ -55,13 +55,12 @@ def filter_by_length():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seq_packets = read_seqrecords_in_packets(in_fhands,
-                                             file_format=args['in_format'])
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     filter_by_length = FilterByLength(threshold=args['threshold'],
                                       reverse=args['reverse'],
                                       ignore_masked=args['ignore_masked'])
-    seq_packets = process_sequences(seq_packets, [filter_by_length])
-    write_seqrecord_packets(out_fhand, seq_packets, args['out_format'])
+    seq_packets = process_seq_packets(seq_packets, [filter_by_length])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'])
 
 if __name__ == '__main__':
     sys.exit(main(filter_by_length))

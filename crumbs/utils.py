@@ -483,9 +483,9 @@ def _guess_format(fhand, force_file_as_non_seek):
     raise UnknownFormatError('Sequence file of unknown format.')
 
 
-def process_sequences(seq_packets, map_functions, processes=1,
-                      keep_order=False):
-    'It processes de sequences. It can do it in parallel'
+def process_seq_packets(seq_packets, map_functions, processes=1,
+                        keep_order=False):
+    'It processes the SeqRecord packets'
     if processes > 1:
         pool = Pool(processes=processes)
         mapper = pool.imap if keep_order else pool.imap_unordered

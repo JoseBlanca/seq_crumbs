@@ -25,7 +25,7 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.trim import (_get_uppercase_segments, _get_longest_segment,
                          TrimLowercasedLetters, TrimEdges)
-from crumbs.seqio import read_seqrecords_in_packets
+from crumbs.seqio import read_seq_packets
 from crumbs.tests.utils import BIN_DIR
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
@@ -77,7 +77,7 @@ class TrimTest(unittest.TestCase):
     def test_trim_seqs():
         'It tests the trim seq function'
         fasta = '>seq1\naaCTTTC\n>seq2\nCTTCaa\n>seq3\naaCTCaa\n>s\nactg\n'
-        seq_packets = read_seqrecords_in_packets([StringIO(fasta)])
+        seq_packets = read_seq_packets([StringIO(fasta)])
         trim_lowercased_seqs = TrimLowercasedLetters()
         # pylint: disable=W0141
         seq_packets = map(trim_lowercased_seqs, seq_packets)

@@ -22,10 +22,10 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils import (main, parse_basic_process_args,
                           create_basic_process_argparse,
-                          process_sequences)
+                          process_seq_packets)
 from crumbs.settings import FWD_454_LINKERS, FLX_LINKER, TITANIUM_LINKER
 from crumbs.split_mates import MatePairSplitter
-from crumbs.seqio import read_seqrecords_in_packets, write_seqrecord_packets
+from crumbs.seqio import read_seq_packets, write_seq_packets
 
 
 def _setup_argparse():
@@ -68,15 +68,14 @@ def split_matepairs():
     parser = _setup_argparse()
     args = _parse_args(parser)
 
-    seq_packets = read_seqrecords_in_packets(args['in_fhands'],
-                                             file_format=args['in_format'])
+    seq_packets = read_seq_packets(args['in_fhands'],
+                                   file_format=args['in_format'])
 
     mate_splitter = MatePairSplitter(linkers=args['linkers'])
-    seq_packets = process_sequences(seq_packets, [mate_splitter],
-                                    processes=args['processes'])
+    seq_packets = process_seq_packets(seq_packets, [mate_splitter],
+                                      processes=args['processes'])
 
-    write_seqrecord_packets(args['out_fhand'], seq_packets,
-                            args['out_format'])
+    write_seq_packets(args['out_fhand'], seq_packets, args['out_format'])
 
 if __name__ == '__main__':
     sys.exit(main(split_matepairs))

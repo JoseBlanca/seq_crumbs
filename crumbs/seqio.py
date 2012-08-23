@@ -50,8 +50,8 @@ def write_seqrecords(fhand, seqs, file_format='fastq'):
     fhand.flush()
 
 
-def write_seqrecord_packets(fhand, seq_packets, file_format='fastq'):
-    'It writes to file a stream of seqcuence lists'
+def write_seq_packets(fhand, seq_packets, file_format='fastq'):
+    'It writes to file a stream of SeqRecord lists'
     write_seqrecords(fhand, chain.from_iterable(seq_packets),
                      file_format=file_format)
 
@@ -71,10 +71,8 @@ def title2ids(title):
     return id_, name, desc
 
 
-def read_seqrecords_in_packets(fhands, size=PACKET_SIZE,
-                               file_format=GUESS_FORMAT):
-    '''it returns the sequences in packets of the given size. It returns a
-    iterator of seq iterators'''
+def read_seq_packets(fhands, size=PACKET_SIZE, file_format=GUESS_FORMAT):
+    '''It yields SeqRecords in packets of the given size.'''
     seqs = read_seqrecords(fhands, file_format=file_format)
     return group_in_packets(seqs, size)
 

@@ -28,7 +28,7 @@ from Bio.Seq import Seq
 
 from crumbs.split_mates import _BlastMatcher, MatePairSplitter
 from crumbs.settings import LINKERS, TITANIUM_LINKER, FLX_LINKER
-from crumbs.seqio import read_seqrecords_in_packets, write_seqrecord_packets
+from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.tests.utils import BIN_DIR
 
 # pylint: disable=R0201
@@ -126,11 +126,11 @@ class MateSplitterTest(unittest.TestCase):
 
         splitter = MatePairSplitter()
         new_seqs = []
-        for packet in read_seqrecords_in_packets([mate_fhand], 2):
+        for packet in read_seq_packets([mate_fhand], 2):
             new_seqs.append(splitter(packet))
 
         out_fhand = StringIO()
-        write_seqrecord_packets(out_fhand, new_seqs, file_format='fasta')
+        write_seq_packets(out_fhand, new_seqs, file_format='fasta')
 
         result = out_fhand.getvalue()
         xpect = '>seq1.f\n'
