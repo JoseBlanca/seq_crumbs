@@ -13,27 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 21/06/2012
-
-@author: jose
-'''
-
 import sys
 import os
-import tempfile
-import shutil
-from subprocess import check_call, Popen
+from subprocess import Popen
 import platform
 import argparse
-import io
-import cStringIO
-from array import array
-import itertools
-from multiprocessing import Pool
 from gzip import GzipFile
 
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.bgzf import BgzfWriter
 
 from crumbs.third_party import cgitb
@@ -43,10 +29,15 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                ExternalBinaryError, MissingBinaryError,
                                IncompatibleFormatError,
                                UndecidedFastqVersionError)
-from crumbs.settings import (OUTFILE, SUPPORTED_OUTPUT_FORMATS, GUESS_FORMAT,
-                             CHUNK_TO_GUESS_FASTQ_VERSION,
-                             SEQS_TO_GUESS_FASTQ_VERSION,
-                             LONGEST_EXPECTED_ILLUMINA_READ)
+from crumbs.utils.file_utils import (wrap_in_buffered_reader,
+                                     uncompress_if_required, fhand_is_seekable)
+from crumbs.utils.seq_utils import guess_format
+from crumbs.settings import SUPPORTED_OUTPUT_FORMATS
+from crumbs.utils.tags import OUTFILE, GUESS_FORMAT
+
+
+BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
+                                       '..', 'bin'))
 
 
 def main(funct):
@@ -107,74 +98,6 @@ def main(funct):
         raise
 
 
-class TemporaryDir(object):
-    '''This class creates temporary directories '''
-    def __init__(self, suffix='', prefix='', directory=None):
-        '''It initiates the class.'''
-        self._name = tempfile.mkdtemp(suffix=suffix, prefix=prefix,
-                                      dir=directory)
-
-    def get_name(self):
-        'Returns path to the dict'
-        return self._name
-    name = property(get_name)
-
-    def close(self):
-        '''It removes the temp dir'''
-        if os.path.exists(self._name):
-            shutil.rmtree(self._name)
-
-
-def _common_base(path1, path2):
-    'it return the common and uncommon part of both strings'
-    common = []
-    path1 = path1.split(os.sep)
-    path2 = path2.split(os.sep)
-
-    for index, dir_ in enumerate(path1):
-        try:
-            if dir_ == path2[index]:
-                common.append(dir_)
-            else:
-                break
-        except IndexError:
-            break
-
-    uncommon1 = path1[len(common):]
-    uncommon2 = path2[len(common):]
-    return uncommon1, uncommon2
-
-
-def _rel_path(path1, path2):
-    'it return relative paths from path2 to path1'
-    uncommon1, uncommon2 = _common_base(path1, path2)
-
-    path = ['..'] * (len(uncommon2) - 1)
-    path.extend(uncommon1)
-    return os.sep.join(path)
-
-
-def rel_symlink(path1, path2):
-    'It makes the relative symlink'
-    path1 = os.path.abspath(path1)
-    path2 = os.path.abspath(path2)
-    fname2 = os.path.split(path2)[-1]
-    rel_path1 = _rel_path(path1, path2)
-
-    #we need a temp dir to be thread safe when creating the link
-    #we cannot use chdir, that is not threadsafe
-    temp_dir = tempfile.mkdtemp()
-    try:
-        temp_link_path = os.path.join(temp_dir, fname2)
-
-        cmd = ['ln', '-s', '-T', rel_path1, temp_link_path]
-        check_call(cmd)
-        cmd2 = ['mv', temp_link_path, path2]
-        check_call(cmd2)
-    finally:
-        os.rmdir(temp_dir)
-
-
 def check_process_finishes(process, binary, stdout=None, stderr=None):
     'It checks that the given process finishes OK, otherwise raises an Error'
 
@@ -226,7 +149,9 @@ def get_binary_path(binary_name):
     join = os.path.join
 
     module_path = os.path.split(__file__)[0]
-    third_party_path = join(module_path, 'third_party', 'bin')
+    third_party_path = join(module_path, '..', 'third_party', 'bin')
+    third_party_path = os.path.abspath(third_party_path)
+
     if not os.path.exists(third_party_path):
         msg = 'Third party bin directory not found, please fix me.'
         raise MissingBinaryError(msg)
@@ -331,168 +256,8 @@ def parse_basic_args(parser):
     return args, parsed_args
 
 
-def uncompress_if_required(fhand):
-    'It returns a uncompressed handle if required'
-    magic = _peek_chunk_from_file(fhand, 2)
-    if magic == '\037\213':
-        fhand = GzipFile(fileobj=fhand)
-    return fhand
-
-
 def parse_basic_process_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_args(parser)
     args['processes'] = parsed_args.processes
     return args, parsed_args
-
-
-def wrap_in_buffered_reader(fhand, force_wrap=False):
-    '''It wraps the given file in a peekable BufferedReader.
-
-    If the file is seekable it doesn't do anything.
-    '''
-    if not force_wrap and fhand_is_seekable(fhand):
-        return fhand
-    else:
-        fhand = io.open(fhand.fileno(), mode='rb')  # with text there's no peek
-
-    return fhand
-
-
-def fhand_is_seekable(fhand):
-    'It returns True if the fhand is seekable'
-    try:
-        try:
-            # The stdin stream in some instances has seek, has no seekable
-            fhand.tell()
-        except IOError:
-            return False
-        try:
-            if fhand.seekable():
-                return True
-            else:
-                return False
-        except AttributeError:
-            return True
-    except AttributeError:
-        return False
-
-
-def _peek_chunk_from_file(fhand, chunk_size):
-    'It returns the beginning of a file without moving the pointer'
-    if fhand_is_seekable(fhand):
-        fhand.seek(0)
-        chunk = fhand.read(chunk_size)
-        fhand.seek(0)
-    else:
-        chunk = fhand.peek(chunk_size)
-    return chunk
-
-
-def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
-    'It returns the quality characters and the lengths'
-    seqs_to_peek = SEQS_TO_GUESS_FASTQ_VERSION
-    chunk_size = CHUNK_TO_GUESS_FASTQ_VERSION
-
-    lengths = array('I')
-    seqs_analyzed = 0
-    if fhand_is_seekable(fhand) and not force_file_as_non_seek:
-        fmt_fhand = fhand
-    else:
-        chunk = _peek_chunk_from_file(fhand, chunk_size)
-        fmt_fhand = cStringIO.StringIO(chunk)
-
-    try:
-        for seq in FastqGeneralIterator(fmt_fhand):
-            qual = [ord(char) for char in seq[2]]
-            sanger_chars = [q for q in qual if q < 64]
-            if sanger_chars:
-                fhand.seek(0)
-                return None, True     # no quals, no lengths, is_sanger
-            lengths.append(len(qual))
-            seqs_analyzed += 1
-            if seqs_analyzed > seqs_to_peek:
-                break
-    except ValueError:
-        raise UnknownFormatError('Malformed fastq')
-    finally:
-        fhand.seek(0)
-    return lengths, None     # quals, lengths, don't know if it's sanger
-
-
-def _guess_fastq_version(fhand, force_file_as_non_seek):
-    '''It guesses the format of fastq files.
-
-    It ignores the solexa fastq version.
-    '''
-    lengths, is_sanger = _get_some_qual_and_lengths(fhand,
-                                                    force_file_as_non_seek)
-    if is_sanger:
-        return 'fastq'
-    elif is_sanger is False:
-        return 'fastq-illumina'
-    n_long_seqs = [l for l in lengths if l > LONGEST_EXPECTED_ILLUMINA_READ]
-    if n_long_seqs:
-        msg = 'It was not possible to guess the format of '
-        if hasattr(fhand, 'name'):
-            msg += 'the file ' + fhand.name
-        else:
-            msg += 'a file '
-        msg = '\n. The quality values could be Illumina, but there are '
-        msg += 'sequences longer than %i bp.'
-        msg %= LONGEST_EXPECTED_ILLUMINA_READ
-        raise UndecidedFastqVersionError(msg)
-    else:
-        return 'fastq-illumina'
-
-
-def guess_format(fhand):
-    '''It guesses the format of the sequence file.
-
-    It does ignore the solexa fastq version.
-    '''
-    return _guess_format(fhand, force_file_as_non_seek=False)
-
-
-def _guess_format(fhand, force_file_as_non_seek):
-    '''It guesses the format of the sequence file.
-
-    This function is just for testing forcing the fhand as non-seekable.
-    It does ignore the solexa fastq version.
-    '''
-    chunk_size = 1024
-    chunk = _peek_chunk_from_file(fhand, chunk_size)
-    if not chunk:
-        raise UnknownFormatError('The file is empty')
-    lines = chunk.splitlines()
-    if chunk.startswith('>'):
-        if lines[1].startswith('>'):
-            raise UnknownFormatError('Malformed fasta')
-        else:
-            first_item = lines[1].strip().split()[0]
-            if first_item.isdigit():
-                return 'qual'
-            else:
-                return 'fasta'
-    elif chunk.startswith('@'):
-        return _guess_fastq_version(fhand, force_file_as_non_seek)
-    elif chunk.startswith('LOCUS'):
-        return 'genbank'
-    elif chunk.startswith('ID'):
-        return 'embl'
-    raise UnknownFormatError('Sequence file of unknown format.')
-
-
-def process_seq_packets(seq_packets, map_functions, processes=1,
-                        keep_order=False):
-    'It processes the SeqRecord packets'
-    if processes > 1:
-        pool = Pool(processes=processes)
-        mapper = pool.imap if keep_order else pool.imap_unordered
-    else:
-        mapper = itertools.imap
-
-    for map_function in map_functions:
-        seq_packets = mapper(map_function, seq_packets)
-
-    return seq_packets

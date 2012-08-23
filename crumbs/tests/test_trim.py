@@ -26,7 +26,7 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.trim import (_get_uppercase_segments, _get_longest_segment,
                          TrimLowercasedLetters, TrimEdges)
 from crumbs.seqio import read_seq_packets
-from crumbs.tests.utils import BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'

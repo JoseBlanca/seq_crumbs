@@ -29,7 +29,7 @@ from Bio.Seq import Seq
 from crumbs.split_mates import _BlastMatcher, MatePairSplitter
 from crumbs.settings import LINKERS, TITANIUM_LINKER, FLX_LINKER
 from crumbs.seqio import read_seq_packets, write_seq_packets
-from crumbs.tests.utils import BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 
 # pylint: disable=R0201
 # pylint: disable=R0904

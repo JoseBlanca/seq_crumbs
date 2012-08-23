@@ -19,9 +19,12 @@ from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
 from cStringIO import StringIO
 
-from crumbs.utils import (TemporaryDir, rel_symlink, wrap_in_buffered_reader,
-                          check_process_finishes, popen, guess_format,
-                          fhand_is_seekable, _guess_format)
+from crumbs.utils.file_utils import (TemporaryDir, rel_symlink,
+                                     wrap_in_buffered_reader,
+                                     fhand_is_seekable)
+from crumbs.utils.bin_utils import check_process_finishes, popen
+from crumbs.utils.seq_utils import guess_format, _guess_format
+
 from crumbs.exceptions import (ExternalBinaryError, MissingBinaryError,
                                UnknownFormatError, UndecidedFastqVersionError)
 

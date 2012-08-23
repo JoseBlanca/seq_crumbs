@@ -18,7 +18,8 @@ import subprocess
 import tempfile
 
 from crumbs.seqio import seqio
-from crumbs.utils import check_process_finishes, popen, get_binary_path
+from crumbs.utils.bin_utils import (check_process_finishes, popen,
+                                    get_binary_path)
 
 BLAST_FIELDS = {'query': 'qseqid', 'subject': 'sseqid', 'identity': 'pident',
                 'aligment_length': 'length', 'mismatches': 'mismatch',

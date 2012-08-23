@@ -17,9 +17,9 @@
 
 import sys
 
-from crumbs.utils import (main, parse_basic_process_args,
-                          create_basic_process_argparse,
-                          process_seq_packets)
+from crumbs.utils.bin_utils import (main, parse_basic_process_args,
+                                    create_basic_process_argparse)
+from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.trim import TrimLowercasedLetters
 

@@ -13,16 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 18/06/2012
-
-@author: jose
-'''
-
-import os.path
-
-
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-
-BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
-                                       '..', 'bin'))
+STDIN = 'stdin'
+STDOUT = 'stdout'
+INFILES = 'infiles'
+OUTFILE = 'output'
+# Input format tag when we want to guess
+GUESS_FORMAT = 'guess'
+PROCESSED_SEQS = 'processed_seqs'
+PROCESSED_PACKETS = 'processed_packets'
+YIELDED_SEQS = 'yielded_seqs'

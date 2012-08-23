@@ -17,7 +17,8 @@
 
 import sys
 
-from crumbs.utils import main, create_basic_argparse, parse_basic_args
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args)
 from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
 from crumbs.exceptions import IncompatibleFormatError
 

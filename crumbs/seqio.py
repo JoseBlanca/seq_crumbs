@@ -28,8 +28,9 @@ from Bio.SeqIO import QualityIO
 
 from crumbs.exceptions import MalformedFile
 from crumbs.iterutils import length, group_in_packets
-from crumbs.utils import rel_symlink, guess_format
-from crumbs.settings import GUESS_FORMAT
+from crumbs.utils.file_utils import rel_symlink
+from crumbs.utils.seq_utils import guess_format
+from crumbs.utils.tags import GUESS_FORMAT
 
 PACKET_SIZE = 1000
 

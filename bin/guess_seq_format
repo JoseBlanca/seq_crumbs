@@ -18,8 +18,9 @@
 import sys
 import argparse
 
-from crumbs.utils import (main, wrap_in_buffered_reader,
-                          uncompress_if_required)
+from crumbs.utils.bin_utils import main
+from crumbs.utils.file_utils import (wrap_in_buffered_reader,
+                                     uncompress_if_required)
 from crumbs.seqio import guess_format
 
 

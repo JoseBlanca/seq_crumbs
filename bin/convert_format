@@ -18,8 +18,10 @@
 import sys
 import argparse
 
-from crumbs.utils import (main, OUTFILE, wrap_in_buffered_reader,
-                          uncompress_if_required)
+from crumbs.utils.bin_utils import main
+from crumbs.utils.tags import OUTFILE
+from crumbs.utils.file_utils import (wrap_in_buffered_reader,
+                                     uncompress_if_required)
 from crumbs.settings import SUPPORTED_OUTPUT_FORMATS
 from crumbs.seqio import guess_format, seqio
 from crumbs.exceptions import TooManyFiles, WrongFormatError

@@ -8,8 +8,8 @@ from crumbs.seqio import write_seqrecords
 from crumbs.alignment_result import (TabularBlastParser, filter_alignments,
                                      covered_segments, ELONGATED, QUERY,
                                      elongate_match_parts_till_global)
-from crumbs.settings import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
-                             LINKERS)
+from crumbs.settings import LINKERS
+from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
 
 
 def _do_blast(seq_fhand, oligos):

@@ -21,7 +21,7 @@ Created on 2012 eka 26
 import random
 import itertools
 
-from crumbs.settings import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
+from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
 
 # pylint: disable=R0903
 

@@ -24,7 +24,7 @@ import os.path
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
-from crumbs.tests.utils import BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 
 # pylint: disable=R0201
 # pylint: disable=R0904

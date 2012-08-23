@@ -20,9 +20,9 @@ import sys
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.utils import (main, parse_basic_process_args,
-                          create_basic_process_argparse,
-                          process_seq_packets)
+from crumbs.utils.bin_utils import (main, parse_basic_process_args,
+                                    create_basic_process_argparse)
+from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.settings import FWD_454_LINKERS, FLX_LINKER, TITANIUM_LINKER
 from crumbs.split_mates import MatePairSplitter
 from crumbs.seqio import read_seq_packets, write_seq_packets

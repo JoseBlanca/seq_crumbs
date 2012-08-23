@@ -18,7 +18,7 @@
 
 import unittest
 
-from crumbs.seq_utils import uppercase_length
+from crumbs.utils.seq_utils import uppercase_length
 
 
 class UppercaseLengthTest(unittest.TestCase):

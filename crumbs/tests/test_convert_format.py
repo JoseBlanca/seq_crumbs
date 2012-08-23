@@ -24,7 +24,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.seqio import seqio, write_seqrecords, read_seqrecords
-from crumbs.tests.utils import BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 
 # pylint: disable=R0201
 # pylint: disable=R0904

@@ -28,7 +28,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.filters import FilterByLength
-from crumbs.tests.utils import BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 
 
 def _create_seqrecord(string):

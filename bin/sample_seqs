@@ -20,8 +20,9 @@ from tempfile import NamedTemporaryFile
 from shutil import copyfileobj
 
 from crumbs.iterutils import sample
-from crumbs.utils import (main, create_basic_argparse, parse_basic_args,
-                          fhand_is_seekable)
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args)
+from crumbs.utils.file_utils import fhand_is_seekable
 from crumbs.seqio import (write_seqrecords, read_seqrecords,
                           count_seqs_in_files)
 from crumbs.exceptions import SampleSizeError

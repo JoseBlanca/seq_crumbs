@@ -20,7 +20,7 @@ from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 from gzip import GzipFile
 
-from crumbs.tests.utils import BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import count_seqs_in_files
 
 # pylint: disable=R0201

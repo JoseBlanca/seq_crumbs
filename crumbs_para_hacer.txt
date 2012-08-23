@@ -2,10 +2,8 @@
 TODO
 -----
 
-- process_sequences -> process_seq_packets
-- order of sequences when in parallel. (by default not in the same order)
 - trimming infrastructure
-- PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS not in settings
+
 
 mask_blast_matches
 ------------------

@@ -7,10 +7,6 @@ Created on 19/07/2012
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-STDIN = 'stdin'
-STDOUT = 'stdout'
-INFILES = 'infiles'
-OUTFILE = 'output'
 SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
 # number of sequences to analyze in the fastq version guessing of a seekable
@@ -21,8 +17,7 @@ SEQS_TO_GUESS_FASTQ_VERSION = 1000
 CHUNK_TO_GUESS_FASTQ_VERSION = 50000
 # maximum length expected for an Illumina read
 LONGEST_EXPECTED_ILLUMINA_READ = 250
-# Input format tag when we want to guess
-GUESS_FORMAT = 'guess'
+
 
 # 454 FLX mate pair linker
 FLX_LINKER = 'GTTGGAACCGAAAGGGTTTGAATTCAAACCCTTTCGGTTCCAAC'
@@ -32,7 +27,3 @@ TITANIUM_LINKER_REV = 'CGTAATAACTTCGTATAGCATACATTATACGAAGTTATACGA'
 FWD_454_LINKERS = [FLX_LINKER, TITANIUM_LINKER]
 LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
            SeqRecord(Seq(TITANIUM_LINKER), id='titanium_linker')]
-
-PROCESSED_SEQS = 'processed_seqs'
-PROCESSED_PACKETS = 'processed_packets'
-YIELDED_SEQS = 'yielded_seqs'

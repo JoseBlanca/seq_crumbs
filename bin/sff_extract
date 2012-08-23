@@ -24,7 +24,7 @@ import argparse
 from crumbs.sff_extract import SffExtractor
 from crumbs.seqio import write_seqrecords
 from crumbs.exceptions import FileNotFoundError
-from crumbs.utils import main
+from crumbs.utils.bin_utils import main
 
 
 def _setup_argparse():
