@@ -59,16 +59,11 @@ con opción de que sea en una región de la secuencia (primeras bases, últimas 
 --send (end of the sequence to be used)
 --reverse -v 
 
-filter_by_length
-----------------
---ignore_masked_region (default False)
---threshold
---reverse -v
 
+change_case
+----------
+--action 'upper, lower, invert (or reverse)'
 
-umask seqeuences
------------------
-pasar toda la secuencia a mayúsculas
 
 trim longest fragemnt trim all fragments
 ------------------
