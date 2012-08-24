@@ -20,17 +20,73 @@ import itertools
 from multiprocessing import Pool
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from Bio.Seq import Seq
 
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.settings import (CHUNK_TO_GUESS_FASTQ_VERSION,
                              SEQS_TO_GUESS_FASTQ_VERSION,
                              LONGEST_EXPECTED_ILLUMINA_READ)
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
+from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE,
+                               PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS)
+
+# pylint: disable=R0903
+
+
+def replace_seq_same_length(seqrecord, seq_str):
+    'It replaces the str with another of equal length keeping the annots.'
+    annots = seqrecord.letter_annotations
+    seqrecord.letter_annotations = {}
+    alphabet = seqrecord.seq.alphabet
+    seqrecord.seq = Seq(seq_str, alphabet)
+    seqrecord.letter_annotations = annots
+    return seqrecord
 
 
 def uppercase_length(string):
     'It returns the number of uppercase characters found in the string'
     return len(re.findall("[A-Z]", string))
+
+
+class ChangeCase(object):
+    'It changes the sequence case.'
+
+    def __init__(self, action):
+        'The initiator'
+        if action not in (UPPERCASE, LOWERCASE, SWAPCASE):
+            msg = 'Action should be: uppercase, lowercase or invertcase'
+            raise ValueError(msg)
+        self.action = action
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It changes the case of the seqrecords.'
+        stats = self._stats
+        action = self.action
+        stats[PROCESSED_PACKETS] += 1
+        processed_seqs = []
+        for seqrecord in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            str_seq = str(seqrecord.seq)
+            if action == UPPERCASE:
+                str_seq = str_seq.upper()
+            elif action == LOWERCASE:
+                str_seq = str_seq.lower()
+            elif action == SWAPCASE:
+                str_seq = str_seq.swapcase()
+            else:
+                raise NotImplementedError()
+            seqrecord = replace_seq_same_length(seqrecord, str_seq)
+            processed_seqs.append(seqrecord)
+            stats[YIELDED_SEQS] += 1
+        return processed_seqs
 
 
 def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):

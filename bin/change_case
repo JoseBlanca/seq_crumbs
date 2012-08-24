@@ -19,40 +19,31 @@ import sys
 
 from crumbs.utils.bin_utils import (main, parse_basic_process_args,
                                     create_basic_process_argparse)
-from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.trim import TrimEdges
+from crumbs.utils.seq_utils import process_seq_packets, ChangeCase
+from crumbs.utils.tags import UPPERCASE, LOWERCASE, SWAPCASE
 from crumbs.seqio import read_seq_packets, write_seq_packets
 
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
-    description = 'It trims a fixed number of bases.'
+    description = 'It changes the case of the sequences.'
     parser = create_basic_process_argparse(description=description)
 
-    parser.add_argument('-l', '--left', dest='left',
-                        help='Number of bases to trim on the left side',
-                        default=0, type=int)
-    parser.add_argument('-r', '--right', dest='right',
-                        help='Number of bases to trim on the right side',
-                        default=0, type=int)
-    parser.add_argument('-m', '--mask', dest='mask',
-                        help='Do not trim, only mask by lowering the case',
-                        action='store_true', default=False)
-
+    parser.add_argument('-a', '--action', dest='action',
+                        help='Change to perform in the case', type=str,
+                        choices=(UPPERCASE, LOWERCASE, SWAPCASE))
     return parser
 
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_process_args(parser)
-    args['right'] = parsed_args.right
-    args['left'] = parsed_args.left
-    args['mask'] = parsed_args.mask
+    args['action'] = parsed_args.action
     return args
 
 
-def trim_edges():
-    'The main function of the trim_edges binary'
+def run():
+    'The main function of the binary'
     parser = _setup_argparse()
     args = _parse_args(parser)
 
@@ -60,11 +51,10 @@ def trim_edges():
     out_fhand = args['out_fhand']
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
-    trim_edges = TrimEdges(right=args['right'], left=args['left'],
-                           mask=args['mask'])
-    seq_packets = process_seq_packets(seq_packets, [trim_edges],
+    change_case = ChangeCase(action=args['action'])
+    seq_packets = process_seq_packets(seq_packets, [change_case],
                                       processes=args['processes'])
     write_seq_packets(out_fhand, seq_packets, args['out_format'])
 
 if __name__ == '__main__':
-    sys.exit(main(trim_edges))
+    sys.exit(main(run))

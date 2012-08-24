@@ -17,6 +17,7 @@ import random
 import itertools
 
 from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
+from crumbs.utils.seq_utils import replace_seq_same_length
 
 # pylint: disable=R0903
 
@@ -131,10 +132,8 @@ class TrimEdges(object):
                     new_seq.append(seq[-right:].lower())
                 else:
                     new_seq.append(seq[left:])
-                annots = seqrecord.letter_annotations
-                seqrecord.letter_annotations = {}
-                seqrecord.seq = ''.join(new_seq)
-                seqrecord.letter_annotations = annots
+                seqrecord = replace_seq_same_length(seqrecord,
+                                                    ''.join(new_seq))
             else:
                 if right:
                     seqrecord = seqrecord[left:-right]

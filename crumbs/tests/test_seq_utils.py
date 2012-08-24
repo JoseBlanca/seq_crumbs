@@ -19,11 +19,18 @@
 import unittest
 from cStringIO import StringIO
 from tempfile import NamedTemporaryFile
+import os.path
+from subprocess import check_output
+
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils.file_utils import fhand_is_seekable, wrap_in_buffered_reader
 from crumbs.utils.seq_utils import (uppercase_length, guess_format,
-                                    _guess_format)
+                                    _guess_format, ChangeCase)
+from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
+from crumbs.utils.bin_utils import BIN_DIR
 
 
 class GuessFormatTest(unittest.TestCase):
@@ -104,6 +111,8 @@ class GuessFormatTest(unittest.TestCase):
         fhand2 = wrap_in_buffered_reader(fhand)
         assert fhand_is_seekable(fhand2)
 
+        # pylint: disable=R0903
+        # pylint: disable=C0111
         class NonSeekable(object):
             'Just for testing'
             pass
@@ -163,6 +172,45 @@ class UppercaseLengthTest(unittest.TestCase):
         'It counts the number of uppercase letters in a string'
         assert uppercase_length('aCTaGGt') == 4
         assert uppercase_length('acagt') == 0
+
+
+def _make_fhand(content=''):
+    'It makes temporary fhands'
+    fhand = NamedTemporaryFile()
+    fhand.write(content)
+    fhand.flush()
+    return fhand
+
+
+class ChangeCaseTest(unittest.TestCase):
+    'It tests the case change'
+    def test_case_change(self):
+        'It changes the case of the sequences'
+        seqs = [SeqRecord(Seq('aCCg'), letter_annotations={'dummy': 'dddd'})]
+        change_case = ChangeCase(action=UPPERCASE)
+        strs = [str(s.seq) for s in change_case(seqs)]
+        assert strs == ['ACCG']
+
+        seqs = [SeqRecord(Seq('aCCg'))]
+        change_case = ChangeCase(action=LOWERCASE)
+        strs = [str(s.seq) for s in change_case(seqs)]
+        assert strs == ['accg']
+
+        seqs = [SeqRecord(Seq('aCCg'))]
+        change_case = ChangeCase(action=SWAPCASE)
+        strs = [str(s.seq) for s in change_case(seqs)]
+        assert strs == ['AccG']
+
+    def test_bin(self):
+        'It tests the trim seqs binary'
+        change_bin = os.path.join(BIN_DIR, 'change_case')
+        assert 'usage' in check_output([change_bin, '-h'])
+
+        fastq = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
+        fastq_fhand = _make_fhand(fastq)
+
+        result = check_output([change_bin, '-a', 'upper', fastq_fhand.name])
+        assert '@seq1\nATCGT\n+' in result
 
 if __name__ == "__main__":
 #    import sys;sys.argv = ['', 'TestPool']
