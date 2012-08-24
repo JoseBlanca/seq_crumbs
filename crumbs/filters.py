@@ -16,6 +16,8 @@
 from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
 from crumbs.utils.seq_utils import uppercase_length
 
+# pylint: disable=R0903
+
 
 class FilterByLength(object):
     'It removes the sequences according to their length.'

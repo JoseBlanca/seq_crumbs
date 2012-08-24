@@ -17,16 +17,12 @@ import unittest
 import os
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
-from cStringIO import StringIO
 
 from crumbs.utils.file_utils import (TemporaryDir, rel_symlink,
-                                     wrap_in_buffered_reader,
-                                     fhand_is_seekable)
+                                     wrap_in_buffered_reader)
 from crumbs.utils.bin_utils import check_process_finishes, popen
-from crumbs.utils.seq_utils import guess_format, _guess_format
 
-from crumbs.exceptions import (ExternalBinaryError, MissingBinaryError,
-                               UnknownFormatError, UndecidedFastqVersionError)
+from crumbs.exceptions import ExternalBinaryError, MissingBinaryError
 
 
 # pylint: disable=R0201
@@ -102,137 +98,6 @@ class UtilsTest(unittest.TestCase):
         fhand2 = open(fhand.name)
         fhand3 = wrap_in_buffered_reader(fhand2, force_wrap=True)
         assert fhand3.peek(10) == 'hola'
-
-
-class GuessFormatTest(unittest.TestCase):
-    'It tests the function that guess the sequence format'
-
-    def test_fasta(self):
-        'It guess fasta formats'
-        fhand = StringIO('>seq\nACTC\n')
-        assert guess_format(fhand) == 'fasta'
-
-        # qual
-        fhand = StringIO('>seq\n10 20\n')
-        assert guess_format(fhand) == 'qual'
-
-        # qual
-        qual = ">seq1\n30 30 30 30 30 30 30 30\n>seq2\n30 30 30 30 30 30 30"
-        qual += " 30\n>seq3\n30 30 30 30 30 30 30 30\n"
-
-        fhand = StringIO(qual)
-        assert guess_format(fhand) == 'qual'
-
-    def test_unkown(self):
-        'It tests unkown formats'
-        fhand = StringIO('xseq\nACTC\n')
-        try:
-            guess_format(fhand)
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
-            pass
-
-    def test_empty_file(self):
-        'It guesses the format of an empty file'
-        fhand = StringIO()
-        try:
-            guess_format(fhand)
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
-            pass
-
-    def test_fastq(self):
-        'It guesses the format for the solexa and illumina fastq'
-
-        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
-        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
-        fhand = StringIO(txt)
-        assert guess_format(fhand) == 'fastq-illumina'
-
-        fhand = StringIO('@HWI-EAS209\n@')
-        try:
-            assert guess_format(fhand) == 'fasta'
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
-            pass
-
-        # sanger
-        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
-        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += '000000000000000000000000000000000000000000000000000000000000\n'
-        fhand = StringIO(txt)
-        assert guess_format(fhand) == 'fastq'
-
-    def test_is_seekable(self):
-        'It tests wether the fhands are seekable or not'
-
-        # StringIO
-        fhand = StringIO('hola')
-        assert fhand_is_seekable(fhand)
-
-        # standard file
-        fhand = NamedTemporaryFile()
-        fhand.seek(0)
-        assert fhand_is_seekable(fhand)
-
-        # a wrapped BufferedReader
-        fhand2 = wrap_in_buffered_reader(fhand)
-        assert fhand_is_seekable(fhand2)
-
-        class NonSeekable(object):
-            'Just for testing'
-            pass
-
-        assert not fhand_is_seekable(NonSeekable())
-
-        class NonSeekable2(object):
-            def seek(self):
-                pass
-
-            def seekable(self):
-                return False
-
-        assert not fhand_is_seekable(NonSeekable2())
-
-    def test_long_illumina(self):
-        'The qualities seem illumina, but the reads are too lengthly'
-        txt = '@read\n'
-        txt += 'T' * 400 + '\n'
-        txt += '+\n'
-        txt += '@' * 400 + '\n'
-        fhand = StringIO(txt)
-        try:
-            guess_format(fhand)
-            self.fail('UndecidedFastqVersionError expected')
-        except UndecidedFastqVersionError:
-            pass
-
-    def test_non_seekable(self):
-        'Fastq version guessing using the non-seekable route'
-        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
-        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
-        fhand = StringIO(txt)
-        assert _guess_format(fhand, True) == 'fastq-illumina'
-
-        fhand = StringIO('@HWI-EAS209\n@')
-        try:
-            assert _guess_format(fhand, True) == 'fasta'
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
-            pass
-
-        # sanger
-        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
-        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
-        txt += '000000000000000000000000000000000000000000000000000000000000\n'
-        fhand = StringIO(txt)
-        assert _guess_format(fhand, True) == 'fastq'
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

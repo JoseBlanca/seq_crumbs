@@ -13,11 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 2012 eka 26
-
-@author: peio
-'''
 import random
 import itertools
 
@@ -40,7 +35,7 @@ def _get_uppercase_segments(string):
 
 
 def _get_longest_segment(segments):
-    'it returns the longest segment'
+    'It returns the longest segment'
     longest = None
     longest_size = None
     for segment in segments:

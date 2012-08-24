@@ -32,6 +32,8 @@ def _do_blast(seq_fhand, oligos):
 
     return TabularBlastParser(blast_fhand, blast_format)
 
+# pylint: disable=R0903
+
 
 class _BlastMatcher(object):
     'It matches the given oligos against the reads using Blast'
