@@ -19,6 +19,7 @@ Created on 20/06/2012
 @author: jose
 '''
 import sys
+import os
 
 try:
     from setuptools import setup
@@ -27,12 +28,13 @@ except ImportError:
     from distutils.core import setup
     _SETUPTOOLS = False
 
+
 # The next three lines are modified from Biopython
 __version__ = "Undefined"
 for line in open('crumbs/__init__.py'):
     if (line.startswith('__version__')):
         exec(line.strip())
-    break
+        break
 
 
 def check_dependencies():
@@ -62,7 +64,12 @@ def check_dependencies():
     sys.exit(-1)
 
 
-SCRIPTS = ['bin/sff_extract', 'bin/seq_head', 'bin/guess_seq_format']
+def get_scripts():
+    scripts = []
+    for file_ in os.listdir('bin'):
+        if not file_.endswith('.error'):
+            scripts.append(os.path.join('bin', file_))
+    return scripts
 
 
 setup_args = {
@@ -72,8 +79,8 @@ setup_args = {
               'author': 'Jose Blanca & Peio Ziarsolo',
               'author_email': 'jblanca@upv.es',
               'url': 'http://bioinf.comav.upv.es/seq_crumbs/',
-              'packages': ['crumbs'],
-              'scripts': SCRIPTS,
+              'packages': ['crumbs', 'crumbs.third_party', 'crumbs.utils'],
+              'scripts': get_scripts(),
               'license': 'AGPL'
               }
 
