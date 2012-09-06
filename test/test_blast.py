@@ -17,9 +17,10 @@ import unittest
 import os.path
 from tempfile import NamedTemporaryFile
 
-from crumbs.tests import TEST_DATA_DIR
 from crumbs.blast import get_blast_db, do_blast
 from crumbs.utils.file_utils import TemporaryDir
+
+from test import TEST_DATA_DIR
 
 # pylint: disable=R0201
 # pylint: disable=R0904

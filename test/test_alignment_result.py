@@ -34,7 +34,7 @@ from crumbs.alignment_result import (BlastParser, TabularBlastParser,
                                      TextBlastParser, QUERY, SUBJECT)
 
 
-from crumbs.tests import TEST_DATA_DIR
+from test import TEST_DATA_DIR
 
 
 def floats_are_equal(num1, num2, ratio=0.01):
