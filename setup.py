@@ -24,10 +24,11 @@ import glob
 import platform
 import subprocess
 
+from distutils.core import Command
 import distutils.command.install_data
 
 try:
-    from setuptools import setu
+    from setuptools import setup
     from setuptools.command import install
     _SETUPTOOLS = True
 
@@ -127,7 +128,7 @@ def get_scripts():
     return scripts
 
 
-class smart_install(install.install):
+class SmartInstall(install.install):
     def run(self):
         result = install.install.run(self)
         install_cmd = self.get_finalized_command('install')
@@ -158,13 +159,29 @@ class smart_install(install.install):
         return result
 
 
-class install_data(distutils.command.install_data.install_data):
+class InstallData(distutils.command.install_data.install_data):
     """need to change self.install_dir to the actual library dir"""
     def run(self):
         # cambiar el sitio donde se van a instalar los third_party_binaries
         install_cmd = self.get_finalized_command('install')
         self.install_dir = getattr(install_cmd, 'install_lib')
         return distutils.command.install_data.install_data.run(self)
+
+
+class MakeBinaries(Command):
+    'it builds the man page '
+    description = 'make binaries with pyinetaller'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        'make the executables with pyinstaller'
+        print 'hola'
 
 
 setup_args = {
@@ -178,8 +195,9 @@ setup_args = {
               'data_files': external_executables,
               'scripts': get_scripts(),
               'license': 'AGPL',
-              'cmdclass': {'install': smart_install,
-                           'install_data': install_data}
+              'cmdclass': {'install': SmartInstall,
+                           'install_data': InstallData,
+                           'make_binaries': MakeBinaries}
               }
 
 if _SETUPTOOLS:
