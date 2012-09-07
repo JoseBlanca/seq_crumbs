@@ -32,7 +32,8 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, fhand_is_seekable)
 from crumbs.utils.seq_utils import guess_format
-from crumbs.settings import SUPPORTED_OUTPUT_FORMATS
+from crumbs.settings import (SUPPORTED_OUTPUT_FORMATS, USE_EXTERNAL_BIN_PREFIX,
+                              EXTERNAL_BIN_PREFIX, ADD_PATH_TO_EXT_BIN)
 from crumbs.utils.tags import OUTFILE, GUESS_FORMAT
 
 
@@ -141,6 +142,16 @@ def get_binary_path(binary_name):
 
     Fails if there is not binary for that architecture
     '''
+    if USE_EXTERNAL_BIN_PREFIX:
+        binary_name = EXTERNAL_BIN_PREFIX + binary_name
+
+    if not ADD_PATH_TO_EXT_BIN:
+        # I have to check if the bynary is on my current directory.
+        # If it is there use it, else assumes that it is on the path
+        if os.path.exists(os.path.join(os.getcwd(), binary_name)):
+            return os.path.join(os.getcwd(), binary_name)
+        return binary_name
+
     system = platform.system().lower()
     if system == 'windows':
         binary_name += '.exe'
