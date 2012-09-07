@@ -12,11 +12,6 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 20/06/2012
-
-@author: jose
-'''
 import sys
 import os
 import fnmatch
