@@ -159,7 +159,7 @@ class SeqioBinTest(unittest.TestCase):
             self.fail('error expected')
         except CalledProcessError:
             assert 'Lengths of sequence and qualit' in open(stderr.name).read()
-        return
+
         #malformed fastq to fastq
         bad_fastq_fhand = self._make_fhand(FASTQ + 'aklsjhdas')
         fastq_out_fhand = NamedTemporaryFile()
