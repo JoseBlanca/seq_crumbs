@@ -133,18 +133,10 @@ def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
                 SeqIO.write([seq], out_fhands[1], 'qual')
         except ValueError, error:
             msg = 'Sequence length and number of quality scores disagree'
-            if msg in str(error):
+            msg2 = 'Lengths of sequence and quality values differs'
+            if msg in str(error) or msg2 in str(error):
                 raise MalformedFile(str(error))
             raise
-#        try:
-#            SeqIO.convert(in_fhands[0], in_formats[0], out_fhands[0], 'fasta')
-#            SeqIO.convert(in_fhands[0], in_formats[0], out_fhands[1], 'qual')
-#        except ValueError as error:
-#            msg = 'Lengths of sequence and quality values differs'
-#            if msg in str(error):
-#                raise MalformedFile(str(error))
-#            raise
-
     elif (len(in_fhands) == 2 and len(out_fhands) == 1 and
           in_formats == ['fasta', 'qual']):
         seq_records = SeqIO.QualityIO.PairedFastaQualIterator(in_fhands[0],
