@@ -13,15 +13,11 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import tempfile
-from iterutils import flat_zip_longest
 
 from Bio import SeqIO
 
 from crumbs.exceptions import MaxNumReadsInMem, PairDirectionError
-
-FWD = 'fwd'
-REV = 'rev'
+from crumbs.utils.tags import FWD, REV
 
 
 def _parse_pair_direction_and_name(seq):
@@ -72,16 +68,13 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
                 error_msg = 'There are too many consecutive non matching seqs'
                 error_msg += ' in your input. We have reached the memory limit'
                 raise MaxNumReadsInMem(error_msg)
-
         else:
             orphan_seqs = buf1['items'][:matching_seq_index]
             matching_seq = buf1['items'][matching_seq_index]
 
             # fix buffers
             buf1['items'] = buf1['items'][matching_seq_index + 1:]
-            buf1['index'] = {}
-            for i, s in enumerate(buf1['items']):
-                buf1['index'][s] = i
+            buf1['index'] = {s: i for i, s in enumerate(buf1['items'])}
 
             #write seqs in file
             SeqIO.write(orphan_seqs, orphan_out_fhand, out_format)
@@ -90,13 +83,3 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
     else:
         orphan_seqs = buf1['items'] + buf2['items']
         SeqIO.write(orphan_seqs, orphan_out_fhand, out_format)
-
-
-def _match_pairs(fwd_seqs, rev_seqs, fwd_out_fhand, rev_out_fhand,
-                orphan_out_fhand, out_format, memory_limit=500000):
-    'It matches the seq pairs in an iterator and splits the orphan seqs'
-    seqs = flat_zip_longest(fwd_seqs, rev_seqs)
-    out_fhand = tempfile.NamedTemporaryFile()
-    match_pairs(seqs, out_fhand, rev_out_fhand, orphan_out_fhand,
-                out_format, memory_limit=memory_limit)
-    #TODO split the out sequences into two files
