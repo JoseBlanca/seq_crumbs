@@ -18,13 +18,15 @@ from cStringIO import StringIO
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
-from Bio import SeqIO
-
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.pairs import match_pairs
+from crumbs.pairs import match_pairs, interleave_pairs, deinterleave_pairs
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
+from crumbs.exceptions import InterleaveError
+
+# pylint: disable=R0201
+# pylint: disable=R0904
 
 
 class PairMatcherTest(unittest.TestCase):
@@ -33,11 +35,11 @@ class PairMatcherTest(unittest.TestCase):
     @staticmethod
     def test_mate_pair_checker():
         'It test the mate pair function'
-        #with equal seqs but the last ones
+        # with equal seqs but the last ones
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = SeqIO.parse(open(file1), 'fastq')
-        rev_seqs = SeqIO.parse(open(file2), 'fastq')
+        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
+        rev_seqs = read_seqrecords([open(file2)], 'fastq')
 
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
@@ -51,7 +53,7 @@ class PairMatcherTest(unittest.TestCase):
         orp = orphan_out_fhand.getvalue()
         assert '@seq8:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
 
-        # with the firts seqs diferent
+        # with the firsts seqs different
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend3.sfastq')
         fwd_seqs = read_seqrecords([open(file1)], 'fastq')
@@ -121,6 +123,47 @@ class PairMatcherbinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'There are too many consecutive' in open(stderr.name).read()
 
+
+class InterleavePairsTest(unittest.TestCase):
+    'It tests the interleaving and de-interleaving of pairs'
+    def test_interleave(self):
+        'It interleaves two iterators with paired reads'
+        file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
+        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
+        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+
+        try:
+            list(interleave_pairs(fwd_seqs, rev_seqs))
+            self.fail('InterleaveError expected')
+        except InterleaveError:
+            pass
+
+        file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        file2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
+        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
+        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+
+        seqs = list(interleave_pairs(fwd_seqs, rev_seqs))
+        assert len(seqs) == 8
+
+    def test_deinterleave(self):
+        'It de-interleaves an iterator of alternating fwd and rev reads'
+
+        fhand1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        fhand2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
+        fwd_seqs = read_seqrecords([open(fhand1)], 'fastq')
+        rev_seqs = read_seqrecords([open(fhand2)], 'fastq')
+
+        seqs = interleave_pairs(fwd_seqs, rev_seqs)
+        out_fhand1 = StringIO()
+        out_fhand2 = StringIO()
+        out_format = 'fastq'
+        deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format)
+        result1 = out_fhand1.getvalue()
+        result2 = out_fhand2.getvalue()
+        assert result1.strip() == open(fhand1).read().strip()
+        assert result2.strip() == open(fhand2).read().strip()
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']

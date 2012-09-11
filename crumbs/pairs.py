@@ -13,11 +13,12 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import re
+from itertools import izip_longest
 
-from Bio import SeqIO
-
-from crumbs.exceptions import MaxNumReadsInMem, PairDirectionError
+from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
+                               InterleaveError)
 from crumbs.utils.tags import FWD, REV
+from crumbs.seqio import write_seqrecords
 
 
 def _parse_pair_direction_and_name(seq):
@@ -77,9 +78,66 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
             buf1['index'] = {s: i for i, s in enumerate(buf1['items'])}
 
             #write seqs in file
-            SeqIO.write(orphan_seqs, orphan_out_fhand, out_format)
-            SeqIO.write([matching_seq, seq], out_fhand, out_format)
+            write_seqrecords(orphan_out_fhand, orphan_seqs, out_format)
+            write_seqrecords(out_fhand, [matching_seq, seq], out_format)
 
     else:
         orphan_seqs = buf1['items'] + buf2['items']
-        SeqIO.write(orphan_seqs, orphan_out_fhand, out_format)
+        write_seqrecords(orphan_out_fhand, orphan_seqs, out_format)
+
+
+def _check_name_and_direction_match(seq1, seq2):
+    'It fails if the names do not match or if the direction are equal'
+    name1, direction1 = _parse_pair_direction_and_name(seq1)
+    name2, direction2 = _parse_pair_direction_and_name(seq2)
+    if name1 != name2:
+        msg = 'The reads from the two files do not match: {}, {}'
+        msg = msg.format(name1, name2)
+        raise InterleaveError(msg)
+    if direction1 == direction2:
+        msg = 'Two paired reads have the same direction: {}, {}'
+        msg = msg.format(name1 + ' ' + direction1,
+                         name2 + ' ' + direction2)
+        raise InterleaveError(msg)
+
+
+def interleave_pairs(seqs1, seqs2):
+    '''A generator that interleaves the paired reads found in two iterators.
+
+    It will fail if forward and reverse reads do not match in both sequence
+    iterators.
+    '''
+    for seq1, seq2 in izip_longest(seqs1, seqs2, fillvalue=None):
+        if seq1 is None or seq2 is None:
+            msg = 'The files had a different number of sequences'
+            raise InterleaveError(msg)
+        _check_name_and_direction_match(seq1, seq2)
+        yield seq1
+        yield seq2
+
+
+def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
+    '''It splits a sequence iterator with alternating paired reads in two.
+
+    It will fail if forward and reverse reads are not alternating.
+    '''
+
+    while True:
+        try:
+            seq1 = seqs.next()
+        except StopIteration:
+            seq1 = None
+        try:
+            seq2 = seqs.next()
+        except StopIteration:
+            seq2 = None
+        if seq1 is None:
+            break   # we have consumed the input iterator completely
+        if seq2 is None:
+            msg = 'The file had an odd number of sequences'
+            raise InterleaveError(msg)
+        _check_name_and_direction_match(seq1, seq2)
+        write_seqrecords(out_fhand1, [seq1], out_format)
+        write_seqrecords(out_fhand2, [seq2], out_format)
+    out_fhand1.flush()
+    out_fhand2.flush()

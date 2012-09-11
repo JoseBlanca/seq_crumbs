@@ -29,7 +29,7 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                ExternalBinaryError, MissingBinaryError,
                                IncompatibleFormatError,
                                UndecidedFastqVersionError, MaxNumReadsInMem,
-                               PairDirectionError)
+                               PairDirectionError, InterleaveError)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, fhand_is_seekable)
 from crumbs.utils.seq_utils import guess_format
@@ -91,6 +91,9 @@ def main(funct):
     except PairDirectionError, error:
         stderr.write(str(error) + '\n')
         return 14
+    except InterleaveError, error:
+        stderr.write(str(error) + '\n')
+        return 15
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq crumbs developers would appreciate your feedback\n'

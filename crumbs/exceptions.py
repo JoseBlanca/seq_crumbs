@@ -82,3 +82,7 @@ class PairDirectionError(Exception):
     'Error in parser trying to get direction from description'
     pass
 
+
+class InterleaveError(Exception):
+    'Error in the alteranation of forward and reverse reads'
+    pass
