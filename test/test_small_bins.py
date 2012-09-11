@@ -160,7 +160,7 @@ class SeqHeadTest(unittest.TestCase):
 
 
 class SampleSeqTest(unittest.TestCase):
-    'It tests the seq head binary'
+    'It tests the seq sample binary'
 
     def test_sample_seq(self):
         'It tests the seq head'

@@ -17,8 +17,35 @@ import random
 from itertools import izip_longest
 
 
-def sample(iterator, length, sample_size):
-    'It makes a sample for the given iterator'
+def sample(iterator, sample_size):
+    'It makes a sample from the given iterator'
+    # This implementation holds the sampled items in memory
+    # Example of the algorithm seen in:
+    # http://nedbatchelder.com/blog/201208/selecting_randomly_from_an_unknown_
+    # sequence.html
+    # See also:
+    # http://stackoverflow.com/questions/12128948/python-random-lines-from-
+    # subfolders/
+
+    sample_ = []
+    for index, elem in enumerate(iterator):
+        if len(sample_) < sample_size:
+            sample_.append(elem)
+        else:
+            if random.randint(0, index) < sample_size:
+                # Ned Bactchelder proposed an algorithm with random order
+                # sample_[random.randint(0, sample_size - 1)] = elem
+                # we prefer to keep the order, so we always add at the end
+                sample_.pop(random.randint(0, sample_size - 1))
+                sample_.append(elem)
+    return sample_
+
+
+def sample_2(iterator, length, sample_size):
+    'It makes a sample from the given iterator'
+    # This implementation will use less memory when the number of sampled items
+    # is quite high.
+    # It requires to know the number of items beforehand
 
     if not 0 <= sample_size <= length:
         raise ValueError("sample larger than population")
@@ -30,7 +57,7 @@ def sample(iterator, length, sample_size):
         num_items_to_select = sample_size
         invert = False
 
-    selected = set(random.randint(0, length - 1) for num in range(num_items_to_select))
+    selected = set(random.randint(0, length - 1) for n in range(num_items_to_select))
     selected_add = selected.add
     while len(selected) < num_items_to_select:
         selected_add(random.randint(0, length - 1))

@@ -15,7 +15,7 @@
 
 import unittest
 
-from crumbs.iterutils import sample, length, group_in_packets
+from crumbs.iterutils import sample, sample_2, length, group_in_packets
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -36,12 +36,21 @@ class IterutilsTest(unittest.TestCase):
 
     def test_sample(self):
         'We can sample an iterator'
+        items = range(100)
+
+        num_sampled_items = 10
+        for num_sampled_items in (10, 90):
+            sampled_items = list(sample(items, num_sampled_items))
+            self.check_sampled_items(items, sampled_items, num_sampled_items)
+
+    def test_sample_2(self):
+        'We can sample an iterator'
         length_ = 100
         items = range(length_)
 
         num_sampled_items = 10
         for num_sampled_items in (10, 90):
-            sampled_items = list(sample(items, length_, num_sampled_items))
+            sampled_items = list(sample_2(items, length_, num_sampled_items))
             self.check_sampled_items(items, sampled_items, num_sampled_items)
 
     def test_length(self):
