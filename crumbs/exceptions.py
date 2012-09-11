@@ -71,3 +71,14 @@ class MissingBinaryError(Exception):
 class IncompatibleFormatError(Exception):
     'Asked output format is incompatible with input file formats'
     pass
+
+
+class MaxNumReadsInMem(Exception):
+    'Number of reads in memory reached the limit'
+    pass
+
+
+class PairDirectionError(Exception):
+    'Error in parser trying to get direction from description'
+    pass
+

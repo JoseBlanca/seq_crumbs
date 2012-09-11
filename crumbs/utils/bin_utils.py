@@ -28,7 +28,8 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                MalformedFile, SampleSizeError,
                                ExternalBinaryError, MissingBinaryError,
                                IncompatibleFormatError,
-                               UndecidedFastqVersionError)
+                               UndecidedFastqVersionError, MaxNumReadsInMem,
+                               PairDirectionError)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, fhand_is_seekable)
 from crumbs.utils.seq_utils import guess_format
@@ -84,6 +85,12 @@ def main(funct):
     except UndecidedFastqVersionError, error:
         stderr.write(str(error) + '\n')
         return 12
+    except MaxNumReadsInMem, error:
+        stderr.write(str(error) + '\n')
+        return 13
+    except PairDirectionError, error:
+        stderr.write(str(error) + '\n')
+        return 14
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq crumbs developers would appreciate your feedback\n'

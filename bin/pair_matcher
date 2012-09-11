@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import argparse
+
+from Bio import SeqIO
+
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args)
+from crumbs.pairs import match_pairs
+from crumbs.seqio import read_seqrecords
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = ''
+    parser = create_basic_argparse(description=description)
+    #orphan
+    parser.add_argument('-p', '--orphan', dest='orphan',
+                       help='Output orphan file', type=argparse.FileType('wt'),
+                       required=True)
+    parser.add_argument('-l', '--limit', dest='limit',
+                       help='limit Number of seqs in memory', type=int,
+                       default=500000)
+
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    orphan = parsed_args.orphan
+    args['orphan'] = orphan
+    args['memory_limit'] = parsed_args.limit
+    if args['memory_limit'] == 0:
+        args['memory_limit'] = None
+
+    return args
+
+
+def run():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    # read seqs
+    seqs = read_seqrecords(args['in_fhands'], file_format=args['in_format'])
+    match_pairs(seqs, out_fhand=args['out_fhand'],
+                orphan_out_fhand=args['orphan'], out_format=args['out_format'],
+                memory_limit=args['memory_limit'])
+
+
+if __name__ == '__main__':
+    sys.exit(main(run))

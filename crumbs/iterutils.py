@@ -14,6 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import random
+from itertools import izip_longest
 
 
 def sample(iterator, length, sample_size):
@@ -78,3 +79,15 @@ class group_in_packets(object):
         if not packet:
             raise StopIteration
         return packet
+
+
+def flat_zip_longest(iter1, iter2, fillvalue=None):
+    '''It yields items alternatively from both iterators.
+
+    It won't return the items equal to the fillvalue.
+    '''
+    for item1, item2 in izip_longest(iter1, iter2, fillvalue=fillvalue):
+        if item1 != fillvalue:
+            yield item1
+        if item2 != fillvalue:
+            yield item2
