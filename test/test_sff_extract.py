@@ -19,7 +19,7 @@ from tempfile import NamedTemporaryFile
 from subprocess import check_output, CalledProcessError
 
 from crumbs.sff_extract import SffExtractor
-from test import TEST_DATA_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 
 # pylint: disable=R0201

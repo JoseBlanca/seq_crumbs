@@ -20,7 +20,7 @@ from tempfile import NamedTemporaryFile
 
 from Bio import SeqIO
 
-from test import TEST_DATA_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.pairs import match_pairs
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.bin_utils import BIN_DIR
