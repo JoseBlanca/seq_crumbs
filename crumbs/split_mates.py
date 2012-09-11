@@ -147,11 +147,9 @@ class MatePairSplitter(object):
             segment_end = segments[0][1]
             if segment_start == 0:
                 new_seqrec = seqrec[segment_end + 1:]
-                new_seqrec.id = seqrec.id + '.fn'
                 return [new_seqrec]
             elif segment_end == len(seqrec) - 1:
                 new_seqrec = seqrec[:segment_start]
-                new_seqrec.id = seqrec.id + '.fn'
                 return [new_seqrec]
             else:
                 new_seqrec1 = seqrec[:segment_start]
@@ -162,8 +160,8 @@ class MatePairSplitter(object):
                     new_seqrec1.id = id_ + '.part1'
                     new_seqrec2.id = id_ + '.part2'
                 else:
-                    new_seqrec1.id = id_ + '.f'
-                    new_seqrec2.id = id_ + '.r'
+                    new_seqrec1.id = id_ + '\1'
+                    new_seqrec2.id = id_ + '\2'
                 return [new_seqrec1, new_seqrec2]
         else:
             seqrecords = []

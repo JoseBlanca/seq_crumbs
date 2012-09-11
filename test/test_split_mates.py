@@ -69,12 +69,12 @@ class MateSplitterTest(unittest.TestCase):
         # segment beginning
         seqs = splitter._split_by_mate_linker(seqrecord, ([(0, 3)], False))
         assert str(seqs[0].seq) == 'ttccctt'
-        assert seqs[0].id == 'seq.fn'
+        assert seqs[0].id == 'seq'
 
         # segment at end
         seqs = splitter._split_by_mate_linker(seqrecord, ([(7, 10)], False))
         assert  str(seqs[0].seq) == 'aaatttc'
-        assert seqs[0].id == 'seq.fn'
+        assert seqs[0].id == 'seq'
 
         # segmnet in the middle
         seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], True))
@@ -84,8 +84,8 @@ class MateSplitterTest(unittest.TestCase):
         assert seqs[1].id == 'seq_pl.part2'
 
         seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], False))
-        assert seqs[0].id == 'seq.f'
-        assert seqs[1].id == 'seq.r'
+        assert seqs[0].id == 'seq\1'
+        assert seqs[1].id == 'seq\2'
 
         seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)],
                                                           False))
@@ -133,9 +133,9 @@ class MateSplitterTest(unittest.TestCase):
         write_seq_packets(out_fhand, new_seqs, file_format='fasta')
 
         result = out_fhand.getvalue()
-        xpect = '>seq1.f\n'
+        xpect = '>seq1\1\n'
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
-        xpect += '>seq1.r\n'
+        xpect += '>seq1\2\n'
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq2\n'
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
@@ -143,7 +143,7 @@ class MateSplitterTest(unittest.TestCase):
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTG\n'
         xpect += '>seq3_pl.part2\n'
         xpect += 'GTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
-        xpect += '>seq4.fn\n'
+        xpect += '>seq4\n'
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq5_mlc.part1\n'
         xpect += 'TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACGATCGATCATGTTGTAT'
@@ -171,7 +171,7 @@ class SplitMatesBinTest(unittest.TestCase):
                mate_fhand.name]
         check_output(cmd)
         result = open(out_fhand.name).read()
-        assert result.startswith('>seq1.f\n')
+        assert result.startswith('>seq1\1\n')
 
     def test_parallel_bin(self):
         'The mate pairs binary runs in parallel'
@@ -185,7 +185,7 @@ class SplitMatesBinTest(unittest.TestCase):
                mate_fhand.name, '-p', '2']
         check_output(cmd)
         result = open(out_fhand.name).read()
-        assert result.startswith('>seq1.f\n')
+        assert result.startswith('>seq1\1\n')
 
 
 if __name__ == "__main__":
