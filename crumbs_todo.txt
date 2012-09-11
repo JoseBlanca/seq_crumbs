@@ -55,12 +55,7 @@ con opción de que sea en una región de la secuencia (primeras bases, últimas 
 --ignore_masked_region (default False)
 --sbegin (start of the sequence to be used)
 --send (end of the sequence to be used)
---reverse -v 
-
-
-change_case
-----------
---action 'upper, lower, invert (or reverse)'
+--reverse -v
 
 
 trim longest fragemnt trim all fragments
