@@ -13,11 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 21/06/2012
 
-@author: jose
-'''
 from itertools import chain
 from shutil import copyfileobj
 
@@ -31,8 +27,7 @@ from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
 from crumbs.utils.seq_utils import guess_format
 from crumbs.utils.tags import GUESS_FORMAT
-
-PACKET_SIZE = 1000
+from crumbs.settings import PACKET_SIZE
 
 
 def clean_seq_stream(seqs):

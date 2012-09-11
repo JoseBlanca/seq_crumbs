@@ -9,12 +9,18 @@ from Bio.SeqRecord import SeqRecord
 
 SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
+# number of sequences to process in a chunk. Lenght of the sequence list to 
+# hold in memory
+PACKET_SIZE = 1000
+
 # number of sequences to analyze in the fastq version guessing of a seekable
 # file
 SEQS_TO_GUESS_FASTQ_VERSION = 1000
+
 # number of bytes to analyze in the fastq version guessing of a non-seekable
 # file
 CHUNK_TO_GUESS_FASTQ_VERSION = 50000
+
 # maximum length expected for an Illumina read
 LONGEST_EXPECTED_ILLUMINA_READ = 250
 
