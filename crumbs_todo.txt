@@ -58,6 +58,10 @@ con opción de que sea en una región de la secuencia (primeras bases, últimas 
 --reverse -v
 
 
+trim_by_quality
+---------------
+
+
 trim longest fragemnt trim all fragments
 ------------------
 
