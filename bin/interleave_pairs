@@ -32,8 +32,9 @@ def _setup_argparse():
     parser.add_argument('input', help='Sequence input files to process',
                         default=sys.stdin, nargs=2,
                         type=argparse.FileType('rt'))
-    parser.add_argument('-u', '--uncheck_correlation', action='store_false',
-                        dest='check_pair_correlation')
+    parser.add_argument('-s', '--skip_checks', action='store_false',
+                        dest='check_pair_correlation',
+                        help='skip pair correlation checking')
     return parser
 
 
