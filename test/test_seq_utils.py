@@ -26,8 +26,8 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils.file_utils import fhand_is_seekable, wrap_in_buffered_reader
-from crumbs.utils.seq_utils import (uppercase_length, guess_format,
-                                    _guess_format, ChangeCase)
+from crumbs.utils.seq_utils import (uppercase_length, guess_format, ChangeCase,
+                                    _guess_format, get_uppercase_segments)
 from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.utils.bin_utils import BIN_DIR
@@ -180,6 +180,26 @@ def _make_fhand(content=''):
     fhand.write(content)
     fhand.flush()
     return fhand
+
+
+class MaskedSegmentsTest(unittest.TestCase):
+    'It tests the lower case segments location functions'
+
+    @staticmethod
+    def test_masked_locations():
+        'It test the masked locations function'
+
+        seq = 'aaATTTTTTaa'
+        assert list(get_uppercase_segments(seq)) == [(2, 8)]
+
+        seq = 'aaATTTaTTaa'
+        assert list(get_uppercase_segments(seq)) == [(2, 5), (7, 8)]
+
+        seq = 'AAATaaa'
+        assert list(get_uppercase_segments(seq)) == [(0, 3)]
+
+        seq = 'aaaaAAAA'
+        assert list(get_uppercase_segments(seq)) == [(4, 7)]
 
 
 class ChangeCaseTest(unittest.TestCase):

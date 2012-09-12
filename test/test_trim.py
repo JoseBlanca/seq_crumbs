@@ -23,8 +23,7 @@ from itertools import chain
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.trim import (_get_uppercase_segments, _get_longest_segment,
-                         TrimLowercasedLetters, TrimEdges)
+from crumbs.trim import _get_longest_segment, TrimLowercasedLetters, TrimEdges
 from crumbs.seqio import read_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
 
@@ -45,22 +44,6 @@ def _make_fhand(content=''):
 
 class TrimTest(unittest.TestCase):
     'It tests the trim functions'
-
-    @staticmethod
-    def test_masked_locations():
-        'It test the masked loacations function'
-
-        seq = 'aaATTTTTTaa'
-        assert list(_get_uppercase_segments(seq)) == [(2, 8)]
-
-        seq = 'aaATTTaTTaa'
-        assert list(_get_uppercase_segments(seq)) == [(2, 5), (7, 8)]
-
-        seq = 'AAATaaa'
-        assert list(_get_uppercase_segments(seq)) == [(0, 3)]
-
-        seq = 'aaaaAAAA'
-        assert list(_get_uppercase_segments(seq)) == [(4, 7)]
 
     @staticmethod
     def test_get_longest_section():
