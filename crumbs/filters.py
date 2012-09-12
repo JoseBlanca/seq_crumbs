@@ -59,3 +59,42 @@ class FilterByLength(object):
                 processed_seqs.append(seqrecord)
                 stats[YIELDED_SEQS] += 1
         return processed_seqs
+
+
+class FilterById(object):
+    'It removes the sequences not found in the given set'
+    def __init__(self, seq_ids, reverse=False):
+        '''The initiator.
+
+        seq_ids - An iterator with the sequence ids to keep
+        reverse - if True keep the sequences not found on the list
+        '''
+        if not isinstance(seq_ids, set):
+            seq_ids = set(seq_ids)
+        self.seq_ids = seq_ids
+        self.reverse = reverse
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It filters out the seqrecords not found in the list.'
+        stats = self._stats
+        seq_ids = self.seq_ids
+        reverse = self.reverse
+        stats[PROCESSED_PACKETS] += 1
+        processed_seqs = []
+        for seqrecord in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            passed = True if seqrecord.id in seq_ids else False
+            if reverse:
+                passed = not(passed)
+            if passed:
+                processed_seqs.append(seqrecord)
+                stats[YIELDED_SEQS] += 1
+        return processed_seqs

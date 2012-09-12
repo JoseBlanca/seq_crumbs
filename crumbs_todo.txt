@@ -50,8 +50,6 @@ filter_by_quality
 con opción de que sea en una región de la secuencia (primeras bases, últimas bases)
 --threshold
 --ignore_masked_region (default False)
---sbegin (start of the sequence to be used)
---send (end of the sequence to be used)
 --reverse -v
 
 

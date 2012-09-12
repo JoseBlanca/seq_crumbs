@@ -19,6 +19,9 @@ split_matepairs
 filter_by_length
         It filters sequences according to a length threshold.
 
+filter_by_name
+		It filters the sequences with a list of names given in a file.
+
 trim_by_case
         It trims the sequences according to its case.
 
