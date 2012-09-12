@@ -11,7 +11,7 @@ Available Crumbs
 ----------------
 
 sff_extract
-        It extracts the reads from a SFF_ file used for instance by 454 and Ion Torrent
+        It extracts the reads from a SFF_ file used by 454 and Ion Torrent.
 
 split_matepairs
         It splits the mate-pairs separated by an oligo sequence.
@@ -59,19 +59,20 @@ General Usage
 All Seq Crumbs try to share a consistent interface.
 Most Seq Crumbs take can their input from the standard input to be able to work with Unix Pipes.
 Alternatively several input sequence files can be provided as a list of arguments.
-By default they throw their output to the standard output, although this behaviour can be changed with the **-o** parameter (or **--outfile**).
+By default they throw their output to the standard output, although this behaviour can be changed with the *-o* parameter (or *--outfile*).
 
-Seq Crumbs compressed gzip and BGZF_ files.
-When used as input they autodetect the compressed files and they can also generate compressed outputs.
+Seq Crumbs supports compressed gzip and BGZF_ files.
+When used as input it autodetects the compressed files.
+It can also generate compressed outputs.
 
 The sequence formats accepted by Seq Crumbs are the ones supported by Biopython's SeqIO_ module.
 As output only Sanger and Illumina fastq and fasta files are supported.
 
-Seq Crumbs can take advantage of the multiprocessor computers by splitting the computational load into several processed.
+Seq Crumbs can take advantage of the multiprocessor computers by splitting the computational load into several processes.
 
 
-Install
--------
+Installation
+------------
 
 Seq Crumbs depends on Python 2.7 and Biopython_.
 The installation manual is located in the INSTALL document.
@@ -82,7 +83,7 @@ Related software
 
 Seq Crumbs relies heavily on Biopython_ and without this free software project it won't be able to provide some of its functionalities.
 
-Biopieces is project with a scope similar to Seq Crumbs.
+Biopieces is a project with a scope similar to Seq Crumbs.
 Biopieces is a great software project capable of working with different kinds of biological data using Unix Pipes.
 Seq Crumbs tries to be more limited in its scope limiting itself only to sequence files and thus providing a somewhat simpler interface.
 
