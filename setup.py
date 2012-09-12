@@ -163,22 +163,6 @@ class InstallData(distutils.command.install_data.install_data):
         return distutils.command.install_data.install_data.run(self)
 
 
-class MakeBinaries(Command):
-    'it builds the man page '
-    description = 'make binaries with pyinetaller'
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        'make the executables with pyinstaller'
-        print 'hola'
-
-
 setup_args = {
               'name': 'seq_crumbs',
               'version': __version__,
@@ -187,12 +171,12 @@ setup_args = {
               'author_email': 'jblanca@upv.es',
               'url': 'http://bioinf.comav.upv.es/seq_crumbs/',
               'packages': ['crumbs', 'crumbs.third_party', 'crumbs.utils'],
+              'include_package_data': True,
               'data_files': external_executables,
               'scripts': get_scripts(),
               'license': 'AGPL',
               'cmdclass': {'install': SmartInstall,
-                           'install_data': InstallData,
-                           'make_binaries': MakeBinaries}
+                           'install_data': InstallData}
               }
 
 if _SETUPTOOLS:

@@ -2,3 +2,4 @@ include LICENSE.txt
 include README.rst
 recursive-include crumbs/third_party *
 recursive-include doc *.rst
+recursive-include crumbs/test_data *
