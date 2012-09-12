@@ -32,18 +32,28 @@ def _setup_argparse():
     parser.add_argument('input', help='Sequence input files to process',
                         default=sys.stdin, nargs=2,
                         type=argparse.FileType('rt'))
+    parser.add_argument('-u', '--uncheck_correlation', action='store_false',
+                        dest='check_pair_correlation')
     return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['check_pair_correlation'] = parsed_args.check_pair_correlation
+    return args
 
 
 def run():
     'The main function of the binary'
     parser = _setup_argparse()
-    args = parse_basic_args(parser)[0]
+    args = _parse_args(parser)
 
     seq1 = read_seqrecords([args['in_fhands'][0]], args['in_format'])
     seq2 = read_seqrecords([args['in_fhands'][1]], args['in_format'])
 
-    seqs = interleave_pairs(seq1, seq2)
+    seqs = interleave_pairs(seq1, seq2,
+                         check_pair_correlation=args['check_pair_correlation'])
     write_seqrecords(args['out_fhand'], seqs, file_format=args['out_format'])
 
 
