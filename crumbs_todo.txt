@@ -45,14 +45,6 @@ filter with re en título
 grep en el nombre y la descripción
 
 
-filter_by_quality
--------------------------
-con opción de que sea en una región de la secuencia (primeras bases, últimas bases)
---threshold
---ignore_masked_region (default False)
---reverse -v
-
-
 trim_by_quality
 ---------------
 

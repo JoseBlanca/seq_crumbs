@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.bin_utils import (main, parse_basic_args,
+                                    create_basic_argparse)
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.seqio import read_seq_packets, write_seq_packets
+from crumbs.filters import FilterByQuality
+
+
+def _setup_argparse(description):
+    'It returns the argument parser'
+    parser = create_basic_argparse(description=description)
+    parser.add_argument('-q', '--threshold', type=float, required=True,
+                        help='Quality threshold')
+    parser.add_argument('-m', '--ignore_masked', action='store_true',
+                        help='Count only the uppercased residues')
+    parser.add_argument('-r', '--reverse', action='store_true',
+                    help='Reverses the filtering (keep low quality sequences)')
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the arguments'
+    args, parsed_args = parse_basic_args(parser)
+    args['threshold'] = parsed_args.threshold
+    args['ignore_masked'] = parsed_args.ignore_masked
+    args['reverse'] = parsed_args.reverse
+    return args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It filters the sequences according to its mean quality.'
+    parser = _setup_argparse(description=description)
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    filter_ = FilterByQuality(threshold=args['threshold'],
+                              reverse=args['reverse'],
+                              ignore_masked=args['ignore_masked'])
+    seq_packets = process_seq_packets(seq_packets, [filter_])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'])
+
+if __name__ == '__main__':
+    sys.exit(main(run))

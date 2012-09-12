@@ -13,8 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import division
+
 from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
-from crumbs.utils.seq_utils import uppercase_length
+from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
+from crumbs.exceptions import WrongFormatError
 
 # pylint: disable=R0903
 
@@ -92,6 +95,59 @@ class FilterById(object):
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1
             passed = True if seqrecord.id in seq_ids else False
+            if reverse:
+                passed = not(passed)
+            if passed:
+                processed_seqs.append(seqrecord)
+                stats[YIELDED_SEQS] += 1
+        return processed_seqs
+
+
+class FilterByQuality(object):
+    'It removes the sequences according to its quality'
+    def __init__(self, threshold, reverse=False, ignore_masked=False):
+        '''The initiator.
+
+        threshold - minimum quality to pass the filter (float)
+        reverse - if True keep the sequences not found on the list
+        '''
+        self.threshold = float(threshold)
+        self.reverse = reverse
+        self.ignore_masked = ignore_masked
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It filters out the seqrecords not found in the list.'
+        stats = self._stats
+        threshold = self.threshold
+        reverse = self.reverse
+        ignore_masked = self.ignore_masked
+
+        stats[PROCESSED_PACKETS] += 1
+        processed_seqs = []
+        for seqrecord in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            try:
+                quals = seqrecord.letter_annotations['phred_quality']
+            except KeyError:
+                msg = 'Some of the input sequences do not have qualities: {}'
+                msg = msg.format(seqrecord.id)
+                raise WrongFormatError(msg)
+            if ignore_masked:
+                seq = str(seqrecord.seq)
+                seg_quals = [quals[segment[0]: segment[1] + 1]
+                                    for segment in get_uppercase_segments(seq)]
+                qual = sum(sum(q) * len(q) for q in seg_quals) / len(quals)
+            else:
+                qual = sum(quals) / len(quals)
+            passed = True if qual >= threshold else False
             if reverse:
                 passed = not(passed)
             if passed:

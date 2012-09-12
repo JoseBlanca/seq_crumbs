@@ -48,6 +48,19 @@ def uppercase_length(string):
     return len(re.findall("[A-Z]", string))
 
 
+def get_uppercase_segments(string):
+    '''It detects the unmasked regions of a sequence
+
+    It returns a list of (start, end) tuples'''
+    start = 0
+    for is_upper, group in itertools.groupby(string, lambda x: x.isupper()):
+        group = list(group)
+        end = start + len(group) - 1
+        if is_upper:
+            yield start, end
+        start = end + 1
+
+
 class ChangeCase(object):
     'It changes the sequence case.'
 

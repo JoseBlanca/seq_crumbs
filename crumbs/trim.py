@@ -14,25 +14,12 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import random
-import itertools
 
 from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
-from crumbs.utils.seq_utils import replace_seq_same_length
+from crumbs.utils.seq_utils import (replace_seq_same_length,
+                                    get_uppercase_segments)
 
 # pylint: disable=R0903
-
-
-def _get_uppercase_segments(string):
-    '''It detects the unmasked regions of a sequence
-
-    It returns a list of (start, end) tuples'''
-    start = 0
-    for is_upper, group in itertools.groupby(string, lambda x: x.isupper()):
-        group = list(group)
-        end = start + len(group) - 1
-        if is_upper:
-            yield start, end
-        start = end + 1
 
 
 def _get_longest_segment(segments):
@@ -80,7 +67,7 @@ class TrimLowercasedLetters(object):
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1
             seq = str(seqrecord.seq)
-            unmasked_segments = _get_uppercase_segments(seq)
+            unmasked_segments = get_uppercase_segments(seq)
             segment = _get_longest_segment(unmasked_segments)
             if segment is not None:
                 stats[YIELDED_SEQS] += 1

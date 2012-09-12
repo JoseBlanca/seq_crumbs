@@ -20,14 +20,14 @@ import unittest
 # pylint: disable=W0402
 from string import ascii_lowercase
 from random import choice
-from subprocess import check_output
+from subprocess import check_output, call
 import os.path
 from tempfile import NamedTemporaryFile
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.filters import FilterByLength, FilterById
+from crumbs.filters import FilterByLength, FilterById, FilterByQuality
 from crumbs.utils.bin_utils import BIN_DIR
 
 
@@ -120,6 +120,47 @@ class SeqListFilterTest(unittest.TestCase):
                                fasta_fhand.name])
         assert '>s2\n' in result
         assert '>s1\n' not in result
+
+
+class QualityFilterTest(unittest.TestCase):
+    'It tests the filtering by a quality threshold'
+    def test_quality_filter(self):
+        'It filters the reads given a quality threshold'
+        seq1 = SeqRecord(Seq('AAcTg'), id='seq1',
+                    letter_annotations={'phred_quality': [42, 42, 40, 42, 40]})
+        seq2 = SeqRecord(Seq('AAcTg'), id='seq2',
+                    letter_annotations={'phred_quality': [40, 40, 42, 40, 42]})
+        seqs = [seq1, seq2]
+
+        filter_by_id = FilterByQuality(threshold=41)
+        assert [s.id for s in filter_by_id(seqs)] == ['seq1']
+
+        filter_by_id = FilterByQuality(threshold=41, reverse=True)
+        assert [s.id for s in filter_by_id(seqs)] == ['seq2']
+
+        filter_by_id = FilterByQuality(threshold=41.5, ignore_masked=True)
+        assert [s.id for s in filter_by_id(seqs)] == ['seq1']
+
+    def test_filter_by_qual_bin(self):
+        'It uses the filter_by_quality binary'
+        filter_bin = os.path.join(BIN_DIR, 'filter_by_quality')
+        assert 'usage' in check_output([filter_bin, '-h'])
+
+        fastq = '@s1\naCTg\n+\n"DD"\n@s2\nAC\n+\n""\n'
+        fastq_fhand = _make_fhand(fastq)
+        result = check_output([filter_bin, '-mrq', '34', fastq_fhand.name])
+        assert '@s1\n' not in result
+        assert '@s2\n' in result
+
+        # Using a fasta file it will fail
+        fasta = '>s1\naCTg\n>s2\nAC\n'
+        fasta_fhand = _make_fhand(fasta)
+        stderr = NamedTemporaryFile()
+        result = call([filter_bin, '-q', '35', fasta_fhand.name],
+                      stderr=stderr)
+        assert result
+        assert 'sequences do not have qualities' in open(stderr.name).read()
+
 
 if __name__ == "__main__":
 #    import sys;sys.argv = ['', 'TestPool']
