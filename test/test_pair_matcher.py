@@ -165,6 +165,35 @@ class InterleavePairsTest(unittest.TestCase):
         assert result1.strip() == open(fhand1).read().strip()
         assert result2.strip() == open(fhand2).read().strip()
 
+
+class InterleaveBinTest(unittest.TestCase):
+    'test of the interleave and deinterleave'
+
+    def test_binaries(self):
+        'It test the binaries'
+        interleave_bin = os.path.join(BIN_DIR, 'interleave_pairs')
+        deinterleave_bin = os.path.join(BIN_DIR, 'deinterleave_pairs')
+        assert 'usage' in check_output([interleave_bin, '-h'])
+        assert 'usage' in check_output([deinterleave_bin, '-h'])
+
+        in_fpath1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        in_fpath2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
+        out_fhand = NamedTemporaryFile()
+
+        check_output([interleave_bin, '-o', out_fhand.name,
+                      in_fpath1, in_fpath2])
+        result = open(out_fhand.name).read()
+        assert '@seq5:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in result
+        assert '@seq5:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in result
+
+        out_fhand1 = NamedTemporaryFile()
+        out_fhand2 = NamedTemporaryFile()
+        check_output([deinterleave_bin, '-o', out_fhand1.name, out_fhand2.name,
+                      out_fhand.name])
+        assert open(in_fpath1).read() == open(out_fhand1.name).read()
+        assert open(in_fpath2).read() == open(out_fhand2.name).read()
+
+
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']
     unittest.main()
