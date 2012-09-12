@@ -30,7 +30,7 @@ def _setup_argparse(description):
     parser.add_argument('-l', '--threshold', type=int, help='Length threshold',
                         required=True)
     parser.add_argument('-m', '--ignore_masked',
-                        help='Count only the uppercase residues',
+                        help='Count only the uppercased residues',
                         action='store_true', default=False)
     parser.add_argument('-r', '--reverse',
                         help='Reverses the filtering (keep small sequences)',
