@@ -9,7 +9,7 @@ from Bio.SeqRecord import SeqRecord
 
 SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
-# number of sequences to process in a chunk. Lenght of the sequence list to 
+# number of sequences to process in a chunk. Lenght of the sequence list to
 # hold in memory
 PACKET_SIZE = 1000
 
