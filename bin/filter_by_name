@@ -47,7 +47,7 @@ def _parse_args(parser):
 
 def run():
     'The main function of the binary'
-    description = 'It filters the sequences according to its length.'
+    description = 'It filters the sequences found in a list of sequence names.'
     parser = _setup_argparse(description=description)
     args = _parse_args(parser)
 
