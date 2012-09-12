@@ -18,8 +18,6 @@
 import sys
 import argparse
 
-from Bio import SeqIO
-
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
 from crumbs.pairs import match_pairs
@@ -28,7 +26,8 @@ from crumbs.seqio import read_seqrecords
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
-    description = ''
+    description = 'It matches pair seqs and splits orphaned seqs in another'
+    description += ' file'
     parser = create_basic_argparse(description=description)
     #orphan
     parser.add_argument('-p', '--orphan', dest='orphan',
