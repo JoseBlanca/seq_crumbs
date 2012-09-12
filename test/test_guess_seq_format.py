@@ -66,6 +66,14 @@ class GuessFormat(unittest.TestCase):
         fmt = check_output([guess_bin], stdin=open(fasta_fhand.name))
         assert fmt == 'fasta\n'
 
+    def test_version(self):
+        'It can return its version number'
+        guess_bin = os.path.join(BIN_DIR, 'guess_seq_format')
+
+        stderr = NamedTemporaryFile()
+        check_output([guess_bin, '--version'], stderr=stderr)
+        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
     unittest.main()

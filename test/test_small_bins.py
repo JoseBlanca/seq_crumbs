@@ -141,6 +141,14 @@ class CatTest(unittest.TestCase):
         result = check_output([cat_bin, out_fhand.name])
         assert '>seq1\nACTATCATGGCAGATA\n' in  result
 
+    def test_version(self):
+        'It can return its version number'
+        guess_bin = os.path.join(BIN_DIR, 'cat_seqs')
+
+        stderr = NamedTemporaryFile()
+        check_output([guess_bin, '--version'], stderr=stderr)
+        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+
 
 class SeqHeadTest(unittest.TestCase):
     'It tests the seq head binary'

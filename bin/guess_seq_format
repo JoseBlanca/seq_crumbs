@@ -18,7 +18,7 @@
 import sys
 import argparse
 
-from crumbs.utils.bin_utils import main
+from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required)
 from crumbs.seqio import guess_format
@@ -33,6 +33,8 @@ def _setup_argparse():
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument('input', help=hlp, default=sys.stdin, nargs='?',
                         type=argparse.FileType('r'))
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
     return parser
 
 

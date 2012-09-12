@@ -36,6 +36,7 @@ from crumbs.utils.seq_utils import guess_format
 from crumbs.settings import (SUPPORTED_OUTPUT_FORMATS, USE_EXTERNAL_BIN_PREFIX,
                               EXTERNAL_BIN_PREFIX, ADD_PATH_TO_EXT_BIN)
 from crumbs.utils.tags import OUTFILE, GUESS_FORMAT
+from crumbs import __version__ as version
 
 
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
@@ -208,12 +209,23 @@ def create_io_argparse(**kwargs):
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
                         help='Sequence output file to process',
                         type=argparse.FileType('wt'))
+
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-z ', '--gzip', action='store_true',
                        help='Compress the output in gzip format')
     group.add_argument('-Z ', '--bgzf', action='store_true',
                        help='Compress the output in bgzf format')
     return parser
+
+
+def build_version_msg():
+    'It creates a message with the version.'
+    bin_name = os.path.split(sys.argv[0])[-1]
+    version_msg = bin_name + ' from Seq Crumbs version: ' + version
+    return version_msg
 
 
 def create_basic_argparse(**kwargs):

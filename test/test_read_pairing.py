@@ -212,6 +212,18 @@ class InterleaveBinTest(unittest.TestCase):
         assert 'seq4:136:FC706VJ:2:2104:15343:197393' in result
         assert 'seq3:136:FC706VJ:2:2104:15343:197393' in result
 
+    def test_version(self):
+        'It can return its version number'
+        guess_bin = os.path.join(BIN_DIR, 'interleave_pairs')
+        stderr = NamedTemporaryFile()
+        check_output([guess_bin, '--version'], stderr=stderr)
+        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+
+        guess_bin = os.path.join(BIN_DIR, 'deinterleave_pairs')
+        stderr = NamedTemporaryFile()
+        check_output([guess_bin, '--version'], stderr=stderr)
+        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']
     unittest.main()
