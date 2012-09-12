@@ -29,19 +29,18 @@ def _setup_argparse():
     parent = create_basic_argparse(description=description)
     parser = argparse.ArgumentParser(parents=[parent],
                                      conflict_handler='resolve')
-    parser.add_argument('input', help='Sequence input files to process',
+    parser.add_argument('input', help='Sequence input files to process.',
                         default=sys.stdin, nargs=2,
                         type=argparse.FileType('rt'))
-    parser.add_argument('-s', '--skip_checks', action='store_false',
-                        dest='check_pair_correlation',
-                        help='skip pair correlation checking')
+    parser.add_argument('-s', '--skip_checks', action='store_true',
+                       help='Skip the pair read name correspondence checking.')
     return parser
 
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_args(parser)
-    args['check_pair_correlation'] = parsed_args.check_pair_correlation
+    args['skip_checks'] = parsed_args.skip_checks
     return args
 
 
@@ -53,8 +52,7 @@ def run():
     seq1 = read_seqrecords([args['in_fhands'][0]], args['in_format'])
     seq2 = read_seqrecords([args['in_fhands'][1]], args['in_format'])
 
-    seqs = interleave_pairs(seq1, seq2,
-                         check_pair_correlation=args['check_pair_correlation'])
+    seqs = interleave_pairs(seq1, seq2, skip_checks=args['skip_checks'])
     write_seqrecords(args['out_fhand'], seqs, file_format=args['out_format'])
 
 

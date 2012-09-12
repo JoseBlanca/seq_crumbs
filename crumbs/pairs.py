@@ -101,20 +101,22 @@ def _check_name_and_direction_match(seq1, seq2):
         raise InterleaveError(msg)
 
 
-def interleave_pairs(seqs1, seqs2, check_pair_correlation=True):
+def interleave_pairs(seqs1, seqs2, skip_checks=False):
     '''A generator that interleaves the paired reads found in two iterators.
 
     It will fail if forward and reverse reads do not match in both sequence
     iterators.
     '''
     for seq1, seq2 in izip_longest(seqs1, seqs2, fillvalue=None):
-        if check_pair_correlation:
+        if not skip_checks:
             if seq1 is None or seq2 is None:
                 msg = 'The files had a different number of sequences'
                 raise InterleaveError(msg)
             _check_name_and_direction_match(seq1, seq2)
-        yield seq1
-        yield seq2
+        if seq1 is not None:
+            yield seq1
+        if seq2 is not None:
+            yield seq2
 
 
 def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):

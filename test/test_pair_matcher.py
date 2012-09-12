@@ -15,7 +15,7 @@
 import unittest
 import os
 from cStringIO import StringIO
-from subprocess import check_output, CalledProcessError
+from subprocess import check_output, CalledProcessError, call
 from tempfile import NamedTemporaryFile
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
@@ -130,14 +130,18 @@ class InterleavePairsTest(unittest.TestCase):
         'It interleaves two iterators with paired reads'
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
-        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+        fwd_seqs = list(read_seqrecords([open(file1)], 'fastq'))
+        rev_seqs = list(read_seqrecords([open(file2)], 'fastq'))
 
         try:
             list(interleave_pairs(fwd_seqs, rev_seqs))
             self.fail('InterleaveError expected')
         except InterleaveError:
             pass
+
+        # we skip the tests
+        seqs = list(interleave_pairs(fwd_seqs, rev_seqs, skip_checks=True))
+        assert len(seqs) == 8
 
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
@@ -180,8 +184,8 @@ class InterleaveBinTest(unittest.TestCase):
         in_fpath2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
         out_fhand = NamedTemporaryFile()
 
-        check_output([interleave_bin, '-o', out_fhand.name, '-s',
-                      in_fpath1, in_fpath2])
+        check_output([interleave_bin, '-o', out_fhand.name, in_fpath1,
+                      in_fpath2])
         result = open(out_fhand.name).read()
         assert '@seq5:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in result
         assert '@seq5:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in result
@@ -193,6 +197,20 @@ class InterleaveBinTest(unittest.TestCase):
         assert open(in_fpath1).read() == open(out_fhand1.name).read()
         assert open(in_fpath2).read() == open(out_fhand2.name).read()
 
+        # skip checks
+        in_fpath1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        in_fpath2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
+        out_fhand = NamedTemporaryFile()
+        stderr = NamedTemporaryFile()
+        ret_code = call([interleave_bin, '-o', out_fhand.name, in_fpath1,
+                         in_fpath2], stderr=stderr)
+        assert int(ret_code)
+        assert 'from the two files do not match' in open(stderr.name).read()
+        check_output([interleave_bin, '-o', out_fhand.name, '-s', in_fpath1,
+                      in_fpath2])
+        result = open(out_fhand.name).read()
+        assert 'seq4:136:FC706VJ:2:2104:15343:197393' in result
+        assert 'seq3:136:FC706VJ:2:2104:15343:197393' in result
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']
