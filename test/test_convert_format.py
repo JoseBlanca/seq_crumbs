@@ -100,7 +100,7 @@ class ReadWriteSeqsTest(unittest.TestCase):
 
 
 class SeqioBinTest(unittest.TestCase):
-    'It test the seqio binary'
+    'It test the convert_format binary'
 
     @staticmethod
     def _make_fhand(content=None):
@@ -179,7 +179,14 @@ class SeqioBinTest(unittest.TestCase):
         assert ">seq1\natcgt" in  open(fasta_out_fhand.name).read()
         assert ">seq1\n30 30 30 30 30" in  open(qual_out_fhand.name).read()
 
+    def test_version(self):
+        'It can return its version number'
+        guess_bin = os.path.join(BIN_DIR, 'convert_format')
+        stderr = NamedTemporaryFile()
+        check_output([guess_bin, '--version'], stderr=stderr)
+        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+
 
 if __name__ == '__main__':
-    import sys;sys.argv = ['', 'SeqioBinTest.test_seqio_bin']
+    #import sys;sys.argv = ['', 'SeqioBinTest.test_seqio_bin']
     unittest.main()
