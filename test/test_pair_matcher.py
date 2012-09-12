@@ -180,7 +180,7 @@ class InterleaveBinTest(unittest.TestCase):
         in_fpath2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
         out_fhand = NamedTemporaryFile()
 
-        check_output([interleave_bin, '-o', out_fhand.name,
+        check_output([interleave_bin, '-o', out_fhand.name, '-s',
                       in_fpath1, in_fpath2])
         result = open(out_fhand.name).read()
         assert '@seq5:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in result
