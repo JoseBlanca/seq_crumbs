@@ -23,10 +23,6 @@ mask con el lucy vectores
 mask con el lucy calidad
 ----------------
 
-mask un número fijo de bases
------------------------------
-con opción para que al menos sean X bases o para que al menos se añadan X bases más enmascaradas
-
 mask quality by n
 ------------------
 
