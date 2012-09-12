@@ -2,6 +2,7 @@
 TODO
 -----
 
+- add version
 - trimming infrastructure
 
 
@@ -21,10 +22,6 @@ mask con el lucy vectores
 
 mask con el lucy calidad
 ----------------
-
-mask un número fijo de bases
------------------------------
-con opción para que al menos sean X bases o para que al menos se añadan X bases más enmascaradas
 
 mask quality by n
 ------------------
@@ -53,9 +50,11 @@ filter_by_quality
 con opción de que sea en una región de la secuencia (primeras bases, últimas bases)
 --threshold
 --ignore_masked_region (default False)
---sbegin (start of the sequence to be used)
---send (end of the sequence to be used)
 --reverse -v
+
+
+trim_by_quality
+---------------
 
 
 trim longest fragemnt trim all fragments

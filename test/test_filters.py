@@ -27,7 +27,7 @@ from tempfile import NamedTemporaryFile
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.filters import FilterByLength
+from crumbs.filters import FilterByLength, FilterById
 from crumbs.utils.bin_utils import BIN_DIR
 
 
@@ -91,6 +91,35 @@ class LengthFilterTest(unittest.TestCase):
 
         result = check_output([filter_bin, '-rml', '4', fasta_fhand.name])
         assert '>s1\naCTg\n>s2\nAC\n' in result
+
+
+class SeqListFilterTest(unittest.TestCase):
+    'It tests the filtering using a list of sequences'
+    def test_seq_list_filter(self):
+        'It filters the reads given a list of ids'
+        seq1 = SeqRecord(Seq('ACTG'), id='seq1')
+        seq2 = SeqRecord(Seq('ACTG'), id='seq2')
+        seqs = [seq1, seq2]
+
+        ids = ['seq1']
+        filter_by_id = FilterById(ids)
+        assert [s.id for s in filter_by_id(seqs)] == ['seq1']
+
+        filter_by_id = FilterById(set(ids), reverse=True)
+        assert [s.id for s in filter_by_id(seqs)] == ['seq2']
+
+    def test_filter_by_name_bin(self):
+        'It uses the filter_by_name binary'
+        filter_bin = os.path.join(BIN_DIR, 'filter_by_name')
+        assert 'usage' in check_output([filter_bin, '-h'])
+
+        fasta = '>s1\naCTg\n>s2\nAC\n'
+        fasta_fhand = _make_fhand(fasta)
+        list_fhand = _make_fhand('s1\n')
+        result = check_output([filter_bin, '-rl', list_fhand.name,
+                               fasta_fhand.name])
+        assert '>s2\n' in result
+        assert '>s1\n' not in result
 
 if __name__ == "__main__":
 #    import sys;sys.argv = ['', 'TestPool']

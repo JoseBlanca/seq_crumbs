@@ -19,7 +19,6 @@ import glob
 import platform
 import subprocess
 
-from distutils.core import Command
 import distutils.command.install_data
 
 try:
@@ -82,11 +81,12 @@ def find_data_file(srcdir, *wildcards, **kw):
             return
         names = []
         lst, wildcards = arg
-        for wc in wildcards:
-            wc_name = opj(dirname, wc)
-            for f in files:
-                filename = opj(dirname, f)
-                if fnmatch.fnmatch(filename, wc_name) and not os.path.isdir(filename):
+        for wildcard in wildcards:
+            wc_name = opj(dirname, wildcard)
+            for fpath in files:
+                filename = opj(dirname, fpath)
+                if (fnmatch.fnmatch(filename, wc_name) and
+                    not os.path.isdir(filename)):
                     names.append(filename)
         if names:
             lst.append((dirname, names))
@@ -157,7 +157,8 @@ class SmartInstall(install.install):
 class InstallData(distutils.command.install_data.install_data):
     """need to change self.install_dir to the actual library dir"""
     def run(self):
-        # cambiar el sitio donde se van a instalar los third_party_binaries
+        '''It modifies the place in which the thrid_party_binaries will be
+        installed.'''
         install_cmd = self.get_finalized_command('install')
         self.install_dir = getattr(install_cmd, 'install_lib')
         return distutils.command.install_data.install_data.run(self)
