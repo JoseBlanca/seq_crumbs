@@ -54,63 +54,6 @@ class TrimLowercasedLetters(object):
         return trimmed_seqs
 
 
-class TrimEdgesOld(object):
-    'It trims a fixed number of bases from the seqrecords.'
-    def __init__(self, left=0, right=0, mask=False):
-        '''The initiator.
-
-        left - number of bases to trim from the left side
-        right - number of bases to trim from the right side
-        mask - if True it will mask by lowercasing instead of trimming.
-        '''
-        self.left = left
-        self.right = right
-        self.mask = mask
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
-
-    def __call__(self, seqrecords):
-        'It trims the edges of the given seqrecords.'
-        stats = self._stats
-        left = self.left
-        mask = self.mask
-        stats[PROCESSED_PACKETS] += 1
-        processed_seqs = []
-        for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
-            right = self.right
-            if mask:
-                seq = str(seqrecord.seq)
-                new_seq = []
-                if left:
-                    new_seq.append(seq[:left].lower())
-                max_right = len(seq) - left
-                if right > max_right:
-                    right = max_right
-                if right:
-                    new_seq.append(seq[left:-right])
-                    new_seq.append(seq[-right:].lower())
-                else:
-                    new_seq.append(seq[left:])
-                seqrecord = replace_seq_same_length(seqrecord,
-                                                    ''.join(new_seq))
-            else:
-                if right:
-                    seqrecord = seqrecord[left:-right]
-                else:
-                    seqrecord = seqrecord[left:]
-            if len(seqrecord.seq):
-                processed_seqs.append(seqrecord)
-                stats[YIELDED_SEQS] += 1
-        return processed_seqs
-
-
 def _add_trim_segments(segments, sequence, vector=True, trim=True):
     'It adds segments to the trimming recommendation in the annotation'
     if not segments:
