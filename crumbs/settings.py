@@ -42,3 +42,6 @@ USE_EXTERNAL_BIN_PREFIX = False
 EXTERNAL_BIN_PREFIX = 'crumbs_'
 # mark True if need the path or assumes that is on the path
 ADD_PATH_TO_EXT_BIN = True
+
+# how many reads can be hold in memory by default
+DEFAULT_SEQS_IN_MEM_LIMIT = 500000

@@ -19,6 +19,7 @@ from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
 from crumbs.utils.tags import FWD, REV
 from crumbs.seqio import write_seqrecords
+from crumbs.settings import DEFAULT_SEQS_IN_MEM_LIMIT
 
 
 def _parse_pair_direction_and_name(seq):
@@ -41,7 +42,7 @@ def _parse_pair_direction_and_name(seq):
 
 
 def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
-                memory_limit=500000):
+                memory_limit=DEFAULT_SEQS_IN_MEM_LIMIT):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
     buf_fwd = {'index': {}, 'items': []}
     buf_rev = {'index': {}, 'items': []}
@@ -70,17 +71,19 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
                 error_msg += ' in your input. We have reached the memory limit'
                 raise MaxNumReadsInMem(error_msg)
         else:
+            # write seqs from buffer1
             orphan_seqs = buf1['items'][:matching_seq_index]
             matching_seq = buf1['items'][matching_seq_index]
-
-            # fix buffers
+            write_seqrecords(orphan_out_fhand, orphan_seqs, out_format)
+            write_seqrecords(out_fhand, [matching_seq, seq], out_format)
+            # fix buffers 1
             buf1['items'] = buf1['items'][matching_seq_index + 1:]
             buf1['index'] = {s: i for i, s in enumerate(buf1['items'])}
 
-            #write seqs in file
-            write_seqrecords(orphan_out_fhand, orphan_seqs, out_format)
-            write_seqrecords(out_fhand, [matching_seq, seq], out_format)
-
+            # writes seqs from buffer 2 and fix buffer2
+            write_seqrecords(orphan_out_fhand, buf2['items'], out_format)
+            buf2['items'] = []
+            buf2['index'] = {}
     else:
         orphan_seqs = buf1['items'] + buf2['items']
         write_seqrecords(orphan_out_fhand, orphan_seqs, out_format)
