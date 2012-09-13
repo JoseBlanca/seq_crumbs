@@ -29,7 +29,8 @@ import math
 
 from crumbs.alignment_result import (BlastParser, TabularBlastParser,
                                      alignment_results_scores, ExonerateParser,
-                                     filter_alignments, covered_segments,
+                                     filter_alignments,
+                                     covered_segments_from_match_parts,
                                      elongate_match_parts_till_global,
                                      TextBlastParser, QUERY, SUBJECT)
 
@@ -938,14 +939,15 @@ class MergeMatchesTests(unittest.TestCase):
         match_part3 = {'query_start': 190, 'query_end': 200,
                        'subject_start': 290, 'subject_end': 300}
         mparts = [match_part1, match_part2, match_part3]
-        covered_segs = covered_segments(mparts)
+        covered_segs = covered_segments_from_match_parts(mparts)
         assert covered_segs == [(80, 110), (190, 200)]
 
         match_part2 = {'query_start': 90, 'query_end': 110,
                        'subject_start': 190, 'subject_end': 210}
         match_part3 = {'query_start': 190, 'query_end': 200,
                        'subject_start': 290, 'subject_end': 300}
-        covered_segs = covered_segments([match_part2, match_part3])
+        covered_segs = covered_segments_from_match_parts([match_part2,
+                                                          match_part3])
         assert covered_segs == [(90, 110), (190, 200)]
 
         # q 0---10
@@ -958,10 +960,11 @@ class MergeMatchesTests(unittest.TestCase):
         match_part2 = {'query_start': 5, 'query_end': 15,
                        'subject_start': 15, 'subject_end': 25}
         mparts = [match_part1, match_part2]
-        covered_segs = covered_segments(mparts)
+        covered_segs = covered_segments_from_match_parts(mparts)
         assert covered_segs == [(0, 15)]
 
-        covered_segs = covered_segments(mparts, in_query=False)
+        covered_segs = covered_segments_from_match_parts(mparts,
+                                                         in_query=False)
         assert covered_segs == [(0, 10), (15, 25)]
 
         match_part1 = {'query_start': 1, 'query_end': 10,
@@ -971,7 +974,7 @@ class MergeMatchesTests(unittest.TestCase):
         match_part3 = {'query_start': 30, 'query_end': 40,
                        'subject_start': 30, 'subject_end': 40}
         mparts = [match_part1, match_part2, match_part3]
-        covered_segs = covered_segments(mparts)
+        covered_segs = covered_segments_from_match_parts(mparts)
         assert covered_segs == [(1, 20), (30, 40)]
 
         match_part1 = {'query_start': 1, 'query_end': 10,
@@ -979,7 +982,7 @@ class MergeMatchesTests(unittest.TestCase):
         match_part2 = {'query_start': 10, 'query_end': 20,
                        'subject_start': 10, 'subject_end': 20}
         mparts = [match_part1, match_part2]
-        covered_segs = covered_segments(mparts)
+        covered_segs = covered_segments_from_match_parts(mparts)
         assert covered_segs == [(1, 20)]
 
         match_part1 = {'query_start': 80, 'query_end': 85,
@@ -989,9 +992,10 @@ class MergeMatchesTests(unittest.TestCase):
         match_part3 = {'query_start': 190, 'query_end': 200,
                        'subject_start': 290, 'subject_end': 300}
         mparts = [match_part1, match_part2, match_part3]
-        covered_segs = covered_segments(mparts, merge_segments_closer=10)
+        covered_segs = covered_segments_from_match_parts(mparts,
+                                                      merge_segments_closer=10)
         assert covered_segs == [(80, 110), (190, 200)]
-        covered_segs = covered_segments(mparts)
+        covered_segs = covered_segments_from_match_parts(mparts)
         assert covered_segs == [(80, 85), (90, 110), (190, 200)]
 
         mpart1 = {'query_start': 0, 'query_end': 41,
@@ -1001,7 +1005,8 @@ class MergeMatchesTests(unittest.TestCase):
         mpart3 = {'query_start': 0, 'query_end': 41,
                   'subject_start': 0, 'subject_end': 41}
         mparts = [mpart1, mpart2, mpart3]
-        covered_segs = covered_segments(mparts, in_query=False)
+        covered_segs = covered_segments_from_match_parts(mparts,
+                                                         in_query=False)
         assert covered_segs == [(0, 41), (99, 140)]
 
     def test_match_part_elongation(self):

@@ -6,7 +6,8 @@ from tempfile import NamedTemporaryFile
 from crumbs.blast import get_blast_db, do_blast, generate_tabblast_format
 from crumbs.seqio import write_seqrecords
 from crumbs.alignment_result import (TabularBlastParser, filter_alignments,
-                                     covered_segments, ELONGATED, QUERY,
+                                     covered_segments_from_match_parts,
+                                     ELONGATED, QUERY,
                                      elongate_match_parts_till_global)
 from crumbs.settings import LINKERS
 from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
@@ -96,7 +97,8 @@ class _BlastMatcher(object):
         for m_p in match_parts:
             if ELONGATED in m_p and m_p[ELONGATED] > ignore_elongation_shorter:
                 elongated_match = True
-        segments = covered_segments(match_parts, in_query=False)
+        segments = covered_segments_from_match_parts(match_parts,
+                                                     in_query=False)
         return segments, elongated_match
 
 

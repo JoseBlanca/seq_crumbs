@@ -13,23 +13,28 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-STDIN = 'stdin'
-STDOUT = 'stdout'
-INFILES = 'infiles'
-OUTFILE = 'output'
-# Input format tag when we want to guess
-GUESS_FORMAT = 'guess'
-PROCESSED_SEQS = 'processed_seqs'
-PROCESSED_PACKETS = 'processed_packets'
-YIELDED_SEQS = 'yielded_seqs'
-UPPERCASE = 'upper'
-LOWERCASE = 'lower'
-SWAPCASE = 'swap'
-FWD = 'fwd'
-REV = 'rev'
-TRIMMING_RECOMMENDATIONS = 'trimming_recommendations'
-ELONGATED = 'elongated'
-SUBJECT = 'subject'
-QUERY = 'query'
-START = 0
-END = 1
+# pylint: disable=R0201
+# pylint: disable=R0904
+
+import unittest
+
+from crumbs.utils.segments_utils import get_longest_segment
+
+
+class SegmentsTest(unittest.TestCase):
+    'It tests the segments functions'
+
+    @staticmethod
+    def test_get_longest_section():
+        'It gets the longest section from a list of sections'
+
+        segments = [(0, 3), (10, 34)]
+        assert (10, 34) == get_longest_segment(segments)
+
+        segments = [(0, 3), (10, 13)]
+        segment = get_longest_segment(segments)
+        assert segment == (0, 3) or segment == (10, 13)
+
+if __name__ == '__main__':
+    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    unittest.main()

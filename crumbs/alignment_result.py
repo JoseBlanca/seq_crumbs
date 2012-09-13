@@ -59,9 +59,11 @@ import itertools
 import copy
 import os
 from math import log10
-from operator import itemgetter
 
 from Bio.Blast import NCBIXML
+
+from crumbs.utils.tags import SUBJECT, QUERY, ELONGATED
+from crumbs.utils.segments_utils import merge_overlaping_segments
 
 
 def _text_blasts_in_file(fhand):
@@ -989,14 +991,8 @@ def _create_fix_matches_mapper():
     return _fix_matches
 
 
-ELONGATED = 'elongated'
-SUBJECT = 'subject'
-QUERY = 'query'
-START = 0
-END = 1
-
-
-def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
+def covered_segments_from_match_parts(match_parts, in_query=True,
+                                      merge_segments_closer=1):
     '''Given a list of match_parts it returns the covered segments.
 
        match_part 1  -------        ----->    -----------
@@ -1008,7 +1004,7 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
     '''
 
     # we collect all start and ends
-    limits = []     # all hsp starts and ends
+    segments = []
     for match_part in match_parts:
         if in_query:
             start = match_part['query_start']
@@ -1018,48 +1014,9 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
             end = match_part['subject_end']
         if start > end:     # a revesed item
             start, end = end, start
-        limit_1 = (START, start)
-        limit_2 = (END, end)
-        limits.append(limit_1)
-        limits.append(limit_2)
-
-    # sort by secondary key: start before end
-    limits.sort(key=itemgetter(0))
-    #sort by location (primary key)
-    limits.sort(key=itemgetter(1))
-
-    # merge the ends and start that differ in only one base
-    filtered_limits = []
-    previous_limit = None
-    for limit in limits:
-        if previous_limit is None:
-            previous_limit = limit
-            continue
-        if (previous_limit[0] == END and limit[0] == START and
-            previous_limit[1] >= limit[1] - merge_segments_closer):
-            #These limits cancelled each other
-            previous_limit = None
-            continue
-        filtered_limits.append(previous_limit)
-        previous_limit = limit
-    else:
-        filtered_limits.append(limit)
-    limits = filtered_limits
-
-    # now we create the merged hsps
-    starts = 0
-    segments = []
-    for limit in limits:
-        if limit[0] == START:
-            starts += 1
-            if starts == 1:
-                segment_start = limit[1]
-        elif limit[0] == END:
-            starts -= 1
-            if starts == 0:
-                segment = (segment_start, limit[1])
-                segments.append(segment)
-    return segments
+        segments.append((start, end))
+    return merge_overlaping_segments(segments,
+                                   merge_segments_closer=merge_segments_closer)
 
 
 def elongate_match_part_till_global(match_part, query_length, subject_length,
@@ -1154,7 +1111,8 @@ def _match_length(match, length_from_query):
 
     It does take into account only the length covered by match_parts.
     '''
-    segments = covered_segments(match['match_parts'], length_from_query)
+    segments = covered_segments_from_match_parts(match['match_parts'],
+                                                 length_from_query)
     length = 0
     for segment in segments:
         match_part_len = segment[1] - segment[0] + 1

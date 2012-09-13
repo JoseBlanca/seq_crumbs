@@ -23,7 +23,7 @@ from itertools import chain
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.trim import _get_longest_segment, TrimLowercasedLetters, TrimEdges
+from crumbs.trim import TrimLowercasedLetters, TrimEdges, TrimAndMask
 from crumbs.seqio import read_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
 
@@ -44,17 +44,6 @@ def _make_fhand(content=''):
 
 class TrimTest(unittest.TestCase):
     'It tests the trim functions'
-
-    @staticmethod
-    def test_get_longest_section():
-        'It gets the longest section from a list of sections'
-
-        segments = [(0, 3), (10, 34)]
-        assert (10, 34) == _get_longest_segment(segments)
-
-        segments = [(0, 3), (10, 13)]
-        segment = _get_longest_segment(segments)
-        assert segment == (0, 3) or segment == (10, 13)
 
     @staticmethod
     def test_trim_seqs():
@@ -103,45 +92,53 @@ class TrimEdgesTest(unittest.TestCase):
 
     def test_edge_trimming(self):
         'It trims the edges'
+        trim = TrimAndMask()
+
         trim_edges = TrimEdges(left=1)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['CCG', 'AACCCGGG']
 
         trim_edges = TrimEdges(right=1)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['ACC', 'AAACCCGG']
 
         trim_edges = TrimEdges(left=1, right=1)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['CC', 'AACCCGG']
 
         trim_edges = TrimEdges(left=2, right=2)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['ACCCG']
 
         trim_edges = TrimEdges(left=3, right=3)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['CCC']
 
         trim_edges = TrimEdges(left=1, mask=True)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['aCCG', 'aAACCCGGG']
 
         trim_edges = TrimEdges(right=1, mask=True)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['ACCg', 'AAACCCGGg']
 
         trim_edges = TrimEdges(left=1, right=1, mask=True)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['aCCg', 'aAACCCGGg']
 
         trim_edges = TrimEdges(left=2, right=2, mask=True)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['accg', 'aaACCCGgg']
 
         trim_edges = TrimEdges(left=3, right=3, mask=True)
-        res = [str(s.seq) for s in trim_edges(self._some_seqs())]
+        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['accg', 'aaaCCCggg']
+
+        # test overlapping mask
+        trim1 = TrimEdges(left=3, right=3, mask=True)
+        trim2 = TrimEdges(left=4, right=4, mask=True)
+        res = [str(s.seq) for s in trim(trim2(trim1(self._some_seqs())))]
+        assert res == ['accg', 'aaacCcggg']
 
     def test_trim_edges_bin(self):
         'It tests the trim_edges binary'
