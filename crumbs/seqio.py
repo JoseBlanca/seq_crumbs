@@ -43,7 +43,6 @@ def write_seqrecords(fhand, seqs, file_format='fastq'):
     'It writes a stream of sequences to a file'
     seqs = clean_seq_stream(seqs)
     SeqIO.write(seqs, fhand, file_format)
-    fhand.flush()
 
 
 def write_seq_packets(fhand, seq_packets, file_format='fastq'):

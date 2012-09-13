@@ -18,6 +18,7 @@ def _do_blast(seq_fhand, oligos):
 
     oligos_fhand = NamedTemporaryFile(prefix='oligo.', suffix='.fasta')
     write_seqrecords(oligos_fhand, oligos, file_format='fasta')
+    oligos_fhand.flush()
 
     blastdb = get_blast_db(seq_fhand.name, dbtype='nucl')
 
@@ -123,6 +124,7 @@ class MatePairSplitter(object):
         stats[PROCESSED_PACKETS] += 1
         seq_fhand = NamedTemporaryFile(suffix='.fasta')
         write_seqrecords(seq_fhand, seqs, 'fasta')
+        seq_fhand.flush()
         matcher = _BlastMatcher(open(seq_fhand.name), self.linkers)
         new_seqs = []
         for seqrec in seqs:

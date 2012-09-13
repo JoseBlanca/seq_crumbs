@@ -85,6 +85,7 @@ def extract_sff():
                              max_nucl_freq_threshold=args['max_percent'])
     seqs = extractor.seqs
     write_seqrecords(args['out_fhand'], seqs)
+    args['out_fhand'].flush()
 
     stderr = sys.stderr
     an_error_apeared = 0

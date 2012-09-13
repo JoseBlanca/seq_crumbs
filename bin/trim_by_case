@@ -38,6 +38,7 @@ def trim_by_case():
     seq_packets = process_seq_packets(seq_packets, [trim_lowercased_seqs],
                                       processes=args['processes'])
     write_seq_packets(out_fhand, seq_packets, args['out_format'])
+    out_fhand.flush()
 
 if __name__ == '__main__':
     sys.exit(main(trim_by_case))

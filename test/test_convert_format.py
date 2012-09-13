@@ -91,6 +91,7 @@ class ReadWriteSeqsTest(unittest.TestCase):
         fhand = StringIO()
         write_seqrecords(fhand, [seq1, None, SeqRecord(Seq(''), id='seq2')],
                          file_format='fasta')
+        fhand.flush()
         assert fhand.getvalue() == '>seq1\nACTG\n'
 
     def test_read_fasta(self):

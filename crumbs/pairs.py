@@ -85,6 +85,9 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
         orphan_seqs = buf1['items'] + buf2['items']
         write_seqrecords(orphan_out_fhand, orphan_seqs, out_format)
 
+    orphan_out_fhand.flush()
+    out_fhand.flush()
+
 
 def _check_name_and_direction_match(seq1, seq2):
     'It fails if the names do not match or if the direction are equal'

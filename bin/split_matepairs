@@ -76,6 +76,7 @@ def split_matepairs():
                                       processes=args['processes'])
 
     write_seq_packets(args['out_fhand'], seq_packets, args['out_format'])
+    args['out_fhand'].flush()
 
 if __name__ == '__main__':
     sys.exit(main(split_matepairs))

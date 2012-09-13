@@ -62,6 +62,7 @@ def filter_by_length():
                                       ignore_masked=args['ignore_masked'])
     seq_packets = process_seq_packets(seq_packets, [filter_by_length])
     write_seq_packets(out_fhand, seq_packets, args['out_format'])
+    out_fhand.flush()
 
 if __name__ == '__main__':
     sys.exit(main(filter_by_length))

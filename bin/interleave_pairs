@@ -54,7 +54,7 @@ def run():
 
     seqs = interleave_pairs(seq1, seq2, skip_checks=args['skip_checks'])
     write_seqrecords(args['out_fhand'], seqs, file_format=args['out_format'])
-
+    args['out_fhand'].flush()
 
 if __name__ == '__main__':
     sys.exit(main(run))
