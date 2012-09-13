@@ -997,17 +997,17 @@ END = 1
 
 
 def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
-    '''Given a list of match_parts it returns the coverd segments.
+    '''Given a list of match_parts it returns the covered segments.
 
        match_part 1  -------        ----->    -----------
        match_part 2       ------
-       It returns the list of segments coverd by the match parts either in the
+       It returns the list of segments covered by the match parts either in the
        query or in the subject.
        merge_segments_closer is an integer. Segments closer than the given
        number of residues will be merged.
     '''
 
-    #we collect all start and ends
+    # we collect all start and ends
     limits = []     # all hsp starts and ends
     for match_part in match_parts:
         if in_query:
@@ -1023,12 +1023,12 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
         limits.append(limit_1)
         limits.append(limit_2)
 
-    #sort by secondary key: start before end
+    # sort by secondary key: start before end
     limits.sort(key=itemgetter(0))
     #sort by location (primary key)
     limits.sort(key=itemgetter(1))
 
-    #merge the ends and start that differ in only one base
+    # merge the ends and start that differ in only one base
     filtered_limits = []
     previous_limit = None
     for limit in limits:
@@ -1046,7 +1046,7 @@ def covered_segments(match_parts, in_query=True, merge_segments_closer=1):
         filtered_limits.append(limit)
     limits = filtered_limits
 
-    #now we create the merged hsps
+    # now we create the merged hsps
     starts = 0
     segments = []
     for limit in limits:
