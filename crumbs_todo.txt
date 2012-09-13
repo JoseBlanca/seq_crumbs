@@ -2,9 +2,6 @@
 TODO
 -----
 
-- trimming infrastructure
-
-
 mask_blast_matches
 ------------------
 
