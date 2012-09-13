@@ -26,6 +26,7 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.trim import TrimLowercasedLetters, TrimEdges, TrimAndMask
 from crumbs.seqio import read_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
@@ -48,13 +49,13 @@ class TrimTest(unittest.TestCase):
     @staticmethod
     def test_trim_seqs():
         'It tests the trim seq function'
-        fasta = '>seq1\naaCTTTC\n>seq2\nCTTCaa\n>seq3\naaCTCaa\n>s\nactg\n'
+        fasta = '>s1\naaCTTTC\n>s2\nCTTCaa\n>s3\naaCTCaa\n>s4\nactg\n>s5\nAC\n'
         seq_packets = read_seq_packets([StringIO(fasta)])
         trim_lowercased_seqs = TrimLowercasedLetters()
         # pylint: disable=W0141
         seq_packets = map(trim_lowercased_seqs, seq_packets)
         seqs = [str(s.seq) for s in chain.from_iterable(seq_packets)]
-        assert seqs == ['CTTTC', 'CTTC', 'CTC']
+        assert seqs == ['CTTTC', 'CTTC', 'CTC', 'AC']
 
 
 class TrimByCaseTest(unittest.TestCase):
@@ -156,6 +157,43 @@ class TrimEdgesTest(unittest.TestCase):
                                fastq_fhand.name])
         assert '@seq1\naTCGt\n+\nA???A\n' in result
 
+
+class TrimAndMaskTest(unittest.TestCase):
+    'It tests the trimming and masking according to the recommendations.'
+    def test_trimming(self):
+        'The sequences are trimmed according to the recommendations.'
+        seq1 = 'gggtctcatcatcaggg'.upper()
+        seq = SeqRecord(Seq(seq1), annotations={TRIMMING_RECOMMENDATIONS: {}})
+
+        trim_rec = seq.annotations[TRIMMING_RECOMMENDATIONS]
+        seq_trimmer = TrimAndMask()
+
+        trim_rec['vector'] = [(0, 3), (8, 13)]
+        seqs2 = seq_trimmer([seq])
+        assert str(seqs2[0].seq) == 'CTCA'
+
+        trim_rec['vector'] = [(0, 0), (8, 13)]
+        seqs2 = seq_trimmer([seq])
+        assert str(seqs2[0].seq) == 'GGTCTCA'
+
+        trim_rec['vector'] = [(0, 0), (8, 13)]
+        trim_rec['quality'] = []
+        trim_rec['mask'] = [(0, 3), (5, 6)]
+        seqs2 = seq_trimmer([seq])
+        assert str(seqs2[0].seq) == 'ggtCtcA'
+        assert TRIMMING_RECOMMENDATIONS not in seqs2[0].annotations
+
+        trim_rec['vector'] = [(0, 1), (8, 12)]
+        trim_rec['quality'] = [(1, 8), (13, 17)]
+        seqs2 = seq_trimmer([seq])
+        assert not seqs2
+
+        trim_rec['vector'] = [(0, 0), (8, 13)]
+        trim_rec['quality'] = []
+        trim_rec['mask'] = []
+        seqs2 = seq_trimmer([seq])
+        assert str(seqs2[0].seq) == 'GGTCTCA'
+        assert TRIMMING_RECOMMENDATIONS not in seqs2[0].annotations
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

@@ -189,17 +189,19 @@ class MaskedSegmentsTest(unittest.TestCase):
     def test_masked_locations():
         'It test the masked locations function'
 
-        seq = 'aaATTTTTTaa'
-        assert list(get_uppercase_segments(seq)) == [(2, 8)]
+        assert list(get_uppercase_segments('aaATTTTTTaa')) == [(2, 8)]
 
-        seq = 'aaATTTaTTaa'
-        assert list(get_uppercase_segments(seq)) == [(2, 5), (7, 8)]
+        assert list(get_uppercase_segments('aaATTTaTTaa')) == [(2, 5), (7, 8)]
 
-        seq = 'AAATaaa'
-        assert list(get_uppercase_segments(seq)) == [(0, 3)]
+        assert list(get_uppercase_segments('AAATaaa')) == [(0, 3)]
 
-        seq = 'aaaaAAAA'
-        assert list(get_uppercase_segments(seq)) == [(4, 7)]
+        assert list(get_uppercase_segments('aaaaAAAA')) == [(4, 7)]
+
+        seq = 'AATTaaTTaaTTT'
+        assert list(get_uppercase_segments(seq)) == [(0, 3), (6, 7), (10, 12)]
+
+        assert list(get_uppercase_segments('AATT')) == [(0, 3)]
+        assert not list(get_uppercase_segments('aatt'))
 
 
 class ChangeCaseTest(unittest.TestCase):

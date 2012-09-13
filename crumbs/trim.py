@@ -13,10 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
+from Bio.Seq import Seq
+
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
                                TRIMMING_RECOMMENDATIONS)
-from crumbs.utils.seq_utils import (replace_seq_same_length,
-                                    get_uppercase_segments)
+from crumbs.utils.seq_utils import copy_seqrecord, get_uppercase_segments
 from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
                                          merge_overlaping_segments)
@@ -128,7 +129,8 @@ def _mask_sequence(seqrecord, segments):
         if segment[1]:
             seq_ = seq_.lower()
         new_seq += seq_
-    return replace_seq_same_length(seqrecord, new_seq)
+    return copy_seqrecord(seqrecord, seq=Seq(new_seq,
+                                             alphabet=seqrecord.seq.alphabet))
 
 
 class TrimAndMask(object):
@@ -180,7 +182,8 @@ class TrimAndMask(object):
                 seqrecord = seqrecord[trim_limits[0]:trim_limits[1] + 1]
 
             #fixing the trimming recommendations
-            seqrecord.annotations[TRIMMING_RECOMMENDATIONS] = {}
+            if TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
+                del seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
             processed_seqs.append(seqrecord)
 
             stats[YIELDED_SEQS] += 1

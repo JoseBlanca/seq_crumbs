@@ -18,7 +18,9 @@
 
 import unittest
 
-from crumbs.utils.segments_utils import get_longest_segment
+from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
+                                         get_complementary_segments,
+                                         get_longest_complementary_segment)
 
 
 class SegmentsTest(unittest.TestCase):
@@ -34,6 +36,32 @@ class SegmentsTest(unittest.TestCase):
         segments = [(0, 3), (10, 13)]
         segment = get_longest_segment(segments)
         assert segment == (0, 3) or segment == (10, 13)
+
+    @staticmethod
+    def test_get_all_segments():
+        'Give a list of discontinious segments we get all segments'
+        segments = get_all_segments([(0, 10), (15, 20)], 30)
+        assert segments == [((0, 10), True), ((11, 14), False),
+                            ((15, 20), True), ((21, 29), False)]
+        segments = get_all_segments([(15, 20)], 30)
+        assert segments == [((0, 14), False),
+                            ((15, 20), True), ((21, 29), False)]
+        segments = get_all_segments([(15, 29)], 30)
+        assert segments == [((0, 14), False), ((15, 29), True)]
+
+    @staticmethod
+    def test_non_matched():
+        'Given a list of segments we get the complementary matches'
+        segments = get_complementary_segments([(0, 10), (15, 20)], 30)
+        assert segments == [(11, 14), (21, 29)]
+
+    @staticmethod
+    def test_get_longest_complementary():
+        'It test that we can get the longest complementary segment'
+        segments = [(0, 200)]
+        result = get_longest_complementary_segment(segments, seq_len=200)
+        assert result is None
+
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

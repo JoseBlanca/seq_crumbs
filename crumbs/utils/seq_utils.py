@@ -18,9 +18,11 @@ import cStringIO
 from array import array
 import itertools
 from multiprocessing import Pool
+from copy import deepcopy
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.settings import (CHUNK_TO_GUESS_FASTQ_VERSION,
@@ -41,6 +43,35 @@ def replace_seq_same_length(seqrecord, seq_str):
     seqrecord.seq = Seq(seq_str, alphabet)
     seqrecord.letter_annotations = annots
     return seqrecord
+
+
+def copy_seqrecord(seqrec, seq=None, name=None, id_=None):
+    '''Given a seqrecord it returns a new seqrecord with seq or qual changed.
+
+    This is necessary because our SeqWithQuality is inmutable
+    '''
+    if seq is None:
+        seq = seqrec.seq
+    if id_ is  None:
+        id_ = seqrec.id
+    if name is None:
+        name = seqrec.name
+
+    #the letter annotations
+    let_annot = {annot: v for annot, v in seqrec.letter_annotations.items()}
+
+    #the rest of parameters
+    description = seqrec.description
+    dbxrefs = seqrec.dbxrefs[:]
+    features = seqrec.features[:]   # the features are not copied
+    annotations = deepcopy(seqrec.annotations)
+
+    #the new sequence
+    new_seq = SeqRecord(seq=seq, id=id_, name=name, description=description,
+                        dbxrefs=dbxrefs, features=features,
+                        annotations=annotations, letter_annotations=let_annot)
+
+    return new_seq
 
 
 def uppercase_length(string):
