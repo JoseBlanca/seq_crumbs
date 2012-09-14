@@ -55,7 +55,16 @@ class TrimLowercasedLetters(object):
             segment = get_longest_segment(unmasked_segments)
             if segment is not None:
                 stats[YIELDED_SEQS] += 1
-                trimmed_seqs.append(seqrecord[segment[0]:segment[1] + 1])
+                segments = []
+                if segment[0] != 0:
+                    segments.append((0, segment[0] - 1))
+                len_seq = len(seqrecord)
+                if segment[1] != len_seq - 1:
+                    segments.append((segment[1] + 1, len_seq - 1))
+
+                _add_trim_segments(segments, seqrecord, kind=OTHER)
+                trimmed_seqs.append(seqrecord)
+            #trimmed_seqs.append(seqrecord[segment[0]:segment[1] + 1])
         return trimmed_seqs
 
 

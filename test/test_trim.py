@@ -50,13 +50,19 @@ class TrimTest(unittest.TestCase):
     @staticmethod
     def test_trim_seqs():
         'It tests the trim seq function'
-        fasta = '>s1\naaCTTTC\n>s2\nCTTCaa\n>s3\naaCTCaa\n>s4\nactg\n>s5\nAC\n'
-        seq_packets = read_seq_packets([StringIO(fasta)])
+        seqs = []
+        seqs.append(SeqRecord(Seq('aaCTTTC')))
+        seqs.append(SeqRecord(Seq('CTTCaa')))
+        seqs.append(SeqRecord(Seq('aaCTCaa')))
+        seqs.append(SeqRecord(Seq('actg')))
+        seqs.append(SeqRecord(Seq('AC')))
+
         trim_lowercased_seqs = TrimLowercasedLetters()
+        trim = TrimOrMask()
         # pylint: disable=W0141
-        seq_packets = map(trim_lowercased_seqs, seq_packets)
-        seqs = [str(s.seq) for s in chain.from_iterable(seq_packets)]
-        assert seqs == ['CTTTC', 'CTTC', 'CTC', 'AC']
+
+        res = [str(s.seq) for s in trim(trim_lowercased_seqs(seqs))]
+        assert res == ['CTTTC', 'CTTC', 'CTC', 'AC']
 
 
 class TrimByCaseTest(unittest.TestCase):
@@ -297,5 +303,5 @@ class TrimByQualityTest(unittest.TestCase):
         assert result == '@seq1\nAAAAAATCGTT\n+\n00000A???A0\n'
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+#    import sys;sys.argv = ['', 'TrimTest.test_trim_seqs']
     unittest.main()
