@@ -23,7 +23,8 @@ from itertools import chain
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.trim import TrimLowercasedLetters, TrimEdges, TrimAndMask
+from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimAndMask,
+                         TrimByQuality)
 from crumbs.seqio import read_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS
@@ -169,31 +170,119 @@ class TrimAndMaskTest(unittest.TestCase):
         seq_trimmer = TrimAndMask()
 
         trim_rec['vector'] = [(0, 3), (8, 13)]
+        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
         assert str(seqs2[0].seq) == 'CTCA'
 
         trim_rec['vector'] = [(0, 0), (8, 13)]
+        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
         assert str(seqs2[0].seq) == 'GGTCTCA'
 
         trim_rec['vector'] = [(0, 0), (8, 13)]
         trim_rec['quality'] = []
         trim_rec['mask'] = [(0, 3), (5, 6)]
+        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
         assert str(seqs2[0].seq) == 'ggtCtcA'
         assert TRIMMING_RECOMMENDATIONS not in seqs2[0].annotations
 
         trim_rec['vector'] = [(0, 1), (8, 12)]
         trim_rec['quality'] = [(1, 8), (13, 17)]
+        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
         assert not seqs2
 
         trim_rec['vector'] = [(0, 0), (8, 13)]
         trim_rec['quality'] = []
         trim_rec['mask'] = []
+        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
         assert str(seqs2[0].seq) == 'GGTCTCA'
         assert TRIMMING_RECOMMENDATIONS not in seqs2[0].annotations
+
+
+class TrimByQualityTest(unittest.TestCase):
+    'It test the quality trimming'
+
+    def test_quality_trimming(self):
+        'It trims the edges'
+        trim = TrimAndMask()
+
+        trim_quality = TrimByQuality(window=5, threshold=30)
+
+        seq = SeqRecord(Seq('ACTGCTGCATAAAA'))
+        quals = [10, 10, 20, 30, 30, 30, 40, 40, 30, 30, 20, 20, 10, 10]
+        seq.letter_annotations['phred_quality'] = quals
+        seqs = trim(trim_quality([seq]))
+        assert seqs[0].letter_annotations['phred_quality'] == [20, 30, 30, 30,
+                                                            40, 40, 30, 30, 20]
+
+        # all bad
+        trim_quality = TrimByQuality(window=5, threshold=60)
+        seqs = trim(trim_quality([seq]))
+        assert not seqs
+
+        # all OK
+        trim_quality = TrimByQuality(window=5, threshold=5)
+        seqs = trim(trim_quality([seq]))
+        assert seqs[0].letter_annotations['phred_quality'] == quals
+
+        quals = [20, 20, 20, 60, 60, 60, 60, 60, 20, 20, 20, 20]
+        trim_quality = TrimByQuality(window=5, threshold=50)
+        seq = SeqRecord(Seq('ataataataata'))
+        seq.letter_annotations['phred_quality'] = quals
+        seqs = trim(trim_quality([seq]))
+        expected = [20, 60, 60, 60, 60, 60, 20]
+        assert seqs[0].letter_annotations['phred_quality'] == expected
+
+        quals = [40, 18, 10, 40, 40, 5, 8, 30, 14, 3, 40, 40, 40, 11, 6, 5, 3,
+                 20, 10, 12, 8, 5, 4, 7, 1]
+        seq = SeqRecord(Seq('atatatatagatagatagatagatg'))
+        seq.letter_annotations['phred_quality'] = quals
+        trim_quality = TrimByQuality(window=5, threshold=25)
+        seqs = trim(trim_quality([seq]))
+        assert seqs[0].letter_annotations['phred_quality'] == [40, 18, 10, 40,
+                                                               40]
+
+        quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
+                 10, 21, 3, 40, 9, 9, 12, 10, 9]
+        seq = SeqRecord(Seq('atatatatatatatatatatatata'))
+        seq.letter_annotations['phred_quality'] = quals
+        trim_quality = TrimByQuality(window=5, threshold=25)
+        seqs = trim(trim_quality([seq]))
+        expected = [40, 4, 27, 38, 40]
+        assert seqs[0].letter_annotations['phred_quality'] == expected
+
+        quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
+                 10, 21, 3, 40, 9, 9, 12, 10, 9]
+        seq = SeqRecord(Seq('atatatatatatatatatatatata'))
+        seq.letter_annotations['phred_quality'] = quals
+        trim_quality = TrimByQuality(window=5, threshold=25, trim_left=False)
+        seqs = trim(trim_quality([seq]))
+        expected = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40]
+        assert seqs[0].letter_annotations['phred_quality'] == expected
+
+        quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
+                 10, 21, 3, 40, 9, 9, 12, 10, 9]
+        seq = SeqRecord(Seq('atatatatatatatatatatatata'))
+        seq.letter_annotations['phred_quality'] = quals
+        trim_quality = TrimByQuality(window=5, threshold=25, trim_right=False)
+        seqs = trim(trim_quality([seq]))
+        expected = [40, 4, 27, 38, 40, 4, 11, 40, 40, 10, 10, 21, 3, 40, 9, 9,
+                    12, 10, 9]
+        assert seqs[0].letter_annotations['phred_quality'] == expected
+
+        quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
+                 10, 21, 3, 40, 9, 9, 12, 10, 9]
+        seq = SeqRecord(Seq('atatatatatatatatatatatata'))
+        seq.letter_annotations['phred_quality'] = quals
+        trim_quality = TrimByQuality(window=5, threshold=25, trim_right=False,
+                                     trim_left=False)
+        seqs = trim(trim_quality([seq]))
+        expected = quals
+        assert seqs[0].letter_annotations['phred_quality'] == expected
+
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

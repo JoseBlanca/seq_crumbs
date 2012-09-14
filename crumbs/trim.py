@@ -13,14 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
+from operator import itemgetter
+
 from Bio.Seq import Seq
 
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
-                               TRIMMING_RECOMMENDATIONS)
+                               TRIMMING_RECOMMENDATIONS, VECTOR, QUALITY, MASK)
 from crumbs.utils.seq_utils import copy_seqrecord, get_uppercase_segments
 from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
                                          merge_overlaping_segments)
+from crumbs.iterutils import rolling_window
 
 # pylint: disable=R0903
 
@@ -55,21 +58,17 @@ class TrimLowercasedLetters(object):
         return trimmed_seqs
 
 
-def _add_trim_segments(segments, sequence, vector=True, trim=True):
+def _add_trim_segments(segments, sequence, kind):
     'It adds segments to the trimming recommendation in the annotation'
+    assert kind in (VECTOR, QUALITY, MASK)
     if not segments:
         return
     if TRIMMING_RECOMMENDATIONS not in sequence.annotations:
-        sequence.annotations[TRIMMING_RECOMMENDATIONS] = {'vector': [],
-                                                           'quality': [],
-                                                           'mask': []}
+        sequence.annotations[TRIMMING_RECOMMENDATIONS] = {VECTOR: [],
+                                                          QUALITY: [],
+                                                          MASK: []}
     trim_rec = sequence.annotations[TRIMMING_RECOMMENDATIONS]
-    if vector and trim:
-        trim_rec['vector'].extend(segments)
-    elif not vector and trim:
-        trim_rec['quality'].extend(segments)
-    elif not trim:
-        trim_rec['mask'].extend(segments)
+    trim_rec[kind].extend(segments)
 
 
 class TrimEdges(object):
@@ -98,7 +97,7 @@ class TrimEdges(object):
         stats = self._stats
         left = self.left
         right = self.right
-        trim = not(self.mask)
+        mask = self.mask
         stats[PROCESSED_PACKETS] += 1
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1
@@ -107,7 +106,8 @@ class TrimEdges(object):
             if right:
                 seq_len = len(seqrecord)
                 segments.append((seq_len - right, seq_len - 1))
-            _add_trim_segments(segments, seqrecord, vector=False, trim=trim)
+            kind = MASK if mask else QUALITY
+            _add_trim_segments(segments, seqrecord, kind=kind)
             stats[YIELDED_SEQS] += 1
         return seqrecords
 
@@ -157,10 +157,13 @@ class TrimAndMask(object):
             stats[PROCESSED_SEQS] += 1
 
             if not TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
-                processed_seqs.append(seqrecord)
+                processed_seqs.append(copy_seqrecord(seqrecord))
                 continue
 
             trim_rec = seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
+            #fixing the trimming recommendations
+            if TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
+                del seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
 
             #masking
             segments = trim_rec.get('mask', [])
@@ -181,10 +184,101 @@ class TrimAndMask(object):
             if trim_limits:
                 seqrecord = seqrecord[trim_limits[0]:trim_limits[1] + 1]
 
-            #fixing the trimming recommendations
-            if TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
-                del seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
             processed_seqs.append(seqrecord)
 
             stats[YIELDED_SEQS] += 1
         return processed_seqs
+
+
+def _get_bad_quality_segments(quals, window, threshold, trim_left=True,
+                              trim_right=True):
+    '''It returns the regions with quality above the threshold.
+
+    The algorithm is similar to the one used by qclip in Staden.
+    '''
+    # do window quality means
+    mean = lambda l: float(sum(l)) / len(l) if len(l) > 0 else float('nan')
+
+    wquals = [mean(win_quals) for win_quals in rolling_window(quals, window)]
+
+    if not wquals:
+        return [(0, len(quals) - 1)]
+
+    index_max, max_val = max(enumerate(wquals), key=itemgetter(1))
+
+    if max_val < threshold:
+        return [(0, len(quals) - 1)]
+
+    if trim_left:
+        wleft_index = 0
+        for wleft_index in range(index_max - 1, -1, -1):
+            if wquals[wleft_index] < threshold:
+                wleft_index += 1
+                break
+    else:
+        wleft_index = 0
+    if trim_right:
+        wright_index = index_max
+        for wright_index in range(index_max, len(wquals)):
+            if wquals[wright_index] < threshold:
+                wright_index -= 1
+                break
+    else:
+        wright_index = len(wquals) - 1
+    left = wleft_index
+    right = wright_index + window - 1
+    segments = []
+    if left:
+        segments.append((0, left - 1))
+    if right < len(quals) - 1:
+        segments.append((right + 1, len(quals) - 1))
+    if not segments:
+        return None
+    return segments
+
+
+class TrimByQuality(object):
+    'It trims the low quality regions of the SeqRecords.'
+
+    def __init__(self, window, threshold, trim_left=True, trim_right=True,
+                 mask=False):
+        'The initiator'
+        self.window = int(window)
+        self.threshold = threshold
+        self.trim_left = trim_left
+        self.trim_right = trim_right
+        self.mask = mask
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It trims the masked segments of the seqrecords.'
+        window = self.window
+        threshold = self.threshold
+        trim_left = self.trim_left
+        trim_right = self.trim_right
+        mask = self.mask
+        stats = self._stats
+        stats[PROCESSED_PACKETS] += 1
+        trimmed_seqs = []
+        for seqrecord in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            try:
+                quals = seqrecord.letter_annotations['phred_quality']
+            except KeyError:
+                msg = 'Some of the input sequences do not have qualities: {}'
+                msg = msg.format(seqrecord.id)
+            segments = _get_bad_quality_segments(quals, window, threshold,
+                                                trim_left, trim_right)
+            if segments is not None:
+                kind = MASK if mask else QUALITY
+                _add_trim_segments(segments, seqrecord, kind=kind)
+            stats[YIELDED_SEQS] += 1
+            trimmed_seqs.append(seqrecord)
+        return trimmed_seqs

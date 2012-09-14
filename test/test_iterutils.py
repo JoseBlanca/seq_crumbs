@@ -15,7 +15,8 @@
 
 import unittest
 
-from crumbs.iterutils import sample, sample_2, length, group_in_packets
+from crumbs.iterutils import (sample, sample_2, length, group_in_packets,
+                              rolling_window)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -69,6 +70,12 @@ class IterutilsTest(unittest.TestCase):
         packets = [packet for packet in  group_in_packets([], 2)]
         assert packets == []
 
+    def test_rolling_window(self):
+        'We get the items along a rolling window'
+        assert [''.join(win) for win in rolling_window('12345', 3)] == ['123',
+                                                                  '234', '345']
+        assert not [''.join(win) for win in rolling_window('12345', 6)]
+        assert [''.join(w) for w in rolling_window('12345', 5)] == ['12345']
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']

@@ -57,7 +57,8 @@ def sample_2(iterator, length, sample_size):
         num_items_to_select = sample_size
         invert = False
 
-    selected = set(random.randint(0, length - 1) for n in range(num_items_to_select))
+    selected = set(random.randint(0, length - 1)
+                                           for n in range(num_items_to_select))
     selected_add = selected.add
     while len(selected) < num_items_to_select:
         selected_add(random.randint(0, length - 1))
@@ -118,3 +119,16 @@ def flat_zip_longest(iter1, iter2, fillvalue=None):
             yield item1
         if item2 != fillvalue:
             yield item2
+
+
+def rolling_window(iterator, window):
+    'It yields lists of items with a window number of elements'
+    items = []
+    for item in iterator:
+        if len(items) >= window:
+            yield items
+            items = items[1:]
+        items.append(item)
+    else:
+        if len(items) >= window:
+            yield items
