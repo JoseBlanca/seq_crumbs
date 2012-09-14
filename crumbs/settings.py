@@ -45,3 +45,6 @@ ADD_PATH_TO_EXT_BIN = True
 
 # how many reads can be hold in memory by default
 DEFAULT_SEQS_IN_MEM_LIMIT = 500000
+
+# max width of a line of an ASCII plot
+MAX_WIDTH_ASCII_PLOT = 100
