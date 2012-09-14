@@ -18,7 +18,8 @@ from operator import itemgetter
 from Bio.Seq import Seq
 
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
-                               TRIMMING_RECOMMENDATIONS, VECTOR, QUALITY)
+                               TRIMMING_RECOMMENDATIONS, VECTOR, QUALITY,
+                               OTHER, TRIMMING_KINDS)
 from crumbs.utils.seq_utils import copy_seqrecord, get_uppercase_segments
 from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
@@ -60,12 +61,14 @@ class TrimLowercasedLetters(object):
 
 def _add_trim_segments(segments, sequence, kind):
     'It adds segments to the trimming recommendation in the annotation'
-    assert kind in (VECTOR, QUALITY)
+    assert kind in TRIMMING_KINDS
     if not segments:
         return
     if TRIMMING_RECOMMENDATIONS not in sequence.annotations:
-        sequence.annotations[TRIMMING_RECOMMENDATIONS] = {VECTOR: [],
-                                                          QUALITY: []}
+        sequence.annotations[TRIMMING_RECOMMENDATIONS] = {}
+        for trim_kind in TRIMMING_KINDS:
+            sequence.annotations[TRIMMING_RECOMMENDATIONS][trim_kind] = []
+
     trim_rec = sequence.annotations[TRIMMING_RECOMMENDATIONS]
     trim_rec[kind].extend(segments)
 
@@ -103,7 +106,7 @@ class TrimEdges(object):
             if right:
                 seq_len = len(seqrecord)
                 segments.append((seq_len - right, seq_len - 1))
-            _add_trim_segments(segments, seqrecord, kind=QUALITY)
+            _add_trim_segments(segments, seqrecord, kind=OTHER)
             stats[YIELDED_SEQS] += 1
         return seqrecords
 
@@ -162,8 +165,9 @@ class TrimOrMask(object):
             if TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
                 del seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
 
-            trim_segments = trim_rec.get(VECTOR, [])
-            trim_segments.extend(trim_rec.get(QUALITY, []))
+            trim_segments = []
+            for trim_kind in TRIMMING_KINDS:
+                trim_segments.extend(trim_rec.get(trim_kind, []))
 
             #masking
             if mask:
