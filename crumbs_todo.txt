@@ -2,16 +2,18 @@
 TODO
 -----
 
-mask_blast_matches
-------------------
+trim_blast_contanimant
+----------------------
+
+It trims the regions that match with a given fasta file or blast database.
+for instance the vector
 
 Enmascara las regiones que tienen un match_part contra una base de datos
 
-mask_librería_búsqueda cutadapt
+trim_adaptors_short trim_adaptor
 --------------------------------
 
-mask regiones baja calidad
-----------------------------
+with cutadapt and blast_short
 
 mask con el lucy vectores
 ----------------
