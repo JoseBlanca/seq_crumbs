@@ -16,7 +16,9 @@
 from __future__ import division
 from array import array
 
-from crumbs.settings import MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN
+from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
+                             MAX_WIDTH_ASCII_PLOT)
+
 
 class IntsStats(object):
     '''This is an array that counts the values.
@@ -256,7 +258,7 @@ class IntsStats(object):
                     sum_values += value
 
             distrib.append(sum_values)
-        return {'distrib': distrib, 'bin_edges': bin_edges}
+        return {'counts': distrib, 'bin_limits': bin_edges}
 
     def _prepare_labels(self, labels=None):
         'It prepares the labels for output files'
@@ -286,5 +288,67 @@ class IntsStats(object):
                                   format_num(self.variance))
             text += '%s: %s\n' % (labels['sum'], format_num(self.sum))
             text += '%s: %s\n' % (labels['items'], self.count)
+            text += '\n'
+            distrib = self.calculate_distribution()
+            text += draw_histogram(distrib['bin_limits'], distrib['counts'])
             return text
         return ''
+
+
+def draw_histogram(bin_limits, counts):
+    'It draws an ASCII histogram'
+
+    fill_char = '*'
+
+    assert len(bin_limits) == len(counts) + 1
+
+    # pylint: disable=W0108
+    number_to_str = lambda n: '{:d}'.format(n)
+
+    # we gather all bin limits and we calculate the longest number
+    bin_start = None
+    bin_end = bin_limits[0]
+    max_ndigits = len(number_to_str(bin_end))
+    max_count_ndigits = 0
+    bins = []
+    for bin_limit, cnt in zip(bin_limits[1:], counts):
+        bin_start, bin_end = bin_end, bin_limit
+        n_digits = len(number_to_str(bin_end))
+        if max_ndigits < n_digits:
+            max_ndigits = n_digits
+        n_digits = len(number_to_str(cnt))
+        if max_count_ndigits < n_digits:
+            max_count_ndigits = n_digits
+        bins.append((bin_start, bin_end))
+
+    limit_fmt = '{:>' + str(max_ndigits) + 'd}'
+    limit_to_padded_str = lambda n: limit_fmt.format(n)
+
+    count_fmt = '{:>' + str(max_count_ndigits) + 'd}'
+    count_to_padded_str = lambda n: count_fmt.format(n)
+
+    result = []
+    for bin_, cnt in zip(bins, counts):
+        line = ''
+        line += '['
+        line += limit_to_padded_str(bin_[0])
+        line += ' , '
+        line += limit_to_padded_str(bin_[1])
+        line += '[ ('
+        line += count_to_padded_str(cnt)
+        line += '): '
+        result.append(line)
+
+    # pylint: disable=W0141
+    max_count = max(counts)
+    max_header_len = max(map(len, result))
+    max_hist_width = MAX_WIDTH_ASCII_PLOT - max_header_len
+    counts_ratio = max_hist_width / max_count
+
+    result2 = []
+    for line, cnt in zip(result, counts):
+        line += fill_char * int(cnt * counts_ratio)
+        line += '\n'
+        result2.append(line)
+
+    return ''.join(result2)
