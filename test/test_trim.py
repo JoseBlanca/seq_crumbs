@@ -23,7 +23,7 @@ from itertools import chain
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimAndMask,
+from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality)
 from crumbs.seqio import read_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
@@ -94,7 +94,7 @@ class TrimEdgesTest(unittest.TestCase):
 
     def test_edge_trimming(self):
         'It trims the edges'
-        trim = TrimAndMask()
+        trim = TrimOrMask()
 
         trim_edges = TrimEdges(left=1)
         res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
@@ -116,29 +116,30 @@ class TrimEdgesTest(unittest.TestCase):
         res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['CCC']
 
-        trim_edges = TrimEdges(left=1, mask=True)
+        trim = TrimOrMask(mask=True)
+        trim_edges = TrimEdges(left=1)
         res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['aCCG', 'aAACCCGGG']
 
-        trim_edges = TrimEdges(right=1, mask=True)
+        trim_edges = TrimEdges(right=1)
         res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['ACCg', 'AAACCCGGg']
 
-        trim_edges = TrimEdges(left=1, right=1, mask=True)
+        trim_edges = TrimEdges(left=1, right=1)
         res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['aCCg', 'aAACCCGGg']
 
-        trim_edges = TrimEdges(left=2, right=2, mask=True)
+        trim_edges = TrimEdges(left=2, right=2)
         res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['accg', 'aaACCCGgg']
 
-        trim_edges = TrimEdges(left=3, right=3, mask=True)
+        trim_edges = TrimEdges(left=3, right=3)
         res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['accg', 'aaaCCCggg']
 
         # test overlapping mask
-        trim1 = TrimEdges(left=3, right=3, mask=True)
-        trim2 = TrimEdges(left=4, right=4, mask=True)
+        trim1 = TrimEdges(left=3, right=3)
+        trim2 = TrimEdges(left=4, right=4)
         res = [str(s.seq) for s in trim(trim2(trim1(self._some_seqs())))]
         assert res == ['accg', 'aaacCcggg']
 
@@ -167,7 +168,7 @@ class TrimAndMaskTest(unittest.TestCase):
         seq = SeqRecord(Seq(seq1), annotations={TRIMMING_RECOMMENDATIONS: {}})
 
         trim_rec = seq.annotations[TRIMMING_RECOMMENDATIONS]
-        seq_trimmer = TrimAndMask()
+        seq_trimmer = TrimOrMask()
 
         trim_rec['vector'] = [(0, 3), (8, 13)]
         seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
@@ -179,14 +180,6 @@ class TrimAndMaskTest(unittest.TestCase):
         seqs2 = seq_trimmer([seq])
         assert str(seqs2[0].seq) == 'GGTCTCA'
 
-        trim_rec['vector'] = [(0, 0), (8, 13)]
-        trim_rec['quality'] = []
-        trim_rec['mask'] = [(0, 3), (5, 6)]
-        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
-        seqs2 = seq_trimmer([seq])
-        assert str(seqs2[0].seq) == 'ggtCtcA'
-        assert TRIMMING_RECOMMENDATIONS not in seqs2[0].annotations
-
         trim_rec['vector'] = [(0, 1), (8, 12)]
         trim_rec['quality'] = [(1, 8), (13, 17)]
         seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
@@ -195,7 +188,6 @@ class TrimAndMaskTest(unittest.TestCase):
 
         trim_rec['vector'] = [(0, 0), (8, 13)]
         trim_rec['quality'] = []
-        trim_rec['mask'] = []
         seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
         assert str(seqs2[0].seq) == 'GGTCTCA'
@@ -207,7 +199,7 @@ class TrimByQualityTest(unittest.TestCase):
 
     def test_quality_trimming(self):
         'It trims the edges'
-        trim = TrimAndMask()
+        trim = TrimOrMask()
 
         trim_quality = TrimByQuality(window=5, threshold=30)
 

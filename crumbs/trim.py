@@ -18,7 +18,7 @@ from operator import itemgetter
 from Bio.Seq import Seq
 
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
-                               TRIMMING_RECOMMENDATIONS, VECTOR, QUALITY, MASK)
+                               TRIMMING_RECOMMENDATIONS, VECTOR, QUALITY)
 from crumbs.utils.seq_utils import copy_seqrecord, get_uppercase_segments
 from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
@@ -60,20 +60,19 @@ class TrimLowercasedLetters(object):
 
 def _add_trim_segments(segments, sequence, kind):
     'It adds segments to the trimming recommendation in the annotation'
-    assert kind in (VECTOR, QUALITY, MASK)
+    assert kind in (VECTOR, QUALITY)
     if not segments:
         return
     if TRIMMING_RECOMMENDATIONS not in sequence.annotations:
         sequence.annotations[TRIMMING_RECOMMENDATIONS] = {VECTOR: [],
-                                                          QUALITY: [],
-                                                          MASK: []}
+                                                          QUALITY: []}
     trim_rec = sequence.annotations[TRIMMING_RECOMMENDATIONS]
     trim_rec[kind].extend(segments)
 
 
 class TrimEdges(object):
     'It adds a trimming recommendation a fixed number of bases from the seqs.'
-    def __init__(self, left=0, right=0, mask=False):
+    def __init__(self, left=0, right=0):
         '''The initiator.
 
         left - number of bases to trim from the left side
@@ -82,7 +81,6 @@ class TrimEdges(object):
         '''
         self.left = left
         self.right = right
-        self.mask = mask
         self._stats = {PROCESSED_SEQS: 0,
                        PROCESSED_PACKETS: 0,
                        YIELDED_SEQS: 0}
@@ -97,7 +95,6 @@ class TrimEdges(object):
         stats = self._stats
         left = self.left
         right = self.right
-        mask = self.mask
         stats[PROCESSED_PACKETS] += 1
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1
@@ -106,8 +103,7 @@ class TrimEdges(object):
             if right:
                 seq_len = len(seqrecord)
                 segments.append((seq_len - right, seq_len - 1))
-            kind = MASK if mask else QUALITY
-            _add_trim_segments(segments, seqrecord, kind=kind)
+            _add_trim_segments(segments, seqrecord, kind=QUALITY)
             stats[YIELDED_SEQS] += 1
         return seqrecords
 
@@ -133,11 +129,12 @@ def _mask_sequence(seqrecord, segments):
                                              alphabet=seqrecord.seq.alphabet))
 
 
-class TrimAndMask(object):
-    'It trims and masks the seqrecords following the trimming recommendations.'
+class TrimOrMask(object):
+    'It trims and masks the SeqRecords following the trimming recommendations.'
 
-    def __init__(self):
+    def __init__(self, mask=False):
         '''The initiator.'''
+        self.mask = mask
         self._stats = {PROCESSED_SEQS: 0,
                        PROCESSED_PACKETS: 0,
                        YIELDED_SEQS: 0}
@@ -150,8 +147,8 @@ class TrimAndMask(object):
     def __call__(self, seqrecords):
         'It trims the edges of the given seqrecords.'
         stats = self._stats
-
         stats[PROCESSED_PACKETS] += 1
+        mask = self.mask
         processed_seqs = []
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1
@@ -165,24 +162,25 @@ class TrimAndMask(object):
             if TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
                 del seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
 
+            trim_segments = trim_rec.get(VECTOR, [])
+            trim_segments.extend(trim_rec.get(QUALITY, []))
+
             #masking
-            segments = trim_rec.get('mask', [])
-            seqrecord = _mask_sequence(seqrecord, segments)
-
-            #trimming
-            trim_segments = trim_rec.get('vector', [])
-            trim_segments.extend(trim_rec.get('quality', []))
-            if trim_segments:
-                trim_limits = get_longest_complementary_segment(trim_segments,
-                                                                len(seqrecord))
-                if trim_limits is None:
-                    # there's no sequence left
-                    continue
+            if mask:
+                seqrecord = _mask_sequence(seqrecord, trim_segments)
             else:
-                trim_limits = []
+                #trimming
+                if trim_segments:
+                    trim_limits = get_longest_complementary_segment(
+                                                 trim_segments, len(seqrecord))
+                    if trim_limits is None:
+                        # there's no sequence left
+                        continue
+                else:
+                    trim_limits = []
 
-            if trim_limits:
-                seqrecord = seqrecord[trim_limits[0]:trim_limits[1] + 1]
+                if trim_limits:
+                    seqrecord = seqrecord[trim_limits[0]:trim_limits[1] + 1]
 
             processed_seqs.append(seqrecord)
 
@@ -240,14 +238,12 @@ def _get_bad_quality_segments(quals, window, threshold, trim_left=True,
 class TrimByQuality(object):
     'It trims the low quality regions of the SeqRecords.'
 
-    def __init__(self, window, threshold, trim_left=True, trim_right=True,
-                 mask=False):
+    def __init__(self, window, threshold, trim_left=True, trim_right=True):
         'The initiator'
         self.window = int(window)
         self.threshold = threshold
         self.trim_left = trim_left
         self.trim_right = trim_right
-        self.mask = mask
         self._stats = {PROCESSED_SEQS: 0,
                        PROCESSED_PACKETS: 0,
                        YIELDED_SEQS: 0}
@@ -263,7 +259,6 @@ class TrimByQuality(object):
         threshold = self.threshold
         trim_left = self.trim_left
         trim_right = self.trim_right
-        mask = self.mask
         stats = self._stats
         stats[PROCESSED_PACKETS] += 1
         trimmed_seqs = []
@@ -277,8 +272,7 @@ class TrimByQuality(object):
             segments = _get_bad_quality_segments(quals, window, threshold,
                                                 trim_left, trim_right)
             if segments is not None:
-                kind = MASK if mask else QUALITY
-                _add_trim_segments(segments, seqrecord, kind=kind)
+                _add_trim_segments(segments, seqrecord, kind=QUALITY)
             stats[YIELDED_SEQS] += 1
             trimmed_seqs.append(seqrecord)
         return trimmed_seqs
