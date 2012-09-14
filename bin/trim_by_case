@@ -21,7 +21,7 @@ from crumbs.utils.bin_utils import (main, parse_basic_process_args,
                                     create_basic_process_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import read_seq_packets, write_seq_packets
-from crumbs.trim import TrimLowercasedLetters
+from crumbs.trim import TrimLowercasedLetters, TrimOrMask
 
 
 def trim_by_case():
@@ -35,7 +35,9 @@ def trim_by_case():
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     trim_lowercased_seqs = TrimLowercasedLetters()
-    seq_packets = process_seq_packets(seq_packets, [trim_lowercased_seqs],
+    trim_or_mask = TrimOrMask()
+    seq_packets = process_seq_packets(seq_packets, [trim_lowercased_seqs,
+                                                    trim_or_mask],
                                       processes=args['processes'])
     write_seq_packets(out_fhand, seq_packets, args['out_format'])
     out_fhand.flush()

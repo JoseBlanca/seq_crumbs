@@ -31,7 +31,7 @@ from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
-
+FASTQ3 = '@seq1\nAAAAAATCGTTTTTTT\n+\n00000A???A000000\n'
 # pylint: disable=R0201
 # pylint: disable=R0904
 
@@ -50,13 +50,19 @@ class TrimTest(unittest.TestCase):
     @staticmethod
     def test_trim_seqs():
         'It tests the trim seq function'
-        fasta = '>s1\naaCTTTC\n>s2\nCTTCaa\n>s3\naaCTCaa\n>s4\nactg\n>s5\nAC\n'
-        seq_packets = read_seq_packets([StringIO(fasta)])
+        seqs = []
+        seqs.append(SeqRecord(Seq('aaCTTTC')))
+        seqs.append(SeqRecord(Seq('CTTCaa')))
+        seqs.append(SeqRecord(Seq('aaCTCaa')))
+        seqs.append(SeqRecord(Seq('actg')))
+        seqs.append(SeqRecord(Seq('AC')))
+
         trim_lowercased_seqs = TrimLowercasedLetters()
+        trim = TrimOrMask()
         # pylint: disable=W0141
-        seq_packets = map(trim_lowercased_seqs, seq_packets)
-        seqs = [str(s.seq) for s in chain.from_iterable(seq_packets)]
-        assert seqs == ['CTTTC', 'CTTC', 'CTC', 'AC']
+
+        res = [str(s.seq) for s in trim(trim_lowercased_seqs(seqs))]
+        assert res == ['CTTTC', 'CTTC', 'CTC', 'AC']
 
 
 class TrimByCaseTest(unittest.TestCase):
@@ -275,7 +281,27 @@ class TrimByQualityTest(unittest.TestCase):
         expected = quals
         assert seqs[0].letter_annotations['phred_quality'] == expected
 
+    def test_trim_quality_bin(self):
+        'It tests the trim_edges binary'
+        trim_bin = os.path.join(BIN_DIR, 'trim_quality')
+        assert 'usage' in check_output([trim_bin, '-h'])
+
+        fastq_fhand = _make_fhand(FASTQ2)
+        result = check_output([trim_bin, fastq_fhand.name])
+        assert '@seq1\nATCGT\n+' in result
+
+        fastq_fhand = _make_fhand(FASTQ3)
+        result = check_output([trim_bin, fastq_fhand.name])
+        assert result == '@seq1\nAATCGTT\n+\n0A???A0\n'
+
+        fastq_fhand = _make_fhand(FASTQ3)
+        result = check_output([trim_bin, fastq_fhand.name, '-r'])
+        assert result == '@seq1\nAATCGTTTTTTT\n+\n0A???A000000\n'
+
+        fastq_fhand = _make_fhand(FASTQ3)
+        result = check_output([trim_bin, fastq_fhand.name, '-l'])
+        assert result == '@seq1\nAAAAAATCGTT\n+\n00000A???A0\n'
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+#    import sys;sys.argv = ['', 'TrimTest.test_trim_seqs']
     unittest.main()
