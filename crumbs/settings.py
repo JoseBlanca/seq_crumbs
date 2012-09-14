@@ -1,8 +1,17 @@
-'''
-Created on 19/07/2012
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 
-@author: jose
-'''
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -48,3 +57,9 @@ DEFAULT_SEQS_IN_MEM_LIMIT = 500000
 
 # max width of a line of an ASCII plot
 MAX_WIDTH_ASCII_PLOT = 100
+
+# default minimum number of bins in an histogram
+MIN_BINS = 20
+# default maximum number of bins in an histogram
+MAX_BINS = 500
+MEAN_VALUES_IN_BIN = 10000
