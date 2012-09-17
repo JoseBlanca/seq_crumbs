@@ -15,6 +15,7 @@
 
 from __future__ import division
 from array import array
+from itertools import izip_longest
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
                              MAX_WIDTH_ASCII_PLOT, MAX_INT_IN_SUM_ARRAY)
@@ -37,10 +38,17 @@ class IntSumarizedArray(object):
         'the initiator'
         if init_len is None:
             init_len = 10
-        self._array = array('I', [0] * init_len)
+        self.array = array('I', [0] * init_len)
         self.max_int = max_int
         if iterable is not None:
             self.extend(iterable)
+
+    def __add__(self, obj):
+        'It adds the method to sum two Instat instances'
+        new_ins_stat = IntSumarizedArray(init_len=0)
+        for values in izip_longest(self.array, obj.array, fillvalue=0):
+            new_ins_stat.array.append(sum(values))
+        return new_ins_stat
 
     def extend(self, values):
         'It adds all the values from an iterable'
@@ -54,15 +62,15 @@ class IntSumarizedArray(object):
             msg = msg.format((value, self.max_int))
             raise ValueError()
         try:
-            self._array[value] += 1
+            self.array[value] += 1
         except IndexError:
-            array_ = self._array
+            array_ = self.array
             array_.extend([0] * (value - len(array_) + 1))
             array_[value] += 1
 
     def _get_flat(self):
         'It yields all integers counted'
-        for val, count in enumerate(self._array):
+        for val, count in enumerate(self.array):
             # pylint: disable=W0612
             for i in range(count):
                 yield val
@@ -70,22 +78,22 @@ class IntSumarizedArray(object):
 
     def _get_min(self):
         'Get minimun value'
-        for index, value in enumerate(self._array):
+        for index, value in enumerate(self.array):
             if value != 0:
                 return index
     min = property(_get_min)
 
     def _get_max(self):
         'get_maxvalue'
-        for index in xrange(len(self._array) - 1, 0, -1):
-            if self._array[index] != 0:
+        for index in xrange(len(self.array) - 1, 0, -1):
+            if self.array[index] != 0:
                 return index
         return 0
     max = property(_get_max)
 
     def _get_count(self):
         'It returns the count of the values appended'
-        return sum(self._array)
+        return sum(self.array)
     count = property(_get_count)
 
     def _get_median(self):
@@ -104,7 +112,7 @@ class IntSumarizedArray(object):
     def _get_sum(self):
         'It gets the sum of the values'
         sum_ = 0
-        for index, value in enumerate(self._array):
+        for index, value in enumerate(self.array):
             sum_ += (index * value)
         return int(sum_)
     sum = property(_get_sum)
@@ -113,14 +121,14 @@ class IntSumarizedArray(object):
         'It gets the variance of the values'
         mean = self.average
         sum_ = 0
-        for index, counts in enumerate(self._array):
+        for index, counts in enumerate(self.array):
             sum_ += ((index - mean) ** 2) * counts
         return sum_ / self.count
     variance = property(_get_variance)
 
     def _count(self):
         'It returns the number of values that there are in the array'
-        return int(sum(self._array))
+        return int(sum(self.array))
     count = property(_count)
 
     def _get_quartile_positions(self):
@@ -154,11 +162,11 @@ class IntSumarizedArray(object):
                 a = [8,4,0,0,2]
                 4 = _next_position_with_value(1)
             '''
-            for i, values  in enumerate(self._array):
+            for i, values  in enumerate(self.array):
                 if i > index and values != 0:
                     return i
         value_pos = 0
-        for index, values in enumerate(self._array):
+        for index, values in enumerate(self.array):
             value_pos += values
             if positions[0] == value_pos:
                 pos1 = index
@@ -250,7 +258,7 @@ class IntSumarizedArray(object):
             except IndexError:
                 break
             sum_values = 0
-            for index2, value in enumerate(self._array):
+            for index2, value in enumerate(self.array):
                 if index2 > rigth_edge:
                     break
 
