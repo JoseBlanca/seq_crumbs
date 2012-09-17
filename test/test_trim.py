@@ -15,17 +15,14 @@
 
 import unittest
 import os.path
-from StringIO import StringIO
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
-from itertools import chain
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality)
-from crumbs.seqio import read_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS
 

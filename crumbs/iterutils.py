@@ -41,27 +41,27 @@ def sample(iterator, sample_size):
     return sample_
 
 
-def sample_2(iterator, length, sample_size):
+def sample_2(iterator, iter_length, sample_size):
     'It makes a sample from the given iterator'
     # This implementation will use less memory when the number of sampled items
     # is quite high.
     # It requires to know the number of items beforehand
 
-    if not 0 <= sample_size <= length:
+    if not 0 <= sample_size <= iter_length:
         raise ValueError("sample larger than population")
 
-    if sample_size > length / 2:
-        num_items_to_select = length - sample_size
+    if sample_size > iter_length / 2:
+        num_items_to_select = iter_length - sample_size
         invert = True
     else:
         num_items_to_select = sample_size
         invert = False
 
-    selected = set(random.randint(0, length - 1)
+    selected = set(random.randint(0, iter_length - 1)
                                            for n in range(num_items_to_select))
     selected_add = selected.add
     while len(selected) < num_items_to_select:
-        selected_add(random.randint(0, length - 1))
+        selected_add(random.randint(0, iter_length - 1))
 
     for index, item in enumerate(iterator):
         item_in_selected = index in selected

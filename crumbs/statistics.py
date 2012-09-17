@@ -19,6 +19,7 @@ from array import array
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
                              MAX_WIDTH_ASCII_PLOT)
 
+MAX_ALLOWED_ARRAY_SIZE = 300000
 
 class IntsStats(object):
     '''This is an array that counts the values.
@@ -47,6 +48,8 @@ class IntsStats(object):
 
     def append(self, value):
         'It appends a value to the array'
+        if value > MAX_ALLOWED_ARRAY_SIZE:
+            raise ValueError('')
         try:
             self._array[value] += 1
         except IndexError:
