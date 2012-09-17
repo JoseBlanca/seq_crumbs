@@ -20,7 +20,7 @@ from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
                              MAX_WIDTH_ASCII_PLOT)
 
 
-class IntsStats(object):
+class IntSumarizedArray(object):
     '''This is an array that counts the values.
     a = IntsStats()
     print (a)

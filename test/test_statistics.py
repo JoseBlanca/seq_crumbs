@@ -18,7 +18,7 @@
 
 import unittest
 
-from crumbs.statistics import IntsStats, draw_histogram
+from crumbs.statistics import IntSumarizedArray, draw_histogram
 
 
 class HistogramTest(unittest.TestCase):
@@ -38,7 +38,7 @@ class IntsStatsTest(unittest.TestCase):
              '13': '0000013555688', '14': '00002555558',
              '15': '0000000000355555555557', '16': '000045', '17': '000055',
              '18': '0005', '19': '00005', '21': '5'}
-        ext_array = IntsStats()
+        ext_array = IntSumarizedArray()
         for key, values in d.items():
             for num in values:
                 ext_array.append(int(key + num))
@@ -47,7 +47,7 @@ class IntsStatsTest(unittest.TestCase):
     @staticmethod
     def test_array():
         'Create an extensible array'
-        ext_array = IntsStats(init_len=5)
+        ext_array = IntSumarizedArray(init_len=5)
         ext_array.append(6)
         ext_array.append(2)
         assert  ext_array.min == 2
@@ -58,7 +58,7 @@ class IntsStatsTest(unittest.TestCase):
         assert list(ext_array.flat) == [2, 6, 200]
 
         input_ = (3, 5, 7, 7, 38)
-        ext_array = IntsStats(input_)
+        ext_array = IntSumarizedArray(input_)
         assert ext_array.median == 7
         assert list(ext_array.flat) == [3, 5, 7, 7, 38]
 
@@ -76,12 +76,12 @@ class IntsStatsTest(unittest.TestCase):
 
         assert 'average' in str(ints_array)
 
-        ints_array = IntsStats([0, 0, 1, 3])
+        ints_array = IntSumarizedArray([0, 0, 1, 3])
         assert ints_array.calculate_distribution(bins=3)['counts'] == [2, 1, 1]
 
     def test_stats_functs(self):
         'It test the statistical functions of the class'
-        ext_array = IntsStats()
+        ext_array = IntSumarizedArray()
         ext_array.append(3)
         ext_array.append(5)
         ext_array.append(7)
@@ -90,10 +90,10 @@ class IntsStatsTest(unittest.TestCase):
         assert ext_array.median == 7
 
         # median with two middle numbers
-        ext_array = IntsStats([3, 5, 7, 7])
+        ext_array = IntSumarizedArray([3, 5, 7, 7])
         assert ext_array.median == 6
 
-        ints = IntsStats([34, 43, 81, 106, 106, 115])
+        ints = IntSumarizedArray([34, 43, 81, 106, 106, 115])
         assert ints.average - 80.83 < 0.01
 
         ext_array = self.create_test_array()
