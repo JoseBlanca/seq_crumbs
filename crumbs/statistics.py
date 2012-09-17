@@ -21,6 +21,7 @@ from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
 
 MAX_ALLOWED_ARRAY_SIZE = 300000
 
+
 class IntSumarizedArray(object):
     '''This is an array that counts the values.
     a = IntsStats()
@@ -55,14 +56,9 @@ class IntSumarizedArray(object):
         try:
             self._array[value] += 1
         except IndexError:
-            new_len = value * 2
-            new_array = array('I', [0] * new_len)
-            for index, value_ in enumerate(self._array):
-                new_array[index] = value_
-
-            self._array = new_array
-            del(new_array)
-            self._array[value] += 1
+            array_ = self._array
+            array_.extend([0] * (value - len(array_) + 1))
+            array_[value] += 1
 
     def _get_flat(self):
         'It yields all integers counted'
