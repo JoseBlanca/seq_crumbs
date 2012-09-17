@@ -18,8 +18,8 @@ from operator import itemgetter
 from Bio.Seq import Seq
 
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
-                               TRIMMING_RECOMMENDATIONS, VECTOR, QUALITY,
-                               OTHER, TRIMMING_KINDS)
+                               TRIMMING_RECOMMENDATIONS, QUALITY, OTHER,
+                               TRIMMING_KINDS)
 from crumbs.utils.seq_utils import copy_seqrecord, get_uppercase_segments
 from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,

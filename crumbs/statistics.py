@@ -19,6 +19,7 @@ from array import array
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
                              MAX_WIDTH_ASCII_PLOT, MAX_INT_IN_SUM_ARRAY)
 
+MAX_ALLOWED_ARRAY_SIZE = 300000
 
 class IntSumarizedArray(object):
     '''This is an array that counts the values.
