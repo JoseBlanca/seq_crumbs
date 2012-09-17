@@ -17,7 +17,7 @@ from __future__ import division
 from array import array
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
-                             MAX_WIDTH_ASCII_PLOT)
+                             MAX_WIDTH_ASCII_PLOT, MAX_INT_IN_SUM_ARRAY)
 
 
 class IntSumarizedArray(object):
@@ -30,13 +30,13 @@ class IntSumarizedArray(object):
     a= [0,0,0,0,1]
 
     '''
-    def __init__(self, iterable=None, init_len=None, max_len=None):
+    def __init__(self, iterable=None, init_len=None,
+                 max_int=MAX_INT_IN_SUM_ARRAY):
         'the initiator'
         if init_len is None:
             init_len = 10
         self._array = array('I', [0] * init_len)
-        if max_len is None:
-            max_len = 100000000
+        self.max_int = max_int
         if iterable is not None:
             self.extend(iterable)
 
@@ -47,6 +47,10 @@ class IntSumarizedArray(object):
 
     def append(self, value):
         'It appends a value to the array'
+        if value > self.max_int:
+            msg = 'Integer ({:d}) larger than maximum allowable ({:d})'
+            msg = msg.format((value, self.max_int))
+            raise ValueError()
         try:
             self._array[value] += 1
         except IndexError:
