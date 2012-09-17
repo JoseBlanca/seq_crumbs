@@ -304,6 +304,7 @@ def _tabular_blast_parser(fhand, line_format):
     for qname, qlen, match_parts in _lines_for_every_tab_blast(fhand,
                                                                line_format):
         matches = []
+        # pylint: disable=C0301
         for sname, slen, match_parts in _group_match_parts_by_subject(match_parts):
             #match start and end
             match_start, match_end = None, None
@@ -571,7 +572,7 @@ class ExonerateParser(object):
     def _create_structure_result(query_result):
         '''It creates the result dictionary structure giving a list of
         match_parts of a query_id '''
-        #TODO add to the match the match subject start and end
+        # TODO add to the match the match subject start and end
         struct_dict = {}
         query_name = query_result[0][0]
         query_length = int(query_result[0][9])
