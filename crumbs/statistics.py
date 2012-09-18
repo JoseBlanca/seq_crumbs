@@ -136,6 +136,9 @@ class IntSumarizedArray(object):
     def _get_quartiles(self):
         'It returns the quartiles'
         num_items = self.count
+        if num_items < 4:
+            msg = 'At least 4 values are required to calculate the quartiles'
+            raise RuntimeError(msg)
         # quartile 1
         quotient, remainder = divmod(num_items + 1, 4)
         if not remainder:
@@ -351,3 +354,106 @@ def draw_histogram(bin_limits, counts):
         result2.append(line)
 
     return ''.join(result2)
+
+
+class IntBoxplot(object):
+    'It represents a Box and whisker plot'
+    def __init__(self):
+        'The init'
+        self.counts = {}
+
+    def append(self, category, value):
+        'It appends a value to the distribution corresponding to a category'
+        counts = self.counts
+        try:
+            cat_counts = counts[category]
+        except KeyError:
+            counts[category] = IntSumarizedArray()
+            cat_counts = counts[category]
+        cat_counts.append(value)
+
+    @property
+    def aggregated_array(self):
+        'It returns the IntSummarizedArray of all appended values.'
+        aggregated_dist = None
+        for cat_count in self.counts.viewvalues():
+            if aggregated_dist is None:
+                aggregated_dist = cat_count
+            else:
+                aggregated_dist += cat_count
+        return aggregated_dist
+
+    @property
+    def ascii_plot(self):
+        'It returns an string with an ASCII representation'
+        distributions = self.counts
+        categories = sorted(distributions.viewkeys())
+        distrib_descriptions = {}
+        for category in categories:
+            distrib = distributions[category]
+            min_ = distrib.min
+            max_ = distrib.max
+            try:
+                quart1, median, quart3 = distrib.quartiles
+                distrib_descriptions[category] = {'min': min_, 'max': max_,
+                                            'quart1': quart1, 'median': median,
+                                            'quart3': quart3}
+            except RuntimeError:
+                distrib_descriptions[category] = None
+
+        min_value = min((d['min'] for d in distrib_descriptions.values()
+                                                             if d is not None))
+        max_value = max((d['max'] for d in distrib_descriptions.values()
+                                                             if d is not None))
+
+        labels_width = max([len(str(d)) for d in distrib_descriptions])
+        plot_width = MAX_WIDTH_ASCII_PLOT - labels_width - len(str(max_value))
+        val_per_pixel = (max_value - min_value) / plot_width
+
+        axis1 = '+' + '-' * (plot_width - 2) + '+' + '\n'
+        axis2 = str(min_value)
+        axis2 += ' ' * (plot_width - len(str(min_value)) - len(str(max_value))
+                       + 1)
+        axis2 += str(max_value) + '\n'
+
+        to_axis_scale = lambda x: int((x - min_value) / val_per_pixel)
+
+        result = ''
+        header_format = '{:>' + str(labels_width) + 's}'
+        for category in categories:
+            distrib = distrib_descriptions[category]
+
+            line2 = header_format.format(str(category))
+            line1 = ' ' * len(line2)
+            if distrib is not None:
+                line1 += ' '
+                line2 += ' '
+                min_ = to_axis_scale(distrib['min'])
+                line1 += ' ' * (min_ - 1)
+                line2 += ' ' * (min_ - 1)
+                line1 += ' '  # min
+                line2 += '<'  # min
+                quart1 = to_axis_scale(distrib['quart1'])
+                line1 += ' ' * ((quart1 - min_) - 1)
+                line2 += '-' * ((quart1 - min_) - 1)
+                line1 += '+'
+                line2 += '|'     # quartil 1
+                median = to_axis_scale(distrib['median'])
+                line1 += '-' * ((median - quart1) - 1)
+                line2 += ' ' * ((median - quart1) - 1)
+                line1 += '+'
+                line2 += '|'     # median 1
+                quart3 = to_axis_scale(distrib['quart3'])
+                line1 += '-' * ((quart3 - median) - 1)
+                line2 += ' ' * ((quart3 - median) - 1)
+                line1 += '+'
+                line2 += '|'     # quart 2
+                max_ = to_axis_scale(distrib['max'])
+                line2 += '-' * ((max_ - quart3) - 1)
+                line2 += '>'     # max
+            line1 += '\n'
+            line2 += '\n'
+            result += line1 + line2 + line1
+        result += ' ' * (labels_width + 1) + axis1
+        result += ' ' * (labels_width + 1) + axis2
+        return result

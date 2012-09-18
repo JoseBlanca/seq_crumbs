@@ -18,7 +18,7 @@
 
 import unittest
 
-from crumbs.statistics import IntSumarizedArray, draw_histogram
+from crumbs.statistics import IntSumarizedArray, draw_histogram, IntBoxplot
 
 
 class HistogramTest(unittest.TestCase):
@@ -136,6 +136,13 @@ class IntsStatsTest(unittest.TestCase):
         assert ints.irq == 4.0
         assert ints.outlier_limits == (-3, 12)
 
+        try:
+            ints = IntSumarizedArray([0, 1, 2])
+            assert ints.quartiles
+            self.fail('RuntimeError')
+        except RuntimeError:
+            pass
+
     def test_value_for_index_test(self):
         'We can get the integer for a given index'
         # pylint: disable=W0212
@@ -151,6 +158,27 @@ class IntsStatsTest(unittest.TestCase):
         except IndexError:
             pass
 
+
+class IntsBoxplot(unittest.TestCase):
+    'It tests the boxplot for integers'
+    def test_boxplot(self):
+        'It does a bloxplot for integers'
+        box = IntBoxplot()
+        box.append(1, 50)
+        box.append(1, 40)
+        box.append(1, 30)
+        box.append(1, 40)
+        box.append(2, 30)
+        box.append(2, 10)
+        box.append(2, 20)
+        box.append(2, 40)
+        box.append('no distrib', 40)
+        counts = box.aggregated_array
+        assert len(list(counts.flat)) == 9
+
+        plot = box.ascii_plot
+        assert '2 <---------' in plot
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'IntsStatsTest.test_stats_functs']
+    #import sys;sys.argv = ['', 'IntsBoxplot.test_boxplot']
     unittest.main()
