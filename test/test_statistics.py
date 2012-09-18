@@ -64,6 +64,19 @@ class IntsStatsTest(unittest.TestCase):
         assert ext_array.median == 7
         assert list(ext_array.flat) == [3, 5, 7, 7, 38]
 
+    @staticmethod
+    def test__add__():
+        ext_array = IntSumarizedArray(init_len=5)
+        ext_array.append(6)
+        ext_array.append(2)
+
+        ext_array2 = IntSumarizedArray(init_len=7)
+        ext_array2.append(7)
+        ext_array2.append(2)
+
+        new_array = ext_array + ext_array2
+        assert list(new_array.flat) == [2, 2, 6, 7]
+
     def test_distribution(self):
         'It tests the histogram function'
 
