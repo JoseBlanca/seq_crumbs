@@ -247,7 +247,7 @@ def create_basic_process_argparse(**kwargs):
     return parser
 
 
-def make_file_compressable(fhand, bgzf=True, gzip=False):
+def _make_file_compressable(fhand, parser, bgzf=True, gzip=False):
     if bgzf:
         if fhand_is_seekable(fhand):
             fhand = BgzfWriter(fileobj=fhand)
@@ -280,14 +280,15 @@ def parse_basic_args(parser):
     if isinstance(out_fhand, list):
         new_out_fhands = []
         for out_f in out_fhand:
-            new_out_fhands.append(make_file_compressable(out_f,
-                                                        bgzf=parsed_args.bgzf,
-                                                        gzip=parsed_args.gzip))
+            out_f = _make_file_compressable(out_f, parser=parser,
+                                            bgzf=parsed_args.bgzf,
+                                            gzip=parsed_args.gzip)
+            new_out_fhands.append(out_f)
         out_fhand = new_out_fhands
     else:
-        out_fhand = make_file_compressable(out_fhand,
-                                           bgzf=parsed_args.bgzf,
-                                           gzip=parsed_args.gzip)
+        out_fhand = _make_file_compressable(out_fhand, parser=parser,
+                                            bgzf=parsed_args.bgzf,
+                                            gzip=parsed_args.gzip)
 
     out_format = parsed_args.out_format
     # The default format is the same as the first file
