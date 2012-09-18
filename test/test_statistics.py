@@ -32,6 +32,8 @@ class HistogramTest(unittest.TestCase):
 
 class IntsStatsTest(unittest.TestCase):
     'It test the extensible array class'
+    # pylint: disable=C0111
+    # pylint: disable=C0103
     @staticmethod
     def create_test_array():
         d = {'9': '5', '10': '288', '11': '002556688', '12': '00012355555',
@@ -81,13 +83,11 @@ class IntsStatsTest(unittest.TestCase):
 
     def test_stats_functs(self):
         'It test the statistical functions of the class'
-        ext_array = IntSumarizedArray()
-        ext_array.append(3)
-        ext_array.append(5)
-        ext_array.append(7)
-        ext_array.append(7)
-        ext_array.append(38)
-        assert ext_array.median == 7
+        ints = IntSumarizedArray([3, 5, 7, 7, 38])
+        assert ints.median == 7
+
+        ints = IntSumarizedArray([3, 5, 7, 38])
+        assert ints.median == 6
 
         # median with two middle numbers
         ext_array = IntSumarizedArray([3, 5, 7, 7])
@@ -104,6 +104,40 @@ class IntsStatsTest(unittest.TestCase):
         assert ext_array.count == 92
         assert round(ext_array.variance, 2) == 557.43
 
+        ints = IntSumarizedArray([3, 4, 4, 5, 6, 8, 8])
+        assert ints.median == 5
+        assert ints.quartiles == (4, 5, 8)
+
+        ints = IntSumarizedArray([1, 2, 3, 4, 5])
+        assert ints.quartiles == (1.5, 3, 4.5)
+
+        ints = IntSumarizedArray([1, 2, 3, 4, 5, 6])
+        assert ints.quartiles == (1.5, 3.5, 5.5)
+
+        ints = IntSumarizedArray([1, 2, 3, 4, 5, 6, 7])
+        assert ints.quartiles == (2, 4, 6)
+
+        ints = IntSumarizedArray([1, 2, 3, 4, 5, 6, 7, 8])
+        assert ints.quartiles == (2.5, 4.5, 6.5)
+
+        assert ints.irq == 4.0
+        assert ints.outlier_limits == (-3, 12)
+
+    def test_value_for_index_test(self):
+        'We can get the integer for a given index'
+        # pylint: disable=W0212
+        ints = IntSumarizedArray([3, 5, 7, 7, 38])
+        assert ints._get_value_for_index(0) == 3
+        assert ints._get_value_for_index(1) == 5
+        assert ints._get_value_for_index(2) == 7
+        assert ints._get_value_for_index(3) == 7
+        assert ints._get_value_for_index(4) == 38
+        try:
+            assert ints._get_value_for_index(5) == 38
+            self.fail('IndexError expected')
+        except IndexError:
+            pass
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    #import sys;sys.argv = ['', 'IntsStatsTest.test_stats_functs']
     unittest.main()

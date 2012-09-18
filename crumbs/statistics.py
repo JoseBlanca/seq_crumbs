@@ -88,12 +88,6 @@ class IntSumarizedArray(object):
         return sum(self._array)
     count = property(_get_count)
 
-    def _get_median(self):
-        'It calculates the median of the values appended'
-        median_positions = self._get_quartile_positions()['median']
-        return self._get_value_of_position(median_positions)
-    median = property(_get_median)
-
     def _calculate_average(self):
         'It calculates the average'
         count = self.count
@@ -123,30 +117,52 @@ class IntSumarizedArray(object):
         return int(sum(self._array))
     count = property(_count)
 
-    def _get_quartile_positions(self):
-        'It returns the positions of the quartiles and the median'
-        def _get_median_position(num_len):
-            'It calculates the center position of the array'
-            quotient, remainder = divmod(num_len, 2)
-            if remainder == 0:
-                position = (quotient, quotient + 1)
-            else:
-                position = (quotient + 1, quotient + 1)
-            return position
+    def _get_median(self):
+        'It calculates the median of the values appended'
+        quotient, remainder = divmod(self.count, 2)
+        if remainder == 0:
+            val1 = self._get_value_for_index(quotient - 1)
+            val2 = self._get_value_for_index(quotient)
+            return (val1 + val2) / 2
+        else:
+            return self._get_value_for_index(quotient)
+    median = property(_get_median)
 
-        quartiles = {}
-        num_values = self.count
-        median_position = _get_median_position(num_values)
+    def _get_quartiles(self):
+        'It returns the quartiles'
+        num_items = self.count
+        # quartile 1
+        quotient, remainder = divmod(num_items + 1, 4)
+        if not remainder:
+            quartile1 = self._get_value_for_index(quotient - 1)
+        else:
+            val1 = self._get_value_for_index(quotient - 1)
+            val2 = self._get_value_for_index(quotient)
+            quartile1 = (val1 + val2) / 2
+        # quartile 3
+        quotient, remainder = divmod((num_items + 1) * 3, 4)
+        if not remainder:
+            quartile3 = self._get_value_for_index(quotient - 1)
+        else:
+            val1 = self._get_value_for_index(quotient - 1)
+            val2 = self._get_value_for_index(quotient)
+            quartile3 = (val1 + val2) / 2
+        return quartile1, self.median, quartile3
+    quartiles = property(_get_quartiles)
 
-        quartiles['median'] = median_position
-        quartiles['quartile_1'] = _get_median_position(median_position[0])
-        quartiles['quartile_2'] = _get_median_position(median_position[0] +
-                                                                    num_values)
-        return quartiles
+    def _get_value_for_index(self, position):
+        '''It takes a position and it returns the value for the given index'''
+        array_ = self._array
+        cum_count = 0
+        for index, count in enumerate(array_):
+            cum_count += count
+            if position <= cum_count - 1:
+                return index
+        else:
+            if position >= cum_count:
+                raise IndexError('You asked for an index beyond the scope')
+            return index
 
-    def _get_value_of_position(self, positions):
-        '''It takes a tuple as a position and it returns the value
-        of the given position'''
         def _next_position_with_value(index):
             '''Giving a position in the array, it returns the next position
             with a value
@@ -160,33 +176,31 @@ class IntSumarizedArray(object):
         value_pos = 0
         for index, values in enumerate(self._array):
             value_pos += values
-            if positions[0] == value_pos:
+            if position == value_pos:
                 pos1 = index
                 pos2 = _next_position_with_value(index)
                 return (pos1 + pos2) / 2
-            if positions[0] < value_pos:
+            if position < value_pos:
                 return index
 
     def _get_iqr(self):
-        'It gets the inter quartil range'
-        quart_pos = self._get_quartile_positions()
-        quart_1 = self._get_value_of_position(quart_pos['quartile_1'])
-        quart_2 = self._get_value_of_position(quart_pos['quartile_2'])
-        iqr = quart_2 - quart_1
+        'It gets the interquartile range'
+        #pylint: disable=W0612
+        quart1, median, quart3 = self.quartiles
+        iqr = quart3 - quart1
         return iqr
     irq = property(_get_iqr)
 
     def _get_outlier_limits(self):
         'It returns the intercuartile'
-        quart_pos = self._get_quartile_positions()
-        quart_1 = self._get_value_of_position(quart_pos['quartile_1'])
-        quart_2 = self._get_value_of_position(quart_pos['quartile_2'])
+        #pylint: disable=W0612
+        quart1, median, quart3 = self.quartiles
 
         iqr = self.irq
         limit_distance = round(iqr * 1.5)
 
-        start = int(quart_1 - limit_distance)
-        end = int(quart_2 + limit_distance)
+        start = int(quart1 - limit_distance)
+        end = int(quart3 + limit_distance)
         return (start, end)
     outlier_limits = property(_get_outlier_limits)
 
@@ -200,9 +214,8 @@ class IntSumarizedArray(object):
         if remove_outliers:
             left_limit = self.count * remove_outliers / 100
             rigth_limit = self.count - left_limit
-            left_value = self._get_value_of_position((left_limit, left_limit))
-            rigth_value = self._get_value_of_position((rigth_limit,
-                                                       rigth_limit))
+            left_value = self._get_value_for_index(left_limit)
+            rigth_value = self._get_value_for_index(rigth_limit)
 
             if min_ < left_value:
                 min_ = left_value
