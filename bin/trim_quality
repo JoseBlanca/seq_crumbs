@@ -27,6 +27,7 @@ from crumbs.seqio import read_seq_packets, write_seq_packets
 DEFAULT_TRESHOLD = 25
 DEFAULT_WINDOW = 5
 
+
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It trims a fixed number of bases.'
