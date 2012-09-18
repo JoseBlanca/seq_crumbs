@@ -38,17 +38,18 @@ class IntSumarizedArray(object):
         'the initiator'
         if init_len is None:
             init_len = 10
-        self.array = array('I', [0] * init_len)
+        self.counts = array('I', [0] * init_len)
         self.max_int = max_int
         if iterable is not None:
             self.extend(iterable)
 
     def __add__(self, obj):
         'It adds the method to sum two Instat instances'
-        new_ins_stat = IntSumarizedArray(init_len=0)
-        for values in izip_longest(self.array, obj.array, fillvalue=0):
-            new_ins_stat.array.append(sum(values))
-        return new_ins_stat
+        new_ints = IntSumarizedArray(init_len=0)
+        new_counts = new_ints.counts
+        for values in izip_longest(self.counts, obj.counts, fillvalue=0):
+            new_counts.append(sum(values))
+        return new_ints
 
     def extend(self, values):
         'It adds all the values from an iterable'
@@ -62,15 +63,15 @@ class IntSumarizedArray(object):
             msg = msg.format((value, self.max_int))
             raise ValueError()
         try:
-            self.array[value] += 1
+            self.counts[value] += 1
         except IndexError:
-            array_ = self.array
-            array_.extend([0] * (value - len(array_) + 1))
-            array_[value] += 1
+            counts = self.counts
+            counts.extend([0] * (value - len(counts) + 1))
+            counts[value] += 1
 
     def _get_flat(self):
         'It yields all integers counted'
-        for val, count in enumerate(self.array):
+        for val, count in enumerate(self.counts):
             # pylint: disable=W0612
             for i in range(count):
                 yield val
@@ -78,22 +79,23 @@ class IntSumarizedArray(object):
 
     def _get_min(self):
         'Get minimun value'
-        for index, value in enumerate(self.array):
+        for index, value in enumerate(self.counts):
             if value != 0:
                 return index
     min = property(_get_min)
 
     def _get_max(self):
         'get_maxvalue'
-        for index in xrange(len(self.array) - 1, 0, -1):
-            if self.array[index] != 0:
+        counts = self.counts
+        for index in xrange(len(counts) - 1, 0, -1):
+            if self.counts[index] != 0:
                 return index
         return 0
     max = property(_get_max)
 
     def _get_count(self):
-        'It returns the count of the values appended'
-        return sum(self.array)
+        'It returns the count of the values stored in the array'
+        return sum(self.counts)
     count = property(_get_count)
 
     def _calculate_average(self):
@@ -106,7 +108,7 @@ class IntSumarizedArray(object):
     def _get_sum(self):
         'It gets the sum of the values'
         sum_ = 0
-        for index, value in enumerate(self.array):
+        for index, value in enumerate(self.counts):
             sum_ += (index * value)
         return int(sum_)
     sum = property(_get_sum)
@@ -115,15 +117,10 @@ class IntSumarizedArray(object):
         'It gets the variance of the values'
         mean = self.average
         sum_ = 0
-        for index, counts in enumerate(self.array):
+        for index, counts in enumerate(self.counts):
             sum_ += ((index - mean) ** 2) * counts
         return sum_ / self.count
     variance = property(_get_variance)
-
-    def _count(self):
-        'It returns the number of values that there are in the array'
-        return int(sum(self.array))
-    count = property(_count)
 
     def _get_median(self):
         'It calculates the median of the values appended'
@@ -160,9 +157,9 @@ class IntSumarizedArray(object):
 
     def _get_value_for_index(self, position):
         '''It takes a position and it returns the value for the given index'''
-        array_ = self._array
+        counts = self.counts
         cum_count = 0
-        for index, count in enumerate(array_):
+        for index, count in enumerate(counts):
             cum_count += count
             if position <= cum_count - 1:
                 return index
@@ -170,26 +167,6 @@ class IntSumarizedArray(object):
             if position >= cum_count:
                 raise IndexError('You asked for an index beyond the scope')
             return index
-
-        def _next_position_with_value(index):
-            '''Giving a position in the array, it returns the next position
-            with a value
-
-                a = [8,4,0,0,2]
-                4 = _next_position_with_value(1)
-            '''
-            for i, values  in enumerate(self.array):
-                if i > index and values != 0:
-                    return i
-        value_pos = 0
-        for index, values in enumerate(self.array):
-            value_pos += values
-            if position == value_pos:
-                pos1 = index
-                pos2 = _next_position_with_value(index)
-                return (pos1 + pos2) / 2
-            if position < value_pos:
-                return index
 
     def _get_iqr(self):
         'It gets the interquartile range'
@@ -271,7 +248,7 @@ class IntSumarizedArray(object):
             except IndexError:
                 break
             sum_values = 0
-            for index2, value in enumerate(self.array):
+            for index2, value in enumerate(self.counts):
                 if index2 > rigth_edge:
                     break
 
