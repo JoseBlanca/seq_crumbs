@@ -277,17 +277,17 @@ def parse_basic_args(parser):
 
     out_fhand = getattr(parsed_args, OUTFILE)
 
-    if isinstance(out_fhand ,list):
+    if isinstance(out_fhand, list):
         new_out_fhands = []
         for out_f in out_fhand:
             new_out_fhands.append(make_file_compressable(out_f,
-                                                         bgzf=parsed_args.bgzf,
-                                                         gzip=parsed_args.gzip))
+                                                        bgzf=parsed_args.bgzf,
+                                                        gzip=parsed_args.gzip))
         out_fhand = new_out_fhands
     else:
-        out_fhand =  make_file_compressable(out_fhand,
-                                            bgzf=parsed_args.bgzf,
-                                            gzip=parsed_args.gzip)
+        out_fhand = make_file_compressable(out_fhand,
+                                           bgzf=parsed_args.bgzf,
+                                           gzip=parsed_args.gzip)
 
     out_format = parsed_args.out_format
     # The default format is the same as the first file
