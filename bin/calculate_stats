@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import argparse
+import sys
+
+from crumbs.utils.tags import GUESS_FORMAT, OUTFILE
+from crumbs.utils.file_utils import (wrap_in_buffered_reader,
+                                     uncompress_if_required)
+from crumbs.utils.bin_utils import main
+from crumbs.seqio import read_seqrecords
+from crumbs.statistics import calculate_sequence_stats
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Calculate stats of the given files'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', help='Sequence input files to process',
+                        default=sys.stdin, nargs='*',
+                        type=argparse.FileType('rt'))
+    parser.add_argument('-t', '--in_format', help='Format of the input files',
+                        default=GUESS_FORMAT)
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+                        help='Sequence output file to process',
+                        type=argparse.FileType('wt'))
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+    # we have to wrap the file in a BufferedReader to allow peeking into stdin
+    wrapped_fhands = []
+    # if input is stdin it will be a fhand not a list of fhands.
+    # we have to convert to a list
+    in_fhands = parsed_args.input
+    if not isinstance(in_fhands, list):
+        in_fhands = [in_fhands]
+    for fhand in in_fhands:
+        fhand = wrap_in_buffered_reader(fhand)
+        fhand = uncompress_if_required(fhand)
+        wrapped_fhands.append(fhand)
+
+    in_format = parsed_args.in_format
+    out_fhand = getattr(parsed_args, OUTFILE)
+
+    args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
+            'original_in_fhands': in_fhands,
+            'in_format': in_format}
+    return args, parsed_args
+
+
+def run():
+    'It makes the actual job'
+    parser = _setup_argparse()
+    args = _parse_args(parser)[0]
+
+    in_fhands = args['in_fhands']
+    in_format = args['in_format']
+    out_fhand = args['out_fhand']
+
+    seqs = read_seqrecords(in_fhands, file_format=in_format)
+
+    lengths_srt, qual_boxplot, qual_str = calculate_sequence_stats(seqs)
+
+    out_fhand.write(lengths_srt + qual_boxplot + qual_str)
+
+if __name__ == '__main__':
+    sys.exit(main(run))

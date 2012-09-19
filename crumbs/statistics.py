@@ -406,9 +406,24 @@ class IntBoxplot(object):
         max_value = max((d['max'] for d in distrib_descriptions.values()
                                                              if d is not None))
 
-        labels_width = max([len(str(d)) for d in distrib_descriptions])
-        plot_width = MAX_WIDTH_ASCII_PLOT - labels_width - len(str(max_value))
+        len_str_float = lambda x: len('{:.1f}'.format(x))
+
+        # how wide is the widest number of each type (min, max, median, etc)
+        widths = {}
+        for distrib in distrib_descriptions.values():
+            if  distrib is None:
+                continue
+            for key in distrib.keys():
+                value = len_str_float(distrib[key])
+                if key not in widths or widths[key] < value:
+                    widths[key] = value
+
+        widths['labels'] = max([len(str(d)) for d in distrib_descriptions])
+        plot_width = (MAX_WIDTH_ASCII_PLOT - widths['labels'] -
+                      len(str(max_value)))
         val_per_pixel = (max_value - min_value) / plot_width
+        if val_per_pixel == 0:
+            val_per_pixel = max_value / plot_width
 
         axis1 = '+' + '-' * (plot_width - 2) + '+' + '\n'
         axis2 = str(min_value)
@@ -419,41 +434,73 @@ class IntBoxplot(object):
         to_axis_scale = lambda x: int((x - min_value) / val_per_pixel)
 
         result = ''
-        header_format = '{:>' + str(labels_width) + 's}'
+        category_format = '{:>' + str(widths['labels']) + 's}'
+
+        header_format = category_format + ':{:>' + str(widths['min']) + '.1f}'
+        header_format += ',{:>' + str(widths['quart1']) + '.1f}'
+        header_format += ',{:>' + str(widths['median']) + '.1f}'
+        header_format += ',{:>' + str(widths['quart3']) + '.1f}'
+        header_format += ',{:>' + str(widths['max']) + '.1f}'
+
         for category in categories:
             distrib = distrib_descriptions[category]
-
-            line2 = header_format.format(str(category))
-            line1 = ' ' * len(line2)
             if distrib is not None:
-                line1 += ' '
-                line2 += ' '
+                line = header_format.format(str(category), distrib['min'],
+                                        distrib['quart1'], distrib['median'],
+                                        distrib['quart3'], distrib['max'])
+                line += ' '
                 min_ = to_axis_scale(distrib['min'])
-                line1 += ' ' * (min_ - 1)
-                line2 += ' ' * (min_ - 1)
-                line1 += ' '  # min
-                line2 += '<'  # min
+                line += ' ' * (min_ - 1)
+                line += '<'  # min
                 quart1 = to_axis_scale(distrib['quart1'])
-                line1 += ' ' * ((quart1 - min_) - 1)
-                line2 += '-' * ((quart1 - min_) - 1)
-                line1 += '+'
-                line2 += '|'     # quartil 1
+                line += '-' * ((quart1 - min_) - 1)
+                line += '['     # quartil 1
                 median = to_axis_scale(distrib['median'])
-                line1 += '-' * ((median - quart1) - 1)
-                line2 += ' ' * ((median - quart1) - 1)
-                line1 += '+'
-                line2 += '|'     # median 1
+                line += '=' * ((median - quart1) - 1)
+                line += '|'     # median 1
                 quart3 = to_axis_scale(distrib['quart3'])
-                line1 += '-' * ((quart3 - median) - 1)
-                line2 += ' ' * ((quart3 - median) - 1)
-                line1 += '+'
-                line2 += '|'     # quart 2
+                line += '=' * ((quart3 - median) - 1)
+                line += ']'     # quart 2
                 max_ = to_axis_scale(distrib['max'])
-                line2 += '-' * ((max_ - quart3) - 1)
-                line2 += '>'     # max
-            line1 += '\n'
-            line2 += '\n'
-            result += line1 + line2 + line1
-        result += ' ' * (labels_width + 1) + axis1
-        result += ' ' * (labels_width + 1) + axis2
+                line += '-' * ((max_ - quart3) - 1)
+                line += '>'     # max
+            else:
+                line = category_format.format(str(category), 0, 0, 0, 0, 0)
+            line += '\n'
+            result += line
+        result += ' ' * (widths['labels'] + 1) + axis1
+        result += ' ' * (widths['labels'] + 1) + axis2
         return result
+
+
+def calculate_sequence_stats(seqs):
+    'It calculates some stats for the given seqs.'
+    # get data
+    lengths = IntSumarizedArray()
+    quals_per_pos = IntBoxplot()
+    for seq in seqs:
+        lengths.append(len(seq))
+        if 'phred_quality' in seq.letter_annotations:
+            for index, qual in enumerate(seq.letter_annotations['phred_quality']):
+                quals_per_pos.append(index + 1, qual)
+
+    # length distribution
+    lengths_srt = 'Length stats and distribution.\n'
+    lengths_srt += '------------------------------\n'
+    lengths_srt += str(lengths)
+    lengths_srt += '\n'
+
+    # qual per position boxplot
+    qual_boxplot = 'Boxplot for quality per position.\n'
+    qual_boxplot += '---------------------------------\n'
+    qual_boxplot += quals_per_pos.ascii_plot
+    qual_boxplot += '\n'
+    # agregate quals
+    quals = quals_per_pos.aggregated_array
+
+    # qual distribution
+    qual_str = 'Quality stats and distribution.\n'
+    qual_str += '-------------------------------\n'
+    qual_str += str(quals)
+    qual_str += '\n'
+    return lengths_srt, qual_boxplot, qual_str

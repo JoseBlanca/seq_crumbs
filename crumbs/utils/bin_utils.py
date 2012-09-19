@@ -257,6 +257,7 @@ def get_requested_compression(parsed_args):
     return comp_kind
 
 
+
 def parse_basic_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     parsed_args = parser.parse_args()

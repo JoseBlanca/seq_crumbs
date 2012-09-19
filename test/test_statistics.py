@@ -15,10 +15,13 @@
 
 # pylint: disable=R0201
 # pylint: disable=R0904
-
+from os.path import join
 import unittest
 
-from crumbs.statistics import IntSumarizedArray, draw_histogram, IntBoxplot
+from crumbs.statistics import (IntSumarizedArray, draw_histogram, IntBoxplot,
+                               calculate_sequence_stats)
+from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.seqio import read_seqrecords
 
 
 class HistogramTest(unittest.TestCase):
@@ -177,7 +180,23 @@ class IntsBoxplot(unittest.TestCase):
         assert len(list(counts.flat)) == 9
 
         plot = box.ascii_plot
-        assert '2 <---------' in plot
+        assert '2:10.0,15.0,25.0,35.0,40.0 <----------[=========' in plot
+
+
+class CalculateStatsTest(unittest.TestCase):
+    'It tests the calculate stats functions'
+
+    @staticmethod
+    def test_calculate_stats():
+        'It tests the calculate stat function'
+        in_fhands = []
+        for val in range(1, 6):
+            in_fhands.append(open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val))))
+        seqs = read_seqrecords(in_fhands, file_format='fastq')
+        lengths_srt, qual_boxplot, qual_str = calculate_sequence_stats(seqs)
+        assert 'maximum: 4' in str(lengths_srt)
+        assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in str(qual_boxplot)
+        assert '[30 , 31[ (96): **********' in str(qual_str)
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IntsBoxplot.test_boxplot']
