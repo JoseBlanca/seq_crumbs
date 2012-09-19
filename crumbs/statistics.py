@@ -425,12 +425,6 @@ class IntBoxplot(object):
         if val_per_pixel == 0:
             val_per_pixel = max_value / plot_width
 
-        axis1 = '+' + '-' * (plot_width - 2) + '+' + '\n'
-        axis2 = str(min_value)
-        axis2 += ' ' * (plot_width - len(str(min_value)) - len(str(max_value))
-                       + 1)
-        axis2 += str(max_value) + '\n'
-
         to_axis_scale = lambda x: int((x - min_value) / val_per_pixel)
 
         result = ''
@@ -442,13 +436,17 @@ class IntBoxplot(object):
         header_format += ',{:>' + str(widths['quart3']) + '.1f}'
         header_format += ',{:>' + str(widths['max']) + '.1f}'
 
+        header_len = None
         for category in categories:
             distrib = distrib_descriptions[category]
             if distrib is not None:
-                line = header_format.format(str(category), distrib['min'],
-                                        distrib['quart1'], distrib['median'],
-                                        distrib['quart3'], distrib['max'])
-                line += ' '
+                header = header_format.format(str(category), distrib['min'],
+                                          distrib['quart1'], distrib['median'],
+                                          distrib['quart3'], distrib['max'])
+                header += ' '
+                if header_len is None or header_len < len(header):
+                    header_len = len(header)
+                line = header
                 min_ = to_axis_scale(distrib['min'])
                 line += ' ' * (min_ - 1)
                 line += '<'  # min
@@ -468,8 +466,15 @@ class IntBoxplot(object):
                 line = category_format.format(str(category), 0, 0, 0, 0, 0)
             line += '\n'
             result += line
-        result += ' ' * (widths['labels'] + 1) + axis1
-        result += ' ' * (widths['labels'] + 1) + axis2
+
+        axis1 = ' ' * header_len + '+' + '-' * (plot_width - 2) + '+' + '\n'
+        axis2 = ' ' * header_len + str(min_value)
+        axis2 += ' ' * (plot_width - len(str(min_value)) - len(str(max_value))
+                       + 1)
+        axis2 += str(max_value) + '\n'
+
+        result += axis1
+        result += axis2
         return result
 
 

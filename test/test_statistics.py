@@ -191,7 +191,8 @@ class CalculateStatsTest(unittest.TestCase):
         'It tests the calculate stat function'
         in_fhands = []
         for val in range(1, 6):
-            in_fhands.append(open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val))))
+            fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
+            in_fhands.append(fhand)
         seqs = read_seqrecords(in_fhands, file_format='fastq')
         lengths_srt, qual_boxplot, qual_str = calculate_sequence_stats(seqs)
         assert 'maximum: 4' in str(lengths_srt)
