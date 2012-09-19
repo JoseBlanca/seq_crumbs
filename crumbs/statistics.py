@@ -42,6 +42,11 @@ class IntSumarizedArray(object):
         self.max_int = max_int
         if iterable is not None:
             self.extend(iterable)
+        self.labels = {'title': 'histogram', 'xlabel': 'values',
+                       'ylabel': 'count', 'minimum': 'minimum',
+                       'maximum': 'maximum', 'average': 'average',
+                       'variance': 'variance', 'sum': 'sum',
+                       'items': 'items', 'quartiles': 'quartiles'}
 
     def __add__(self, obj):
         'It adds the method to sum two Instat instances'
@@ -262,25 +267,14 @@ class IntSumarizedArray(object):
             distrib.append(sum_values)
         return {'counts': distrib, 'bin_limits': bin_edges}
 
-    def _prepare_labels(self, labels=None):
+    def update_labels(self, labels):
         'It prepares the labels for output files'
-        default_labels = {'title': 'histogram', 'xlabel': 'values',
-                          'ylabel': 'count', 'minimum': 'minimum',
-                          'maximum': 'maximum', 'average': 'average',
-                          'variance': 'variance', 'sum': 'sum',
-                          'items': 'items', 'quartiles': 'quartiles'}
-        if labels is None:
-            labels = default_labels
-        else:
-            for label, value in default_labels.items():
-                if label not in labels:
-                    labels[label] = value
-        return labels
+        self.labels.update(labels)
 
     def __str__(self):
         'It writes some basic stats of the values'
         if self.count != 0:
-            labels = self._prepare_labels()
+            labels = self.labels
             #now we write some basic stats
             format_num = lambda x: str(x) if isinstance(x, int) else '%.4f' % x
             text = '%s: %s\n' % (labels['minimum'], format_num(self.min))
@@ -486,8 +480,11 @@ def calculate_sequence_stats(seqs):
     for seq in seqs:
         lengths.append(len(seq))
         if 'phred_quality' in seq.letter_annotations:
-            for index, qual in enumerate(seq.letter_annotations['phred_quality']):
+            quals = seq.letter_annotations['phred_quality']
+            for index, qual in enumerate(quals):
                 quals_per_pos.append(index + 1, qual)
+
+    lengths.update_labels({'sum': 'tot. residues', 'items': 'num. seqs.'})
 
     # length distribution
     lengths_srt = 'Length stats and distribution.\n'
@@ -502,6 +499,7 @@ def calculate_sequence_stats(seqs):
     qual_boxplot += '\n'
     # agregate quals
     quals = quals_per_pos.aggregated_array
+    quals.update_labels({'sum': 'tot. base pairs', 'items': 'num. seqs.'})
 
     # qual distribution
     qual_str = 'Quality stats and distribution.\n'

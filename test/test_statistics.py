@@ -195,9 +195,9 @@ class CalculateStatsTest(unittest.TestCase):
             in_fhands.append(fhand)
         seqs = read_seqrecords(in_fhands, file_format='fastq')
         lengths_srt, qual_boxplot, qual_str = calculate_sequence_stats(seqs)
-        assert 'maximum: 4' in str(lengths_srt)
+        assert 'maximum: 4' in lengths_srt
         assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in str(qual_boxplot)
-        assert '[30 , 31[ (96): **********' in str(qual_str)
+        assert '[30 , 31[ (96): **********' in qual_str
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IntsBoxplot.test_boxplot']
