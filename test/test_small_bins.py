@@ -114,7 +114,7 @@ class CatTest(unittest.TestCase):
             check_output([cat_bin, '-Z', in_fhand.name], stderr=stderr)
             self.fail('CalledProcessError expected')
         except CalledProcessError:
-            msg = 'bgzf is incompatible with STDOUT'
+            msg = 'bgzf is only available to seekable files'
             assert msg in open(stderr.name).read()
 
         # bgzf

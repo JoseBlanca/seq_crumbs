@@ -37,3 +37,5 @@ SUBJECT = 'subject'
 QUERY = 'query'
 START = 0
 END = 1
+BGZF = 'bgzf'
+GZIP = 'gzip'

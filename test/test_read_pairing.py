@@ -18,6 +18,8 @@ from cStringIO import StringIO
 from subprocess import check_output, CalledProcessError, call
 from tempfile import NamedTemporaryFile
 
+from Bio.bgzf import BgzfReader
+
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.pairs import match_pairs, interleave_pairs, deinterleave_pairs
 from crumbs.iterutils import flat_zip_longest
@@ -123,6 +125,21 @@ class PairMatcherbinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'There are too many consecutive' in open(stderr.name).read()
 
+        # compressed output
+        in_fpath = os.path.join(TEST_DATA_DIR, 'pairend5.sfastq')
+        out_fhand = NamedTemporaryFile()
+        orphan_fhand = NamedTemporaryFile()
+        check_output([pair_matcher_bin, '-o', out_fhand.name,
+                      '-p', orphan_fhand.name, in_fpath, '-Z'])
+        result = BgzfReader(out_fhand.name).read(2000)
+        assert '@seq1:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in result
+        assert '@seq1:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in result
+
+        orp = BgzfReader(orphan_fhand.name).read(2000)
+        assert '@seq8:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
+
+
+
 
 class InterleavePairsTest(unittest.TestCase):
     'It tests the interleaving and de-interleaving of pairs'
@@ -196,6 +213,15 @@ class InterleaveBinTest(unittest.TestCase):
                       out_fhand.name])
         assert open(in_fpath1).read() == open(out_fhand1.name).read()
         assert open(in_fpath2).read() == open(out_fhand2.name).read()
+
+        out_fhand1 = NamedTemporaryFile()
+        out_fhand2 = NamedTemporaryFile()
+        check_output([deinterleave_bin, '-o', out_fhand1.name, out_fhand2.name,
+                      out_fhand.name, '-Z'])
+
+        assert open(in_fpath1).read() == BgzfReader(out_fhand1.name).read(2000)
+        assert open(in_fpath2).read() == BgzfReader(out_fhand2.name).read(2000)
+
 
         # skip checks
         in_fpath1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')

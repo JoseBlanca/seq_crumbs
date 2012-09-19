@@ -18,9 +18,7 @@ import os
 from subprocess import Popen
 import platform
 import argparse
-from gzip import GzipFile
 
-from Bio.bgzf import BgzfWriter
 
 from crumbs.third_party import cgitb
 from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
@@ -31,11 +29,11 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                UndecidedFastqVersionError, MaxNumReadsInMem,
                                PairDirectionError, InterleaveError)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
-                                     uncompress_if_required, fhand_is_seekable)
+                                     uncompress_if_required, compress_fhand)
 from crumbs.utils.seq_utils import guess_format
 from crumbs.settings import (SUPPORTED_OUTPUT_FORMATS, USE_EXTERNAL_BIN_PREFIX,
                               EXTERNAL_BIN_PREFIX, ADD_PATH_TO_EXT_BIN)
-from crumbs.utils.tags import OUTFILE, GUESS_FORMAT
+from crumbs.utils.tags import OUTFILE, GUESS_FORMAT, BGZF, GZIP
 from crumbs import __version__ as version
 
 
@@ -247,15 +245,16 @@ def create_basic_process_argparse(**kwargs):
     return parser
 
 
-def _make_file_compressable(fhand, parser, bgzf=True, gzip=False):
+def get_requested_compression(parsed_args):
+    'It looks in the selected options and return the selected compression kind'
+    comp_kind = None
+    bgzf = getattr(parsed_args, 'bgzf', False)
+    gzip = getattr(parsed_args, 'gzip', False)
     if bgzf:
-        if fhand_is_seekable(fhand):
-            fhand = BgzfWriter(fileobj=fhand)
-        else:
-            parser.error('bgzf is incompatible with STDOUT.')
+        comp_kind = BGZF
     elif gzip:
-        fhand = GzipFile(fileobj=fhand)
-    return fhand
+        comp_kind = GZIP
+    return comp_kind
 
 
 def parse_basic_args(parser):
@@ -277,18 +276,23 @@ def parse_basic_args(parser):
 
     out_fhand = getattr(parsed_args, OUTFILE)
 
+    comp_kind = get_requested_compression(parsed_args)
     if isinstance(out_fhand, list):
         new_out_fhands = []
         for out_f in out_fhand:
-            out_f = _make_file_compressable(out_f, parser=parser,
-                                            bgzf=parsed_args.bgzf,
-                                            gzip=parsed_args.gzip)
+            try:
+                out_f = compress_fhand(out_f, compression_kind=comp_kind)
+            except RuntimeError, error:
+                print 'hello', error
+                parser.error(error)
+
             new_out_fhands.append(out_f)
         out_fhand = new_out_fhands
     else:
-        out_fhand = _make_file_compressable(out_fhand, parser=parser,
-                                            bgzf=parsed_args.bgzf,
-                                            gzip=parsed_args.gzip)
+        try:
+            out_fhand = compress_fhand(out_fhand, compression_kind=comp_kind)
+        except RuntimeError, error:
+            parser.error(error)
 
     out_format = parsed_args.out_format
     # The default format is the same as the first file

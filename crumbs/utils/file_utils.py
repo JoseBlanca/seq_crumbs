@@ -20,6 +20,10 @@ from gzip import GzipFile
 import os.path
 from subprocess import check_call
 
+from Bio.bgzf import BgzfWriter
+
+from crumbs.utils.tags import BGZF, GZIP
+
 
 def wrap_in_buffered_reader(fhand, force_wrap=False):
     '''It wraps the given file in a peekable BufferedReader.
@@ -68,6 +72,18 @@ def uncompress_if_required(fhand):
     'It returns a uncompressed handle if required'
     magic = peek_chunk_from_file(fhand, 2)
     if magic == '\037\213':
+        fhand = GzipFile(fileobj=fhand)
+    return fhand
+
+
+def compress_fhand(fhand, compression_kind=None):
+    'Compreses the file if required'
+    if compression_kind == BGZF:
+        if fhand_is_seekable(fhand):
+            fhand = BgzfWriter(fileobj=fhand)
+        else:
+            raise RuntimeError('bgzf is only available to seekable files')
+    elif compression_kind == GZIP:
         fhand = GzipFile(fileobj=fhand)
     return fhand
 
