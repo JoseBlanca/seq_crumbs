@@ -14,120 +14,43 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-from array import array
-from itertools import izip_longest
+from collections import Counter
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
-                             MAX_WIDTH_ASCII_PLOT, MAX_INT_IN_SUM_ARRAY)
-
-MAX_ALLOWED_ARRAY_SIZE = 300000
+                             MAX_WIDTH_ASCII_PLOT)
 
 
-class IntSumarizedArray(object):
-    '''This is an array that counts the values.
-    a = IntsStats()
-    print (a)
-    []
-    a.append(5)
-    print a
-    a= [0,0,0,0,1]
+class IntCounter(Counter):
+    '''This is a subclass  of the Counter on python collections.
 
-    '''
-    def __init__(self, iterable=None, init_len=None,
-                 max_int=MAX_INT_IN_SUM_ARRAY):
-        'the initiator'
-        if init_len is None:
-            init_len = 10
-        self.counts = array('I', [0] * init_len)
-        self.max_int = max_int
-        if iterable is not None:
-            self.extend(iterable)
+    It adds some statistical functionalities to the class'''
+
+    def __init__(self, *args, **kwargs):
+        'It inialices a '
+        super(IntCounter, self).__init__(*args, **kwargs)
         self.labels = {'title': 'histogram', 'xlabel': 'values',
                        'ylabel': 'count', 'minimum': 'minimum',
                        'maximum': 'maximum', 'average': 'average',
                        'variance': 'variance', 'sum': 'sum',
                        'items': 'items', 'quartiles': 'quartiles'}
 
-    def __add__(self, obj):
-        'It adds the method to sum two Instat instances'
-        new_ints = IntSumarizedArray(init_len=0)
-        new_counts = new_ints.counts
-        for values in izip_longest(self.counts, obj.counts, fillvalue=0):
-            new_counts.append(sum(values))
-        return new_ints
+    @property
+    def min(self):
+        'Get the minimun value'
+        return min(self.keys())
 
-    def extend(self, values):
-        'It adds all the values from an iterable'
-        for value in values:
-            self.append(value)
+    @property
+    def max(self):
+        'Get the maximun value'
+        return max(self.keys())
 
-    def append(self, value):
-        'It appends a value to the array'
-        if value > self.max_int:
-            msg = 'Integer ({:d}) larger than maximum allowable ({:d})'
-            msg = msg.format((value, self.max_int))
-            raise ValueError()
-        try:
-            self.counts[value] += 1
-        except IndexError:
-            counts = self.counts
-            counts.extend([0] * (value - len(counts) + 1))
-            counts[value] += 1
-
-    def _get_flat(self):
-        'It yields all integers counted'
-        for val, count in enumerate(self.counts):
-            # pylint: disable=W0612
-            for i in range(count):
-                yield val
-    flat = property(_get_flat)
-
-    def _get_min(self):
-        'Get minimun value'
-        for index, value in enumerate(self.counts):
-            if value != 0:
-                return index
-    min = property(_get_min)
-
-    def _get_max(self):
-        'get_maxvalue'
-        counts = self.counts
-        for index in xrange(len(counts) - 1, 0, -1):
-            if self.counts[index] != 0:
-                return index
-        return 0
-    max = property(_get_max)
-
-    def _get_count(self):
+    @property
+    def count(self):
         'It returns the count of the values stored in the array'
-        return sum(self.counts)
-    count = property(_get_count)
+        return sum(self.values())
 
-    def _calculate_average(self):
-        'It calculates the average'
-        count = self.count
-        sum_ = self.sum
-        return sum_ / count
-    average = property(_calculate_average)
-
-    def _get_sum(self):
-        'It gets the sum of the values'
-        sum_ = 0
-        for index, value in enumerate(self.counts):
-            sum_ += (index * value)
-        return int(sum_)
-    sum = property(_get_sum)
-
-    def _get_variance(self):
-        'It gets the variance of the values'
-        mean = self.average
-        sum_ = 0
-        for index, counts in enumerate(self.counts):
-            sum_ += ((index - mean) ** 2) * counts
-        return sum_ / self.count
-    variance = property(_get_variance)
-
-    def _get_median(self):
+    @property
+    def median(self):
         'It calculates the median of the values appended'
         quotient, remainder = divmod(self.count, 2)
         if remainder == 0:
@@ -136,9 +59,33 @@ class IntSumarizedArray(object):
             return (val1 + val2) / 2
         else:
             return self._get_value_for_index(quotient)
-    median = property(_get_median)
 
-    def _get_quartiles(self):
+    @property
+    def sum(self):
+        'It gets the sum of the values'
+        sum_ = 0
+        for index, value in self.items():
+            sum_ += (index * value)
+        return int(sum_)
+
+    @property
+    def average(self):
+        'It calculates the average'
+        count = self.count
+        sum_ = self.sum
+        return sum_ / count
+
+    @property
+    def variance(self):
+        'It gets the variance of the values'
+        mean = self.average
+        sum_ = 0
+        for index, counts in self.items():
+            sum_ += ((index - mean) ** 2) * counts
+        return sum_ / self.count
+
+    @property
+    def quartiles(self):
         'It returns the quartiles'
         num_items = self.count
         if num_items < 4:
@@ -161,30 +108,16 @@ class IntSumarizedArray(object):
             val2 = self._get_value_for_index(quotient)
             quartile3 = (val1 + val2) / 2
         return quartile1, self.median, quartile3
-    quartiles = property(_get_quartiles)
 
-    def _get_value_for_index(self, position):
-        '''It takes a position and it returns the value for the given index'''
-        counts = self.counts
-        cum_count = 0
-        for index, count in enumerate(counts):
-            cum_count += count
-            if position <= cum_count - 1:
-                return index
-        else:
-            if position >= cum_count:
-                raise IndexError('You asked for an index beyond the scope')
-            return index
-
-    def _get_iqr(self):
+    @property
+    def irq(self):
         'It gets the interquartile range'
         #pylint: disable=W0612
         quart1, median, quart3 = self.quartiles
-        iqr = quart3 - quart1
-        return iqr
-    irq = property(_get_iqr)
+        return quart3 - quart1
 
-    def _get_outlier_limits(self):
+    @property
+    def outlier_limits(self):
         'It returns the intercuartile'
         #pylint: disable=W0612
         quart1, median, quart3 = self.quartiles
@@ -195,7 +128,19 @@ class IntSumarizedArray(object):
         start = int(quart1 - limit_distance)
         end = int(quart3 + limit_distance)
         return (start, end)
-    outlier_limits = property(_get_outlier_limits)
+
+    def _get_value_for_index(self, position):
+        '''It takes a position and it returns the value for the given index'''
+        cum_count = 0
+        for index in sorted(self.keys()):
+            count = self[index]
+            cum_count += count
+            if position <= cum_count - 1:
+                return index
+        else:
+            if position >= cum_count:
+                raise IndexError('You asked for an index beyond the scope')
+            return index
 
     def _calculate_dist_range(self, min_, max_, remove_outliers):
         'it calculates the range for the histogram'
@@ -256,7 +201,9 @@ class IntSumarizedArray(object):
             except IndexError:
                 break
             sum_values = 0
-            for index2, value in enumerate(self.counts):
+
+            for index2 in sorted(self.keys()):
+                value = self[index2]
                 if index2 > rigth_edge:
                     break
 
@@ -270,6 +217,11 @@ class IntSumarizedArray(object):
     def update_labels(self, labels):
         'It prepares the labels for output files'
         self.labels.update(labels)
+
+    def __add__(self, other):
+        'Add counts from two counters.'
+        counter_python = super(IntCounter, self).__add__(other)
+        return self.__class__(counter_python)
 
     def __str__(self):
         'It writes some basic stats of the values'
@@ -362,9 +314,9 @@ class IntBoxplot(object):
         try:
             cat_counts = counts[category]
         except KeyError:
-            counts[category] = IntSumarizedArray()
+            counts[category] = IntCounter()
             cat_counts = counts[category]
-        cat_counts.append(value)
+        cat_counts[value] += 1
 
     @property
     def aggregated_array(self):
@@ -475,10 +427,10 @@ class IntBoxplot(object):
 def calculate_sequence_stats(seqs):
     'It calculates some stats for the given seqs.'
     # get data
-    lengths = IntSumarizedArray()
+    lengths = IntCounter()
     quals_per_pos = IntBoxplot()
     for seq in seqs:
-        lengths.append(len(seq))
+        lengths[len(seq)] += 1
         if 'phred_quality' in seq.letter_annotations:
             quals = seq.letter_annotations['phred_quality']
             for index, qual in enumerate(quals):

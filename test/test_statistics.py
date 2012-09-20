@@ -18,7 +18,7 @@
 from os.path import join
 import unittest
 
-from crumbs.statistics import (IntSumarizedArray, draw_histogram, IntBoxplot,
+from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                calculate_sequence_stats)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seqio import read_seqrecords
@@ -33,114 +33,92 @@ class HistogramTest(unittest.TestCase):
         assert '[-2 , -1[ ( 9): ****************' in hist
 
 
-class IntsStatsTest(unittest.TestCase):
-    'It test the extensible array class'
-    # pylint: disable=C0111
-    # pylint: disable=C0103
+class CounterTest(unittest.TestCase):
+    'It tests that we can use a Counter'
     @staticmethod
-    def create_test_array():
+    def create_test_counter():
+        counter = IntCounter()
         d = {'9': '5', '10': '288', '11': '002556688', '12': '00012355555',
              '13': '0000013555688', '14': '00002555558',
              '15': '0000000000355555555557', '16': '000045', '17': '000055',
              '18': '0005', '19': '00005', '21': '5'}
-        ext_array = IntSumarizedArray()
+
         for key, values in d.items():
             for num in values:
-                ext_array.append(int(key + num))
-        return ext_array
+                counter[int(key + num)] += 1
+        return counter
 
     @staticmethod
-    def test_array():
-        'Create an extensible array'
-        ext_array = IntSumarizedArray(init_len=5)
-        ext_array.append(6)
-        ext_array.append(2)
-        assert  ext_array.min == 2
-        assert  ext_array.max == 6
-        ext_array.append(200)
-        assert ext_array.max == 200
+    def test_counter():
+        'create a counter'
+        # initialize with values
+        counter = IntCounter({2: 2})
+        counter[2] += 1
+        counter[6] += 1
+        assert counter.min == 2
+        assert counter.max == 6
 
-        assert list(ext_array.flat) == [2, 6, 200]
-
-        input_ = (3, 5, 7, 7, 38)
-        ext_array = IntSumarizedArray(input_)
-        assert ext_array.median == 7
-        assert list(ext_array.flat) == [3, 5, 7, 7, 38]
+        counter = IntCounter({3: 1, 5: 1, 7: 2, 38: 1})
+        assert counter.min == 3
+        assert counter.max == 38
+        assert counter.sum == 60
+        assert counter.count == 5
+        assert counter.median == 7
 
     @staticmethod
     def test__add__():
-        ext_array = IntSumarizedArray(init_len=5)
-        ext_array.append(6)
-        ext_array.append(2)
+        ext_counter = IntCounter({6: 1, 2: 1})
+        ext_counter2 = IntCounter({7: 1, 2: 1})
 
-        ext_array2 = IntSumarizedArray(init_len=7)
-        ext_array2.append(7)
-        ext_array2.append(2)
+        new_array = ext_counter + ext_counter2
+        assert new_array[6] == 1
+        assert new_array[7] == 1
+        assert new_array[2] == 2
 
-        new_array = ext_array + ext_array2
-        assert list(new_array.flat) == [2, 2, 6, 7]
-
-    def test_distribution(self):
-        'It tests the histogram function'
-
-        ints_array = self.create_test_array()
-        distrib = ints_array.calculate_distribution(bins=10,
-                                                        remove_outliers=5)
-
-        assert distrib['counts'] == [7L, 13L, 7L, 10L, 7L, 22L, 6L, 4L, 5L,
-                                      5L]
-        assert distrib['bin_limits'] == [110, 118, 126, 134, 142, 150, 158,
-                                         166, 174, 182, 190]
-
-        assert 'average' in str(ints_array)
-
-        ints_array = IntSumarizedArray([0, 0, 1, 3])
-        assert ints_array.calculate_distribution(bins=3)['counts'] == [2, 1, 1]
-
+        #assert list(new_array.flat) == [2, 2, 6, 7]
     def test_stats_functs(self):
         'It test the statistical functions of the class'
-        ints = IntSumarizedArray([3, 5, 7, 7, 38])
+        ints = IntCounter({3: 1, 5: 1, 7: 2, 38: 1})
         assert ints.median == 7
 
-        ints = IntSumarizedArray([3, 5, 7, 38])
+        ints = IntCounter({3: 1, 5: 1, 7: 1, 38: 1})
         assert ints.median == 6
 
         # median with two middle numbers
-        ext_array = IntSumarizedArray([3, 5, 7, 7])
+        ext_array = IntCounter({3: 1, 5: 1, 7: 2})
         assert ext_array.median == 6
 
-        ints = IntSumarizedArray([34, 43, 81, 106, 106, 115])
+        ints = IntCounter({34: 1, 43: 1, 81: 1, 106: 2, 115: 1})
         assert ints.average - 80.83 < 0.01
 
-        ext_array = self.create_test_array()
-        assert ext_array.median == 145
-        assert round(ext_array.average, 2) == 145.15
+        ext_counter = self.create_test_counter()
+        assert ext_counter.median == 145
+        assert round(ext_counter.average, 2) == 145.15
 
-        assert ext_array.sum == 13354
-        assert ext_array.count == 92
-        assert round(ext_array.variance, 2) == 557.43
+        assert ext_counter.sum == 13354
+        assert ext_counter.count == 92
+        assert round(ext_counter.variance, 2) == 557.43
 
-        ints = IntSumarizedArray([3, 4, 4, 5, 6, 8, 8])
+        ints = IntCounter({3: 1, 4: 2, 5: 1, 6: 1, 8: 2})
         assert ints.median == 5
         assert ints.quartiles == (4, 5, 8)
 
-        ints = IntSumarizedArray([1, 2, 3, 4, 5])
+        ints = IntCounter({1: 1, 2: 1, 3: 1, 4: 1, 5: 1})
         assert ints.quartiles == (1.5, 3, 4.5)
 
-        ints = IntSumarizedArray([1, 2, 3, 4, 5, 6])
+        ints = IntCounter({1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1})
         assert ints.quartiles == (1.5, 3.5, 5.5)
 
-        ints = IntSumarizedArray([1, 2, 3, 4, 5, 6, 7])
+        ints = IntCounter({1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1})
         assert ints.quartiles == (2, 4, 6)
 
-        ints = IntSumarizedArray([1, 2, 3, 4, 5, 6, 7, 8])
+        ints = IntCounter({1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1})
         assert ints.quartiles == (2.5, 4.5, 6.5)
-
         assert ints.irq == 4.0
         assert ints.outlier_limits == (-3, 12)
 
         try:
-            ints = IntSumarizedArray([0, 1, 2])
+            ints = IntCounter({0: 1, 1: 1, 2: 1})
             assert ints.quartiles
             self.fail('RuntimeError')
         except RuntimeError:
@@ -149,7 +127,7 @@ class IntsStatsTest(unittest.TestCase):
     def test_value_for_index_test(self):
         'We can get the integer for a given index'
         # pylint: disable=W0212
-        ints = IntSumarizedArray([3, 5, 7, 7, 38])
+        ints = IntCounter({3: 1, 5: 1, 7: 2, 38: 1})
         assert ints._get_value_for_index(0) == 3
         assert ints._get_value_for_index(1) == 5
         assert ints._get_value_for_index(2) == 7
@@ -160,6 +138,23 @@ class IntsStatsTest(unittest.TestCase):
             self.fail('IndexError expected')
         except IndexError:
             pass
+
+    def test_distribution(self):
+        'It tests the histogram function'
+
+        ints_counter = self.create_test_counter()
+        distrib = ints_counter.calculate_distribution(bins=10,
+                                                        remove_outliers=5)
+
+        assert distrib['counts'] == [7L, 13L, 7L, 10L, 7L, 22L, 6L, 4L, 5L,
+                                      5L]
+        assert distrib['bin_limits'] == [110, 118, 126, 134, 142, 150, 158,
+                                         166, 174, 182, 190]
+        assert 'average' in str(ints_counter)
+
+        ints_counter = IntCounter({0: 2, 1: 1, 3: 1})
+        result = [2, 1, 1]
+        assert ints_counter.calculate_distribution(bins=3)['counts'] == result
 
 
 class IntsBoxplot(unittest.TestCase):
@@ -177,7 +172,7 @@ class IntsBoxplot(unittest.TestCase):
         box.append(2, 40)
         box.append('no distrib', 40)
         counts = box.aggregated_array
-        assert len(list(counts.flat)) == 9
+        assert sum(counts.values()) == 9
 
         plot = box.ascii_plot
         assert '2:10.0,15.0,25.0,35.0,40.0 <----------[=========' in plot
@@ -200,5 +195,5 @@ class CalculateStatsTest(unittest.TestCase):
         assert '[30 , 31[ (96): **********' in qual_str
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'IntsBoxplot.test_boxplot']
+    #import sys;sys.argv = ['', 'CounterTest']
     unittest.main()

@@ -63,5 +63,3 @@ MIN_BINS = 20
 # default maximum number of bins in an histogram
 MAX_BINS = 500
 MEAN_VALUES_IN_BIN = 10000
-# LARGEST integer that can be stored in a IntSummarizedArray
-MAX_INT_IN_SUM_ARRAY = 100000000
