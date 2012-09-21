@@ -23,6 +23,16 @@ Created on 21/06/2012
 # pylint: disable=R0903
 
 
+def error_quality_disagree(error_msg):
+    'It checks if a Biopython ValueError is due to a malformed quality file'
+    msg = 'Sequence length and number of quality scores disagree'
+    msg2 = 'Lengths of sequence and quality values differs'
+    if msg in str(error_msg) or msg2 in str(error_msg):
+        return True
+    else:
+        return False
+
+
 class UnknownFormatError(Exception):
     'Raised when the format of a sequence file cannot be guessed'
     pass

@@ -22,7 +22,7 @@ from Bio import SeqIO
 from Bio.SeqIO import FastaIO
 from Bio.SeqIO import QualityIO
 
-from crumbs.exceptions import MalformedFile
+from crumbs.exceptions import MalformedFile, error_quality_disagree
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
 from crumbs.utils.seq_utils import guess_format
@@ -68,6 +68,7 @@ def title2ids(title):
 
 def read_seq_packets(fhands, size=PACKET_SIZE, file_format=GUESS_FORMAT):
     '''It yields SeqRecords in packets of the given size.'''
+
     seqs = read_seqrecords(fhands, file_format=file_format)
     return group_in_packets(seqs, size)
 
@@ -115,8 +116,7 @@ def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
             SeqIO.convert(in_fhands[0], in_formats[0], out_fhands[0],
                           out_format)
         except ValueError as error:
-            msg = 'Lengths of sequence and quality values differs'
-            if msg in str(error):
+            if error_quality_disagree(error):
                 raise MalformedFile(str(error))
             raise
     elif (len(in_fhands) == 1 and len(out_fhands) == 2 and
@@ -126,9 +126,7 @@ def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
                 SeqIO.write([seq], out_fhands[0], out_format)
                 SeqIO.write([seq], out_fhands[1], 'qual')
         except ValueError, error:
-            msg = 'Sequence length and number of quality scores disagree'
-            msg2 = 'Lengths of sequence and quality values differs'
-            if msg in str(error) or msg2 in str(error):
+            if error_quality_disagree(error):
                 raise MalformedFile(str(error))
             raise
     elif (len(in_fhands) == 2 and len(out_fhands) == 1 and
@@ -138,8 +136,7 @@ def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
         try:
             SeqIO.write(seq_records, out_fhands[0].name, out_format)
         except ValueError, error:
-            msg = 'Sequence length and number of quality scores disagree'
-            if msg in str(error):
+            if error_quality_disagree(error):
                 raise MalformedFile(str(error))
             raise
     elif (len(in_fhands) == 2 and len(out_fhands) == 2 and

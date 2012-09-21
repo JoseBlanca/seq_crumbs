@@ -16,6 +16,8 @@
 import random
 from itertools import izip_longest
 
+from crumbs.exceptions import error_quality_disagree, MalformedFile
+
 
 def sample(iterator, sample_size):
     'It makes a sample from the given iterator'
@@ -99,11 +101,16 @@ class group_in_packets(object):
         packet = []
         count = 0
         size = self._packet_size
-        for item in self._iterable:
-            packet.append(item)
-            count += 1
-            if count >= size:
-                break
+        try:
+            for item in self._iterable:
+                packet.append(item)
+                count += 1
+                if count >= size:
+                    break
+        except ValueError as error:
+            if error_quality_disagree(error):
+                raise MalformedFile(str(error))
+            raise
         if not packet:
             raise StopIteration
         return packet
