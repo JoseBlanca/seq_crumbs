@@ -28,7 +28,7 @@ from crumbs.statistics import calculate_sequence_stats
 
 def _setup_argparse():
     'It returns the argument parser'
-    description = 'Calculate stats of the given files'
+    description = 'Calculate statistics of the given files'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('input', help='Sequence input files to process',
                         default=sys.stdin, nargs='*',
@@ -76,9 +76,10 @@ def run():
 
     seqs = read_seqrecords(in_fhands, file_format=in_format)
 
-    lengths_srt, qual_boxplot, qual_str = calculate_sequence_stats(seqs)
+    (lengths_srt, qual_str, freq_str,
+                                 qual_boxplot) = calculate_sequence_stats(seqs)
 
-    out_fhand.write(lengths_srt + qual_boxplot + qual_str)
+    out_fhand.write(lengths_srt + qual_str + freq_str + qual_boxplot)
 
 if __name__ == '__main__':
     sys.exit(main(run))

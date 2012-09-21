@@ -64,6 +64,8 @@ interleave_pairs
 deinterleave_pairs
     It splits a ordered file of paired reads into two files, one for every end.
 
+calculate_stats
+    It generates basic statistics for the given sequence files
 
 General Usage
 ---------------

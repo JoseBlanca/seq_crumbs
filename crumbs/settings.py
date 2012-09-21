@@ -63,3 +63,6 @@ MIN_BINS = 20
 # default maximum number of bins in an histogram
 MAX_BINS = 500
 MEAN_VALUES_IN_BIN = 10000
+
+# default number of location to plot in a nucleotide frequency plot 
+DEF_PLOT_FREQS_UP_TO_BASE = 40
