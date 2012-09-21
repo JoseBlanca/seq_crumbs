@@ -239,7 +239,7 @@ class BaseFreqPlotTest(unittest.TestCase):
         plot.append(1, 'Y')
         plot.append(1, 'C')
         ascii = plot.ascii_plot
-        expected = '0 (A: 0.67, C: 0.00, G: 0.00, T: 0.33, N: 0.00) |AAAAAAAA'
+        expected = '0 (A: 0.67, C: 0.00, G: 0.00, T: 0.33, N: 0.00) |aaaaaaaaa'
         assert expected in ascii
 
 if __name__ == '__main__':

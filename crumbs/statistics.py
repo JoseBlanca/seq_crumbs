@@ -455,6 +455,7 @@ class NuclFreqsPlot(object):
     def ascii_plot(self):
         'It plots columns with the nucleotide frequencies'
         nucls = ('A', 'C', 'G', 'T', 'N')
+        plot_nucls = ('a', 'C', 'g', 'T', 'n')
         locs = self.counts.keys()
         if not locs:
             return ''
@@ -472,7 +473,7 @@ class NuclFreqsPlot(object):
             tot_bases = sum(freqs)
             freqs = [f / tot_bases for f in freqs]
             freq_strs = ['{}: {:.2f}'.format(n, f)
-                                                for n, f in zip(nucls, freqs)]
+                                                 for n, f in zip(nucls, freqs)]
             header += ', '.join(freq_strs) + ') |'
             return header, freqs
 
@@ -485,7 +486,7 @@ class NuclFreqsPlot(object):
             header, freqs = _header_for_nucl(loc)
             line = header
             freqs = [int(round(f / val_per_pixel)) for f in freqs]
-            line += ''.join([n * f for f, n in zip(freqs, nucls)])
+            line += ''.join([n * f for f, n in zip(freqs, plot_nucls)])
             line += '\n'
             plot += line
         return plot
