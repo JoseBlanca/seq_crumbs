@@ -301,12 +301,9 @@ class TrimByQualityTest(unittest.TestCase):
         result = check_output([trim_bin, fastq_fhand.name, '-l'])
         assert result == '@seq1\nAAAAAATCGTT\n+\n00000A???A0\n'
 
+# pylint: disable=C0301
 
-class TrimBlastShortTest(unittest.TestCase):
-    'It tests the blast short adaptor trimming'
-    def test_blast_short_trimming(self):
-        # pylint: disable=C0301
-        fastq = '''@HWI-ST1203:122:C130PACXX:4:1101:13499:4144 1:N:0:CAGATC
+FASTQ4 = '''@HWI-ST1203:122:C130PACXX:4:1101:13499:4144 1:N:0:CAGATC
 AAGCAGTGGTATCAAAGCAGAGTACTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTCCAACCCTTTGCTTTTTTTTTTTTTCGAGGAGGAGGGT
 +
 @@@DBDDDDHFBHGGHFEA@GG<?FHHIIIIIIIIIGCCCCCCCCCCCCCCCCBCCBC###########################################
@@ -320,17 +317,35 @@ GGAAGAGGAACAAGTGAGCAGCAGGACTGTATGATATTCTCATCTGAAGACAGGGACCATCATATTCCCCGGGAAACTCC
 @1?DFFFFGHHHHIBGGHGHGEICCAGHHCFGHHIGGHFIHIIIJJJIJIJJJIJIIIJJJJJJJICEEHHFDADBCCDDDDDBBDDCAB@CCDEEDDEDC
 '''
 
+
+class TrimBlastShortTest(unittest.TestCase):
+    'It tests the blast short adaptor trimming'
+    def test_blast_short_trimming(self):
+        'It trims oligos using blast-short'
+
         adaptors = [SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACATGGG')),
                     SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACTTTTT'))]
 
         blast_trim = TrimWithBlastShort(oligos=adaptors)
-        fhand = StringIO(fastq)
+        fhand = StringIO(FASTQ4)
         seq_packets = list(read_seq_packets([fhand]))
         # It should trim the first and the second reads.
         res = [seq.annotations.get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
                                          for seq in blast_trim(seq_packets[0])]
         assert res == [[(0, 29)], [(0, 29)], []]
 
+    def test_trim_oligos_bin(self):
+        'It tests the trim_blast_short binary'
+        trim_bin = os.path.join(BIN_DIR, 'trim_blast_short')
+        assert 'usage' in check_output([trim_bin, '-h'])
+
+        fastq_fhand = _make_fhand(FASTQ4)
+        result = check_output([trim_bin,
+                               '-l', 'AAGCAGTGGTATCAACGCAGAGTACATGGG',
+                               '-l', 'AAGCAGTGGTATCAACGCAGAGTACTTTTT',
+                               fastq_fhand.name])
+        assert '\nTTTTTTTTTTTTTTTTTTTT' in result
+        assert '\nCGAGAAGAAGGATCCAAGT' in result
 
 if __name__ == '__main__':
 #    import sys;sys.argv = ['', 'TrimTest.test_trim_seqs']

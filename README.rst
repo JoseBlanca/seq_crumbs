@@ -31,6 +31,12 @@ trim_by_case
 trim_edges
     It removes a fixed number of residues from the sequence edges.
 
+trim_quality
+	It removes with a sliding windows regions of low quality in the edges
+	
+trim_blast_short
+	It removes oligonucleotides by using the blast-short algoritm 
+
 convert_format
     It changes between the different supported sequence formats.
 

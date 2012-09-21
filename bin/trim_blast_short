@@ -17,10 +17,13 @@
 
 import sys
 
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+
 from crumbs.utils.bin_utils import (main, parse_basic_process_args,
                                     create_basic_process_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.trim import TrimByQuality, TrimOrMask
+from crumbs.trim import TrimWithBlastShort, TrimOrMask
 from crumbs.seqio import read_seq_packets, write_seq_packets
 
 
@@ -33,34 +36,28 @@ def _setup_argparse():
     description = 'It trims a fixed number of bases.'
     parser = create_basic_process_argparse(description=description)
 
-    parser.add_argument('-q', '--qual_threshold', dest='threshold',
-                        help='Quality threshold', default=DEFAULT_TRESHOLD,
-                        type=int)
-    parser.add_argument('-w', '--window', dest='window',
-                        help='Window size to calculate quality mean',
-                        default=DEFAULT_WINDOW, type=int)
     parser.add_argument('-m', '--mask', dest='mask',
                         help='Do not trim, only mask by lowering the case',
                         action='store_true', default=False)
 
-    parser.add_argument('-l', '--omit_left', dest='left',
-                        help='Do not trim the left side',
-                        action='store_false', default=True)
-
-    parser.add_argument('-r', '--omit_right', dest='right',
-                        help='Do not trim the right side',
-                        action='store_false', default=True)
+    hlp = 'Oligonucleotide (from 18 to 40 pb) to remove'
+    parser.add_argument('-l', '--oligo', dest='oligos', help=hlp,
+                        action='append', required=True)
     return parser
 
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_process_args(parser)
-    args['threshold'] = parsed_args.threshold
-    args['window'] = parsed_args.window
+
     args['mask'] = parsed_args.mask
-    args['right'] = parsed_args.right
-    args['left'] = parsed_args.left
+
+    oligos = []
+    for i, l in enumerate(parsed_args.oligos):
+        oligos.append(SeqRecord(Seq(l), id='oligo' + str(i)))
+
+    args['oligos'] = oligos
+
     return args
 
 
@@ -73,14 +70,11 @@ def run():
     out_fhand = args['out_fhand']
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
-    trim_quality = TrimByQuality(window=args['window'],
-                                 threshold=args['threshold'],
-                                 trim_left=args['left'],
-                                 trim_right=args['right'])
+
+    prep_trim = TrimWithBlastShort(oligos=args['oligos'])
     trim_or_mask = TrimOrMask(mask=args['mask'])
 
-    seq_packets = process_seq_packets(seq_packets,
-                                      [trim_quality, trim_or_mask],
+    seq_packets = process_seq_packets(seq_packets, [prep_trim, trim_or_mask],
                                       processes=args['processes'])
     write_seq_packets(out_fhand, seq_packets, args['out_format'])
     out_fhand.flush()
