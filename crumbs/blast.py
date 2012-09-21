@@ -17,9 +17,13 @@ import os.path
 import subprocess
 import tempfile
 
-from crumbs.seqio import seqio
+from crumbs.seqio import seqio, write_seqrecords
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
+from crumbs.alignment_result import (filter_alignments, ELONGATED, QUERY,
+                                     covered_segments_from_match_parts,
+                                     elongate_match_parts_till_global,
+                                     TabularBlastParser)
 
 BLAST_FIELDS = {'query': 'qseqid', 'subject': 'sseqid', 'identity': 'pident',
                 'aligment_length': 'length', 'mismatches': 'mismatch',
@@ -84,3 +88,105 @@ def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
     cmd.extend(['-outfmt', outfmt])
     process = popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     check_process_finishes(process, binary=cmd[0])
+
+
+def _do_blast_2(db_fhand, queries, program, blast_format=None, params=None):
+    '''It returns an alignment result with the blast.
+
+    It is an alternative interface to the one based on fpaths.
+    db_fhand should be a plain sequence file.
+    queries should be a SeqRecord list.
+    If an alternative blast output format is given it should be tabular, so
+    blast_format is a list of fields.
+    '''
+
+    query_fhand = write_seqrecords(queries, file_format='fasta')
+    query_fhand.flush()
+
+    blastdb = get_blast_db(db_fhand.name, dbtype='nucl')
+
+    if blast_format is None:
+        blast_format = ['query', 'subject', 'query_length', 'subject_length',
+                        'query_start', 'query_end', 'subject_start',
+                        'subject_end', 'expect', 'identity']
+    fmt = generate_tabblast_format(blast_format)
+    if params is None:
+        params = {}
+    params['outfmt'] = fmt
+
+    blast_fhand = tempfile.NamedTemporaryFile(suffix='.blast')
+    do_blast(query_fhand.name, blastdb, program, blast_fhand.name, params)
+
+    return TabularBlastParser(blast_fhand, blast_format)
+
+
+class BlastMatcher(object):
+    'It matches the given SeqRecords against the reads in the file using Blast'
+    def __init__(self, reads_fhand, seqrecords, program, params=None,
+                 filters=None, elongate_for_global=False):
+        'It inits the class.'
+        self._subjects = seqrecords
+        self.program = program
+        if params is None:
+            params = {}
+        self.params = params
+        if filters is None:
+            filters = []
+        self.filters = filters
+        self.elongate_for_global = elongate_for_global
+        self._match_parts = self._look_for_blast_matches(reads_fhand,
+                                                         seqrecords)
+
+    def _look_for_blast_matches(self, seq_fhand, oligos):
+        'It looks for the oligos in the given sequence files'
+        # we need to keep the blast_fhands, because they're temp files and
+        # otherwise they might be removed
+        blasts = _do_blast_2(seq_fhand, oligos, params=self.params,
+                             program=self.program)
+        if self.filters is not None:
+            blasts = filter_alignments(blasts, config=self.filters)
+
+        # Which are the regions covered in each sequence?
+        indexed_match_parts = {}
+        one_oligo = True if len(oligos) == 1 else False
+        for blast in blasts:
+            oligo = blast['query']
+            for match in blast['matches']:
+                read = match['subject']
+                if self.elongate_for_global:
+                    elongate_match_parts_till_global(match['match_parts'],
+                                                 query_length=oligo['length'],
+                                                 subject_length=read['length'],
+                                                 align_completely=QUERY)
+
+                #match_parts = [m['match_parts'] for m in blast['matches']]
+                match_parts = match['match_parts']
+                if one_oligo:
+                    indexed_match_parts[read['name']] = match_parts
+                else:
+                    try:
+                        indexed_match_parts[read['name']].extend(match_parts)
+                    except KeyError:
+                        indexed_match_parts[read['name']] = match_parts
+        return indexed_match_parts
+
+    def get_matched_segments_for_read(self, read_name):
+        'It returns the matched segments for any oligo'
+        ignore_elongation_shorter = 3
+
+        try:
+            match_parts = self._match_parts[read_name]
+            if read_name == 'seq5':
+                pass
+        except KeyError:
+            # There was no match in the blast
+            return None
+
+        # Any of the match_parts has been elongated?
+        elongated_match = False
+        for m_p in match_parts:
+            if ELONGATED in m_p and m_p[ELONGATED] > ignore_elongation_shorter:
+                elongated_match = True
+        segments = covered_segments_from_match_parts(match_parts,
+                                                     in_query=False)
+        return segments, elongated_match

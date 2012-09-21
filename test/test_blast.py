@@ -17,9 +17,9 @@ import unittest
 import os.path
 from tempfile import NamedTemporaryFile
 
-from crumbs.blast import get_blast_db, do_blast
+from crumbs.blast import get_blast_db, do_blast, BlastMatcher
 from crumbs.utils.file_utils import TemporaryDir
-
+from crumbs.settings import LINKERS, TITANIUM_LINKER
 from crumbs.utils.test_utils import TEST_DATA_DIR
 
 # pylint: disable=R0201
@@ -68,6 +68,31 @@ class BlastTest(unittest.TestCase):
         finally:
             db_dir.close()
 
+
+def create_a_matepair_file():
+    'It creates a matepair fasta file'
+
+    seq_5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
+    seq_3 = 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT'
+    mate_seq = seq_5 + TITANIUM_LINKER + seq_3
+    mate_fhand = NamedTemporaryFile(suffix='.fasta')
+    mate_fhand.write('>seq1\n' + mate_seq + '\n')
+    mate_fhand.flush()
+    return mate_fhand
+
+
+class BlastMater(unittest.TestCase):
+    'It tests the splitting of mate pairs'
+    def test_matching_segments(self):
+        'It tests the detection of oligos in sequence files'
+        seq_5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
+        mate_fhand = create_a_matepair_file()
+
+        expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
+        matcher = BlastMatcher(mate_fhand, LINKERS, program='blastn',
+                               elongate_for_global=True)
+        linker_region = matcher.get_matched_segments_for_read('seq1')[0]
+        assert [expected_region] == linker_region
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

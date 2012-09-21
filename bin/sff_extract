@@ -84,7 +84,7 @@ def extract_sff():
                              min_left_clip=args['min_left_clip'],
                              max_nucl_freq_threshold=args['max_percent'])
     seqs = extractor.seqs
-    write_seqrecords(args['out_fhand'], seqs)
+    write_seqrecords(seqs, args['out_fhand'])
     args['out_fhand'].flush()
 
     stderr = sys.stderr

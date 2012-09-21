@@ -1098,7 +1098,7 @@ def elongate_match_parts_till_global(match_parts, query_length,
                                      subject_length, align_completely):
     '''It streches the match_part to convert it in a global alignment.
 
-    We asume that the subject should be completely aligned and we strech the
+    We assume that the subject should be completely aligned and we stretch the
     match part to do it.
     The elongated match_parts will be marked unless the segment added is
     shorter than the mark_strech_longer integer.

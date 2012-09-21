@@ -54,7 +54,7 @@ def sample_seqs():
     except ValueError as error:
         if str(error) == "sample larger than population":
             raise SampleSizeError("sample larger than population")
-    write_seqrecords(out_fhand, seqs, args['out_format'])
+    write_seqrecords(seqs, out_fhand, args['out_format'])
     out_fhand.flush()
 
 if __name__ == '__main__':

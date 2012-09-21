@@ -19,12 +19,14 @@ from Bio.Seq import Seq
 
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
                                TRIMMING_RECOMMENDATIONS, QUALITY, OTHER,
-                               TRIMMING_KINDS)
+                               VECTOR, TRIMMING_KINDS)
 from crumbs.utils.seq_utils import copy_seqrecord, get_uppercase_segments
 from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
                                          merge_overlaping_segments)
 from crumbs.iterutils import rolling_window
+from crumbs.blast import BlastMatcher
+from crumbs.seqio import write_seqrecords
 
 # pylint: disable=R0903
 
@@ -289,3 +291,39 @@ class TrimByQuality(object):
             stats[YIELDED_SEQS] += 1
             trimmed_seqs.append(seqrecord)
         return trimmed_seqs
+
+
+class TrimWithBlastShort(object):
+    'It trims adaptors with the blast short algorithm'
+    def __init__(self, oligos):
+        'The initiator'
+        self.oligos = oligos
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It trims the masked segments of the seqrecords.'
+        stats = self.stats
+        db_fhand = write_seqrecords(seqrecords, file_format='fasta')
+        db_fhand.flush()
+        params = {'task': 'blastn-short', 'expect': '0.0001'}
+        filters = [{'kind': 'score_threshold', 'score_key': 'identity',
+                    'min_score': 89},
+                   {'kind': 'min_length', 'min_num_residues': 13,
+                    'length_in_query': False}]
+        matcher = BlastMatcher(open(db_fhand.name), self.oligos,
+                               program='blastn', filters=filters,
+                               params=params, elongate_for_global=True)
+        for seqrec in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            segments = matcher.get_matched_segments_for_read(seqrec.id)
+            if segments is not None:
+                _add_trim_segments(segments[0], seqrec, kind=VECTOR)
+            stats[YIELDED_SEQS] += 1
+        return seqrecords

@@ -48,7 +48,7 @@ def cat_seqs():
     check_format_incompatibilities(in_fhands, out_format)
 
     seqs = read_seqrecords(in_fhands, file_format=args['in_format'])
-    write_seqrecords(out_fhand, seqs, out_format)
+    write_seqrecords(seqs, out_fhand, out_format)
     out_fhand.flush()
 
 if __name__ == '__main__':

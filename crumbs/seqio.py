@@ -16,6 +16,7 @@
 
 from itertools import chain
 from shutil import copyfileobj
+from tempfile import NamedTemporaryFile
 
 
 from Bio import SeqIO
@@ -39,15 +40,18 @@ def clean_seq_stream(seqs):
             yield seq
 
 
-def write_seqrecords(fhand, seqs, file_format='fastq'):
+def write_seqrecords(seqs, fhand=None, file_format='fastq'):
     'It writes a stream of sequences to a file'
+    if fhand is None:
+        fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
     seqs = clean_seq_stream(seqs)
     SeqIO.write(seqs, fhand, file_format)
+    return fhand
 
 
 def write_seq_packets(fhand, seq_packets, file_format='fastq'):
     'It writes to file a stream of SeqRecord lists'
-    write_seqrecords(fhand, chain.from_iterable(seq_packets),
+    write_seqrecords(chain.from_iterable(seq_packets), fhand,
                      file_format=file_format)
 
 

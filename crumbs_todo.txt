@@ -10,10 +10,10 @@ for instance the vector
 
 Enmascara las regiones que tienen un match_part contra una base de datos
 
-trim_adaptors_short trim_adaptor
---------------------------------
+trim_with_cutadapt
+------------------
 
-with cutadapt and blast_short
+with cutadapt
 
 mask con el lucy vectores
 ----------------

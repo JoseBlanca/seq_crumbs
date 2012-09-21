@@ -53,7 +53,7 @@ def run():
     seq2 = read_seqrecords([args['in_fhands'][1]], args['in_format'])
 
     seqs = interleave_pairs(seq1, seq2, skip_checks=args['skip_checks'])
-    write_seqrecords(args['out_fhand'], seqs, file_format=args['out_format'])
+    write_seqrecords(seqs, args['out_fhand'], file_format=args['out_format'])
     args['out_fhand'].flush()
 
 if __name__ == '__main__':

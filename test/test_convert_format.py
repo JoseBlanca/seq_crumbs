@@ -89,7 +89,7 @@ class ReadWriteSeqsTest(unittest.TestCase):
         'It does not write an empty sequence'
         seq1 = SeqRecord(Seq('ACTG'), id='seq1')
         fhand = StringIO()
-        write_seqrecords(fhand, [seq1, None, SeqRecord(Seq(''), id='seq2')],
+        write_seqrecords([seq1, None, SeqRecord(Seq(''), id='seq2')], fhand,
                          file_format='fasta')
         fhand.flush()
         assert fhand.getvalue() == '>seq1\nACTG\n'

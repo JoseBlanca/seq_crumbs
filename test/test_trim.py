@@ -17,14 +17,16 @@ import unittest
 import os.path
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
+from cStringIO import StringIO
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
-                         TrimByQuality)
+                         TrimByQuality, TrimWithBlastShort)
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS
+from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS, VECTOR
+from crumbs.seqio import read_seq_packets
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
@@ -298,6 +300,37 @@ class TrimByQualityTest(unittest.TestCase):
         fastq_fhand = _make_fhand(FASTQ3)
         result = check_output([trim_bin, fastq_fhand.name, '-l'])
         assert result == '@seq1\nAAAAAATCGTT\n+\n00000A???A0\n'
+
+
+class TrimBlastShortTest(unittest.TestCase):
+    'It tests the blast short adaptor trimming'
+    def test_blast_short_trimming(self):
+        # pylint: disable=C0301
+        fastq = '''@HWI-ST1203:122:C130PACXX:4:1101:13499:4144 1:N:0:CAGATC
+AAGCAGTGGTATCAAAGCAGAGTACTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTCCAACCCTTTGCTTTTTTTTTTTTTCGAGGAGGAGGGT
++
+@@@DBDDDDHFBHGGHFEA@GG<?FHHIIIIIIIIIGCCCCCCCCCCCCCCCCBCCBC###########################################
+@HWI-ST1203:122:C130PACXX:4:1101:13623:4101 1:N:0:CAGATC
+AAGCAGTGGTATCAACGCAGAGTACATGGGCGAGAAGAAGGATCCAAGTGGTGCCAAGGTTACCAAATCTGCAGCCAAGAAGGCTGGAAAGTGAACCGTGC
++
+CCCFFFFFHHHHHJJIJJJHIIHGIIIIIIIJGGHIIJGHJIJIGHFG@FHGGHIJHHHHHFFFFFDEEEEEEDDBDCBDDDDDDDBADCD>C@DCDD<<<
+@HWI-ST1203:122:C130PACXX:4:1101:13615:4163 1:N:0:CAGATC
+GGAAGAGGAACAAGTGAGCAGCAGGACTGTATGATATTCTCATCTGAAGACAGGGACCATCATATTCCCCGGGAAACTCCGATGCCAGAGTATTAGCATGC
++
+@1?DFFFFGHHHHIBGGHGHGEICCAGHHCFGHHIGGHFIHIIIJJJIJIJJJIJIIIJJJJJJJICEEHHFDADBCCDDDDDBBDDCAB@CCDEEDDEDC
+'''
+
+        adaptors = [SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACATGGG')),
+                    SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACTTTTT'))]
+
+        blast_trim = TrimWithBlastShort(oligos=adaptors)
+        fhand = StringIO(fastq)
+        seq_packets = list(read_seq_packets([fhand]))
+        # It should trim the first and the second reads.
+        res = [seq.annotations.get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
+                                         for seq in blast_trim(seq_packets[0])]
+        assert res == [[(0, 29)], [(0, 29)], []]
+
 
 if __name__ == '__main__':
 #    import sys;sys.argv = ['', 'TrimTest.test_trim_seqs']

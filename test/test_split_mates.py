@@ -26,7 +26,7 @@ import os.path
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.split_mates import _BlastMatcher, MatePairSplitter
+from crumbs.split_mates import MatePairSplitter
 from crumbs.settings import LINKERS, TITANIUM_LINKER, FLX_LINKER
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
@@ -49,16 +49,6 @@ def create_a_matepair_file():
 
 class MateSplitterTest(unittest.TestCase):
     'It tests the splitting of mate pairs'
-    def test_matching_segments(self):
-        'It tests the detection of oligos in sequence files'
-        seq_5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
-        mate_fhand = create_a_matepair_file()
-
-        expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
-        matcher = _BlastMatcher(mate_fhand, LINKERS)
-        linker_region = matcher.get_matched_segments_for_read('seq1')[0]
-        assert [expected_region] == linker_region
-
     def test_split_mate(self):
         'It tests the function that splits seqs using segments'
         # pylint: disable=W0212
