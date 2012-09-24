@@ -227,16 +227,31 @@ def _guess_format(fhand, force_file_as_non_seek):
     raise UnknownFormatError('Sequence file of unknown format.')
 
 
+class FunctionRunner(object):
+    'a class to join all the mapper functions in a single function'
+    def __init__(self, map_functions):
+        'Class initiator'
+        self.map_functions = map_functions
+
+    def __call__(self, seq_packet):
+        'It runs all the map_functions for each seq_packet '
+        processed_packet = seq_packet
+        for map_function in self.map_functions:
+            processed_packet = map_function(processed_packet)
+        return processed_packet
+
+
 def process_seq_packets(seq_packets, map_functions, processes=1,
                         keep_order=False):
     'It processes the SeqRecord packets'
     if processes > 1:
         pool = Pool(processes=processes)
         mapper = pool.imap if keep_order else pool.imap_unordered
+
     else:
         mapper = itertools.imap
+    run_functions = FunctionRunner(map_functions)
 
-    for map_function in map_functions:
-        seq_packets = mapper(map_function, seq_packets)
+    seq_packets = mapper(run_functions, seq_packets)
 
     return seq_packets
