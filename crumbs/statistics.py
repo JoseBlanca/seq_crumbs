@@ -17,7 +17,7 @@ from __future__ import division
 from collections import Counter
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
-                             MAX_WIDTH_ASCII_PLOT)
+                             MAX_WIDTH_ASCII_PLOT, DEF_PLOT_FREQS_UP_TO_BASE)
 
 
 class IntCounter(Counter):
@@ -423,18 +423,89 @@ class IntBoxplot(object):
         result += axis2
         return result
 
+    def __nonzero__(self):
+        'It returns True if the object holds any counts'
+        return bool(self.counts)
+
+
+class NuclFreqsPlot(object):
+    'It represents the base frequencies along the read lengts'
+    def __init__(self, count_up_to_base=DEF_PLOT_FREQS_UP_TO_BASE):
+        'The init'
+        self.counts = {}
+        self.count_up_to_base = count_up_to_base
+
+    def append(self, base_index, nucleotide):
+        'It appends a value to the distribution corresponding to a category'
+        count_up_to_base = self.count_up_to_base
+        if count_up_to_base is not None and base_index > count_up_to_base:
+            return
+        counts = self.counts
+        try:
+            cat_counts = counts[base_index]
+        except KeyError:
+            counts[base_index] = Counter()
+            cat_counts = counts[base_index]
+        nucleotide = nucleotide.upper()
+        if nucleotide not in ('A', 'C', 'T', 'G'):
+            nucleotide = 'N'
+        cat_counts[nucleotide] += 1
+
+    @property
+    def ascii_plot(self):
+        'It plots columns with the nucleotide frequencies'
+        nucls = ('A', 'C', 'G', 'T', 'N')
+        plot_nucls = ('a', 'C', 'g', 'T', 'n')
+        locs = self.counts.keys()
+        if not locs:
+            return ''
+        loc_max = max(locs)
+        loc_min = min(locs)
+        loc_width = len(str(loc_max))
+        loc_fmt = '{:>' + str(loc_width) + 'd}'
+        counts = self.counts
+
+        def _header_for_nucl(loc):
+            'It returns the header for the given position'
+            header = loc_fmt.format(loc) + ' ('
+            count = counts.get(loc, {})
+            freqs = [count.get(n, 0) for n in nucls]
+            tot_bases = sum(freqs)
+            freqs = [f / tot_bases for f in freqs]
+            freq_strs = ['{}: {:.2f}'.format(n, f)
+                                                 for n, f in zip(nucls, freqs)]
+            header += ', '.join(freq_strs) + ') |'
+            return header, freqs
+
+        header_len = len(_header_for_nucl(0)[0])
+        plot_width = MAX_WIDTH_ASCII_PLOT - header_len
+        val_per_pixel = 1 / plot_width
+
+        plot = ''
+        for loc in range(loc_min, loc_max + 1):
+            header, freqs = _header_for_nucl(loc)
+            line = header
+            freqs = [int(round(f / val_per_pixel)) for f in freqs]
+            line += ''.join([n * f for f, n in zip(freqs, plot_nucls)])
+            line += '\n'
+            plot += line
+        return plot
+
 
 def calculate_sequence_stats(seqs):
     'It calculates some stats for the given seqs.'
     # get data
     lengths = IntCounter()
     quals_per_pos = IntBoxplot()
+    nucl_freq = NuclFreqsPlot()
     for seq in seqs:
         lengths[len(seq)] += 1
         if 'phred_quality' in seq.letter_annotations:
             quals = seq.letter_annotations['phred_quality']
             for index, qual in enumerate(quals):
                 quals_per_pos.append(index + 1, qual)
+        for index, nucl in enumerate(str(seq.seq)):
+            nucl_freq.append(index, nucl)
 
     lengths.update_labels({'sum': 'tot. residues', 'items': 'num. seqs.'})
 
@@ -444,18 +515,30 @@ def calculate_sequence_stats(seqs):
     lengths_srt += str(lengths)
     lengths_srt += '\n'
 
-    # qual per position boxplot
-    qual_boxplot = 'Boxplot for quality per position.\n'
-    qual_boxplot += '---------------------------------\n'
-    qual_boxplot += quals_per_pos.ascii_plot
-    qual_boxplot += '\n'
     # agregate quals
-    quals = quals_per_pos.aggregated_array
-    quals.update_labels({'sum': 'tot. base pairs', 'items': 'num. seqs.'})
+    if quals_per_pos:
+        quals = quals_per_pos.aggregated_array
+        quals.update_labels({'sum': 'tot. base pairs', 'items': 'num. seqs.'})
 
-    # qual distribution
-    qual_str = 'Quality stats and distribution.\n'
-    qual_str += '-------------------------------\n'
-    qual_str += str(quals)
-    qual_str += '\n'
-    return lengths_srt, qual_boxplot, qual_str
+        # qual distribution
+        qual_str = 'Quality stats and distribution.\n'
+        qual_str += '-------------------------------\n'
+        qual_str += str(quals)
+        qual_str += '\n'
+
+        # qual per position boxplot
+        qual_boxplot = 'Boxplot for quality per position.\n'
+        qual_boxplot += '---------------------------------\n'
+        qual_boxplot += quals_per_pos.ascii_plot
+        qual_boxplot += '\n'
+    else:
+        qual_str = ''
+        qual_boxplot = ''
+
+    # nucl freqs
+    freq_str = 'Nucleotide frequency per position.\n'
+    freq_str += '----------------------------------\n'
+    freq_str += nucl_freq.ascii_plot
+    freq_str += '\n'
+
+    return lengths_srt, qual_str, freq_str, qual_boxplot

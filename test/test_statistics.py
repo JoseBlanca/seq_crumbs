@@ -17,10 +17,13 @@
 # pylint: disable=R0904
 from os.path import join
 import unittest
+from subprocess import check_output
+from tempfile import NamedTemporaryFile
 
 from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
-                               calculate_sequence_stats)
+                               calculate_sequence_stats, NuclFreqsPlot)
 from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
 
 
@@ -157,7 +160,7 @@ class CounterTest(unittest.TestCase):
         assert ints_counter.calculate_distribution(bins=3)['counts'] == result
 
 
-class IntsBoxplot(unittest.TestCase):
+class IntsBoxplotTest(unittest.TestCase):
     'It tests the boxplot for integers'
     def test_boxplot(self):
         'It does a bloxplot for integers'
@@ -181,6 +184,13 @@ class IntsBoxplot(unittest.TestCase):
 class CalculateStatsTest(unittest.TestCase):
     'It tests the calculate stats functions'
 
+    def make_fasta(self):
+        'it returns a fasta fhand'
+        fhand = NamedTemporaryFile()
+        fhand.write('>seq\nACTATCATGGCAGATA\n')
+        fhand.flush()
+        return fhand
+
     @staticmethod
     def test_calculate_stats():
         'It tests the calculate stat function'
@@ -189,10 +199,48 @@ class CalculateStatsTest(unittest.TestCase):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
         seqs = read_seqrecords(in_fhands, file_format='fastq')
-        lengths_srt, qual_boxplot, qual_str = calculate_sequence_stats(seqs)
+        (lengths_srt, qual_str, freq_str,
+                                 qual_boxplot) = calculate_sequence_stats(seqs)
         assert 'maximum: 4' in lengths_srt
         assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in str(qual_boxplot)
         assert '[30 , 31[ (96): **********' in qual_str
+        assert '0 (A: 1.00, C: 0.00, G: 0.00, T: 0.00, N: 0.00) |' in  freq_str
+
+    def test_stats_bin(self):
+        'It tests the statistics binary'
+
+        bin_ = join(BIN_DIR, 'calculate_stats')
+
+        # help
+        assert 'usage' in check_output([bin_, '-h'])
+
+        # fasta
+        in_fhand1 = self.make_fasta()
+        in_fhand2 = self.make_fasta()
+        result = check_output([bin_, in_fhand1.name, in_fhand2.name])
+        assert 'Length stats and distribution.\n-------------------' in result
+
+        # fastq
+        cmd = [bin_]
+        for val in range(1, 6):
+            cmd.append(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
+        assert 'Quality stats and distribution' in check_output(cmd)
+
+
+class BaseFreqPlotTest(unittest.TestCase):
+    'It tests the nucleotide frequency plot'
+    def test_base_freq_plot(self):
+        'It does a NuclBaseFreqPlot'
+        plot = NuclFreqsPlot()
+        plot.append(0, 'A')
+        plot.append(0, 'T')
+        plot.append(0, 'A')
+        plot.append(1, 'N')
+        plot.append(1, 'Y')
+        plot.append(1, 'C')
+        ascii = plot.ascii_plot
+        expected = '0 (A: 0.67, C: 0.00, G: 0.00, T: 0.33, N: 0.00) |aaaaaaaaa'
+        assert expected in ascii
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'CounterTest']
