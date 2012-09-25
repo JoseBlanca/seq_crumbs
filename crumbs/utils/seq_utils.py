@@ -243,7 +243,7 @@ class FunctionRunner(object):
 
 
 def process_seq_packets(seq_packets, map_functions, processes=1,
-                        keep_order=False):
+                        keep_order=True):
     'It processes the SeqRecord packets'
     if processes > 1:
         workers = Pool(processes=processes)
