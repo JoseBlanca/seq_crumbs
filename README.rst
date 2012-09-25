@@ -100,7 +100,8 @@ Seq Crumbs relies heavily on Biopython_ and without this free software project i
 Biopieces_ is a project with a scope similar to Seq Crumbs.
 Biopieces_ is a great software project capable of working with different kinds of biological data using Unix Pipes.
 Seq Crumbs tries to be more limited in its scope limiting itself only to sequence files and thus providing a somewhat simpler interface.
-Another software very similar in the approach to Seq Crumbs is the nice fastx collection_.
+
+Another software very similar in the approach to Seq Crumbs is the nice fastx_ collection.
 
 License
 -------
