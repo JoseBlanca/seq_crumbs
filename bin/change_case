@@ -52,9 +52,10 @@ def run():
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     change_case = ChangeCase(action=args['action'])
-    seq_packets = process_seq_packets(seq_packets, [change_case],
+    seq_packets, workers = process_seq_packets(seq_packets, [change_case],
                                       processes=args['processes'])
-    write_seq_packets(out_fhand, seq_packets, args['out_format'])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
+                      workers=workers)
     out_fhand.flush()
 
 if __name__ == '__main__':

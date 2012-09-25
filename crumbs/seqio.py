@@ -49,10 +49,15 @@ def write_seqrecords(seqs, fhand=None, file_format='fastq'):
     return fhand
 
 
-def write_seq_packets(fhand, seq_packets, file_format='fastq'):
+def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
     'It writes to file a stream of SeqRecord lists'
-    write_seqrecords(chain.from_iterable(seq_packets), fhand,
-                     file_format=file_format)
+    try:
+        write_seqrecords(chain.from_iterable(seq_packets), fhand,
+                         file_format=file_format)
+    except BaseException:
+        if workers is not None:
+            workers.terminate()
+        raise
 
 
 def title2ids(title):

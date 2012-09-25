@@ -60,8 +60,9 @@ def filter_by_length():
     filter_by_length = FilterByLength(threshold=args['threshold'],
                                       reverse=args['reverse'],
                                       ignore_masked=args['ignore_masked'])
-    seq_packets = process_seq_packets(seq_packets, [filter_by_length])
-    write_seq_packets(out_fhand, seq_packets, args['out_format'])
+    seq_packets, workers = process_seq_packets(seq_packets, [filter_by_length])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
+                      workers=workers)
     out_fhand.flush()
 
 if __name__ == '__main__':

@@ -62,9 +62,11 @@ def trim_edges():
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     trim_edges = TrimEdges(right=args['right'], left=args['left'])
     trim_and_mask = TrimOrMask(mask=args['mask'])
-    seq_packets = process_seq_packets(seq_packets, [trim_edges, trim_and_mask],
-                                      processes=args['processes'])
-    write_seq_packets(out_fhand, seq_packets, args['out_format'])
+    seq_packets, workers = process_seq_packets(seq_packets,
+                                               [trim_edges, trim_and_mask],
+                                               processes=args['processes'])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
+                      workers=workers)
     out_fhand.flush()
 
 if __name__ == '__main__':

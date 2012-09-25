@@ -56,8 +56,9 @@ def run():
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     filter_by_id = FilterById(seq_ids=args['seq_ids'], reverse=args['reverse'])
-    seq_packets = process_seq_packets(seq_packets, [filter_by_id])
-    write_seq_packets(out_fhand, seq_packets, args['out_format'])
+    seq_packets, workers = process_seq_packets(seq_packets, [filter_by_id])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
+                      workers=workers)
     out_fhand.flush()
 
 if __name__ == '__main__':

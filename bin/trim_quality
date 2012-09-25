@@ -79,10 +79,12 @@ def run():
                                  trim_right=args['right'])
     trim_or_mask = TrimOrMask(mask=args['mask'])
 
-    seq_packets = process_seq_packets(seq_packets,
-                                      [trim_quality, trim_or_mask],
-                                      processes=args['processes'])
-    write_seq_packets(out_fhand, seq_packets, args['out_format'])
+    seq_packets, workers = process_seq_packets(seq_packets,
+                                               [trim_quality, trim_or_mask],
+                                               processes=args['processes'])
+
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
+                      workers=workers)
     out_fhand.flush()
 
 if __name__ == '__main__':

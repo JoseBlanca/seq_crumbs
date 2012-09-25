@@ -93,6 +93,9 @@ def main(funct):
     except InterleaveError, error:
         stderr.write(str(error) + '\n')
         return 15
+    except KeyboardInterrupt, error:
+        stderr.write('Program stopped by user request\n')
+        return 16
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq crumbs developers would appreciate your feedback\n'

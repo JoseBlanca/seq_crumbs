@@ -14,6 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import signal
 import cStringIO
 from array import array
 import itertools
@@ -245,13 +246,13 @@ def process_seq_packets(seq_packets, map_functions, processes=1,
                         keep_order=False):
     'It processes the SeqRecord packets'
     if processes > 1:
-        pool = Pool(processes=processes)
-        mapper = pool.imap if keep_order else pool.imap_unordered
-
+        workers = Pool(processes=processes)
+        mapper = workers.imap if keep_order else workers.imap_unordered
     else:
+        workers = None
         mapper = itertools.imap
     run_functions = FunctionRunner(map_functions)
 
     seq_packets = mapper(run_functions, seq_packets)
 
-    return seq_packets
+    return seq_packets, workers
