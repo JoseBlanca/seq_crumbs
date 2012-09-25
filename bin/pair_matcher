@@ -38,7 +38,8 @@ def _setup_argparse():
     parser.add_argument('-l', '--limit', dest='limit',
                        help='limit Number of seqs in memory', type=int,
                        default=500000)
-
+    # TODO. pair_matcher based in index incompatible with stdin and withmore
+    # than one input file
     return parser
 
 

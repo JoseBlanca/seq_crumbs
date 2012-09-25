@@ -15,16 +15,27 @@
 import re
 from itertools import izip_longest
 
+from Bio.SeqIO import _index
+
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
 from crumbs.utils.tags import FWD, REV
 from crumbs.seqio import write_seqrecords
 from crumbs.settings import DEFAULT_SEQS_IN_MEM_LIMIT
+from crumbs.third_party.index import FastqRandomAccess, index
+from crumbs.utils.seq_utils import guess_format
 
 
 def _parse_pair_direction_and_name(seq):
     'It parses the description field to get the name and the pair direction'
     title = seq.id + ' ' + seq.description
+    return _parse_pair_direction_and_name_from_title(title)
+
+
+def _parse_pair_direction_and_name_from_title(title):
+    '''It parses the description field to get the name and the pair direction,
+    using the seq title'''
+
     reg_exps = ['(.+)/(\d+)', '(.+)\s(\d+):.+', '(.+)\.(\w)\s?']
 
     for reg_exp in reg_exps:
@@ -33,12 +44,79 @@ def _parse_pair_direction_and_name(seq):
             name, direction = match.groups()
             if direction in ('1', 'f'):
                 direction = FWD
-            elif direction in ('2', '.r'):
+            elif direction in ('2', 'r'):
                 direction = REV
             else:
                 raise PairDirectionError('unknown direction descriptor')
             return name, direction
     raise PairDirectionError('Unable to detect the direction of the seq')
+
+
+def index_seq_file(fpath, file_format=None):
+    '''It indexes a seq file using Biopython index but changing the fastqrandom
+    iterator to use the description as part of the identifier'''
+    old_format = _index._FormatToRandomAccess
+    _index._FormatToRandomAccess['fastq'] = FastqRandomAccess
+    _index._FormatToRandomAccess['astq-sanger'] = FastqRandomAccess
+    _index._FormatToRandomAccess['fastq-solexa'] = FastqRandomAccess
+    _index._FormatToRandomAccess['fastq-illumina'] = FastqRandomAccess
+
+    if file_format is None:
+        file_format = guess_format(open(fpath))
+    file_index = index(fpath, format=file_format)
+
+    _index._FormatToRandomAccess = old_format
+
+    return file_index
+
+
+def _get_paired_and_orphan(index_):
+    'It guesses the paired and the orphan seqs'
+    fwd_reads = set()
+    rev_reads = set()
+    title_resolver = {}
+    for title in index_.iterkeys():
+        name, direction = _parse_pair_direction_and_name_from_title(title)
+        if name not in title_resolver:
+            title_resolver[name] = {}
+        if direction == FWD:
+            title_resolver[name][FWD] = title
+            fwd_reads.add(name)
+        else:
+            title_resolver[name][REV] = title
+            rev_reads.add(name)
+
+    paired = fwd_reads.intersection(rev_reads)
+    fwd_orphans = fwd_reads.difference(rev_reads)
+    rev_orphans = rev_reads.difference(fwd_reads)
+
+    paired_titles = []
+    for paired_seq in paired:
+        paired_titles.append(title_resolver[paired_seq][FWD])
+        paired_titles.append(title_resolver[paired_seq][REV])
+
+    orphan_titles = []
+    for fwd_orphan in fwd_orphans:
+        orphan_titles.append(title_resolver[fwd_orphan][FWD])
+
+    for rev_orphan in rev_orphans:
+        orphan_titles.append(title_resolver[rev_orphan][REV])
+
+    return paired_titles, orphan_titles
+
+
+def match_pairs2(seq_fpath, out_fhand, orphan_out_fhand, out_format):
+    'It matches the seq pairs in an iterator and splits the orphan seqs'
+    index_ = index_seq_file(seq_fpath)
+    paired, orphans = _get_paired_and_orphan(index_)
+
+    #write paired
+    write_seqrecords((index_[title] for title in paired), out_fhand,
+                     out_format)
+
+    #orphans
+    write_seqrecords((index_[title] for title in orphans), orphan_out_fhand,
+                     out_format)
 
 
 def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,

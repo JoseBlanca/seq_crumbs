@@ -21,11 +21,15 @@ from tempfile import NamedTemporaryFile
 from Bio.bgzf import BgzfReader
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.pairs import match_pairs, interleave_pairs, deinterleave_pairs
+from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
+                          index_seq_file,
+                          _parse_pair_direction_and_name_from_title,
+    match_pairs2)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
 from crumbs.exceptions import InterleaveError
+from crumbs.utils.tags import FWD
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -92,6 +96,24 @@ class PairMatcherTest(unittest.TestCase):
         assert '@seq1:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
         assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
 
+    @staticmethod
+    def test_pair_direction_and_name():
+        'it test the pair_name parser'
+        title = '@seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
+        assert name == '@seq8:136:FC706VJ:2:2104:15343:197393'
+        assert dir_ == FWD
+
+        title = '@seq8:136:FC706VJ:2:2104:15343:197393/1'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
+        assert name == '@seq8:136:FC706VJ:2:2104:15343:197393'
+        assert dir_ == FWD
+
+        title = '@seq8:136:FC706VJ:2:2104:15343:197393.f'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
+        assert name == '@seq8:136:FC706VJ:2:2104:15343:197393'
+        assert dir_ == FWD
+
 
 class PairMatcherbinTest(unittest.TestCase):
     'It test the matepair binary'
@@ -137,8 +159,6 @@ class PairMatcherbinTest(unittest.TestCase):
 
         orp = BgzfReader(orphan_fhand.name).read(2000)
         assert '@seq8:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
-
-
 
 
 class InterleavePairsTest(unittest.TestCase):
@@ -250,6 +270,103 @@ class InterleaveBinTest(unittest.TestCase):
         check_output([guess_bin, '--version'], stderr=stderr)
         assert 'from Seq Crumbs version:' in open(stderr.name).read()
 
+
+class IndexedPairMatcher(unittest.TestCase):
+    'pair matching using biopythonindex'
+
+    @staticmethod
+    def test_index_seqfile():
+        'Tets index seqfile'
+        in_fpath1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        in_fpath2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
+        fhand = NamedTemporaryFile()
+        fhand.write(open(in_fpath1).read())
+        fhand.write(open(in_fpath2).read())
+        fhand.flush()
+        index_ = index_seq_file(fhand.name)
+        keys = index_.keys()
+        assert 'seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in keys
+
+    @staticmethod
+    def test_mate_pair_checker():
+        'It test the mate pair function'
+        # with equal seqs but the last ones
+        file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
+        fhand = NamedTemporaryFile()
+        fhand.write(open(file1).read())
+        fhand.write(open(file2).read())
+        fhand.flush()
+
+        out_fhand = StringIO()
+        orphan_out_fhand = StringIO()
+        out_format = 'fastq'
+        match_pairs2(fhand.name, out_fhand, orphan_out_fhand, out_format)
+
+        output = out_fhand.getvalue()
+        assert '@seq1:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in output
+        assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in output
+        orp = orphan_out_fhand.getvalue()
+        assert '@seq8:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
+
+        # with the firsts seqs different
+        file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        file2 = os.path.join(TEST_DATA_DIR, 'pairend3.sfastq')
+        fhand = NamedTemporaryFile()
+        fhand.write(open(file1).read())
+        fhand.write(open(file2).read())
+        fhand.flush()
+        out_fhand = StringIO()
+        orphan_out_fhand = StringIO()
+        out_format = 'fastq'
+        match_pairs2(fhand.name, out_fhand, orphan_out_fhand, out_format)
+
+        output = out_fhand.getvalue()
+        assert '@seq4:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in output
+        assert '@seq5:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in output
+        orp = orphan_out_fhand.getvalue()
+        assert '@seq1:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in orp
+        assert '@seq3:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
+        assert '@seq6:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
+
+        file1 = os.path.join(TEST_DATA_DIR, 'pairend4.sfastq')
+        file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
+        fhand = NamedTemporaryFile()
+        fhand.write(open(file1).read())
+        fhand.write(open(file2).read())
+        fhand.flush()
+        out_fhand = StringIO()
+        orphan_out_fhand = StringIO()
+        out_format = 'fastq'
+
+        match_pairs2(fhand.name, out_fhand, orphan_out_fhand, out_format)
+
+        output = out_fhand.getvalue()
+        assert '@seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in output
+        assert '@seq8:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in output
+        orp = orphan_out_fhand.getvalue()
+        assert '@seq1:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
+        assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
+
+        #unordered file
+        file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
+        file2 = os.path.join(TEST_DATA_DIR, 'pairend2_unordered.sfastq')
+        fhand = NamedTemporaryFile()
+        fhand.write(open(file1).read())
+        fhand.write(open(file2).read())
+        fhand.flush()
+        out_fhand = StringIO()
+        orphan_out_fhand = StringIO()
+        out_format = 'fastq'
+
+        match_pairs2(fhand.name, out_fhand, orphan_out_fhand, out_format)
+        output = out_fhand.getvalue()
+        assert '@seq1:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in output
+        assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in output
+        orp = orphan_out_fhand.getvalue()
+        assert '@seq8:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
+
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']
+    #import sys;sys.argv = ['', 'IndexedPairMatcher.test_index_seqfile']
     unittest.main()
