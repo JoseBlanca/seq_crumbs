@@ -218,6 +218,14 @@ class IntCounter(Counter):
         'It prepares the labels for output files'
         self.labels.update(labels)
 
+    def count_bigger_than_treshold(self, threshold):
+        'It return the count of the values bigger than threshold'
+        item_counter = 0
+        for key, value in self.items():
+            if key >= threshold:
+                item_counter += value
+        return item_counter
+
     def __add__(self, other):
         'Add counts from two counters.'
         counter_python = super(IntCounter, self).__add__(other)
@@ -518,11 +526,16 @@ def calculate_sequence_stats(seqs):
     # agregate quals
     if quals_per_pos:
         quals = quals_per_pos.aggregated_array
-        quals.update_labels({'sum': 'tot. base pairs', 'items': 'num. seqs.'})
+        quals.update_labels({'sum': 'sum of qualities',
+                             'items': 'tot. base pairs'})
 
+        q30 = round((quals.count_bigger_than_treshold(30) / quals.count) * 100, 2)
+        q20 = round((quals.count_bigger_than_treshold(20) / quals.count) * 100, 2)
         # qual distribution
         qual_str = 'Quality stats and distribution.\n'
         qual_str += '-------------------------------\n'
+        qual_str += 'Q20: {}\n'.format(q20)
+        qual_str += 'Q30: {}\n'.format(q30)
         qual_str += str(quals)
         qual_str += '\n'
 

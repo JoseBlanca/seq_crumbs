@@ -127,6 +127,14 @@ class CounterTest(unittest.TestCase):
         except RuntimeError:
             pass
 
+    @staticmethod
+    def test_sum_with_treshold_function():
+        'It tests the function that calculates Q30 and Q20'
+
+        quals = IntCounter({15: 10, 21: 13, 30: 12})
+        assert quals.count_bigger_than_treshold(20) == 25
+        assert quals.count_bigger_than_treshold(30) == 12
+
     def test_value_for_index_test(self):
         'We can get the integer for a given index'
         # pylint: disable=W0212
@@ -202,7 +210,8 @@ class CalculateStatsTest(unittest.TestCase):
         (lengths_srt, qual_str, freq_str,
                                  qual_boxplot) = calculate_sequence_stats(seqs)
         assert 'maximum: 4' in lengths_srt
-        assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in str(qual_boxplot)
+        assert 'Q30: 100.0' in qual_str
+        assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in qual_boxplot
         assert '[30 , 31[ (96): **********' in qual_str
         assert '0 (A: 1.00, C: 0.00, G: 0.00, T: 0.00, N: 0.00) |' in  freq_str
 
