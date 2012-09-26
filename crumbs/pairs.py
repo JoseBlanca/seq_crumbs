@@ -55,17 +55,23 @@ def _parse_pair_direction_and_name_from_title(title):
 def index_seq_file(fpath, file_format=None):
     '''It indexes a seq file using Biopython index but changing the fastqrandom
     iterator to use the description as part of the identifier'''
-    old_format = _index._FormatToRandomAccess
-    _index._FormatToRandomAccess['fastq'] = FastqRandomAccess
-    _index._FormatToRandomAccess['astq-sanger'] = FastqRandomAccess
-    _index._FormatToRandomAccess['fastq-solexa'] = FastqRandomAccess
-    _index._FormatToRandomAccess['fastq-illumina'] = FastqRandomAccess
-
     if file_format is None:
         file_format = guess_format(open(fpath))
+
+    # pylint: disable W0212
+    # we monkey patch to be able to index using the whole tile line and not
+    # only the id. We need it because in a pair end file sequences with the
+    # same id could be found
+    old_accessor = _index._FormatToRandomAccess.copy()
+    accessor = _index._FormatToRandomAccess
+    accessor['fastq'] = FastqRandomAccess
+    accessor['astq-sanger'] = FastqRandomAccess
+    accessor['fastq-solexa'] = FastqRandomAccess
+    accessor['fastq-illumina'] = FastqRandomAccess
+
     file_index = index(fpath, format=file_format)
 
-    _index._FormatToRandomAccess = old_format
+    _index._FormatToRandomAccess = old_accessor
 
     return file_index
 
