@@ -38,7 +38,7 @@ def _setup_argparse():
     parser.add_argument('-l', '--limit', dest='limit',
                        help='limit Number of seqs in memory', type=int,
                        default=500000)
-    unor_help = 'Use this option if the seq file are not equally ordered'
+    unor_help = 'paired reads are unordered and not just interleaved'
     parser.add_argument('-u', '--unordered', dest='unordered',
                         help=unor_help, action='store_true', default=False)
     return parser
@@ -53,13 +53,13 @@ def _parse_args(parser):
     args['memory_limit'] = parsed_args.limit
     if args['memory_limit'] == 0:
         args['memory_limit'] = None
-    unordered = parsed_args.unordered
-    # Pair_matcher based in index incompatible with stdin and withmore
-    # than one input file
 
+    unordered = parsed_args.unordered
+    # Pair_matcher based in index incompatible with stdin and withm ore
+    # than one input file
     if unordered and (len(args['in_fhands']) > 1 or
                       args['in_fhands'][0] == sys.stdin):
-        error_str = 'Unordered file option is not compatible with stdin or '
+        error_str = 'Unordered file option is not compatible with STDIN or '
         error_str += 'with more than one input file'
         parser.error(error_str)
     args['unordered'] = unordered
@@ -84,7 +84,6 @@ def run():
                     orphan_out_fhand=args['orphan'],
                     out_format=args['out_format'],
                     memory_limit=args['memory_limit'])
-
 
 if __name__ == '__main__':
     sys.exit(main(run))
