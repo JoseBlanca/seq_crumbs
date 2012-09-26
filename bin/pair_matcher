@@ -22,7 +22,7 @@ from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args,
                                     get_requested_compression)
 from crumbs.utils.file_utils import compress_fhand
-from crumbs.pairs import match_pairs
+from crumbs.pairs import match_pairs, match_pairs_unordered
 from crumbs.seqio import read_seqrecords
 
 
@@ -38,8 +38,9 @@ def _setup_argparse():
     parser.add_argument('-l', '--limit', dest='limit',
                        help='limit Number of seqs in memory', type=int,
                        default=500000)
-    # TODO. pair_matcher based in index incompatible with stdin and withmore
-    # than one input file
+    unor_help = 'Use this option if the seq file are not equally ordered'
+    parser.add_argument('-u', '--unordered', dest='unordered',
+                        help=unor_help, action='store_true', default=False)
     return parser
 
 
@@ -52,7 +53,16 @@ def _parse_args(parser):
     args['memory_limit'] = parsed_args.limit
     if args['memory_limit'] == 0:
         args['memory_limit'] = None
+    unordered = parsed_args.unordered
+    # Pair_matcher based in index incompatible with stdin and withmore
+    # than one input file
 
+    if unordered and (len(args['in_fhands']) > 1 or
+                      args['in_fhands'][0] == sys.stdin):
+        error_str = 'Unordered file option is not compatible with stdin or '
+        error_str += 'with more than one input file'
+        parser.error(error_str)
+    args['unordered'] = unordered
     return args
 
 
@@ -62,10 +72,18 @@ def run():
     args = _parse_args(parser)
 
     # read seqs
-    seqs = read_seqrecords(args['in_fhands'], file_format=args['in_format'])
-    match_pairs(seqs, out_fhand=args['out_fhand'],
-                orphan_out_fhand=args['orphan'], out_format=args['out_format'],
-                memory_limit=args['memory_limit'])
+    if args['unordered']:
+        match_pairs_unordered(args['in_fhands'][0].name,
+                              out_fhand=args['out_fhand'],
+                              orphan_out_fhand=args['orphan'],
+                              out_format=args['out_format'])
+    else:
+        seqs = read_seqrecords(args['in_fhands'],
+                               file_format=args['in_format'])
+        match_pairs(seqs, out_fhand=args['out_fhand'],
+                    orphan_out_fhand=args['orphan'],
+                    out_format=args['out_format'],
+                    memory_limit=args['memory_limit'])
 
 
 if __name__ == '__main__':

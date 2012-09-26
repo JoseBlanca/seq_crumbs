@@ -105,7 +105,7 @@ def _get_paired_and_orphan(index_):
     return paired_titles, orphan_titles
 
 
-def match_pairs2(seq_fpath, out_fhand, orphan_out_fhand, out_format):
+def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
     index_ = index_seq_file(seq_fpath)
     paired, orphans = _get_paired_and_orphan(index_)
