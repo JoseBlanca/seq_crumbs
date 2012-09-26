@@ -52,9 +52,11 @@ def _parse_pair_direction_and_name_from_title(title):
     raise PairDirectionError('Unable to detect the direction of the seq')
 
 
-def index_seq_file(fpath, file_format=None):
-    '''It indexes a seq file using Biopython index but changing the fastqrandom
-    iterator to use the description as part of the identifier'''
+def _index_seq_file(fpath, file_format=None):
+    '''It indexes a seq file using Biopython index.
+
+    It uses the title line line as the key and not just the id.
+    '''
     if file_format is None:
         file_format = guess_format(open(fpath))
 
@@ -62,8 +64,8 @@ def index_seq_file(fpath, file_format=None):
     # we monkey patch to be able to index using the whole tile line and not
     # only the id. We need it because in a pair end file sequences with the
     # same id could be found
-    old_accessor = _index._FormatToRandomAccess.copy()
     accessor = _index._FormatToRandomAccess
+    old_accessor = accessor.copy()
     accessor['fastq'] = FastqRandomAccess
     accessor['astq-sanger'] = FastqRandomAccess
     accessor['fastq-solexa'] = FastqRandomAccess
@@ -113,7 +115,7 @@ def _get_paired_and_orphan(index_):
 
 def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
-    index_ = index_seq_file(seq_fpath)
+    index_ = _index_seq_file(seq_fpath)
     paired, orphans = _get_paired_and_orphan(index_)
 
     #write paired
