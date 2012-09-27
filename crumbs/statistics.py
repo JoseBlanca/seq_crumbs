@@ -511,6 +511,7 @@ class NuclFreqsPlot(object):
             plot += line
         return plot
 
+
 def calculate_sequence_stats(seqs):
     'It calculates some stats for the given seqs.'
     # get data
