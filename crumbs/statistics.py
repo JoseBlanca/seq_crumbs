@@ -16,6 +16,7 @@
 from __future__ import division
 from collections import Counter
 import operator
+import re
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
                              MAX_WIDTH_ASCII_PLOT, DEF_PLOT_FREQS_UP_TO_BASE)
@@ -480,23 +481,35 @@ class NuclFreqsPlot(object):
             freqs = [f / tot_bases for f in freqs]
             freq_strs = ['{}: {:.2f}'.format(n, f)
                                                  for n, f in zip(nucls, freqs)]
-            header += ', '.join(freq_strs) + ') |'
+            header += ', '.join(freq_strs) + ') | '
             return header, freqs
 
         header_len = len(_header_for_nucl(0)[0])
         plot_width = MAX_WIDTH_ASCII_PLOT - header_len
         val_per_pixel = 1 / plot_width
-
         plot = ''
         for loc in range(loc_min, loc_max + 1):
             header, freqs = _header_for_nucl(loc)
+            assert sum(freqs) == 1
             line = header
-            freqs = [int(round(f / val_per_pixel)) for f in freqs]
-            line += ''.join([n * f for f, n in zip(freqs, plot_nucls)])
+
+            ############################
+            remainder_freqs = [float(re.sub('\d\.', '0.', str(f))) for f in freqs]
+            round_freqs = [int(round(f / val_per_pixel)) for f in freqs]
+
+            pixels_remaining = plot_width - sum(round_freqs)
+
+            if pixels_remaining > 0:
+                add_to_freq = remainder_freqs.index(max(remainder_freqs))
+                round_freqs[add_to_freq] += (plot_width - sum(round_freqs))
+            elif pixels_remaining < 0:
+                add_to_freq = remainder_freqs.index(min(remainder_freqs))
+                round_freqs[add_to_freq] -= (plot_width - sum(round_freqs))
+            assert sum(round_freqs) == plot_width
+            line += ''.join([n * f for f, n in zip(round_freqs, plot_nucls)])
             line += '\n'
             plot += line
         return plot
-
 
 def calculate_sequence_stats(seqs):
     'It calculates some stats for the given seqs.'

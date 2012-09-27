@@ -249,9 +249,21 @@ class BaseFreqPlotTest(unittest.TestCase):
         plot.append(1, 'Y')
         plot.append(1, 'C')
         ascii = plot.ascii_plot
-        expected = '0 (A: 0.67, C: 0.00, G: 0.00, T: 0.33, N: 0.00) |aaaaaaaaa'
+        expected = '0 (A: 0.67, C: 0.00, G: 0.00, T: 0.33, N: 0.00) | aaaaaaaa'
         assert expected in ascii
 
+        plot = NuclFreqsPlot()
+        plot.append(0, 'A')
+        plot.append(0, 'A')
+        plot.append(0, 'A')
+        plot.append(0, 'C')
+        plot.append(0, 'T')
+        plot.append(0, 'T')
+        plot.append(0, 'T')
+
+        ascii = plot.ascii_plot
+        assert '0 (A: 0.43, C: 0.14, G: 0.00, T: 0.43, N: 0.00) | aaa' in ascii
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'CounterTest']
+    import sys;sys.argv = ['', 'BaseFreqPlotTest']
     unittest.main()
