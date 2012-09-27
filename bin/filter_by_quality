@@ -17,8 +17,8 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_basic_args,
-                                    create_basic_argparse)
+from crumbs.utils.bin_utils import (main, parse_basic_process_args,
+                                    create_basic_process_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.filters import FilterByQuality
@@ -26,7 +26,7 @@ from crumbs.filters import FilterByQuality
 
 def _setup_argparse(description):
     'It returns the argument parser'
-    parser = create_basic_argparse(description=description)
+    parser = create_basic_process_argparse(description=description)
     parser.add_argument('-q', '--threshold', type=float, required=True,
                         help='Quality threshold')
     parser.add_argument('-m', '--ignore_masked', action='store_true',
@@ -38,7 +38,7 @@ def _setup_argparse(description):
 
 def _parse_args(parser):
     'It parses the arguments'
-    args, parsed_args = parse_basic_args(parser)
+    args, parsed_args = parse_basic_process_args(parser)
     args['threshold'] = parsed_args.threshold
     args['ignore_masked'] = parsed_args.ignore_masked
     args['reverse'] = parsed_args.reverse
@@ -58,7 +58,8 @@ def run():
     filter_ = FilterByQuality(threshold=args['threshold'],
                               reverse=args['reverse'],
                               ignore_masked=args['ignore_masked'])
-    seq_packets, workers = process_seq_packets(seq_packets, [filter_])
+    seq_packets, workers = process_seq_packets(seq_packets, [filter_],
+                                               processes=args['processes'])
     write_seq_packets(out_fhand, seq_packets, args['out_format'],
                       workers=workers)
     out_fhand.flush()

@@ -18,8 +18,8 @@
 import sys
 import argparse
 
-from crumbs.utils.bin_utils import (main, parse_basic_args,
-                                    create_basic_argparse)
+from crumbs.utils.bin_utils import (main, parse_basic_process_args,
+                                    create_basic_process_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.filters import FilterById
@@ -27,7 +27,7 @@ from crumbs.filters import FilterById
 
 def _setup_argparse(description):
     'It returns the argument parser'
-    parser = create_basic_argparse(description=description)
+    parser = create_basic_process_argparse(description=description)
     parser.add_argument('-l', '--seq_list', type=argparse.FileType('rt'),
                         help='File with the list of sequences',
                         required=True)
@@ -39,7 +39,7 @@ def _setup_argparse(description):
 
 def _parse_args(parser):
     'It parses the arguments'
-    args, parsed_args = parse_basic_args(parser)
+    args, parsed_args = parse_basic_process_args(parser)
     args['seq_ids'] = {l.strip() for l in parsed_args.seq_list}
     args['reverse'] = parsed_args.reverse
     return args
@@ -56,7 +56,8 @@ def run():
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     filter_by_id = FilterById(seq_ids=args['seq_ids'], reverse=args['reverse'])
-    seq_packets, workers = process_seq_packets(seq_packets, [filter_by_id])
+    seq_packets, workers = process_seq_packets(seq_packets, [filter_by_id],
+                                               processes=args['processes'])
     write_seq_packets(out_fhand, seq_packets, args['out_format'],
                       workers=workers)
     out_fhand.flush()
