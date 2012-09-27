@@ -15,6 +15,7 @@
 
 from __future__ import division
 from collections import Counter
+import operator
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
                              MAX_WIDTH_ASCII_PLOT, DEF_PLOT_FREQS_UP_TO_BASE)
@@ -218,13 +219,10 @@ class IntCounter(Counter):
         'It prepares the labels for output files'
         self.labels.update(labels)
 
-    def count_bigger_than_treshold(self, threshold):
-        'It return the count of the values bigger than threshold'
-        item_counter = 0
-        for key, value in self.items():
-            if key >= threshold:
-                item_counter += value
-        return item_counter
+    def count_relative_to_value(self, value, comparison):
+        'It counts the ints greater, equal, etc, relative to the given value.'
+        return sum([counts for val, counts in self.items()
+                                                    if comparison(val, value)])
 
     def __add__(self, other):
         'Add counts from two counters.'
@@ -529,13 +527,17 @@ def calculate_sequence_stats(seqs):
         quals.update_labels({'sum': 'sum of qualities',
                              'items': 'tot. base pairs'})
 
-        q30 = round((quals.count_bigger_than_treshold(30) / quals.count) * 100, 2)
-        q20 = round((quals.count_bigger_than_treshold(20) / quals.count) * 100, 2)
+        q30 = quals.count_relative_to_value(30, operator.ge) / quals.count
+        q30 *= 100
+
+        q20 = quals.count_relative_to_value(30, operator.ge) / quals.count
+        q20 *= 100
+
         # qual distribution
         qual_str = 'Quality stats and distribution.\n'
         qual_str += '-------------------------------\n'
-        qual_str += 'Q20: {}\n'.format(q20)
-        qual_str += 'Q30: {}\n'.format(q30)
+        qual_str += 'Q20: {:.2f}\n'.format(q20)
+        qual_str += 'Q30: {:.2f}\n'.format(q30)
         qual_str += str(quals)
         qual_str += '\n'
 

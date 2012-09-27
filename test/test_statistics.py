@@ -19,6 +19,7 @@ from os.path import join
 import unittest
 from subprocess import check_output
 from tempfile import NamedTemporaryFile
+import operator
 
 from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                calculate_sequence_stats, NuclFreqsPlot)
@@ -132,8 +133,8 @@ class CounterTest(unittest.TestCase):
         'It tests the function that calculates Q30 and Q20'
 
         quals = IntCounter({15: 10, 21: 13, 30: 12})
-        assert quals.count_bigger_than_treshold(20) == 25
-        assert quals.count_bigger_than_treshold(30) == 12
+        assert quals.count_relative_to_value(20, operator.ge) == 25
+        assert quals.count_relative_to_value(30, operator.ge) == 12
 
     def test_value_for_index_test(self):
         'We can get the integer for a given index'
