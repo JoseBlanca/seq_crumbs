@@ -19,12 +19,13 @@ from subprocess import check_output, CalledProcessError, call
 from tempfile import NamedTemporaryFile
 
 from Bio.bgzf import BgzfReader
+# pylint: disable=W0212
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
-                          index_seq_file,
+                          _index_seq_file,
                           _parse_pair_direction_and_name_from_title,
-    match_pairs_unordered)
+                          match_pairs_unordered)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
@@ -380,11 +381,9 @@ class IndexedPairMatcher(unittest.TestCase):
         fhand.write(open(in_fpath1).read())
         fhand.write(open(in_fpath2).read())
         fhand.flush()
-        index_ = index_seq_file(fhand.name)
+        index_ = _index_seq_file(fhand.name)
         keys = index_.keys()
         assert 'seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in keys
-
-
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IndexedPairMatcher.test_index_seqfile']

@@ -52,62 +52,69 @@ def _parse_pair_direction_and_name_from_title(title):
     raise PairDirectionError('Unable to detect the direction of the seq')
 
 
-def index_seq_file(fpath, file_format=None):
-    '''It indexes a seq file using Biopython index but changing the fastqrandom
-    iterator to use the description as part of the identifier'''
-    old_format = _index._FormatToRandomAccess
-    _index._FormatToRandomAccess['fastq'] = FastqRandomAccess
-    _index._FormatToRandomAccess['astq-sanger'] = FastqRandomAccess
-    _index._FormatToRandomAccess['fastq-solexa'] = FastqRandomAccess
-    _index._FormatToRandomAccess['fastq-illumina'] = FastqRandomAccess
+def _index_seq_file(fpath, file_format=None):
+    '''It indexes a seq file using Biopython index.
 
+    It uses the title line line as the key and not just the id.
+    '''
     if file_format is None:
         file_format = guess_format(open(fpath))
+
+    # pylint: disable W0212
+    # we monkey patch to be able to index using the whole tile line and not
+    # only the id. We need it because in a pair end file sequences with the
+    # same id could be found
+    accessor = _index._FormatToRandomAccess
+    old_accessor = accessor.copy()
+    accessor['fastq'] = FastqRandomAccess
+    accessor['astq-sanger'] = FastqRandomAccess
+    accessor['fastq-solexa'] = FastqRandomAccess
+    accessor['fastq-illumina'] = FastqRandomAccess
+
     file_index = index(fpath, format=file_format)
 
-    _index._FormatToRandomAccess = old_format
+    _index._FormatToRandomAccess = old_accessor
 
     return file_index
 
 
 def _get_paired_and_orphan(index_):
     'It guesses the paired and the orphan seqs'
-    fwd_reads = set()
-    rev_reads = set()
-    title_resolver = {}
+    fwd_reads = {}
+    rev_reads = {}
+
     for title in index_.iterkeys():
         name, direction = _parse_pair_direction_and_name_from_title(title)
-        if name not in title_resolver:
-            title_resolver[name] = {}
-        if direction == FWD:
-            title_resolver[name][FWD] = title
-            fwd_reads.add(name)
-        else:
-            title_resolver[name][REV] = title
-            rev_reads.add(name)
 
-    paired = fwd_reads.intersection(rev_reads)
-    fwd_orphans = fwd_reads.difference(rev_reads)
-    rev_orphans = rev_reads.difference(fwd_reads)
+        if direction in (FWD, REV):
+            reads_info = fwd_reads if direction == FWD else rev_reads
+            reads_info[name] = title
+        else:
+            raise RuntimeError('Unknown direction for read.')
+
+    fwd_names = set(fwd_reads.viewkeys())
+    rev_names = set(rev_reads.viewkeys())
+
+    paired = fwd_names.intersection(rev_names)
 
     paired_titles = []
-    for paired_seq in paired:
-        paired_titles.append(title_resolver[paired_seq][FWD])
-        paired_titles.append(title_resolver[paired_seq][REV])
+    for paired_name in paired:
+        paired_titles.append(fwd_reads[paired_name])
+        paired_titles.append(rev_reads[paired_name])
 
-    orphan_titles = []
-    for fwd_orphan in fwd_orphans:
-        orphan_titles.append(title_resolver[fwd_orphan][FWD])
+    fwd_orphans = fwd_names.difference(rev_names)
+    orphan_titles = [fwd_reads[orphan] for orphan in fwd_orphans]
+    del fwd_orphans
 
-    for rev_orphan in rev_orphans:
-        orphan_titles.append(title_resolver[rev_orphan][REV])
+    rev_orphans = rev_names.difference(fwd_names)
+    orphan_titles.extend(rev_reads[orphan] for orphan in rev_orphans)
 
     return paired_titles, orphan_titles
 
 
 def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
-    index_ = index_seq_file(seq_fpath)
+    index_ = _index_seq_file(seq_fpath)
     paired, orphans = _get_paired_and_orphan(index_)
 
     #write paired
