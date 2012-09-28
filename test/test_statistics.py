@@ -265,5 +265,5 @@ class BaseFreqPlotTest(unittest.TestCase):
         assert '0 (A: 0.43, C: 0.14, G: 0.00, T: 0.43, N: 0.00) | aaa' in ascii
 
 if __name__ == '__main__':
-    import sys;sys.argv = ['', 'BaseFreqPlotTest']
+    #import sys;sys.argv = ['', 'BaseFreqPlotTest']
     unittest.main()

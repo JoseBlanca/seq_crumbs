@@ -235,15 +235,22 @@ class IntCounter(Counter):
         if self.count != 0:
             labels = self.labels
             #now we write some basic stats
-            format_num = lambda x: str(x) if isinstance(x, int) else '%.4f' % x
-            text = '%s: %s\n' % (labels['minimum'], format_num(self.min))
-            text += '%s: %s\n' % (labels['maximum'], format_num(self.max))
-            text += '%s: %s\n' % (labels['average'], format_num(self.average))
-            text += '%s: %s\n' % (labels['variance'],
-                                  format_num(self.variance))
-            text += '%s: %s\n' % (labels['sum'], format_num(self.sum))
-            text += '%s: %s\n' % (labels['items'], self.count)
+            format_num = lambda x: '{:,d}'.format(x) if isinstance(x, int) else '%.2f' % x
+            text = '{}: {}\n'.format(labels['minimum'], format_num(self.min))
+            text += '{}: {}\n'.format(labels['maximum'], format_num(self.max))
+            text += '{}: {}\n'.format(labels['average'],
+                                      format_num(self.average))
+
+            if labels['variance'] is not None:
+                text += '{}: {}\n'.format(labels['variance'],
+                                          format_num(self.variance))
+            if labels['sum'] is not None:
+                text += '{}: {}\n'.format(labels['sum'],
+                                          format_num(self.sum))
+            if labels['items'] is not None:
+                text += '{}: {}\n'.format(labels['items'], self.count)
             text += '\n'
+
             distrib = self.calculate_distribution()
             text += draw_histogram(distrib['bin_limits'], distrib['counts'])
             return text
@@ -538,8 +545,7 @@ def calculate_sequence_stats(seqs):
     # agregate quals
     if quals_per_pos:
         quals = quals_per_pos.aggregated_array
-        quals.update_labels({'sum': 'sum of qualities',
-                             'items': 'tot. base pairs'})
+        quals.update_labels({'sum': None, 'items': 'tot. base pairs'})
 
         q30 = quals.count_relative_to_value(30, operator.ge) / quals.count
         q30 *= 100
