@@ -151,24 +151,25 @@ def main():
     # make directory where all bynaries will go
     bin_dist_dir = get_bin_dist_directory(app_dir)
     os.makedirs(bin_dist_dir)
+    try:
+         # copy the external executables changing the name
+        copy_and_rename_ext_bin(app_dir, bin_dist_dir)
 
-    # copy the external executables changing the name
-    copy_and_rename_ext_bin(app_dir, bin_dist_dir)
-
-    # modify the conf to compile the binaries with the get_binary() modified
-    settings_fpath = join(app_dir, 'crumbs', 'settings.py')
-    settings_content = open(settings_fpath).readlines()
-    modified_settings = modify_settings_content(settings_content)
-    write_lines(modified_settings, settings_fpath)
-
-    # make binary for each executable
-    for command in os.listdir(join(app_dir, 'bin')):
-        script_path = join(app_dir, 'bin', command)
-        first_line = open(script_path).readline()
-        if first_line.startswith('#!/usr/bin/env'):
-            make_binary(script_path, pyinstaller_dir, bin_dist_dir)
-    # return the settings file to its origin
-    write_lines(settings_content, settings_fpath)
+        # modify the conf to compile the binaries with the get_binary() modified
+        settings_fpath = join(app_dir, 'crumbs', 'settings.py')
+        settings_content = open(settings_fpath).readlines()
+        modified_settings = modify_settings_content(settings_content)
+        write_lines(modified_settings, settings_fpath)
+    
+        # make binary for each executable
+        for command in os.listdir(join(app_dir, 'bin')):
+            script_path = join(app_dir, 'bin', command)
+            first_line = open(script_path).readline()
+            if first_line.startswith('#!/usr/bin/env'):
+                make_binary(script_path, pyinstaller_dir, bin_dist_dir)
+    except Exception:
+        # return the settings file to its origin
+        write_lines(settings_content, settings_fpath)
 
 
 if __name__ == '__main__':
