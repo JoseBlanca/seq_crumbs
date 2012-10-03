@@ -5,3 +5,4 @@ build/*
 dist/*
 seq_crumbs.egg-info/*
 *.error
+doc/downloads
