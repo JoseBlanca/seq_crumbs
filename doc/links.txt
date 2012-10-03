@@ -1,0 +1,36 @@
+.. _Biopython: http://biopython.org/wiki/Main_Page
+.. _setuptools: http://pypi.python.org/pypi/setuptools
+.. _SFF: http://www.ncbi.nlm.nih.gov/Traces/trace.cgi?cmd=show&f=formats&m=doc&s=format#sff
+.. _BGZF: http://samtools.sourceforge.net/SAM1.pdf
+.. _SeqIO: http://biopython.org/wiki/SeqIO
+.. _free software: http://en.wikipedia.org/wiki/Free_software
+.. _GPL: http://www.gnu.org/copyleft/gpl.html
+
+.. _blast2go: http://www.blast2go.org/
+.. _bwa: http://bio-bwa.sourceforge.net/
+.. _blast: http://web.ncbi.nlm.nih.gov/blast/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download
+.. _configobj: http://pypi.python.org/pypi/configobj/
+.. _emboss: http://emboss.sourceforge.net/
+.. _ESTScan: http://estscan.sourceforge.net/
+.. _exonerate: http://www.ebi.ac.uk/~guy/exonerate/
+.. _GATK: http://www.broadinstitute.org/gsa/wiki/index.php/The_Genome_Analysis_Toolkit
+.. _Gene Ontology: http://www.sequenceontology.org/resources/gff3.html
+.. _github: http://github.com/JoseBlanca/seq_crumbs
+.. _GFF: http://www.sequenceontology.org/resources/gff3.html
+.. _lucy: http://lucy.sourceforge.net/
+.. _matplotlib: http://matplotlib.sourceforge.net/
+.. _mdust: http://compbio.dfci.harvard.edu/tgi/software/
+.. _mira: http://sourceforge.net/apps/mediawiki/mira-assembler
+.. _Numpy: http://numpy.scipy.org/
+.. _picard: http://picard.sourceforge.net/index.shtml
+.. _psubprocess: http://bioinf.comav.upv.es/psubprocess/
+.. _pysam: http://code.google.com/p/pysam/
+.. _realignment: http://www.broadinstitute.org/gsa/wiki/index.php/Local_realignment_around_indels
+.. _samtools: http://samtools.sourceforge.net/
+.. _trimpoly: http://compbio.dfci.harvard.edu/tgi/software/
+.. _Univec: http://www.ncbi.nlm.nih.gov/VecScreen/UniVec.html
+.. _VCF: http://1000genomes.org/wiki/doku.php?id=1000_genomes:analysis:vcf4.0
+
+.. _ngs_backbone: http://bioinf.comav.upv.es/ngs_backbone/
+.. _franklin: http://github.com/JoseBlanca/franklin
+
