@@ -103,6 +103,8 @@ Seq Crumbs tries to be more limited in its scope limiting itself only to sequenc
 
 Another software very similar in the approach to Seq Crumbs is the nice fastx_ collection.
 
+Other related software: Pyroclenaer_, lucy_, and FastQC_.
+
 License
 -------
 
@@ -119,3 +121,7 @@ For more details on the licensing take a look at the LICENSE.txt file.
 .. _GPL: http://www.gnu.org/copyleft/gpl.html
 .. _fastx: http://hannonlab.cshl.edu/fastx_toolkit/
 .. _Biopieces: http://code.google.com/p/biopieces/
+.. _Pyrocleaner: https://pyrocleaner.mulcyber.toulouse.inra.fr/plugins/mediawiki/wiki/pyrocleaner/index.php/Pyrocleaner
+.. _lucy: http://lucy.sourceforge.net/
+.. _FastQC: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
