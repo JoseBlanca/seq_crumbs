@@ -103,7 +103,7 @@ Seq Crumbs tries to be more limited in its scope limiting itself only to sequenc
 
 Another software very similar in the approach to Seq Crumbs is the nice fastx_ collection.
 
-Other related software: Pyroclenaer_, lucy_, and FastQC_.
+Other related software: Pyrocleaner_, lucy_, and FastQC_.
 
 License
 -------
