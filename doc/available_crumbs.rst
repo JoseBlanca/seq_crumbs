@@ -16,6 +16,9 @@ filter_by_length
 filter_by_name
   It filters the sequences with a list of names given in a file.
 
+filter_by_blast
+    It filters the sequences using blast
+
 trim_by_case
     It trims the sequences according to its case.
 

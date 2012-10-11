@@ -11,7 +11,7 @@ Available Crumbs
 ----------------
 
 sff_extract
-	It extracts the reads from a SFF_ file used by 454 and Ion Torrent.
+  It extracts the reads from a SFF_ file used by 454 and Ion Torrent.
 
 split_matepairs
     It splits the mate-pairs separated by an oligo sequence.
@@ -23,7 +23,10 @@ filter_by_length
     It filters sequences according to a length threshold.
 
 filter_by_name
-	It filters the sequences with a list of names given in a file.
+    It filters the sequences with a list of names given in a file.
+
+filter_by_blast
+    It filters the sequences using blast
 
 trim_by_case
     It trims the sequences according to its case.
@@ -32,10 +35,10 @@ trim_edges
     It removes a fixed number of residues from the sequence edges.
 
 trim_quality
-	It removes with a sliding windows regions of low quality in the edges
-	
+  It removes with a sliding windows regions of low quality in the edges
+
 trim_blast_short
-	It removes oligonucleotides by using the blast-short algoritm 
+  It removes oligonucleotides by using the blast-short algoritm
 
 convert_format
     It changes between the different supported sequence formats.
