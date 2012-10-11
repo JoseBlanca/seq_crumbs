@@ -317,7 +317,7 @@ class TrimWithBlastShort(object):
                     'min_score': 89},
                    {'kind': 'min_length', 'min_num_residues': 13,
                     'length_in_query': False}]
-        matcher = BlastMatcher(open(db_fhand.name), self.oligos,
+        matcher = BlastMatcher(db_fhand.name, self.oligos,
                                program='blastn', filters=filters,
                                params=params, elongate_for_global=True)
         for seqrec in seqrecords:

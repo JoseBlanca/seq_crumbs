@@ -20,15 +20,17 @@ import unittest
 # pylint: disable=W0402
 from string import ascii_lowercase
 from random import choice
-from subprocess import check_output, call
+from subprocess import check_output, call, CalledProcessError
 import os.path
 from tempfile import NamedTemporaryFile
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.filters import FilterByLength, FilterById, FilterByQuality
+from crumbs.filters import FilterByLength, FilterById, FilterByQuality, \
+    FilterBlastMatch
 from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
 
 
 def _create_seqrecord(string):
@@ -162,6 +164,110 @@ class QualityFilterTest(unittest.TestCase):
         assert 'sequences do not have qualities' in open(stderr.name).read()
 
 
+class BlastMatchFilterTest(unittest.TestCase):
+    'It tests the filtering by blast match'
+    @staticmethod
+    def test_blastmatch_filter():
+        'it test filter by blast'
+        blastdb = os.path.join(TEST_DATA_DIR, 'blastdbs', 'arabidopsis_genes')
+
+        match = 'CCAAAGTACGGTCTCCCAAGCGGTCTCTTACCGGACACCGTCACCGATTTCACCCTCT'
+        seq = 'ATCATGTAGTTACACATGAACACACACATG'
+        seq += match
+
+        seqs = [SeqRecord(Seq(seq), id='seq')]
+        filters = [{'kind': 'score_threshold', 'score_key': 'expect',
+                    'max_score': 0.001},
+                   {'kind': 'score_threshold', 'score_key': 'identity',
+                    'min_score': 80},
+                   {'kind': 'min_length', 'min_percentage': 60,
+                    'length_in_query': True}]
+
+        filter_ = FilterBlastMatch(blastdb, 'blastn', filters)
+        new_seqs = filter_(seqs)
+        assert  new_seqs == []
+
+        filters = [{'kind': 'score_threshold', 'score_key': 'expect',
+                    'max_score': 1e-28}]
+        filter_ = FilterBlastMatch(blastdb, 'blastn', filters)
+        new_seqs = filter_(seqs)
+        assert len(new_seqs) == 1
+
+        filters = [{'kind': 'score_threshold', 'score_key': 'expect',
+                    'max_score': 1e-28}]
+        filter_ = FilterBlastMatch(blastdb, 'blastn', filters, reverse=True)
+        new_seqs = filter_(seqs)
+        assert new_seqs == []
+
+
+
+
+
+    def test_blastmatch_bin(self):
+        'It test the binary of the filter_by_blast'
+        filter_bin = os.path.join(BIN_DIR, 'filter_by_blast')
+        assert 'usage' in check_output([filter_bin, '-h'])
+        blastdb = os.path.join(TEST_DATA_DIR, 'blastdbs', 'arabidopsis_genes')
+
+        match = 'CCAAAGTACGGTCTCACAAGCGGTCTCTTACCGGACACCGTCACCGATTTCACCCTCT'
+        seq = 'ATCATGTAGTTACACATGAACACACACATG'
+        seq += match
+        seq_fhand = _make_fhand('>seq\n' + seq + '\n')
+        # fail if no filters
+        stderr = NamedTemporaryFile()
+        try:
+            check_output([filter_bin, '-b', blastdb, seq_fhand.name],
+                         stderr=stderr)
+            self.fail()
+        except CalledProcessError:
+            assert 'At least a filter must be Used' in open(stderr.name).read()
+
+        #expected_filter
+        result = check_output([filter_bin, '-b', blastdb, '-e', '1e-27',
+                               seq_fhand.name])
+
+        assert 'CATGAACACACACAT' in result
+
+        #similarity_filter
+        result = check_output([filter_bin, '-b', blastdb, '-s', '99',
+                               seq_fhand.name])
+        assert 'CATGAACACACACAT' in result
+
+        # fail if -a an -l given i in the command line
+        stderr = NamedTemporaryFile()
+        try:
+            check_output([filter_bin, '-b', blastdb, seq_fhand.name, '-a', '3',
+                          '-l', '4'], stderr=stderr)
+            self.fail()
+        except CalledProcessError:
+            assert 'not allowed with argument'  in open(stderr.name).read()
+
+        #minlen percentaje_filter
+        result = check_output([filter_bin, '-b', blastdb, '-l', '40',
+                               seq_fhand.name])
+
+        assert result == ''
+
+        result = check_output([filter_bin, '-b', blastdb, '-l', '80',
+                               seq_fhand.name])
+        assert 'CATGAACACACACAT' in result
+
+        #min nucleotides in query filter
+        result = check_output([filter_bin, '-b', blastdb, '-a', '40',
+                               seq_fhand.name])
+        assert result == ''
+
+        result = check_output([filter_bin, '-b', blastdb, '-a', '80',
+                               seq_fhand.name])
+        assert 'CATGAACACACACAT' in result
+
+        #reverse
+        result = check_output([filter_bin, '-b', blastdb, '-a', '80', '-r',
+                               seq_fhand.name])
+        assert result == ''
+
+
 if __name__ == "__main__":
-#    import sys;sys.argv = ['', 'TestPool']
+    #import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_filter']
+    #import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_bin']
     unittest.main()

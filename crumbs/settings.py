@@ -64,5 +64,8 @@ MIN_BINS = 20
 MAX_BINS = 500
 MEAN_VALUES_IN_BIN = 10000
 
-# default number of location to plot in a nucleotide frequency plot 
+# default number of location to plot in a nucleotide frequency plot
 DEF_PLOT_FREQS_UP_TO_BASE = 40
+
+#when 2 match parts are in this distance they are merges as just one matchpart
+DEFAULT_IGNORE_ELONGATION_SHORTER = 3

@@ -20,10 +20,14 @@ import tempfile
 from crumbs.seqio import seqio, write_seqrecords
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
+from crumbs.utils.tags import NUCL, PROT, SUBJECT
 from crumbs.alignment_result import (filter_alignments, ELONGATED, QUERY,
                                      covered_segments_from_match_parts,
                                      elongate_match_parts_till_global,
                                      TabularBlastParser)
+from crumbs.utils.file_utils import TemporaryDir
+from crumbs.settings import DEFAULT_IGNORE_ELONGATION_SHORTER
+
 
 BLAST_FIELDS = {'query': 'qseqid', 'subject': 'sseqid', 'identity': 'pident',
                 'aligment_length': 'length', 'mismatches': 'mismatch',
@@ -47,27 +51,50 @@ def _makeblastdb_plus(seq_fpath, dbtype, outputdb=None):
     check_process_finishes(process, binary=cmd[0])
 
 
-def get_blast_db(seq_fpath, dbtype, directory=None):
-    '''It returns an fpath to a blast db for the given sequence fpath.
+def _get_abs_blastdb_path(blastdb_or_path, dbtype):
+    'It returns the blastdb absolute fpath'
+    if os.path.isabs(blastdb_or_path):
+        return blastdb_or_path
+    else:
+        paths = [blastdb_or_path]
+        if 'BLASTDB' in os.environ:
+            paths.append(os.path.join(os.environ['BLASTDB'], blastdb_or_path))
+        for path in paths:
+            if (os.path.exists(path) or _blastdb_exists(path, dbtype)):
+                return os.path.abspath(path)
+    return OSError('blastdb not found')
 
-    If the blast database does not exists it will create a new one.
+
+def _blastdb_exists(dbpath, dbtype):
+    'It checks if a a blast db exists giving its path'
+    assert dbtype in (NUCL, PROT)
+    ext = '.nin' if dbtype == NUCL else '.pin'
+
+    return os.path.exists(dbpath + ext)
+
+
+def get_or_create_blastdb(blastdb_or_path, dbtype, directory=None):
+    '''it returns a blast database.
+
+    If it does not exists it creates and if you give it a directory it will
+    create it in that directory if it does not exist yet
     '''
-    assert dbtype in ('nucl', 'prot')
+    seq_fpath = _get_abs_blastdb_path(blastdb_or_path, dbtype)
+    if directory:
+        dbname = os.path.basename(seq_fpath)
+        dbpath = os.path.join(directory, dbname)
+    else:
+        dbpath = seq_fpath
 
-    if directory is None:
-        directory = tempfile.gettempdir()
-
-    db_name = os.path.splitext(os.path.basename(seq_fpath))[0]
-    db_path = os.path.join(directory, db_name)
-    if os.path.exists(db_path):
-        return db_path
-
-    seqio([open(seq_fpath)], [open(db_path, 'w')], out_format='fasta',
-          copy_if_same_format=False)
-
-    _makeblastdb_plus(db_path, dbtype)
-
-    return db_path
+    if not _blastdb_exists(dbpath, dbtype):
+        if not os.path.exists(seq_fpath):
+            msg = 'An input sequence is required to create a blastdb'
+            raise RuntimeError(msg)
+        if seq_fpath != dbpath:
+            seqio([open(seq_fpath)], [open(dbpath, 'w')], out_format='fasta',
+                  copy_if_same_format=False)
+        _makeblastdb_plus(dbpath, dbtype)
+    return dbpath
 
 
 def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
@@ -90,11 +117,11 @@ def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
     check_process_finishes(process, binary=cmd[0])
 
 
-def _do_blast_2(db_fhand, queries, program, blast_format=None, params=None):
+def _do_blast_2(db_fpath, queries, program, blast_format=None, params=None):
     '''It returns an alignment result with the blast.
 
     It is an alternative interface to the one based on fpaths.
-    db_fhand should be a plain sequence file.
+    db_fpath should be a plain sequence file.
     queries should be a SeqRecord list.
     If an alternative blast output format is given it should be tabular, so
     blast_format is a list of fields.
@@ -103,12 +130,12 @@ def _do_blast_2(db_fhand, queries, program, blast_format=None, params=None):
     query_fhand = write_seqrecords(queries, file_format='fasta')
     query_fhand.flush()
 
-    blastdb = get_blast_db(db_fhand.name, dbtype='nucl')
+    blastdb = get_or_create_blastdb(db_fpath, dbtype=NUCL)
 
     if blast_format is None:
         blast_format = ['query', 'subject', 'query_length', 'subject_length',
                         'query_start', 'query_end', 'subject_start',
-                        'subject_end', 'expect', 'identity']
+                        'subject_end', 'expect', 'identity', ]
     fmt = generate_tabblast_format(blast_format)
     if params is None:
         params = {}
@@ -117,14 +144,19 @@ def _do_blast_2(db_fhand, queries, program, blast_format=None, params=None):
     blast_fhand = tempfile.NamedTemporaryFile(suffix='.blast')
     do_blast(query_fhand.name, blastdb, program, blast_fhand.name, params)
 
-    return TabularBlastParser(blast_fhand, blast_format)
+    blasts = TabularBlastParser(blast_fhand, blast_format)
+
+    return blasts, blast_fhand
 
 
 class BlastMatcher(object):
-    'It matches the given SeqRecords against the reads in the file using Blast'
-    def __init__(self, reads_fhand, seqrecords, program, params=None,
+    '''It matches the given SeqRecords against the reads in the file.
+
+    This class uses Blast to do the matching and it is optimized for having
+    few SeqRecords to match against a medium sized sequence file.'''
+    def __init__(self, seqs_fpath, seqrecords, program, params=None,
                  filters=None, elongate_for_global=False):
-        'It inits the class.'
+        '''It inits the class.'''
         self._subjects = seqrecords
         self.program = program
         if params is None:
@@ -134,15 +166,21 @@ class BlastMatcher(object):
             filters = []
         self.filters = filters
         self.elongate_for_global = elongate_for_global
-        self._match_parts = self._look_for_blast_matches(reads_fhand,
+        self._match_parts = self._look_for_blast_matches(seqs_fpath,
                                                          seqrecords)
 
-    def _look_for_blast_matches(self, seq_fhand, oligos):
+    def _look_for_blast_matches(self, seq_fpath, oligos):
         'It looks for the oligos in the given sequence files'
         # we need to keep the blast_fhands, because they're temp files and
         # otherwise they might be removed
-        blasts = _do_blast_2(seq_fhand, oligos, params=self.params,
-                             program=self.program)
+        temp_dir = TemporaryDir()
+        dbpath = os.path.join(temp_dir.name, os.path.basename(seq_fpath))
+        seqio([open(seq_fpath)], [open(dbpath, 'w')], out_format='fasta',
+              copy_if_same_format=False)
+
+        blasts, blast_fhand = _do_blast_2(dbpath, oligos,
+                                          params=self.params,
+                                          program=self.program)
         if self.filters is not None:
             blasts = filter_alignments(blasts, config=self.filters)
 
@@ -168,20 +206,83 @@ class BlastMatcher(object):
                         indexed_match_parts[read['name']].extend(match_parts)
                     except KeyError:
                         indexed_match_parts[read['name']] = match_parts
+
+        temp_dir.close()
+        blast_fhand.close()
         return indexed_match_parts
 
     def get_matched_segments_for_read(self, read_name):
         'It returns the matched segments for any oligo'
-        ignore_elongation_shorter = 3
+        ignore_elongation_shorter = DEFAULT_IGNORE_ELONGATION_SHORTER
 
         try:
             match_parts = self._match_parts[read_name]
-            if read_name == 'seq5':
-                pass
         except KeyError:
             # There was no match in the blast
             return None
 
+        # Any of the match_parts has been elongated?
+        elongated_match = False
+        for m_p in match_parts:
+            if ELONGATED in m_p and m_p[ELONGATED] > ignore_elongation_shorter:
+                elongated_match = True
+        segments = covered_segments_from_match_parts(match_parts,
+                                                     in_query=False)
+        return segments, elongated_match
+
+
+class BlastMatcher2(object):
+    '''It matches the given SeqRecords against a blast database.
+    It needs iterable with seqrecords and a blast dabatase
+    '''
+
+    def __init__(self, seqrecords, blastdb, program, params=None,
+                 filters=None, elongate_for_global=False):
+        self.program = program
+        if params is None:
+            params = {}
+        self.params = params
+        if filters is None:
+            filters = []
+        self.filters = filters
+        self.elongate_for_global = elongate_for_global
+        self._match_parts = self._look_for_blast_matches(seqrecords, blastdb)
+
+    def _look_for_blast_matches(self, seqrecords, blastdb):
+        'it makes the blast and filters the results'
+        blasts, blast_fhand = _do_blast_2(blastdb, seqrecords, self.program,
+                                          params=self.params)
+        #print open(blast_fhand.name).read()
+        if self.filters is not None:
+            blasts = filter_alignments(blasts, config=self.filters)
+
+        indexed_match_parts = {}
+        for blast in blasts:
+            query = blast['query']
+            for match in blast['matches']:
+                subject = match['subject']
+                if self.elongate_for_global:
+                    elongate_match_parts_till_global(match['match_parts'],
+                                              query_length=query['length'],
+                                              subject_length=subject['length'],
+                                              align_completely=SUBJECT)
+                match_parts = match['match_parts']
+                try:
+                    indexed_match_parts[query['name']].extend(match_parts)
+                except KeyError:
+                    indexed_match_parts[query['name']] = match_parts
+
+        blast_fhand.close()
+        return indexed_match_parts
+
+    def get_matched_segments(self, seqrecord_name):
+        'it return the matched segments for the given seqrecord'
+        ignore_elongation_shorter = DEFAULT_IGNORE_ELONGATION_SHORTER
+        try:
+            match_parts = self._match_parts[seqrecord_name]
+        except KeyError:
+            # There was no match in the blast
+            return None
         # Any of the match_parts has been elongated?
         elongated_match = False
         for m_p in match_parts:

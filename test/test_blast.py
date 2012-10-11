@@ -17,10 +17,12 @@ import unittest
 import os.path
 from tempfile import NamedTemporaryFile
 
-from crumbs.blast import get_blast_db, do_blast, BlastMatcher
+from crumbs.blast import (do_blast, BlastMatcher, get_or_create_blastdb,
+                          _blastdb_exists)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import LINKERS, TITANIUM_LINKER
 from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.tags import NUCL
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -35,7 +37,7 @@ class BlastTest(unittest.TestCase):
         seq_fpath = os.path.join(TEST_DATA_DIR, db_name)
         db_dir = TemporaryDir(prefix='blast_dbs_')
         try:
-            db_path1 = get_blast_db(seq_fpath, directory=db_dir.name,
+            db_path1 = get_or_create_blastdb(seq_fpath, directory=db_dir.name,
                                     dbtype='nucl')
             db_path = os.path.join(db_dir.name, db_name)
             assert 'CATAGGGTCACCAATGGC' in open(db_path1).read(100)
@@ -44,9 +46,6 @@ class BlastTest(unittest.TestCase):
             index_fpath = os.path.join(db_dir.name, db_name + '.nsq')
             assert os.path.exists(index_fpath)
 
-            db_path2 = get_blast_db(seq_fpath, directory=db_dir.name,
-                                    dbtype='nucl')
-            assert db_path1 == db_path2
         finally:
             db_dir.close()
 
@@ -56,8 +55,8 @@ class BlastTest(unittest.TestCase):
         seq_fpath = os.path.join(TEST_DATA_DIR, db_name)
         db_dir = TemporaryDir(prefix='blast_dbs_')
         try:
-            db_fpath = get_blast_db(seq_fpath, directory=db_dir.name,
-                                    dbtype='nucl')
+            db_fpath = get_or_create_blastdb(seq_fpath, directory=db_dir.name,
+                                              dbtype='nucl')
             query_fhand = NamedTemporaryFile()
             query_fhand.write(open(seq_fpath).read(200))
             query_fhand.flush()
@@ -67,6 +66,27 @@ class BlastTest(unittest.TestCase):
             assert '</BlastOutput>' in open(out_fhand.name).read()
         finally:
             db_dir.close()
+
+    @staticmethod
+    def test_get_or_create_blastdb():
+        'It test the blastdb kind'
+        blastdb = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
+
+        directory = TemporaryDir()
+        assert not _blastdb_exists(blastdb, NUCL)
+        get_or_create_blastdb(blastdb, NUCL, directory.name)
+        new_blast_path = os.path.join(directory.name,
+                                      os.path.basename(blastdb))
+        assert _blastdb_exists(new_blast_path, NUCL)
+        get_or_create_blastdb(blastdb, NUCL, directory.name)
+        assert _blastdb_exists(new_blast_path, NUCL)
+        directory.close()
+
+        # already exists
+        blastdb = os.path.join(TEST_DATA_DIR, 'blastdbs', 'arabidopsis_genes')
+        assert _blastdb_exists(blastdb, NUCL)
+        get_or_create_blastdb(blastdb, NUCL)
+        assert _blastdb_exists(blastdb, NUCL)
 
 
 def create_a_matepair_file():
@@ -89,11 +109,11 @@ class BlastMater(unittest.TestCase):
         mate_fhand = create_a_matepair_file()
 
         expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
-        matcher = BlastMatcher(mate_fhand, LINKERS, program='blastn',
+        matcher = BlastMatcher(mate_fhand.name, LINKERS, program='blastn',
                                elongate_for_global=True)
         linker_region = matcher.get_matched_segments_for_read('seq1')[0]
         assert [expected_region] == linker_region
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    import sys;sys.argv = ['', 'BlastTest.test_blastdb']
     unittest.main()

@@ -53,7 +53,7 @@ class MatePairSplitter(object):
                    {'kind': 'score_threshold', 'score_key': 'identity',
                    'min_score': min_identity}]
 
-        matcher = BlastMatcher(open(seq_fhand.name), self.linkers,
+        matcher = BlastMatcher(seq_fhand.name, self.linkers,
                                program='blastn', filters=filters,
                                params={'task': 'blastn-short'},
                                elongate_for_global=True)

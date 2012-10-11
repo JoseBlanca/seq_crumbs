@@ -18,7 +18,7 @@ from __future__ import division
 from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.exceptions import WrongFormatError
-
+from crumbs.blast import BlastMatcher2
 # pylint: disable=R0903
 
 
@@ -154,3 +154,46 @@ class FilterByQuality(object):
                 processed_seqs.append(seqrecord)
                 stats[YIELDED_SEQS] += 1
         return processed_seqs
+
+
+class FilterBlastMatch(object):
+    'It filters a seq if there is a match against a blastdb'
+    def __init__(self, database, program, filters, reverse=False):
+        '''The initiator
+            database: path to a file with seqs or a blast database
+            filter_params:
+                expect_threshold
+                similarty treshlod
+                min_length_percentaje
+        '''
+        self._blast_db = database
+        self._blast_program = program
+        self._filters = filters
+        self._reverse = reverse
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It filters the seq by blast match'
+        filtered_seqrecords = []
+        stats = self._stats
+
+        matcher = BlastMatcher2(seqrecords, self._blast_db,
+                               program=self._blast_program,
+                               filters=self._filters,
+                               elongate_for_global=True)
+        for seqrec in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            segments = matcher.get_matched_segments(seqrec.id)
+            if ((not self._reverse and segments is None) or
+                (self._reverse and segments)):
+                filtered_seqrecords.append(seqrec)
+                stats[YIELDED_SEQS] += 1
+
+        return filtered_seqrecords

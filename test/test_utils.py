@@ -23,6 +23,8 @@ from crumbs.utils.file_utils import (TemporaryDir, rel_symlink,
 from crumbs.utils.bin_utils import check_process_finishes, popen
 
 from crumbs.exceptions import ExternalBinaryError, MissingBinaryError
+from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.seq_utils import guess_seq_type
 
 
 # pylint: disable=R0201
@@ -98,6 +100,14 @@ class UtilsTest(unittest.TestCase):
         fhand2 = open(fhand.name)
         fhand3 = wrap_in_buffered_reader(fhand2, force_wrap=True)
         assert fhand3.peek(10) == 'hola'
+
+    @staticmethod
+    def test_guess_seq_type():
+        'It checks that we can guess the type of the seqs in a file'
+        fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
+        guess_seq_type(open(fpath))
+
+
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

@@ -13,32 +13,23 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-STDIN = 'stdin'
-STDOUT = 'stdout'
-INFILES = 'infiles'
-OUTFILE = 'output'
-# Input format tag when we want to guess
-GUESS_FORMAT = 'guess'
-PROCESSED_SEQS = 'processed_seqs'
-PROCESSED_PACKETS = 'processed_packets'
-YIELDED_SEQS = 'yielded_seqs'
-UPPERCASE = 'upper'
-LOWERCASE = 'lower'
-SWAPCASE = 'swap'
-FWD = 'fwd'
-REV = 'rev'
-TRIMMING_RECOMMENDATIONS = 'trimming_recommendations'
-VECTOR = 'vector'
-QUALITY = 'quality'
-OTHER = 'other'
-TRIMMING_KINDS = [VECTOR, QUALITY, OTHER]
-ELONGATED = 'elongated'
-SUBJECT = 'subject'
-QUERY = 'query'
-START = 0
-END = 1
-BGZF = 'bgzf'
-GZIP = 'gzip'
+import os
+import unittest
+from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.seqio import guess_seq_type
 
-NUCL = 'nucl'
-PROT = 'prot'
+
+class SeqioTest(unittest.TestCase):
+    'It test seqIO functions'
+
+    @staticmethod
+    def test_guess_seq_type():
+        fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
+        assert guess_seq_type(open(fpath)) == 'nucl'
+
+        fpath = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
+        assert guess_seq_type(open(fpath)) == 'nucl'
+
+if __name__ == '__main__':
+    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    unittest.main()

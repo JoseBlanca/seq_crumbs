@@ -14,7 +14,6 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import signal
 import cStringIO
 from array import array
 import itertools

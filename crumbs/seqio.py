@@ -17,16 +17,18 @@
 from itertools import chain
 from shutil import copyfileobj
 from tempfile import NamedTemporaryFile
-
+import cStringIO
 
 from Bio import SeqIO
 from Bio.SeqIO import FastaIO
 from Bio.SeqIO import QualityIO
+from Bio.Alphabet import IUPAC
 
-from crumbs.exceptions import MalformedFile, error_quality_disagree
+from crumbs.exceptions import MalformedFile, error_quality_disagree, \
+    UnknownFormatError
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
-from crumbs.utils.seq_utils import guess_format
+from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
 from crumbs.utils.tags import GUESS_FORMAT
 from crumbs.settings import PACKET_SIZE
 
@@ -188,3 +190,34 @@ def count_seqs_in_files(fhands, file_format=GUESS_FORMAT):
         else:
             count += length(read_seqrecords([fhand]))
     return count
+
+
+def guess_seq_type(fhand):
+    '''it guesses the file's seq type'''
+
+    rna = set(IUPAC.ambiguous_rna.letters)
+    dna = set(IUPAC.ambiguous_dna.letters)
+    rna_dna = rna.union(dna)
+
+    protein = set(IUPAC.extended_protein.letters)
+    only_prot = list(protein.difference(rna_dna))
+
+    chunk_size = 1024
+    chunk = peek_chunk_from_file(fhand, chunk_size)
+    if not chunk:
+        raise UnknownFormatError('The file is empty')
+    fhand_ = cStringIO.StringIO(chunk)
+    total_letters = 0
+    nucleotides = 0
+    for seqrec in read_seqrecords([fhand_]):
+        for letter in str(seqrec.seq):
+            total_letters += 1
+            if letter in ('gcatnuGCATNU'):
+                nucleotides += 1
+            if letter in only_prot:
+                return 'prot'
+    nucl_freq = nucleotides / total_letters
+    if nucl_freq > 0.8:
+        return 'nucl'
+
+    raise RuntimeError('unable to guess the seq type')

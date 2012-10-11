@@ -31,6 +31,7 @@ from crumbs.utils.seq_utils import (uppercase_length, guess_format, ChangeCase,
 from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.seqio import guess_seq_type
 
 
 class GuessFormatTest(unittest.TestCase):
