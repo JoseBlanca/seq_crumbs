@@ -24,7 +24,7 @@ from crumbs.utils.bin_utils import check_process_finishes, popen
 
 from crumbs.exceptions import ExternalBinaryError, MissingBinaryError
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.seq_utils import guess_seq_type
+from crumbs.seqio import guess_seq_type
 
 
 # pylint: disable=R0201
