@@ -115,5 +115,5 @@ class BlastMater(unittest.TestCase):
         assert [expected_region] == linker_region
 
 if __name__ == '__main__':
-    import sys;sys.argv = ['', 'BlastTest.test_blastdb']
+    #import sys;sys.argv = ['', 'BlastTest.test_blastdb']
     unittest.main()
