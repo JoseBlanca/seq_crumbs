@@ -9,6 +9,6 @@ seq_crumbs 0.0.1
 Released on 04-10-12
 
   * :download:`Source distribution <downloads/seq_crumbs-0.1.tar.gz>`.
-  * :download:`x64-linux Binary distribution <downloads/crumbs-0.1-x64-linux.tar.gz>`.
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1-x64-linux.tar.gz>`.
 
 .. include:: links.txt
