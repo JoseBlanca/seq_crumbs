@@ -45,12 +45,12 @@ def _parse_args(parser):
     if parsed_args.pyinstaller_dir is None:
         parser.error('pyinstaller dir is mandatory')
     else:
-        pyinstaller_dir = parsed_args.pyinstaller_dir
+        pyinstaller_dir = os.path.abspath(parsed_args.pyinstaller_dir)
 
     if parsed_args.app_dir is None:
         parser.error('app dir is mandatory')
     else:
-        app_dir = parsed_args.app_dir
+        app_dir = os.path.abspath(parsed_args.app_dir)
 
     return pyinstaller_dir, app_dir
 
@@ -179,7 +179,7 @@ def main():
     #make targz
     tar_fpath = bin_dist_dir + '.tar.gz'
     tar = tarfile.open(tar_fpath, 'w:gz')
-    tar.add(bin_dist_dir, '')
+    tar.add(bin_dist_dir, os.path.basename(bin_dist_dir))
     tar.close()
     shutil.rmtree(bin_dist_dir)
 
