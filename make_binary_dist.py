@@ -19,6 +19,7 @@ import os
 import platform
 import shutil
 import subprocess
+import tarfile
 
 from os.path import join
 
@@ -87,7 +88,7 @@ def get_bin_dist_directory(app_dir):
     arch = platform.architecture()[0]
     arch = 'i686' if arch == '32bits' else 'x64'
 
-    bin_dist_name = 'crumbs-{0:s}-{1:s}-linux'.format(version, arch)
+    bin_dist_name = 'seq_crumbs-{0:s}-{1:s}-linux'.format(version, arch)
     return join(app_dir, 'dist', bin_dist_name)
 
 
@@ -150,17 +151,20 @@ def main():
 
     # make directory where all bynaries will go
     bin_dist_dir = get_bin_dist_directory(app_dir)
+    if os.path.exists(bin_dist_dir):
+        shutil.rmtree(bin_dist_dir)
     os.makedirs(bin_dist_dir)
     try:
-         # copy the external executables changing the name
+        # copy the external executables changing the name
         copy_and_rename_ext_bin(app_dir, bin_dist_dir)
 
-        # modify the conf to compile the binaries with the get_binary() modified
+        # modify the conf to compile the binaries with the get_binary()
+        # modified
         settings_fpath = join(app_dir, 'crumbs', 'settings.py')
         settings_content = open(settings_fpath).readlines()
         modified_settings = modify_settings_content(settings_content)
         write_lines(modified_settings, settings_fpath)
-    
+
         # make binary for each executable
         for command in os.listdir(join(app_dir, 'bin')):
             script_path = join(app_dir, 'bin', command)
@@ -171,6 +175,13 @@ def main():
         # return the settings file to its origin
         write_lines(settings_content, settings_fpath)
 
+    write_lines(settings_content, settings_fpath)
+    #make targz
+    tar_fpath = bin_dist_dir + '.tar.gz'
+    tar = tarfile.open(tar_fpath, 'w:gz')
+    tar.add(bin_dist_dir, '')
+    tar.close()
+    shutil.rmtree(bin_dist_dir)
 
 if __name__ == '__main__':
     main()
