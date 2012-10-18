@@ -2,6 +2,7 @@
 .. _setuptools: http://pypi.python.org/pypi/setuptools
 .. _SFF: http://www.ncbi.nlm.nih.gov/Traces/trace.cgi?cmd=show&f=formats&m=doc&s=format#sff
 .. _BGZF: http://samtools.sourceforge.net/SAM1.pdf
+.. _gzip: http://www.gzip.org/
 .. _SeqIO: http://biopython.org/wiki/SeqIO
 .. _free software: http://en.wikipedia.org/wiki/Free_software
 .. _GPL: http://www.gnu.org/copyleft/gpl.html

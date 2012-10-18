@@ -1,33 +1,30 @@
+
 seq_crumbs
 ==========
 
-Seq Crumbs aims to be a collection of small sequence processing utilities.
+seq_crumbs aims to be a collection of small sequence processing utilities.
 
-Seq Crumbs is modeled after the Unix command line text processing utilities so every utility tries to perform a specific task and most of them take a sequence file as input and create a new processed sequence file as output.
-This design encorages the assembly of the Seq Crumbs utilities with Unix pipes.
+seq_crumbs is modeled after the Unix command line text processing utilities so every utility tries to perform a specific task and most of them take a sequence file as input and create a new processed sequence file as output.
+This design encourages the assembly of the seq_crumbs utilities with Unix pipes to create complex pipelines.
+There are already other similar software that uses this approach like `fastx <http://hannonlab.cshl.edu/fastx_toolkit/>`_ and `biopieces <http://code.google.com/p/biopieces/>`_.
 
--------
-
- 
-All Seq Crumbs try to share a consistent interface.
-Most Seq Crumbs take can their input from the standard input to be able to work with Unix Pipes.
-Alternatively several input sequence files can be provided as a list of arguments.
-By default they throw their output to the standard output, although this behaviour can be changed with the *-o* parameter (or *--outfile*).
-
-Seq Crumbs supports compressed gzip and BGZF_ files.
-When used as input it autodetects the compressed files.
-It can also generate compressed outputs.
-
-The sequence formats accepted by Seq Crumbs are the ones supported by Biopython's SeqIO_ module.
-As output only Sanger and Illumina fastq and fasta files are supported.
-
-Seq Crumbs can take advantage of the multiprocessor computers by splitting the computational load into several processes.
-
-------
+seq_crumbs is a young software, that we use in our analysis and that we share with the hope that could be useful to you.
+We have tried to create automated tests for every feature, but we are sure that some hidden bugs remain, so if you use it and you come across some problem we would appreciate your report.
+You can also track or participate in the development of seq_crumbs in `github <https://github.com/JoseBlanca/seq_crumbs>`_.
 
  
-Seq Crumbs is `free software`_. Licensed mainly under the General Public License (GPL_).
-For more details on the licensing take a look at the LICENSE.txt file.
+All seq_crumbs try to share a consistent interface and implementation:
+  * All take a sequence file as the input and most generate a processed sequence file as output.
+  * The input can be either a file or the standard input and the output can also be a file or the standard output.
+  * They can autodetect and work with files compressed with either gzip or BGZF_
+  * The can work with any format supported by biopython's SeqIO_ and they try to autodetect the most common formats: fasta, Sanger and Illumina fastq.
+  * Most seq_crumbs can split the work load in multicore machines into several processes
+
+ 
+seq_crumbs is powered by Biopython_ library.
+
+seq_crumbs is `free software`_. Licensed mainly under the General Public License (GPL_).
+For more details on the licensing take a look at the LICENSE.txt file included in the seq_crumbs distribution.
 
 .. toctree::
    :maxdepth: 2
