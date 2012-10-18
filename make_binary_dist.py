@@ -87,7 +87,7 @@ def get_bin_dist_directory(app_dir):
     # get version
     version = get_version(app_dir)
     arch = platform.architecture()[0]
-    arch = 'i686' if arch == '32bits' else 'x64'
+    arch = 'i686' if arch == '32bit' else 'x64'
 
     bin_dist_name = 'seq_crumbs-{0:s}-{1:s}-linux'.format(version, arch)
     return join(app_dir, 'dist', bin_dist_name)
