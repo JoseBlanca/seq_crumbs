@@ -1,7 +1,7 @@
 Available Crumbs
 ----------------
 
-sff_extract_
+sff_extract
   It extracts the reads from a SFF_ file used by 454 and Ion Torrent.
 
 split_matepairs
@@ -61,5 +61,4 @@ deinterleave_pairs
 calculate_stats
     It generates basic statistics for the given sequence files
 
-.. _sff_extract: man/sff_extract.manual.html
 .. include:: links.txt
