@@ -20,6 +20,7 @@ import platform
 import shutil
 import subprocess
 import tarfile
+import sys
 
 from os.path import join
 
@@ -129,10 +130,10 @@ def make_binary(script_path, pyinstaller_dir, bin_dist_dir):
     initial_wd = os.getcwd()
     script_name = os.path.basename(script_path)
     os.chdir(pyinstaller_dir)
-    subprocess.check_call(['python', 'pyinstaller.py', '--onefile',
+    subprocess.check_call([sys.executable, 'pyinstaller.py', '--onefile',
                            script_path])
 
-    subprocess.check_call(['python', 'pyinstaller.py', join(script_name,
+    subprocess.check_call([sys.executable, 'pyinstaller.py', join(script_name,
                                                       script_name + '.spec')])
 
     shutil.copy(join(script_name, 'dist', script_name),
