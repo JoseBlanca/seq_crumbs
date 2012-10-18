@@ -22,7 +22,8 @@ from tempfile import NamedTemporaryFile
 import operator
 
 from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
-                               calculate_sequence_stats, NuclFreqsPlot)
+                               calculate_sequence_stats, NuclFreqsPlot,
+    KmerCounter)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
@@ -190,6 +191,17 @@ class IntsBoxplotTest(unittest.TestCase):
         assert '2:10.0,15.0,25.0,35.0,40.0 <----------[=========' in plot
 
 
+class KmerCounterTest(unittest.TestCase):
+    'It tests the kmer counter test'
+    @staticmethod
+    def test_kmer_counter():
+        kmers = KmerCounter(3)
+        kmers.count_seq('ATCATGGCTACGACT')
+        assert list(kmers.values) == [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        kmers.count_seq('ATCATGGCTACGACT')
+        assert list(kmers.values) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+
+
 class CalculateStatsTest(unittest.TestCase):
     'It tests the calculate stats functions'
 
@@ -209,12 +221,19 @@ class CalculateStatsTest(unittest.TestCase):
             in_fhands.append(fhand)
         seqs = read_seqrecords(in_fhands, file_format='fastq')
         (lengths_srt, qual_str, freq_str,
-                                 qual_boxplot) = calculate_sequence_stats(seqs)
+                          qual_boxplot, kmers) = calculate_sequence_stats(seqs)
         assert 'maximum: 4' in lengths_srt
         assert 'Q30: 100.0' in qual_str
         assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in qual_boxplot
         assert '[30 , 31[ (96): **********' in qual_str
         assert '0 (A: 1.00, C: 0.00, G: 0.00, T: 0.00, N: 0.00) |' in  freq_str
+        assert kmers == ''
+
+        infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
+        seqs = read_seqrecords(infhands, file_format='fasta')
+        kmers = calculate_sequence_stats(seqs)[-1]
+        print kmers
+        assert 'Kmer distribution' in kmers
 
     def test_stats_bin(self):
         'It tests the statistics binary'

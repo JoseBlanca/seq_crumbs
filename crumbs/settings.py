@@ -46,11 +46,11 @@ LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
 
 ## Use this to modify how get_binary path works
 # if need to modify the binary's name
-USE_EXTERNAL_BIN_PREFIX = False
+USE_EXTERNAL_BIN_PREFIX = True
 # prefix to add to the binary name
 EXTERNAL_BIN_PREFIX = 'crumbs_'
 # mark True if need the path or assumes that is on the path
-ADD_PATH_TO_EXT_BIN = True
+ADD_PATH_TO_EXT_BIN = False
 
 # how many reads can be hold in memory by default
 DEFAULT_SEQS_IN_MEM_LIMIT = 500000
@@ -69,3 +69,6 @@ DEF_PLOT_FREQS_UP_TO_BASE = 40
 
 #when 2 match parts are in this distance they are merges as just one matchpart
 DEFAULT_IGNORE_ELONGATION_SHORTER = 3
+
+# default kmer size to do the kmer stats
+DEFAULT_KMER_SIZE = 20

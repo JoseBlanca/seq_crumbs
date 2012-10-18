@@ -19,7 +19,10 @@ import operator
 import re
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
-                             MAX_WIDTH_ASCII_PLOT, DEF_PLOT_FREQS_UP_TO_BASE)
+                             MAX_WIDTH_ASCII_PLOT, DEF_PLOT_FREQS_UP_TO_BASE,
+                             DEFAULT_KMER_SIZE)
+from crumbs.iterutils import rolling_window
+from crumbs.utils import approx_equal
 
 
 class IntCounter(Counter):
@@ -497,11 +500,11 @@ class NuclFreqsPlot(object):
         plot = ''
         for loc in range(loc_min, loc_max + 1):
             header, freqs = _header_for_nucl(loc)
-            assert sum(freqs) == 1
+            assert approx_equal(sum(freqs), 1)
             line = header
 
-            ############################
-            remainder_freqs = [float(re.sub('\d\.', '0.', str(f))) for f in freqs]
+            remainder_freqs = [float(re.sub('\d\.', '0.', str(f)))
+                                                                for f in freqs]
             round_freqs = [int(round(f / val_per_pixel)) for f in freqs]
 
             pixels_remaining = plot_width - sum(round_freqs)
@@ -512,11 +515,32 @@ class NuclFreqsPlot(object):
             elif pixels_remaining < 0:
                 add_to_freq = remainder_freqs.index(min(remainder_freqs))
                 round_freqs[add_to_freq] -= (plot_width - sum(round_freqs))
-            assert sum(round_freqs) == plot_width
+            assert approx_equal(sum(round_freqs), plot_width)
             line += ''.join([n * f for f, n in zip(round_freqs, plot_nucls)])
             line += '\n'
             plot += line
         return plot
+
+
+class KmerCounter(object):
+    'It counts kmers in the given sequences'
+    def __init__(self, kmer_size=DEFAULT_KMER_SIZE):
+        'initiator'
+        self._kmer_size = kmer_size
+        self._counter = Counter()
+
+    def count_seq(self, serie):
+        'It adds the kmers of the given iterable/serie'
+        for kmer in rolling_window(serie, self._kmer_size):
+            self._counter[kmer] += 1
+
+    @property
+    def values(self):
+        return iter(self._counter.viewvalues())
+
+    def most_common(self, num_items):
+        'return most common kmers with their counts'
+        return self._counter.most_common(num_items)
 
 
 def calculate_sequence_stats(seqs):
@@ -525,6 +549,7 @@ def calculate_sequence_stats(seqs):
     lengths = IntCounter()
     quals_per_pos = IntBoxplot()
     nucl_freq = NuclFreqsPlot()
+    kmer_counter = KmerCounter()
     for seq in seqs:
         lengths[len(seq)] += 1
         if 'phred_quality' in seq.letter_annotations:
@@ -533,7 +558,7 @@ def calculate_sequence_stats(seqs):
                 quals_per_pos.append(index + 1, qual)
         for index, nucl in enumerate(str(seq.seq)):
             nucl_freq.append(index, nucl)
-
+        kmer_counter.count_seq(str(seq.seq))
     lengths.update_labels({'sum': 'tot. residues', 'items': 'num. seqs.'})
 
     # length distribution
@@ -576,4 +601,18 @@ def calculate_sequence_stats(seqs):
     freq_str += nucl_freq.ascii_plot
     freq_str += '\n'
 
-    return lengths_srt, qual_str, freq_str, qual_boxplot
+    #kmer_distriubution
+    kmers = IntCounter(kmer_counter.values)
+    if kmers:
+        kmers.update_labels({'sum': None, 'items': 'num. kmers'})
+        kmer_str = 'Kmer distribution\n'
+        kmer_str += '-----------------\n'
+        kmer_str += str(kmers)
+        kmer_str += '\n'
+        kmer_str += 'Most common kmers:\n'
+        for kmer, number in kmer_counter.most_common(20):
+            kmer_str += '\t{}: {}\n'.format(kmer, number)
+    else:
+        kmer_str = ''
+
+    return lengths_srt, qual_str, freq_str, qual_boxplot, kmer_str

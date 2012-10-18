@@ -77,9 +77,9 @@ def run():
     seqs = read_seqrecords(in_fhands, file_format=in_format)
 
     (lengths_srt, qual_str, freq_str,
-                                 qual_boxplot) = calculate_sequence_stats(seqs)
+                         qual_boxplot, kmers) = calculate_sequence_stats(seqs)
 
-    out_fhand.write(lengths_srt + qual_str + freq_str + qual_boxplot)
+    out_fhand.write(lengths_srt + qual_str + freq_str + qual_boxplot + kmers)
 
 if __name__ == '__main__':
     sys.exit(main(run))
