@@ -31,7 +31,7 @@ except ImportError:
     from distutils.command import install
     _SETUPTOOLS = False
 
-print "using_setuptools", _SETUPTOOLS
+#print "using_setuptools", _SETUPTOOLS
 
 # The next three lines are modified from Biopython
 __version__ = "Undefined"
@@ -43,29 +43,27 @@ for line in open('crumbs/__init__.py'):
 
 def check_dependencies():
     'If a dependency is not met it stops the installation'
-    if not _SETUPTOOLS:
+    if _SETUPTOOLS:
         return  # No need to check anything because it will get installed
-    dependencies = []
+    msg = None
     try:
         import Bio
     except ImportError:
-        dependencies.append('biopython')
-    try:
-        import argparse
-    except ImportError:
-        dependencies.append('argparse')
+        msg = 'You have to install Bioypython >= 1.60\n'
 
-    if not dependencies:
+    if not msg:
+        try:
+            from Bio.bgzf import BgzfWriter
+        except ImportError:
+            msg = 'You have an old version of Biopython installed, '
+            msg += 'please update to >= 1.60\n'
+
+    if not msg:
         return
-
-    if len(dependencies) > 1:
-        msg = 'These python packages are required dependencies of seq_crumbs, '
-        msg += 'please install them: '
-    else:
-        msg = 'seq_crumbs depends on this package, please install it: '
-    msg += ' '.join(dependencies)
-    print msg
+    sys.stderr.write(msg)
     sys.exit(-1)
+
+check_dependencies()
 
 
 def opj(*args):
@@ -148,7 +146,7 @@ class SmartInstall(install.install):
                 rst_fpath = os.path.join('doc', fpath)
                 man_fpath = os.path.join(man_dir,
                                          os.path.splitext(fpath)[0] + '.1')
-                print 'generating manpage: ', man_fpath
+                #print 'generating manpage: ', man_fpath
                 subprocess.call(['rst2man.py', rst_fpath, man_fpath])
 
         return result
@@ -181,11 +179,6 @@ setup_args = {
               }
 
 if _SETUPTOOLS:
-    requires = ['biopython']
-    try:
-        import argparse
-    except ImportError:
-        requires.append(argparse)
-    setup_args['install_requires'] = requires
+    setup_args['install_requires'] = ['biopython >= 1.60']
 
 setup(**setup_args)
