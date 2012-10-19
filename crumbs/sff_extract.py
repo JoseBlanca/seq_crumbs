@@ -95,7 +95,7 @@ class SffExtractor(object):
 
     @property
     def clip_advice(self):
-        'It checks how many positions (from the left) have a high max nucl freq.'
+        'It checks how many positions have a high max nucl freq.'
         advices = {}
         for fhand in self.fhands:
             fpath = fhand.name
@@ -118,10 +118,10 @@ class SffExtractor(object):
                 else:
                     break
             if pos_above_threshold:
-                if self.trim:
-                    advice = index + self.min_left_clip, seq_above_threshold
+                if pos_above_threshold <= self.min_left_clip:
+                    advice = None
                 else:
-                    advice = index, seq_above_threshold
+                    advice = seq_above_threshold
             else:
                 advice = None
             advices[fpath] = advice

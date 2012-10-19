@@ -86,24 +86,15 @@ class SffExtractTest(unittest.TestCase):
         seqs = extractor.seqs
         seqs = list(seqs)
         assert len(seqs) == 10
-        assert extractor.clip_advice[sff_fpath][0] == 5
-        assert extractor.clip_advice[sff_fpath][1] == 'A'
+        assert extractor.clip_advice[sff_fpath] == 'A'
 
-        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=4,
-                            trim=False)
+        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=0)
         seqs = extractor.seqs
         seqs = list(seqs)
         assert len(seqs) == 10
-        assert extractor.clip_advice[sff_fpath][0] == 5
+        assert extractor.clip_advice[sff_fpath] == 'A'
 
-        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=4,
-                            trim=True)
-        seqs = extractor.seqs
-        seqs = list(seqs)
-        assert len(seqs) == 10
-        assert extractor.clip_advice[sff_fpath][0] == 5
-
-        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=5,
+        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=1,
                             trim=True)
         seqs = extractor.seqs
         seqs = list(seqs)
@@ -134,11 +125,11 @@ class SffExtractBinTest(unittest.TestCase):
         sff_fpath = os.path.join(TEST_DATA_DIR, '10_454_reads.sff')
         cmd = [sff_bin, '--max_percentage', '70.0', sff_fpath]
         stderr = NamedTemporaryFile()
-        check_output(cmd, stderr=stderr)
+        assert 'Countermeasures' not in check_output(cmd, stderr=stderr)
 
         # min left clip
-        cmd = [sff_bin, '--min_left_clip', '5', sff_fpath]
-        check_output(cmd)
+        cmd = [sff_bin, '--min_left_clip', '1', sff_fpath]
+        assert 'Countermeasures' not in check_output(cmd)
 
         # clip
         cmd = [sff_bin, '--min_left_clip', '5', '--clip', sff_fpath]
@@ -155,5 +146,5 @@ class SffExtractBinTest(unittest.TestCase):
             assert 'A file was not found: no_file' in open(stderr.name).read()
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    #import sys;sys.argv = ['', 'SffExtractBinTest.test_extract_sff']
     unittest.main()
