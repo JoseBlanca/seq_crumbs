@@ -232,7 +232,6 @@ class CalculateStatsTest(unittest.TestCase):
         infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
         seqs = read_seqrecords(infhands, file_format='fasta')
         kmers = calculate_sequence_stats(seqs)[-1]
-        print kmers
         assert 'Kmer distribution' in kmers
 
     def test_stats_bin(self):
