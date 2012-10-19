@@ -48,7 +48,7 @@ def main(funct):
         error_fpath_index = argv.index('--error_log') + 1
         error_fpath = argv[error_fpath_index]
     else:
-        binary = sys.argv[0]
+        binary = os.path.split(sys.argv[0])[-1]
         error_fpath = binary + '.error'
 
     stderr = sys.stderr
