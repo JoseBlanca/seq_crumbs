@@ -46,11 +46,11 @@ LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
 
 ## Use this to modify how get_binary path works
 # if need to modify the binary's name
-USE_EXTERNAL_BIN_PREFIX = True
+USE_EXTERNAL_BIN_PREFIX = False
 # prefix to add to the binary name
 EXTERNAL_BIN_PREFIX = 'crumbs_'
 # mark True if need the path or assumes that is on the path
-ADD_PATH_TO_EXT_BIN = False
+ADD_PATH_TO_EXT_BIN = True
 
 # how many reads can be hold in memory by default
 DEFAULT_SEQS_IN_MEM_LIMIT = 500000
