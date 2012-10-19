@@ -118,6 +118,7 @@ class SffExtractBinTest(unittest.TestCase):
         'It tests the sff_extract binary'
         sff_bin = os.path.join(BIN_DIR, 'sff_extract')
         assert 'usage' in check_output([sff_bin, '-h'])
+        assert 'usage' in check_output([sff_bin])
 
         # clipping warning
         sff_fpath = os.path.join(TEST_DATA_DIR, '10_454_reads.sff')
