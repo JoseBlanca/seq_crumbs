@@ -15,15 +15,16 @@
 
 import unittest
 import os
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
 from crumbs.utils.file_utils import (TemporaryDir, rel_symlink,
                                      wrap_in_buffered_reader)
-from crumbs.utils.bin_utils import check_process_finishes, popen
+from crumbs.utils.bin_utils import check_process_finishes, popen, BIN_DIR
 
 from crumbs.exceptions import ExternalBinaryError, MissingBinaryError
 from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.tags import ERROR_ENVIRON_VARIABLE
 from crumbs.seqio import guess_seq_type
 
 
@@ -108,7 +109,23 @@ class UtilsTest(unittest.TestCase):
         guess_seq_type(open(fpath))
 
 
+class ErrorHandlingTest(unittest.TestCase):
+    'It tests the handling of the unexpected errors'
+    def test_error_handling(self):
+        'We handle the errors'
+        cat_bin = os.path.join(BIN_DIR, 'cat_seqs')
+
+        os.environ[ERROR_ENVIRON_VARIABLE] = 'Fail'
+        stderr = NamedTemporaryFile(suffix='.error')
+        try:
+            check_output([cat_bin, '-h'], stderr=stderr)
+            self.fail('Error expected')
+        except CalledProcessError:
+            pass
+        finally:
+            del os.environ[ERROR_ENVIRON_VARIABLE]
+            stderr.close()
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    #import sys;sys.argv = ['', 'ErrorHandlingTest.test_error_handling']
     unittest.main()

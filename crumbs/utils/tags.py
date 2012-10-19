@@ -42,3 +42,5 @@ GZIP = 'gzip'
 
 NUCL = 'nucl'
 PROT = 'prot'
+
+ERROR_ENVIRON_VARIABLE = 'seq_crumbs_error_debugging'

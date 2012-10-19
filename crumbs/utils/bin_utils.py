@@ -33,7 +33,8 @@ from crumbs.utils.file_utils import (wrap_in_buffered_reader,
 from crumbs.utils.seq_utils import guess_format
 from crumbs.settings import (SUPPORTED_OUTPUT_FORMATS, USE_EXTERNAL_BIN_PREFIX,
                               EXTERNAL_BIN_PREFIX, ADD_PATH_TO_EXT_BIN)
-from crumbs.utils.tags import OUTFILE, GUESS_FORMAT, BGZF, GZIP
+from crumbs.utils.tags import (OUTFILE, GUESS_FORMAT, BGZF, GZIP,
+                               ERROR_ENVIRON_VARIABLE)
 from crumbs import __version__ as version
 
 
@@ -53,6 +54,10 @@ def main(funct):
 
     stderr = sys.stderr
     try:
+        # This code is required to test the error handling
+        fail = os.environ.get(ERROR_ENVIRON_VARIABLE, None)
+        if fail:
+            raise RuntimeError('Generating a test error')
         return(funct())
     except FileNotFoundError, error:
         stderr.write(str(error) + '\n')
@@ -98,14 +103,30 @@ def main(funct):
         return 16
     except Exception as error:
         msg = 'An unexpected error happened.\n'
-        msg += 'The seq crumbs developers would appreciate your feedback\n'
-        msg += 'Please send them the error log: '
-        msg += error_fpath + '\n\n'
+        msg += 'The seq_crumbs developers would appreciate your feedback.\n'
+        try:
+            fail = os.environ.get(ERROR_ENVIRON_VARIABLE, None)
+            if fail:
+                # error handling debugging
+                fhand = sys.stderr
+                error_fpath = None
+            else:
+                fhand = open(error_fpath, 'a')
+        except IOError:
+            # the fpath for the error is not writable
+            fhand = sys.stderr
+            error_fpath = None
+
+        if error_fpath:
+            msg += 'Please send them the error log'
+            msg += ': ' + error_fpath + '\n\n'
         msg += str(error)
         stderr.write(msg)
-        hook = cgitb.Hook(display=0, format='text', logfpath=error_fpath)
-        hook.handle()
-        fhand = open(error_fpath, 'a')
+
+        if error_fpath:
+            hook = cgitb.Hook(display=0, format='text', logfpath=error_fpath)
+            hook.handle()
+
         fhand.write('\nThe command was:\n' + ' '.join(sys.argv) + '\n')
         fhand.close()
         raise
