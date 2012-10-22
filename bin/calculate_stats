@@ -51,6 +51,13 @@ def _setup_argparse():
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
+    args = sys.argv
+    if (('-k' in args or '--kmer_size' in args) and
+        not ('-c' in args or '--complexity_stats' in args)):
+        # if we ask for a kmer we want the stats done
+        sys.argv.insert(1, '-c')
+        print sys.argv
+
     parsed_args = parser.parse_args()
     # we have to wrap the file in a BufferedReader to allow peeking into stdin
     wrapped_fhands = []

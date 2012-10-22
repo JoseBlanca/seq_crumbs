@@ -262,14 +262,21 @@ class CalculateStatsTest(unittest.TestCase):
         assert 'Quality stats and distribution' in result
         assert 'Kmer distribution' not in result
 
-        # fastq
-        cmd = [bin_, '-c', '-k' '3']
+        # kmer distribution
+        cmd = [bin_, '-c', '-k', '3']
         for val in range(1, 6):
             cmd.append(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
         result = check_output(cmd)
         assert 'Quality stats and distribution' in result
         assert 'Kmer distribution' in result
         assert 'aaa: 48' in result
+
+        # kmer distribution
+        cmd = [bin_, '-k', '3']
+        for val in range(1, 6):
+            cmd.append(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
+        result = check_output(cmd)
+        assert 'Kmer distribution' in result
 
 
 class BaseFreqPlotTest(unittest.TestCase):
