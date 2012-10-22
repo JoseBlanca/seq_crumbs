@@ -80,7 +80,7 @@ class CounterTest(unittest.TestCase):
         assert new_array[7] == 1
         assert new_array[2] == 2
 
-        #assert list(new_array.flat) == [2, 2, 6, 7]
+        # assert list(new_array.flat) == [2, 2, 6, 7]
     def test_stats_functs(self):
         'It test the statistical functions of the class'
         ints = IntCounter({3: 1, 5: 1, 7: 2, 38: 1})
@@ -232,7 +232,13 @@ class CalculateStatsTest(unittest.TestCase):
         infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
         seqs = read_seqrecords(infhands, file_format='fasta')
         kmers = calculate_sequence_stats(seqs)[-1]
+        assert not 'Kmer distribution' in kmers
+
+        infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
+        seqs = read_seqrecords(infhands, file_format='fasta')
+        kmers = calculate_sequence_stats(seqs, kmer_size=3)[-1]
         assert 'Kmer distribution' in kmers
+        assert 'TCT: 167' in kmers
 
     def test_stats_bin(self):
         'It tests the statistics binary'
@@ -252,7 +258,18 @@ class CalculateStatsTest(unittest.TestCase):
         cmd = [bin_]
         for val in range(1, 6):
             cmd.append(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
-        assert 'Quality stats and distribution' in check_output(cmd)
+        result = check_output(cmd)
+        assert 'Quality stats and distribution' in result
+        assert 'Kmer distribution' not in result
+
+        # fastq
+        cmd = [bin_, '-c', '-k' '3']
+        for val in range(1, 6):
+            cmd.append(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
+        result = check_output(cmd)
+        assert 'Quality stats and distribution' in result
+        assert 'Kmer distribution' in result
+        assert 'aaa: 48' in result
 
 
 class BaseFreqPlotTest(unittest.TestCase):
@@ -283,5 +300,5 @@ class BaseFreqPlotTest(unittest.TestCase):
         assert '0 (A: 0.43, C: 0.14, G: 0.00, T: 0.43, N: 0.00) | aaa' in ascii
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'BaseFreqPlotTest']
+    # import sys;sys.argv = ['', 'CalculateStatsTest.test_stats_bin']
     unittest.main()

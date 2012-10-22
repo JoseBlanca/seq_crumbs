@@ -117,14 +117,14 @@ class IntCounter(Counter):
     @property
     def irq(self):
         'It gets the interquartile range'
-        #pylint: disable=W0612
+        # pylint: disable=W0612
         quart1, median, quart3 = self.quartiles
         return quart3 - quart1
 
     @property
     def outlier_limits(self):
         'It returns the intercuartile'
-        #pylint: disable=W0612
+        # pylint: disable=W0612
         quart1, median, quart3 = self.quartiles
 
         iqr = self.irq
@@ -183,7 +183,7 @@ class IntCounter(Counter):
                 if n_bins > num_values:
                     n_bins = num_values
 
-        #now we can calculate the bin edges
+        # now we can calculate the bin edges
         distrib_span = max_ - min_ if max_ != min_ else 1
 
         if distrib_span % n_bins:
@@ -237,7 +237,7 @@ class IntCounter(Counter):
         'It writes some basic stats of the values'
         if self.count != 0:
             labels = self.labels
-            #now we write some basic stats
+            # now we write some basic stats
             format_num = lambda x: '{:,d}'.format(x) if isinstance(x, int) else '%.2f' % x
             text = '{}: {}\n'.format(labels['minimum'], format_num(self.min))
             text += '{}: {}\n'.format(labels['maximum'], format_num(self.max))
@@ -415,16 +415,16 @@ class IntBoxplot(object):
                 line += '<'  # min
                 quart1 = to_axis_scale(distrib['quart1'])
                 line += '-' * ((quart1 - min_) - 1)
-                line += '['     # quartil 1
+                line += '['  # quartil 1
                 median = to_axis_scale(distrib['median'])
                 line += '=' * ((median - quart1) - 1)
-                line += '|'     # median 1
+                line += '|'  # median 1
                 quart3 = to_axis_scale(distrib['quart3'])
                 line += '=' * ((quart3 - median) - 1)
-                line += ']'     # quart 2
+                line += ']'  # quart 2
                 max_ = to_axis_scale(distrib['max'])
                 line += '-' * ((max_ - quart3) - 1)
-                line += '>'     # max
+                line += '>'  # max
             else:
                 line = category_format.format(str(category), 0, 0, 0, 0, 0)
             line += '\n'
@@ -543,13 +543,13 @@ class KmerCounter(object):
         return self._counter.most_common(num_items)
 
 
-def calculate_sequence_stats(seqs):
+def calculate_sequence_stats(seqs, kmer_size=None):
     'It calculates some stats for the given seqs.'
     # get data
     lengths = IntCounter()
     quals_per_pos = IntBoxplot()
     nucl_freq = NuclFreqsPlot()
-    kmer_counter = KmerCounter()
+    kmer_counter = KmerCounter(kmer_size) if kmer_size else None
     for seq in seqs:
         lengths[len(seq)] += 1
         if 'phred_quality' in seq.letter_annotations:
@@ -558,7 +558,8 @@ def calculate_sequence_stats(seqs):
                 quals_per_pos.append(index + 1, qual)
         for index, nucl in enumerate(str(seq.seq)):
             nucl_freq.append(index, nucl)
-        kmer_counter.count_seq(str(seq.seq))
+        if kmer_counter is not None:
+            kmer_counter.count_seq(str(seq.seq))
     lengths.update_labels({'sum': 'tot. residues', 'items': 'num. seqs.'})
 
     # length distribution
@@ -601,18 +602,18 @@ def calculate_sequence_stats(seqs):
     freq_str += nucl_freq.ascii_plot
     freq_str += '\n'
 
-    #kmer_distriubution
-    kmers = IntCounter(kmer_counter.values)
-    if kmers:
-        kmers.update_labels({'sum': None, 'items': 'num. kmers'})
-        kmer_str = 'Kmer distribution\n'
-        kmer_str += '-----------------\n'
-        kmer_str += str(kmers)
-        kmer_str += '\n'
-        kmer_str += 'Most common kmers:\n'
-        for kmer, number in kmer_counter.most_common(20):
-            kmer_str += '\t{}: {}\n'.format(kmer, number)
-    else:
-        kmer_str = ''
+    # kmer_distriubution
+    kmer_str = ''
+    if kmer_counter is not None:
+        kmers = IntCounter(kmer_counter.values)
+        if kmers:
+            kmers.update_labels({'sum': None, 'items': 'num. kmers'})
+            kmer_str = 'Kmer distribution\n'
+            kmer_str += '-----------------\n'
+            kmer_str += str(kmers)
+            kmer_str += '\n'
+            kmer_str += 'Most common kmers:\n'
+            for kmer, number in kmer_counter.most_common(20):
+                kmer_str += '\t{}: {}\n'.format(kmer, number)
 
     return lengths_srt, qual_str, freq_str, qual_boxplot, kmer_str

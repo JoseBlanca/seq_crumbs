@@ -24,6 +24,7 @@ from crumbs.utils.file_utils import (wrap_in_buffered_reader,
 from crumbs.utils.bin_utils import main
 from crumbs.seqio import read_seqrecords
 from crumbs.statistics import calculate_sequence_stats
+from crumbs.settings import DEFAULT_KMER_SIZE
 
 
 def _setup_argparse():
@@ -38,6 +39,13 @@ def _setup_argparse():
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
                         help='Sequence output file to process',
                         type=argparse.FileType('wt'))
+    help_kmer_size = 'kmer size to calculate kmer stats, default:{}'.format(
+                                                            DEFAULT_KMER_SIZE)
+    parser.add_argument('-k', '--kmer_size', type=int, help=help_kmer_size,
+                        default=DEFAULT_KMER_SIZE, dest='kmer_size')
+    parser.add_argument('-c', '--complexity_stats', action='store_true',
+                        help='Do complexity (kmer) stats, default False',
+                        default=False, dest='complex_stats')
     return parser
 
 
@@ -58,10 +66,15 @@ def _parse_args(parser):
 
     in_format = parsed_args.in_format
     out_fhand = getattr(parsed_args, OUTFILE)
+    kmer_size = parsed_args.kmer_size
+    complexity_stats = parsed_args.complex_stats
+
+    if not complexity_stats:
+        kmer_size = None
 
     args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
-            'original_in_fhands': in_fhands,
-            'in_format': in_format}
+            'original_in_fhands': in_fhands, 'in_format': in_format,
+            'kmer_size': kmer_size}
     return args, parsed_args
 
 
@@ -73,12 +86,11 @@ def run():
     in_fhands = args['in_fhands']
     in_format = args['in_format']
     out_fhand = args['out_fhand']
+    kmer_size = args['kmer_size']
 
     seqs = read_seqrecords(in_fhands, file_format=in_format)
-
-    (lengths_srt, qual_str, freq_str,
-                         qual_boxplot, kmers) = calculate_sequence_stats(seqs)
-
+    (lengths_srt, qual_str, freq_str, qual_boxplot,
+                             kmers) = calculate_sequence_stats(seqs, kmer_size)
     out_fhand.write(lengths_srt + qual_str + freq_str + qual_boxplot + kmers)
 
 if __name__ == '__main__':
