@@ -86,15 +86,23 @@ class SffExtractTest(unittest.TestCase):
         seqs = extractor.seqs
         seqs = list(seqs)
         assert len(seqs) == 10
-        assert extractor.clip_advice[sff_fpath] == 'A'
+        assert extractor.clip_advice[sff_fpath] == (5, 'A')
 
-        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=0)
+        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=4,
+                            trim=False)
         seqs = extractor.seqs
         seqs = list(seqs)
         assert len(seqs) == 10
-        assert extractor.clip_advice[sff_fpath] == 'A'
+        assert extractor.clip_advice[sff_fpath] == (5, 'A')
 
-        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=1,
+        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=4,
+                            trim=True)
+        seqs = extractor.seqs
+        seqs = list(seqs)
+        assert len(seqs) == 10
+        assert extractor.clip_advice[sff_fpath] == (5, 'A')
+
+        extractor = SffExtractor([open(sff_fpath, 'rb')], min_left_clip=5,
                             trim=True)
         seqs = extractor.seqs
         seqs = list(seqs)
@@ -128,7 +136,7 @@ class SffExtractBinTest(unittest.TestCase):
         assert 'Countermeasures' not in check_output(cmd, stderr=stderr)
 
         # min left clip
-        cmd = [sff_bin, '--min_left_clip', '1', sff_fpath]
+        cmd = [sff_bin, '--min_left_clip', '5', sff_fpath]
         assert 'Countermeasures' not in check_output(cmd)
 
         # clip

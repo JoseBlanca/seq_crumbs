@@ -91,7 +91,7 @@ class SffExtractor(object):
             try:
                 counts[fpath][nucl][index] += 1
             except KeyError:
-                pass    # we do not count the lower letters
+                pass    # we do not count the lowercase letters
 
     @property
     def clip_advice(self):
@@ -103,6 +103,7 @@ class SffExtractor(object):
             treshold = self.max_nucl_freq_threshold
             pos_above_threshold = 0
             seq_above_threshold = ''
+            index = 0
             for index in range(self.nucls_to_check):
                 num_nucls = [counts['A'][index], counts['T'][index],
                              counts['C'][index], counts['G'][index]]
@@ -118,10 +119,12 @@ class SffExtractor(object):
                 else:
                     break
             if pos_above_threshold:
-                if pos_above_threshold <= self.min_left_clip:
-                    advice = None
+                if self.trim:
+                    # number of nucleotides to remove next time, the ones
+                    # that we have detected plus the ones already removed
+                    advice = index + self.min_left_clip, seq_above_threshold
                 else:
-                    advice = seq_above_threshold
+                    advice = index, seq_above_threshold
             else:
                 advice = None
             advices[fpath] = advice

@@ -98,7 +98,7 @@ def extract_sff():
             msg += "\nWARNING: "
             msg += "weird sequences in file " + fpath + "\n\n"
             msg += "After applying left clips too many reads start with:\n"
-            msg += advice
+            msg += advice[1]
             msg += "\n\nThis does not look sane.\n\n"
             msg += "Countermeasures you *probably* must take:\n"
             msg += "1) Make your sequence provider aware of that problem and "
@@ -106,7 +106,7 @@ def extract_sff():
             msg += "2) If you decide that this is not normal and your sequence"
             msg += " provider does not\n"
             msg += "    react, use the --min_left_clip of sff_extract.\n"
-            msg += "    (Probably '--min_left_clip " + str(len(advice))
+            msg += "    (Probably '--min_left_clip " + str(advice[0])
             msg += "' but you should cross-check that)\n"
             msg += "*" * 80 + "\n"
             stderr.write(msg)
