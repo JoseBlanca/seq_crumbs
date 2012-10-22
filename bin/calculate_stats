@@ -21,7 +21,7 @@ import sys
 from crumbs.utils.tags import GUESS_FORMAT, OUTFILE
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required)
-from crumbs.utils.bin_utils import main
+from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.seqio import read_seqrecords
 from crumbs.statistics import calculate_sequence_stats
 from crumbs.settings import DEFAULT_KMER_SIZE
@@ -46,6 +46,8 @@ def _setup_argparse():
     parser.add_argument('-c', '--complexity_stats', action='store_true',
                         help='Do complexity (kmer) stats, default False',
                         default=False, dest='complex_stats')
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
     return parser
 
 
