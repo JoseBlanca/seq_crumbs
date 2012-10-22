@@ -29,7 +29,7 @@ from crumbs.exceptions import TooManyFiles, WrongFormatError
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
-    description = 'Get first seqs from file[s]'
+    description = 'Convert between sequence file formats'
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument('input', help='Sequence input files to process',
