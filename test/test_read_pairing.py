@@ -361,12 +361,12 @@ class InterleaveBinTest(unittest.TestCase):
         guess_bin = os.path.join(BIN_DIR, 'interleave_pairs')
         stderr = NamedTemporaryFile()
         check_output([guess_bin, '--version'], stderr=stderr)
-        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+        assert 'from seq_crumbs version:' in open(stderr.name).read()
 
         guess_bin = os.path.join(BIN_DIR, 'deinterleave_pairs')
         stderr = NamedTemporaryFile()
         check_output([guess_bin, '--version'], stderr=stderr)
-        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+        assert 'from seq_crumbs version:' in open(stderr.name).read()
 
 
 class IndexedPairMatcher(unittest.TestCase):

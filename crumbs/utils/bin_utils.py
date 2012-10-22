@@ -246,7 +246,7 @@ def create_io_argparse(**kwargs):
 def build_version_msg():
     'It creates a message with the version.'
     bin_name = os.path.split(sys.argv[0])[-1]
-    version_msg = bin_name + ' from Seq Crumbs version: ' + version
+    version_msg = bin_name + ' from seq_crumbs version: ' + version
     return version_msg
 
 

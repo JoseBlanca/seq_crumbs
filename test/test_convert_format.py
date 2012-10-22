@@ -185,7 +185,7 @@ class SeqioBinTest(unittest.TestCase):
         guess_bin = os.path.join(BIN_DIR, 'convert_format')
         stderr = NamedTemporaryFile()
         check_output([guess_bin, '--version'], stderr=stderr)
-        assert 'from Seq Crumbs version:' in open(stderr.name).read()
+        assert 'from seq_crumbs version:' in open(stderr.name).read()
 
 
 if __name__ == '__main__':
