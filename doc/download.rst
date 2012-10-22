@@ -4,6 +4,20 @@ Download
 
 The recommended method to get seq_crumbs is to download one of the releases, but if you want to access to the latest code you can do it at github_.
 
+seq_crumbs 0.1.2
+----------------
+
+Changelog:
+
+  * added kmer freq stats to calculate stats
+  * sff_extract now recommends how many nucleotides to trim
+  * several bugfixes
+
+Released on 22-10-12
+
+  * :download:`Source distribution <downloads/seq_crumbs-0.1.2.tar.gz>`.
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.2-x64-linux.tar.gz>`.
+
 seq_crumbs 0.1.1
 ----------------
 
