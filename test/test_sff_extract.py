@@ -119,6 +119,11 @@ class SffExtractBinTest(unittest.TestCase):
         assert 'usage' in check_output([sff_bin, '-h'])
         assert 'usage' in check_output([sff_bin])
 
+        # version string
+        stderr = NamedTemporaryFile()
+        check_output([sff_bin, '--version'], stderr=stderr)
+        assert 'version' in open(stderr.name).read()
+
         # clipping warning
         sff_fpath = os.path.join(TEST_DATA_DIR, '10_454_reads.sff')
         cmd = [sff_bin, sff_fpath]

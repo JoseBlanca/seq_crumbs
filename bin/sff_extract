@@ -24,7 +24,7 @@ import argparse
 from crumbs.sff_extract import SffExtractor
 from crumbs.seqio import write_seqrecords
 from crumbs.exceptions import FileNotFoundError
-from crumbs.utils.bin_utils import main
+from crumbs.utils.bin_utils import main, build_version_msg
 
 
 def _setup_argparse():
@@ -47,6 +47,8 @@ def _setup_argparse():
     msg += 'same word  (default 50)'
     parser.add_argument('--max_percentage', dest='max_percent', type=float,
                      help=msg, default=50.0)
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
     return parser
 
 
