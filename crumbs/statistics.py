@@ -118,14 +118,16 @@ class IntCounter(Counter):
     def irq(self):
         'It gets the interquartile range'
         # pylint: disable=W0612
-        quart1, median, quart3 = self.quartiles
+        quart1 = self.quartiles[0]
+        quart3 = self.quartiles[2]
         return quart3 - quart1
 
     @property
     def outlier_limits(self):
         'It returns the intercuartile'
         # pylint: disable=W0612
-        quart1, median, quart3 = self.quartiles
+        quart1 = self.quartiles[0]
+        quart3 = self.quartiles[2]
 
         iqr = self.irq
         limit_distance = round(iqr * 1.5)
@@ -545,6 +547,7 @@ class KmerCounter(object):
 
     @property
     def values(self):
+        'It returns the values of the counter'
         return iter(self._counter.viewvalues())
 
     def most_common(self, num_items):
