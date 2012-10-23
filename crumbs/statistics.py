@@ -579,7 +579,7 @@ def calculate_sequence_stats(seqs, kmer_size=None):
         q30 = quals.count_relative_to_value(30, operator.ge) / quals.count
         q30 *= 100
 
-        q20 = quals.count_relative_to_value(30, operator.ge) / quals.count
+        q20 = quals.count_relative_to_value(20, operator.ge) / quals.count
         q20 *= 100
 
         # qual distribution
