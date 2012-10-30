@@ -106,7 +106,7 @@ Seq Crumbs tries to be more limited in its scope limiting itself only to sequenc
 
 Another software very similar in the approach to Seq Crumbs is the nice fastx_ collection.
 
-Other related software: Pyrocleaner_, lucy_, `NGS QC Toolkit <http://www.nipgr.res.in/ngsqctoolkit.html>`_, and FastQC_.
+Other related software: Pyrocleaner_, lucy_, `NGS QC Toolkit <http://www.nipgr.res.in/ngsqctoolkit.html>`_, scythe_, sickle_, cutadapt_ and FastQC_.
 
 License
 -------
@@ -127,4 +127,7 @@ For more details on the licensing take a look at the LICENSE.txt file.
 .. _Pyrocleaner: https://pyrocleaner.mulcyber.toulouse.inra.fr/plugins/mediawiki/wiki/pyrocleaner/index.php/Pyrocleaner
 .. _lucy: http://lucy.sourceforge.net/
 .. _FastQC: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+.. _scythe: https://github.com/vsbuffalo/scythe
+.. _sickle: https://github.com/najoshi/sickle
+.. _cutadapt: http://code.google.com/p/cutadapt/
 
