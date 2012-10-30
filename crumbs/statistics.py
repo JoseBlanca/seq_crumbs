@@ -24,6 +24,13 @@ from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
 
+# pylint: disable=R0904
+# pylint: disable=R0912
+# pylint: disable=R0914
+# pylint: disable=R0915
+# pylint: disable=W1401
+# pylint: disable=W0223
+
 
 class IntCounter(Counter):
     '''This is a subclass  of the Counter on python collections.

@@ -23,6 +23,8 @@ from array import array
 
 from Bio.SeqIO.SffIO import SffIterator
 
+# pylint: disable=R0913
+
 
 def _min_left_clipped_seqs(sff_fhand, trim, min_left_clip):
     'It generates sequences (as tuples) given a path to a SFF file.'
@@ -91,7 +93,7 @@ class SffExtractor(object):
             try:
                 counts[fpath][nucl][index] += 1
             except KeyError:
-                pass    # we do not count the lowercase letters
+                pass  # we do not count the lowercase letters
 
     @property
     def clip_advice(self):
