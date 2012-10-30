@@ -15,12 +15,16 @@
 import subprocess
 from tempfile import NamedTemporaryFile
 from collections import Counter
+from random import randint
 
 from crumbs.utils.bin_utils import (get_binary_path, popen,
                                     check_process_finishes)
-from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS)
+from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
+                               FIVE_PRIME, THREE_PRIME)
 from crumbs.seqio import write_seqrecords, read_seqrecords
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+
+# pylint: disable=R0903
 
 
 def _run_estscan(seqrecords, pep_out_fpath, dna_out_fpath, matrix_fpath):
@@ -106,4 +110,115 @@ class EstscanOrfAnnotator(object):
 
         dna_fhand.close()
         pep_fhand.close()
+        return seqrecords
+
+
+def _detect_polya_tail(seq, location, min_len, max_cont_mismatches):
+    '''It detects 3' poylA or 5' polyT tails.
+
+    This function is a re-implementation of the EMBOSS's trimest code.
+    It will return the position of a poly-A in 3' or a poly-T in 5'.
+    It returns the start and end of the tail. The nucleotide in the end
+    position won't be included in the poly-A.
+    '''
+    if location == FIVE_PRIME:
+        tail_nucl = 'T'
+        inc = 1
+        start = 0
+        end = len(seq)
+    elif location == THREE_PRIME:
+        tail_nucl = 'A'
+        inc = -1
+        start = -1
+        end = -len(seq) - 1
+    else:
+        msg = 'location should be five or three prime'
+        raise ValueError(msg)
+
+    mismatch_count = 0
+    poly_count = 0
+    tail_len = 0
+    result = 0
+
+    for index in range(start, end, inc):
+        nucl = seq[index].upper()
+        if nucl == tail_nucl:
+            poly_count += 1
+            mismatch_count = 0
+        elif nucl == 'N':
+            pass
+        else:
+            poly_count = 0
+            mismatch_count += 1
+        if poly_count >= min_len:
+            result = tail_len + 1
+        if mismatch_count > max_cont_mismatches:
+            break
+        tail_len += 1
+    if result and location == FIVE_PRIME:
+        start = 0
+        end = result
+        result = start, end
+    elif result and location == THREE_PRIME:
+        end = len(seq)
+        start = end - result
+        result = start, end
+    else:
+        result = None
+    return result
+
+
+class PolyaAnnotator(object):
+    'It annotates the given seqrecords with poly-A or poly-T regions'
+    def __init__(self, min_len, max_cont_mismatches):
+        '''It inits the class.
+
+        min_len - minimum number of consecutive As (or Ts) to be considered
+                  part of the tail
+        max_cont_mismatches - maximum number of consecutive no A (or Ts) to
+                              break a tail.
+        '''
+        self._min_len = min_len
+        self._max_cont_mismatches = max_cont_mismatches
+        self._stats = Counter()
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It runs the actual annotations'
+        stats = self._stats
+        stats[PROCESSED_PACKETS] += 1
+        max_cont_mismatches = self._max_cont_mismatches
+        min_len = self._min_len
+
+        for seq in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            str_seq = str(seq.seq)
+            polya = _detect_polya_tail(str_seq, THREE_PRIME, min_len,
+                                       max_cont_mismatches)
+            polyt = _detect_polya_tail(str_seq, FIVE_PRIME, min_len,
+                                       max_cont_mismatches)
+            a_len = polya[1] - polya[0] if polya else 0
+            t_len = polyt[1] - polyt[0] if polyt else 0
+            chosen_tail = None
+            if a_len > t_len:
+                chosen_tail = 'A'
+            elif t_len > a_len:
+                chosen_tail = 'T'
+            elif a_len and a_len == t_len:
+                if randint(0, 1):
+                    chosen_tail = 'A'
+                else:
+                    chosen_tail = 'T'
+            if chosen_tail:
+                strand = 1 if chosen_tail == 'A' else -1
+                start, end = polya if chosen_tail == 'A' else polyt
+                feat = SeqFeature(location=FeatureLocation(start, end, strand),
+                                  type='polyA_sequence')
+                seq.features.append(feat)
+            stats[YIELDED_SEQS] += 1
+
         return seqrecords
