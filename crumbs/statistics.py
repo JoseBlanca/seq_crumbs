@@ -384,17 +384,8 @@ class IntBoxplot(object):
                     widths[key] = value
 
         widths['labels'] = max([len(str(d)) for d in distrib_descriptions])
-        plot_width = (MAX_WIDTH_ASCII_PLOT - widths['labels'] -
-                      len(str(max_value)))
-        val_per_pixel = (max_value - min_value) / plot_width
-        if val_per_pixel == 0:
-            val_per_pixel = max_value / plot_width
 
-        to_axis_scale = lambda x: int((x - min_value) / val_per_pixel)
-
-        result = ''
         category_format = '{:>' + str(widths['labels']) + 's}'
-
         header_format = category_format + ':{:>' + str(widths['min']) + '.1f}'
         header_format += ',{:>' + str(widths['quart1']) + '.1f}'
         header_format += ',{:>' + str(widths['median']) + '.1f}'
@@ -402,6 +393,7 @@ class IntBoxplot(object):
         header_format += ',{:>' + str(widths['max']) + '.1f}'
 
         header_len = None
+        headers, distribs = [], []
         for category in categories:
             distrib = distrib_descriptions[category]
             if distrib is not None:
@@ -411,6 +403,23 @@ class IntBoxplot(object):
                 header += ' '
                 if header_len is None or header_len < len(header):
                     header_len = len(header)
+            else:
+                header = None
+            headers.append(header)
+            distribs.append(distrib)
+
+        plot_width = (MAX_WIDTH_ASCII_PLOT - widths['labels'] -
+                      len(str(max_value)) - header_len)
+        val_per_pixel = (max_value - min_value) / plot_width
+        if val_per_pixel == 0:
+            val_per_pixel = max_value / plot_width
+
+        to_axis_scale = lambda x: int((x - min_value) / val_per_pixel)
+
+        result = ''
+
+        for distrib, header in zip(distribs, headers):
+            if distrib is not None:
                 line = header
                 min_ = to_axis_scale(distrib['min'])
                 line += ' ' * (min_ - 1)

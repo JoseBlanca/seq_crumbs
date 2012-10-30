@@ -188,7 +188,7 @@ class IntsBoxplotTest(unittest.TestCase):
         assert sum(counts.values()) == 9
 
         plot = box.ascii_plot
-        assert '2:10.0,15.0,25.0,35.0,40.0 <----------[=========' in plot
+        assert '2:10.0,15.0,25.0,35.0,40.0 <-----[============|=======' in plot
 
 
 class KmerCounterTest(unittest.TestCase):

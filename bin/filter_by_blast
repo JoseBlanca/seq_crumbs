@@ -29,9 +29,11 @@ def _setup_argparse():
     description = 'It filters sequences using blast'
     parser = create_basic_process_argparse(description=description)
     parser.add_argument('-b', '--blastdb', dest='blastdb',
-                        help='Path to blast database')
+                        help='Blast database or path to sequence file')
+    default_blast_program = 'blastn'
+    hlp = 'blast program to use (default' + default_blast_program + ')'
     parser.add_argument('-g', '--blast_program', dest='blast_program',
-                        help='Path to blast database', default='blastn')
+                        help=hlp, default=default_blast_program)
     parser.add_argument('-e', '--expected', dest='expected',
                         help='Maximum e-value', type=float)
     parser.add_argument('-s', '--similarity', dest='similarity', type=float,
