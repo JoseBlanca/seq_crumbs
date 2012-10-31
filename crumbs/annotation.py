@@ -17,12 +17,15 @@ from tempfile import NamedTemporaryFile
 from collections import Counter
 from random import randint
 
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+
 from crumbs.utils.bin_utils import (get_binary_path, popen,
                                     check_process_finishes)
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
                                FIVE_PRIME, THREE_PRIME)
 from crumbs.seqio import write_seqrecords, read_seqrecords
-from Bio.SeqFeature import SeqFeature, FeatureLocation
+from crumbs.blast import BlastMatcher2
+from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
 
 # pylint: disable=R0903
 
@@ -168,13 +171,40 @@ def _detect_polya_tail(seq, location, min_len, max_cont_mismatches):
     return result
 
 
+def _annotate_polya(seqrecord, min_len, max_cont_mismatches):
+    'It annotates the polyA with the EMBOSS trimest method'
+    str_seq = str(seqrecord.seq)
+    polya = _detect_polya_tail(str_seq, THREE_PRIME, min_len,
+                               max_cont_mismatches)
+    polyt = _detect_polya_tail(str_seq, FIVE_PRIME, min_len,
+                               max_cont_mismatches)
+    a_len = polya[1] - polya[0] if polya else 0
+    t_len = polyt[1] - polyt[0] if polyt else 0
+    chosen_tail = None
+    if a_len > t_len:
+        chosen_tail = 'A'
+    elif t_len > a_len:
+        chosen_tail = 'T'
+    elif a_len and a_len == t_len:
+        if randint(0, 1):
+            chosen_tail = 'A'
+        else:
+            chosen_tail = 'T'
+    if chosen_tail:
+        strand = 1 if chosen_tail == 'A' else -1
+        start, end = polya if chosen_tail == 'A' else polyt
+        feat = SeqFeature(location=FeatureLocation(start, end, strand),
+                          type='polyA_sequence')
+        seqrecord.features.append(feat)
+
+
 class PolyaAnnotator(object):
     'It annotates the given seqrecords with poly-A or poly-T regions'
-    def __init__(self, min_len, max_cont_mismatches):
+    def __init__(self, min_len=POLYA_ANNOTATOR_MIN_LEN,
+                 max_cont_mismatches=POLYA_ANNOTATOR_MISMATCHES):
         '''It inits the class.
 
-        min_len - minimum number of consecutive As (or Ts) to be considered
-                  part of the tail
+        min_len - minimum number of consecutive As (or Ts) to extend the tail
         max_cont_mismatches - maximum number of consecutive no A (or Ts) to
                               break a tail.
         '''
@@ -196,29 +226,7 @@ class PolyaAnnotator(object):
 
         for seq in seqrecords:
             stats[PROCESSED_SEQS] += 1
-            str_seq = str(seq.seq)
-            polya = _detect_polya_tail(str_seq, THREE_PRIME, min_len,
-                                       max_cont_mismatches)
-            polyt = _detect_polya_tail(str_seq, FIVE_PRIME, min_len,
-                                       max_cont_mismatches)
-            a_len = polya[1] - polya[0] if polya else 0
-            t_len = polyt[1] - polyt[0] if polyt else 0
-            chosen_tail = None
-            if a_len > t_len:
-                chosen_tail = 'A'
-            elif t_len > a_len:
-                chosen_tail = 'T'
-            elif a_len and a_len == t_len:
-                if randint(0, 1):
-                    chosen_tail = 'A'
-                else:
-                    chosen_tail = 'T'
-            if chosen_tail:
-                strand = 1 if chosen_tail == 'A' else -1
-                start, end = polya if chosen_tail == 'A' else polyt
-                feat = SeqFeature(location=FeatureLocation(start, end, strand),
-                                  type='polyA_sequence')
-                seq.features.append(feat)
             stats[YIELDED_SEQS] += 1
-
+            _annotate_polya(seq, min_len, max_cont_mismatches)
         return seqrecords
+

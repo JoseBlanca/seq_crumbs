@@ -44,7 +44,7 @@ LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
            SeqRecord(Seq(TITANIUM_LINKER), id='titanium_linker')]
 
 
-## Use this to modify how get_binary path works
+# # Use this to modify how get_binary path works
 # if need to modify the binary's name
 USE_EXTERNAL_BIN_PREFIX = False
 # prefix to add to the binary name
@@ -67,8 +67,12 @@ MEAN_VALUES_IN_BIN = 10000
 # default number of location to plot in a nucleotide frequency plot
 DEF_PLOT_FREQS_UP_TO_BASE = 40
 
-#when 2 match parts are in this distance they are merges as just one matchpart
+# when 2 match parts are in this distance they are merges as just one matchpart
 DEFAULT_IGNORE_ELONGATION_SHORTER = 3
 
 # default kmer size to do the kmer stats
 DEFAULT_KMER_SIZE = 20
+
+# trimest polyannotator
+POLYA_ANNOTATOR_MIN_LEN = 4
+POLYA_ANNOTATOR_MISMATCHES = 1

@@ -18,8 +18,11 @@
 
 import unittest
 import os
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
-from crumbs.annotation import EstscanOrfAnnotator, _detect_polya_tail
+from crumbs.annotation import (EstscanOrfAnnotator, _detect_polya_tail,
+                               PolyaAnnotator)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seqio import read_seqrecords
 from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME
@@ -48,8 +51,53 @@ class AnnotationTest(unittest.TestCase):
 
     def test_polya_annotator(self):
         'It annotates poly-A or poly-T regions'
-        # TODO comprobar
-        # TODO default parameters, check with trimest
+        seq1 = SeqRecord(seq=Seq('atccgtcagcatcCAATAAAAA'), id='seq1')
+        seq2 = SeqRecord(seq=Seq('TTTTcTTcatccgtcag'), id='seq2')
+        seq3 = SeqRecord(seq=Seq('TTTTcTTatccgtcagcatcCAATAAAAA'), id='seq3')
+        seqs = [seq1, seq2, seq3]
+        annotator = PolyaAnnotator(min_len=5, max_cont_mismatches=0)
+        seqs = annotator(seqs)
+        polya1 = seqs[0].features[0]
+        assert not seqs[1].features
+        polya3 = seqs[2].features[0]
+
+        assert polya1.type == 'polyA_sequence'
+        assert polya1.location.start.position == 17
+        assert polya1.location.end.position == 22
+        assert polya1.location.strand == 1
+
+        assert polya3.type == 'polyA_sequence'
+        assert polya3.location.start.position == 24
+        assert polya3.location.end.position == 29
+        assert polya3.location.strand == 1
+
+        seq1 = SeqRecord(seq=Seq('atccgtcagcatcCAATAAAAA'), id='seq1')
+        seq2 = SeqRecord(seq=Seq('TTTTcTTcatccgtcag'), id='seq2')
+        seq3 = SeqRecord(seq=Seq('TTTTcTTatccgtcagcatcCAATAAAAA'), id='seq3')
+        seqs = [seq1, seq2, seq3]
+        annotator = PolyaAnnotator(min_len=4, max_cont_mismatches=1)
+        seqs = annotator(seqs)
+        polya1 = seqs[0].features[0]
+        polya2 = seqs[1].features[0]
+        polya3 = seqs[2].features[0]
+
+        assert polya1.type == 'polyA_sequence'
+        assert polya1.location.start.position == 17
+        assert polya1.location.end.position == 22
+        assert polya1.location.strand == 1
+
+        assert polya2.type == 'polyA_sequence'
+        assert polya2.location.start.position == 0
+        assert polya2.location.end.position == 4
+        assert polya2.location.strand == -1
+
+        assert polya2.location.start.position == 0
+        assert polya2.location.end.position == 4
+        assert polya2.location.strand == -1
+
+        assert polya3.location.start.position == 24
+        assert polya3.location.end.position == 29
+        assert polya3.location.strand == 1
 
     def test_polya_detection(self):
         'It detects poly-A regions'
@@ -62,6 +110,7 @@ class AnnotationTest(unittest.TestCase):
         seq = 'TTTTcTTc'
         assert _detect_polya_tail(seq, FIVE_PRIME, 2, 0) == (0, 4)
         assert _detect_polya_tail(seq, FIVE_PRIME, 2, 1) == (0, 7)
+        assert _detect_polya_tail(seq, FIVE_PRIME, 3, 3) == (0, 4)
 
         seq = 'AAAAA'
         assert _detect_polya_tail(seq, THREE_PRIME, 4, 0) == (0, 5)
@@ -69,6 +118,7 @@ class AnnotationTest(unittest.TestCase):
         assert _detect_polya_tail(seq, THREE_PRIME, 4, 1) == (0, 6)
         seq = 'TTTTT'
         assert _detect_polya_tail(seq, FIVE_PRIME, 2, 0) == (0, 5)
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
