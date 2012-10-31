@@ -229,3 +229,37 @@ class PolyaAnnotator(object):
             stats[YIELDED_SEQS] += 1
             _annotate_polya(seq, min_len, max_cont_mismatches)
         return seqrecords
+
+
+class BlastAnnotator(object):
+    'It guess the direction of the seq using blast'
+    def __init__(self, blastdb, program, filters=None, params=None):
+        'Initializes the class'
+        self._blastdb = blastdb
+        self._program = program
+        self._filters = [] if filters is None else filters
+        self._params = params
+        self._stats = Counter()
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It does the work'
+        stats = self._stats
+        matcher = BlastMatcher(seqrecords, self._blastdb, self._program,
+                                filters=self._filters, params=self._params)
+        blasts = matcher.blasts
+        for seqrecord in seqrecords:
+            align_result = blasts.get(seqrecord.id, None)
+            if not align_result:
+                continue
+
+            for match in align_result['matches']:
+                print match['subject']['name']
+                print match.keys()
+
+
+

@@ -22,7 +22,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.annotation import (EstscanOrfAnnotator, _detect_polya_tail,
-                               PolyaAnnotator)
+                               PolyaAnnotator, BlastAnnotator)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seqio import read_seqrecords
 from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME
@@ -118,6 +118,36 @@ class AnnotationTest(unittest.TestCase):
         assert _detect_polya_tail(seq, THREE_PRIME, 4, 1) == (0, 6)
         seq = 'TTTTT'
         assert _detect_polya_tail(seq, FIVE_PRIME, 2, 0) == (0, 5)
+
+    def test_blast_annotator(self):
+        'It finds the seq direction looking to a blast result'
+        blastdb = os.path.join(TEST_DATA_DIR, 'blastdbs', 'arabidopsis_genes')
+        seq_forward = 'CTAAATCTCCGCCGTCCGATCTTCTCTCAATCCAACGACCTCGATCTCTTCTCTT'
+        seq_forward += 'CTCTAAATCTCGACCGTCCATCTCTCGCCGCCGATGACATCCACGATCTTCTCC'
+        seq_forward += 'CACGCTACGGATTCCCGAAAGGTCTTCTTCCCAACAACGTCAAATCGTACACTA'
+        seq_forward += 'TCTCCGACGACGGCGATTTCACCGTTGACCTGATTTCCAGTTGCTACGTCAAGT'
+        seq_forward += 'TCTCCGATCAACTCGTTTTCTACGGCAAGAATATCGCCGGAAAACTCAGTTACG'
+        seq_forward += 'GATCTGTTAAA'
+        seq_forward += 'AATTGTCATGGGGTACTGACTGATCGATCGTAGCTAGTCGATC'
+        seq_forward += 'CACGCTACGGATTCCCGAAAGGTCTTCTTCCCAACAACGTCAAATCGTACACTA'
+        seq_forward += 'TCTCCGACGACGGCGATTTCACCGTTGACCTGATTTCCAGTTGCTACGTCAAGT'
+        seq_forward += 'TCTCCGATCAACTCGTTTTCTACGGCAAGAATATCGCCGGAAAACTCAGTTACG'
+
+        seq_reverse = 'TTTAACAGATCCGTAACTGAGTTTTCCGGCGATATTCTTGCCGTAGAAAACGAGT'
+        seq_reverse += 'TGATCGGAGAACTTGACGTAGCAACTGGAAATCAGGTCAACGGTGAAATCGCCG'
+        seq_reverse += 'TCGTCGGAGATAGTGTACGATTTGACGTTGTTGGGAAGAAGACCTTTCGGGAAT'
+        seq_reverse += 'CCGTAGCGTGGGAGAAGATCGTGGATGTCATCGGCGGCGAGAGATGGACGGTCG'
+        seq_reverse += 'AGATTTAGAGAAGAGAAGAGATCGAGGTCGTTGGATTGAGAGAAGATCGGACGG'
+        seq_reverse += 'CGGAGATTTAG'
+
+        seq1 = SeqRecord(seq=Seq(seq_forward), id='seq_forward')
+        seq2 = SeqRecord(seq=Seq(seq_reverse), id='seq_reverse')
+        seq3 = SeqRecord(seq=Seq('ttgtcatcgtagctagctagctgactgatcga'),
+                                 id='seq_nomatch')
+        seqrecords = [seq1, seq2, seq3]
+
+        annotator = BlastAnnotator(blastdb=blastdb, program='blastn')
+        seqrecords = annotator(seqrecords)
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
