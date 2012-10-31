@@ -24,7 +24,7 @@ from crumbs.utils.bin_utils import (get_binary_path, popen,
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
                                FIVE_PRIME, THREE_PRIME)
 from crumbs.seqio import write_seqrecords, read_seqrecords
-from crumbs.blast import BlastMatcher2
+from crumbs.blast import BlastMatcher
 from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
 
 # pylint: disable=R0903
@@ -229,4 +229,3 @@ class PolyaAnnotator(object):
             stats[YIELDED_SEQS] += 1
             _annotate_polya(seq, min_len, max_cont_mismatches)
         return seqrecords
-

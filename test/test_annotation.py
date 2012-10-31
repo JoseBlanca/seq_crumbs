@@ -119,7 +119,6 @@ class AnnotationTest(unittest.TestCase):
         seq = 'TTTTT'
         assert _detect_polya_tail(seq, FIVE_PRIME, 2, 0) == (0, 5)
 
-
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

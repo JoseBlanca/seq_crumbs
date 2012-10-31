@@ -15,7 +15,7 @@
 
 # similar software SffToCA
 
-from crumbs.blast import BlastMatcher
+from crumbs.blast import BlastMatcherForFewSubjects
 from crumbs.seqio import write_seqrecords
 
 from crumbs.settings import LINKERS
@@ -53,10 +53,10 @@ class MatePairSplitter(object):
                    {'kind': 'score_threshold', 'score_key': 'identity',
                    'min_score': min_identity}]
 
-        matcher = BlastMatcher(seq_fhand.name, self.linkers,
-                               program='blastn', filters=filters,
-                               params={'task': 'blastn-short'},
-                               elongate_for_global=True)
+        matcher = BlastMatcherForFewSubjects(seq_fhand.name, self.linkers,
+                                             program='blastn', filters=filters,
+                                             params={'task': 'blastn-short'},
+                                             elongate_for_global=True)
         new_seqs = []
         for seqrec in seqs:
             stats[PROCESSED_SEQS] += 1

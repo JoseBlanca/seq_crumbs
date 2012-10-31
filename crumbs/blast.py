@@ -149,11 +149,20 @@ def _do_blast_2(db_fpath, queries, program, blast_format=None, params=None):
     return blasts, blast_fhand
 
 
-class BlastMatcher(object):
+class BlastMatcherForFewSubjects(object):
     '''It matches the given SeqRecords against the reads in the file.
 
     This class uses Blast to do the matching and it is optimized for having
-    few SeqRecords to match against a medium sized sequence file.'''
+    few SeqRecords to match against a medium sized sequence file.
+
+    In this class the seqs_fpath, that in the API acts as the query, it's
+    internally indexed into a blast database and the seqrecords are blasted
+    against it. This is done because in the case of having lots of queries to
+    blast against few subjects it is more efficient to do the blast backwards.
+    This class behaves as if the seqs_fpath were the query and the seqrecords
+    the subject although internally the blast is done with the query and
+    subject changed.
+    '''
     def __init__(self, seqs_fpath, seqrecords, program, params=None,
                  filters=None, elongate_for_global=False):
         '''It inits the class.'''
@@ -197,7 +206,7 @@ class BlastMatcher(object):
                                                  subject_length=read['length'],
                                                  align_completely=QUERY)
 
-                #match_parts = [m['match_parts'] for m in blast['matches']]
+                # match_parts = [m['match_parts'] for m in blast['matches']]
                 match_parts = match['match_parts']
                 if one_oligo:
                     indexed_match_parts[read['name']] = match_parts
@@ -231,13 +240,13 @@ class BlastMatcher(object):
         return segments, elongated_match
 
 
-class BlastMatcher2(object):
+class BlastMatcher(object):
     '''It matches the given SeqRecords against a blast database.
     It needs iterable with seqrecords and a blast dabatase
     '''
 
     def __init__(self, seqrecords, blastdb, program, params=None,
-                 filters=None, elongate_for_global=False):
+                 filters=None):
         self.program = program
         if params is None:
             params = {}
@@ -245,14 +254,13 @@ class BlastMatcher2(object):
         if filters is None:
             filters = []
         self.filters = filters
-        self.elongate_for_global = elongate_for_global
         self._match_parts = self._look_for_blast_matches(seqrecords, blastdb)
 
     def _look_for_blast_matches(self, seqrecords, blastdb):
         'it makes the blast and filters the results'
         blasts, blast_fhand = _do_blast_2(blastdb, seqrecords, self.program,
                                           params=self.params)
-        #print open(blast_fhand.name).read()
+        # print open(blast_fhand.name).read()
         if self.filters is not None:
             blasts = filter_alignments(blasts, config=self.filters)
 
@@ -260,12 +268,6 @@ class BlastMatcher2(object):
         for blast in blasts:
             query = blast['query']
             for match in blast['matches']:
-                subject = match['subject']
-                if self.elongate_for_global:
-                    elongate_match_parts_till_global(match['match_parts'],
-                                              query_length=query['length'],
-                                              subject_length=subject['length'],
-                                              align_completely=SUBJECT)
                 match_parts = match['match_parts']
                 try:
                     indexed_match_parts[query['name']].extend(match_parts)
@@ -278,11 +280,11 @@ class BlastMatcher2(object):
     def get_matched_segments(self, seqrecord_name):
         'it return the matched segments for the given seqrecord'
         ignore_elongation_shorter = DEFAULT_IGNORE_ELONGATION_SHORTER
-        try:
-            match_parts = self._match_parts[seqrecord_name]
-        except KeyError:
+        match_parts = self.get_match_parts(seqrecord_name)
+        if match_parts is None:
             # There was no match in the blast
             return None
+
         # Any of the match_parts has been elongated?
         elongated_match = False
         for m_p in match_parts:
@@ -291,3 +293,12 @@ class BlastMatcher2(object):
         segments = covered_segments_from_match_parts(match_parts,
                                                      in_query=False)
         return segments, elongated_match
+
+    def get_match_parts(self, seqrecord_name):
+        'it returns all the matches of a sequnce query'
+        try:
+            match_parts = self._match_parts[seqrecord_name]
+        except KeyError:
+            # There was no match in the blast
+            match_parts = None
+        return match_parts

@@ -199,10 +199,6 @@ class BlastMatchFilterTest(unittest.TestCase):
         new_seqs = filter_(seqs)
         assert new_seqs == []
 
-
-
-
-
     def test_blastmatch_bin(self):
         'It test the binary of the filter_by_blast'
         filter_bin = os.path.join(BIN_DIR, 'filter_by_blast')
@@ -222,13 +218,13 @@ class BlastMatchFilterTest(unittest.TestCase):
         except CalledProcessError:
             assert 'At least a filter must be Used' in open(stderr.name).read()
 
-        #expected_filter
+        # expected_filter
         result = check_output([filter_bin, '-b', blastdb, '-e', '1e-27',
                                seq_fhand.name])
 
         assert 'CATGAACACACACAT' in result
 
-        #similarity_filter
+        # similarity_filter
         result = check_output([filter_bin, '-b', blastdb, '-s', '99',
                                seq_fhand.name])
         assert 'CATGAACACACACAT' in result
@@ -242,7 +238,7 @@ class BlastMatchFilterTest(unittest.TestCase):
         except CalledProcessError:
             assert 'not allowed with argument'  in open(stderr.name).read()
 
-        #minlen percentaje_filter
+        # minlen percentaje_filter
         result = check_output([filter_bin, '-b', blastdb, '-l', '40',
                                seq_fhand.name])
 
@@ -252,7 +248,7 @@ class BlastMatchFilterTest(unittest.TestCase):
                                seq_fhand.name])
         assert 'CATGAACACACACAT' in result
 
-        #min nucleotides in query filter
+        # min nucleotides in query filter
         result = check_output([filter_bin, '-b', blastdb, '-a', '40',
                                seq_fhand.name])
         assert result == ''
@@ -261,13 +257,13 @@ class BlastMatchFilterTest(unittest.TestCase):
                                seq_fhand.name])
         assert 'CATGAACACACACAT' in result
 
-        #reverse
+        # reverse
         result = check_output([filter_bin, '-b', blastdb, '-a', '80', '-r',
                                seq_fhand.name])
         assert result == ''
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_filter']
-    #import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_bin']
+    # import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_filter']
+    # import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_bin']
     unittest.main()

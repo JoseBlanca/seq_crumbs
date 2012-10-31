@@ -25,7 +25,7 @@ from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
                                          merge_overlaping_segments)
 from crumbs.iterutils import rolling_window
-from crumbs.blast import BlastMatcher
+from crumbs.blast import BlastMatcherForFewSubjects
 from crumbs.seqio import write_seqrecords
 
 # pylint: disable=R0903
@@ -66,7 +66,7 @@ class TrimLowercasedLetters(object):
 
                 _add_trim_segments(segments, seqrecord, kind=OTHER)
                 trimmed_seqs.append(seqrecord)
-            #trimmed_seqs.append(seqrecord[segment[0]:segment[1] + 1])
+            # trimmed_seqs.append(seqrecord[segment[0]:segment[1] + 1])
         return trimmed_seqs
 
 
@@ -172,7 +172,7 @@ class TrimOrMask(object):
                 continue
 
             trim_rec = seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
-            #fixing the trimming recommendations
+            # fixing the trimming recommendations
             if TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
                 del seqrecord.annotations[TRIMMING_RECOMMENDATIONS]
 
@@ -180,11 +180,11 @@ class TrimOrMask(object):
             for trim_kind in TRIMMING_KINDS:
                 trim_segments.extend(trim_rec.get(trim_kind, []))
 
-            #masking
+            # masking
             if mask:
                 seqrecord = _mask_sequence(seqrecord, trim_segments)
             else:
-                #trimming
+                # trimming
                 if trim_segments:
                     trim_limits = get_longest_complementary_segment(
                                                  trim_segments, len(seqrecord))
@@ -317,9 +317,10 @@ class TrimWithBlastShort(object):
                     'min_score': 89},
                    {'kind': 'min_length', 'min_num_residues': 13,
                     'length_in_query': False}]
-        matcher = BlastMatcher(db_fhand.name, self.oligos,
-                               program='blastn', filters=filters,
-                               params=params, elongate_for_global=True)
+        matcher = BlastMatcherForFewSubjects(db_fhand.name, self.oligos,
+                                             program='blastn', filters=filters,
+                                             params=params,
+                                             elongate_for_global=True)
         for seqrec in seqrecords:
             stats[PROCESSED_SEQS] += 1
             segments = matcher.get_matched_segments_for_read(seqrec.id)
