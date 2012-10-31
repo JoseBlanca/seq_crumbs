@@ -241,7 +241,6 @@ class BlastMatchFilterTest(unittest.TestCase):
         # minlen percentaje_filter
         result = check_output([filter_bin, '-b', blastdb, '-l', '40',
                                seq_fhand.name])
-
         assert result == ''
 
         result = check_output([filter_bin, '-b', blastdb, '-l', '80',

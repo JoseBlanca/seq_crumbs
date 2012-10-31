@@ -254,6 +254,7 @@ class BlastMatcher(object):
         if filters is None:
             filters = []
         self.filters = filters
+        self._blasts = self._look_for_blast_matches(seqrecords, blastdb)
         self._match_parts = self._look_for_blast_matches(seqrecords, blastdb)
 
     def _look_for_blast_matches(self, seqrecords, blastdb):
@@ -264,41 +265,27 @@ class BlastMatcher(object):
         if self.filters is not None:
             blasts = filter_alignments(blasts, config=self.filters)
 
-        indexed_match_parts = {}
-        for blast in blasts:
-            query = blast['query']
-            for match in blast['matches']:
-                match_parts = match['match_parts']
-                try:
-                    indexed_match_parts[query['name']].extend(match_parts)
-                except KeyError:
-                    indexed_match_parts[query['name']] = match_parts
-
+        blasts = {blast['query']['name']: blast for blast in blasts}
         blast_fhand.close()
-        return indexed_match_parts
+        return blasts
 
     def get_matched_segments(self, seqrecord_name):
-        'it return the matched segments for the given seqrecord'
-        ignore_elongation_shorter = DEFAULT_IGNORE_ELONGATION_SHORTER
-        match_parts = self.get_match_parts(seqrecord_name)
-        if match_parts is None:
+        'It returns the matched segments for the given query (SeqRecord) name.'
+        try:
+            blast = self._blasts[seqrecord_name]
+        except KeyError:
             # There was no match in the blast
             return None
 
-        # Any of the match_parts has been elongated?
-        elongated_match = False
-        for m_p in match_parts:
-            if ELONGATED in m_p and m_p[ELONGATED] > ignore_elongation_shorter:
-                elongated_match = True
+        match_parts = [mp for m in blast['matches'] for mp in m['match_parts']]
         segments = covered_segments_from_match_parts(match_parts,
                                                      in_query=False)
-        return segments, elongated_match
+        return segments
 
-    def get_match_parts(self, seqrecord_name):
-        'it returns all the matches of a sequnce query'
-        try:
-            match_parts = self._match_parts[seqrecord_name]
-        except KeyError:
-            # There was no match in the blast
-            match_parts = None
-        return match_parts
+    @property
+    def blasts(self):
+        'It returns the blasts alignment results.'
+        # we trust the clients not to mess with this dict or its nested
+        # structure, to deepcopy would be a waste of resources in a
+        # well-behaved world
+        return self._blasts
