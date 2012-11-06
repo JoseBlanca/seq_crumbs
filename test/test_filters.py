@@ -27,10 +27,11 @@ from tempfile import NamedTemporaryFile
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.filters import FilterByLength, FilterById, FilterByQuality, \
-    FilterBlastMatch
+from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
+                            FilterBlastMatch)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.tags import NUCL
 
 
 def _create_seqrecord(string):
@@ -183,7 +184,8 @@ class BlastMatchFilterTest(unittest.TestCase):
                    {'kind': 'min_length', 'min_percentage': 60,
                     'length_in_query': True}]
 
-        filter_ = FilterBlastMatch(blastdb, 'blastn', filters)
+        filter_ = FilterBlastMatch(blastdb, 'blastn', filters=filters,
+                                   dbtype=NUCL)
         new_seqs = filter_(seqs)
         assert  new_seqs == []
 

@@ -17,7 +17,7 @@ import os.path
 import subprocess
 import tempfile
 
-from crumbs.seqio import seqio, write_seqrecords
+from crumbs.seqio import seqio, write_seqrecords, guess_seq_type
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
 from crumbs.utils.tags import NUCL, PROT
@@ -65,15 +65,20 @@ def _get_abs_blastdb_path(blastdb_or_path, dbtype):
     return OSError('blastdb not found')
 
 
-def _blastdb_exists(dbpath, dbtype):
+def _blastdb_exists(dbpath, dbtype=None):
     'It checks if a a blast db exists giving its path'
-    assert dbtype in (NUCL, PROT)
-    ext = '.nin' if dbtype == NUCL else '.pin'
+    assert dbtype in (NUCL, PROT, None)
+    if dbtype == NUCL:
+        exts = ['.nin']
+    elif dbtype == PROT:
+        exts = ['.pin']
+    else:
+        exts = ['.nin', '.pin']
 
-    return os.path.exists(dbpath + ext)
+    return any([os.path.exists(dbpath + ext) for ext in exts])
 
 
-def get_or_create_blastdb(blastdb_or_path, dbtype, directory=None):
+def get_or_create_blastdb(blastdb_or_path, dbtype=None, directory=None):
     '''it returns a blast database.
 
     If it does not exists it creates and if you give it a directory it will
@@ -86,13 +91,15 @@ def get_or_create_blastdb(blastdb_or_path, dbtype, directory=None):
     else:
         dbpath = seq_fpath
 
-    if not _blastdb_exists(dbpath, dbtype):
+    if not _blastdb_exists(dbpath, dbtype=dbtype):
         if not os.path.exists(seq_fpath):
             msg = 'An input sequence is required to create a blastdb'
             raise RuntimeError(msg)
         if seq_fpath != dbpath:
             seqio([open(seq_fpath)], [open(dbpath, 'w')], out_format='fasta',
                   copy_if_same_format=False)
+        if dbtype is None:
+            dbtype = guess_seq_type(open(dbpath))
         _makeblastdb_plus(dbpath, dbtype)
     return dbpath
 
@@ -117,7 +124,8 @@ def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
     check_process_finishes(process, binary=cmd[0])
 
 
-def _do_blast_2(db_fpath, queries, program, blast_format=None, params=None):
+def _do_blast_2(db_fpath, queries, program, dbtype=None, blast_format=None,
+                params=None):
     '''It returns an alignment result with the blast.
 
     It is an alternative interface to the one based on fpaths.
@@ -130,7 +138,7 @@ def _do_blast_2(db_fpath, queries, program, blast_format=None, params=None):
     query_fhand = write_seqrecords(queries, file_format='fasta')
     query_fhand.flush()
 
-    blastdb = get_or_create_blastdb(db_fpath, dbtype=NUCL)
+    blastdb = get_or_create_blastdb(db_fpath, dbtype=dbtype)
 
     if blast_format is None:
         blast_format = ['query', 'subject', 'query_length', 'subject_length',
@@ -187,8 +195,7 @@ class BlastMatcherForFewSubjects(object):
         seqio([open(seq_fpath)], [open(dbpath, 'w')], out_format='fasta',
               copy_if_same_format=False)
 
-        blasts, blast_fhand = _do_blast_2(dbpath, oligos,
-                                          params=self.params,
+        blasts, blast_fhand = _do_blast_2(dbpath, oligos, params=self.params,
                                           program=self.program)
         if self.filters is not None:
             blasts = filter_alignments(blasts, config=self.filters)
@@ -245,7 +252,7 @@ class BlastMatcher(object):
     It needs iterable with seqrecords and a blast dabatase
     '''
 
-    def __init__(self, seqrecords, blastdb, program, params=None,
+    def __init__(self, seqrecords, blastdb, program, dbtype=None, params=None,
                  filters=None):
         self.program = program
         if params is None:
@@ -254,13 +261,15 @@ class BlastMatcher(object):
         if filters is None:
             filters = []
         self.filters = filters
-        self._blasts = self._look_for_blast_matches(seqrecords, blastdb)
-        self._match_parts = self._look_for_blast_matches(seqrecords, blastdb)
+        if dbtype not in (NUCL, PROT, None):
+            raise ValueError('dbtype must be NUCL, PROT or None (we guess)')
+        self._blasts = self._look_for_blast_matches(seqrecords, blastdb,
+                                                    dbtype)
 
-    def _look_for_blast_matches(self, seqrecords, blastdb):
+    def _look_for_blast_matches(self, seqrecords, blastdb, dbtype):
         'it makes the blast and filters the results'
         blasts, blast_fhand = _do_blast_2(blastdb, seqrecords, self.program,
-                                          params=self.params)
+                                          params=self.params, dbtype=dbtype)
         # print open(blast_fhand.name).read()
         if self.filters is not None:
             blasts = filter_alignments(blasts, config=self.filters)

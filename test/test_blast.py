@@ -109,11 +109,12 @@ class BlastMater(unittest.TestCase):
         mate_fhand = create_a_matepair_file()
 
         expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
-        matcher = BlastMatcherForFewSubjects(mate_fhand.name, LINKERS, program='blastn',
-                               elongate_for_global=True)
+        matcher = BlastMatcherForFewSubjects(mate_fhand.name, LINKERS,
+                                             program='blastn',
+                                             elongate_for_global=True)
         linker_region = matcher.get_matched_segments_for_read('seq1')[0]
         assert [expected_region] == linker_region
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'BlastTest.test_blastdb']
+    # import sys;sys.argv = ['', 'BlastTest.test_blastdb']
     unittest.main()

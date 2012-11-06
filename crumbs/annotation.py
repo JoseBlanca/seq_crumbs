@@ -233,12 +233,14 @@ class PolyaAnnotator(object):
 
 class BlastAnnotator(object):
     'It guess the direction of the seq using blast'
-    def __init__(self, blastdb, program, filters=None, params=None):
+    def __init__(self, blastdb, program, dbtype=None, filters=None,
+                 params=None):
         'Initializes the class'
         self._blastdb = blastdb
         self._program = program
         self._filters = [] if filters is None else filters
         self._params = params
+        self._dbtype = dbtype
         self._stats = Counter()
 
     @property
@@ -251,7 +253,8 @@ class BlastAnnotator(object):
         stats = self._stats
         stats[PROCESSED_PACKETS] += 1
         matcher = BlastMatcher(seqrecords, self._blastdb, self._program,
-                                filters=self._filters, params=self._params)
+                               self._dbtype, filters=self._filters,
+                               params=self._params)
         blasts = matcher.blasts
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1

@@ -25,7 +25,7 @@ from crumbs.annotation import (EstscanOrfAnnotator, _detect_polya_tail,
                                PolyaAnnotator, BlastAnnotator)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seqio import read_seqrecords
-from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME
+from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME, NUCL
 
 
 class AnnotationTest(unittest.TestCase):
@@ -146,7 +146,8 @@ class AnnotationTest(unittest.TestCase):
                                  id='seq_nomatch')
         seqrecords = [seq1, seq2, seq3]
 
-        annotator = BlastAnnotator(blastdb=blastdb, program='blastn')
+        annotator = BlastAnnotator(blastdb=blastdb, program='blastn',
+                                   dbtype=NUCL)
         seqrecords = annotator(seqrecords)
         seq1 = seqrecords[0]
         seq2 = seqrecords[1]

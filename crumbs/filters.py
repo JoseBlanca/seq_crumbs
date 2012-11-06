@@ -158,7 +158,7 @@ class FilterByQuality(object):
 
 class FilterBlastMatch(object):
     'It filters a seq if there is a match against a blastdb'
-    def __init__(self, database, program, filters, reverse=False):
+    def __init__(self, database, program, filters, dbtype=None, reverse=False):
         '''The initiator
             database: path to a file with seqs or a blast database
             filter_params:
