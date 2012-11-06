@@ -249,17 +249,40 @@ class BlastAnnotator(object):
     def __call__(self, seqrecords):
         'It does the work'
         stats = self._stats
+        stats[PROCESSED_PACKETS] += 1
         matcher = BlastMatcher(seqrecords, self._blastdb, self._program,
                                 filters=self._filters, params=self._params)
         blasts = matcher.blasts
         for seqrecord in seqrecords:
+            stats[PROCESSED_SEQS] += 1
             align_result = blasts.get(seqrecord.id, None)
             if not align_result:
                 continue
-
+            stats[YIELDED_SEQS] += 1
+            match_counter = 0
             for match in align_result['matches']:
-                print match['subject']['name']
-                print match.keys()
+                subject = match['subject']['name']
+                match_counter += 1
+                for match_part in  match['match_parts']:
+                    if match_part['subject_end'] < match_part['subject_start']:
+                        strand = -1
+                        subject_start = match_part['subject_end']
+                        subject_end = match_part['subject_start']
+                    else:
+                        strand = 1
+                        subject_start = match_part['subject_start']
+                        subject_end = match_part['subject_end']
 
+                    query_start = match_part['query_start']
+                    query_end = match_part['query_end']
+                    qualifiers = {}
+                    qualifiers['Target'] = {'start': subject_start,
+                                            'end': subject_end,
+                                            'name': subject}
+                    location = FeatureLocation(query_start, query_end, strand)
+                    feature = SeqFeature(location=location, type='match_part',
+                                         qualifiers=qualifiers,
+                                       id='match{0:03d}'.format(match_counter))
+                    seqrecord.features.append(feature)
 
-
+        return seqrecords

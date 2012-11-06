@@ -306,7 +306,7 @@ def _tabular_blast_parser(fhand, line_format):
         matches = []
         # pylint: disable=C0301
         for sname, slen, match_parts in _group_match_parts_by_subject(match_parts):
-            #match start and end
+            # match start and end
             match_start, match_end = None, None
             match_subject_start, match_subject_end = None, None
             for match_part in match_parts:
@@ -384,8 +384,8 @@ class BlastParser(object):
         if subj_def_as_accesion is not None:
             self.use_subject_def_as_accession = subj_def_as_accesion
 
-        #we use the biopython parser
-        #if there are no results we put None in our blast_parse results
+        # we use the biopython parser
+        # if there are no results we put None in our blast_parse results
         self._blast_parse = None
         if fhand.read(1) == '<':
             fhand.seek(0)
@@ -397,7 +397,7 @@ class BlastParser(object):
 
     def _create_result_structure(self, bio_result):
         'Given a BioPython blast result it returns our result structure'
-        #the query name and definition
+        # the query name and definition
         definition = bio_result.query
         if self.use_query_def_as_accession:
             items = definition.split(' ', 1)
@@ -411,15 +411,15 @@ class BlastParser(object):
             definition = definition
         if definition is None:
             definition = "<unknown description>"
-        #length of query sequence
+        # length of query sequence
         length = bio_result.query_letters
-        #now we can create the query sequence
+        # now we can create the query sequence
         query = {'name': name, 'description': definition, 'length': length}
 
-        #now we go for the hits (matches)
+        # now we go for the hits (matches)
         matches = []
         for alignment in bio_result.alignments:
-            #the subject sequence
+            # the subject sequence
             if self.use_subject_def_as_accession:
                 items = alignment.hit_def.split(' ', 1)
                 name = items[0]
@@ -438,7 +438,7 @@ class BlastParser(object):
             subject = {'name': name, 'description': definition,
                        'length': length}
 
-            #the hsps (match parts)
+            # the hsps (match parts)
             match_parts = []
             match_start, match_end = None, None
             match_subject_start, match_subject_end = None, None
@@ -449,14 +449,14 @@ class BlastParser(object):
                 query_start = hsp.query_start
                 query_end = hsp.query_end
                 hsp_length = len(hsp.query)
-                #We have to check the subject strand
+                # We have to check the subject strand
                 if subject_start < subject_end:
                     subject_strand = 1
                 else:
                     subject_strand = -1
                     subject_start, subject_end = (subject_end,
                                                   subject_start)
-                #Also the query strand
+                # Also the query strand
                 if query_start < query_end:
                     query_strand = 1
                 else:
@@ -533,8 +533,8 @@ class BlastParser(object):
             raise StopIteration
         else:
             bio_result = self._blast_parse.next()
-            #now we have to change this biopython blast_result in our
-            #structure
+            # now we have to change this biopython blast_result in our
+            # structure
             our_result = self._create_result_structure(bio_result)
             return our_result
 
@@ -585,11 +585,11 @@ class ExonerateParser(object):
             subject_start, subject_end, subject_strand, score, query_length,
             subject_length, similarity) = match_part_
             query_start = int(query_start)
-            #they number the positions between symbols
+            # they number the positions between symbols
             # A C G T
-            #0 1 2 3 4
-            #Hence the subsequence "CG" would have start=1, end=3, and length=2
-            #but we would say start=1 and end=2
+            # 0 1 2 3 4
+            # Hence the subsequence "CG" would have start=1, end=3, and length=2
+            # but we would say start=1 and end=2
             query_end = int(query_end) - 1
             subject_start = int(subject_start)
             subject_end = int(subject_end) - 1
@@ -676,12 +676,12 @@ def get_match_score(match, score_key, query=None, subject=None):
     It can also be a derived score like the incompatibility. All derived scores
     begin with d_
     '''
-    #the score can be in the match itself or in the first
-    #match_part
+    # the score can be in the match itself or in the first
+    # match_part
     if score_key in match['scores']:
         score = match['scores'][score_key]
     else:
-        #the score is taken from the best hsp (the first one)
+        # the score is taken from the best hsp (the first one)
         score = match['match_parts'][0]['scores'][score_key]
     return score
 
@@ -706,7 +706,7 @@ def alignment_results_scores(results, scores, filter_same_query_subject=True):
     out.
     The scores can be a single one or a list of them.
     '''
-    #for each score we want a list to gather the results
+    # for each score we want a list to gather the results
     score_res = []
     for score in scores:
         score_res.append([])
@@ -717,9 +717,9 @@ def alignment_results_scores(results, scores, filter_same_query_subject=True):
             if (filter_same_query_subject and query is not None and subject is
                 not None and query['name'] == subject['name']):
                 continue
-            #all the scores for this match
+            # all the scores for this match
             score_values = get_match_scores(match, scores, query, subject)
-            #we append each score to the corresponding result list
+            # we append each score to the corresponding result list
             for index, value in enumerate(score_values):
                 score_res[index].append(value)
     if len(score_res) == 1:
@@ -734,7 +734,7 @@ def build_relations_from_aligment(fhand, query_name, subject_name):
     The alignment must be only between two sequences query against subject
     '''
 
-    #we parse the aligment
+    # we parse the aligment
     in_seq_section = 0
     seq, seq_len, al_start = None, None, None
     for line in fhand:
@@ -765,7 +765,7 @@ def build_relations_from_aligment(fhand, query_name, subject_name):
             'al_start': al_start - 1,
             'name': subject_name}
 
-    #now we get the segments
+    # now we get the segments
     gap = '-'
     pos_seq0 = seq0['al_start']
     pos_seq1 = seq1['al_start']
@@ -809,12 +809,12 @@ def _get_match_score(match, score_key, query=None, subject=None):
     It tries to get the score from the match, if it's not there it goes for
     the first match_part.
     '''
-    #the score can be in the match itself or in the first
-    #match_part
+    # the score can be in the match itself or in the first
+    # match_part
     if score_key in match['scores']:
         score = match['scores'][score_key]
     else:
-        #the score is taken from the best hsp (the first one)
+        # the score is taken from the best hsp (the first one)
         score = match['match_parts'][0]['scores'][score_key]
     return score
 
@@ -859,7 +859,7 @@ def _create_scores_mapper_(score_key, score_tolerance=None,
         if log_tolerance is None:
             log_best_score = None
         else:
-            #score of the best match
+            # score of the best match
             try:
                 best_match = alignment['matches'][0]
                 best_score = _get_match_score(best_match, score_key)
@@ -881,7 +881,7 @@ def _create_scores_mapper_(score_key, score_tolerance=None,
             match['match_parts'] = filtered_match_parts
             if not len(match['match_parts']):
                 continue
-            #is this match ok?
+            # is this match ok?
             match_score = get_match_score(match, score_key)
             if _score_above_threshold(match_score, min_score, max_score,
                                       log_tolerance, log_best_score):
@@ -1013,7 +1013,7 @@ def covered_segments_from_match_parts(match_parts, in_query=True,
         else:
             start = match_part['subject_start']
             end = match_part['subject_end']
-        if start > end:     # a revesed item
+        if start > end:  # a revesed item
             start, end = end, start
         segments.append((start, end))
     return merge_overlaping_segments(segments,
@@ -1104,7 +1104,9 @@ def elongate_match_parts_till_global(match_parts, query_length,
     shorter than the mark_strech_longer integer.
 
     '''
-    return [elongate_match_part_till_global(mp, query_length, subject_length, align_completely=align_completely) for mp in match_parts]
+    return [elongate_match_part_till_global(mp, query_length, subject_length,
+                                            align_completely=align_completely)
+                                                         for mp in match_parts]
 
 
 def _match_length(match, length_from_query):
@@ -1180,7 +1182,7 @@ def _create_min_length_mapper(length_in_query, min_num_residues=None,
                 else:
                     mol_length = match['subject']['length']
             else:
-                mol_length = None   # it doesn't matter because we're after an
+                mol_length = None  # it doesn't matter because we're after an
                                     # absolute value
             if filter_match_parts:
                 filtered_match_parts = []
@@ -1244,7 +1246,7 @@ def filter_alignments(alignments, config):
     config.append({'kind': 'fix_matches'})
     config.append({'kind': 'filter_empty'})
 
-    #create the pipeline
+    # create the pipeline
     for conf in config:
         funct_fact = FILTER_COLLECTION[conf['kind']]['funct_factory']
         kind = FILTER_COLLECTION[conf['kind']]['kind']

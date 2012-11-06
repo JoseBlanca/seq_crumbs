@@ -20,7 +20,7 @@ import tempfile
 from crumbs.seqio import seqio, write_seqrecords
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
-from crumbs.utils.tags import NUCL, PROT, SUBJECT
+from crumbs.utils.tags import NUCL, PROT
 from crumbs.alignment_result import (filter_alignments, ELONGATED, QUERY,
                                      covered_segments_from_match_parts,
                                      elongate_match_parts_till_global,

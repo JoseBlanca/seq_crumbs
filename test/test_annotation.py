@@ -148,6 +148,23 @@ class AnnotationTest(unittest.TestCase):
 
         annotator = BlastAnnotator(blastdb=blastdb, program='blastn')
         seqrecords = annotator(seqrecords)
+        seq1 = seqrecords[0]
+        seq2 = seqrecords[1]
+        seq3 = seqrecords[2]
+
+        assert seq1.features[0].strand == 1
+        assert seq1.features[0].qualifiers['Target']['name'] == 'AT1G55265.1'
+        assert seq1.features[0].location.start.position == 0
+
+        assert seq2.features[0].location.strand == -1
+        assert seq2.features[0].location.start.position == 0
+        assert seq2.features[0].location.end.position == 281
+        assert seq2.features[0].qualifiers['Target']['name'] == 'AT1G55265.1'
+        assert seq2.features[0].qualifiers['Target']['start'] == 79
+        assert seq2.features[0].qualifiers['Target']['end'] == 360
+
+        assert len(seq2.features) == 1
+        assert len(seq3.features) == 0
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
