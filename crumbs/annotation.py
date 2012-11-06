@@ -282,6 +282,8 @@ class BlastAnnotator(object):
                     qualifiers['Target'] = {'start': subject_start,
                                             'end': subject_end,
                                             'name': subject}
+                    qualifiers['score'] = match_part['scores']['expect']
+                    qualifiers['identity'] = match_part['scores']['identity']
                     location = FeatureLocation(query_start, query_end, strand)
                     feature = SeqFeature(location=location, type='match_part',
                                          qualifiers=qualifiers,
