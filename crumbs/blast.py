@@ -157,7 +157,7 @@ def _do_blast_2(db_fpath, queries, program, dbtype=None, blast_format=None,
     return blasts, blast_fhand
 
 
-class BlastMatcherForFewSubjects(object):
+class BlasterForFewSubjects(object):
     '''It matches the given SeqRecords against the reads in the file.
 
     This class uses Blast to do the matching and it is optimized for having
@@ -247,7 +247,7 @@ class BlastMatcherForFewSubjects(object):
         return segments, elongated_match
 
 
-class BlastMatcher(object):
+class Blaster(object):
     '''It matches the given SeqRecords against a blast database.
     It needs iterable with seqrecords and a blast dabatase
     '''

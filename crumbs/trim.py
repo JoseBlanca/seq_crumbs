@@ -25,7 +25,7 @@ from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
                                          merge_overlaping_segments)
 from crumbs.iterutils import rolling_window
-from crumbs.blast import BlastMatcherForFewSubjects
+from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqrecords
 
 # pylint: disable=R0903
@@ -317,7 +317,7 @@ class TrimWithBlastShort(object):
                     'min_score': 89},
                    {'kind': 'min_length', 'min_num_residues': 13,
                     'length_in_query': False}]
-        matcher = BlastMatcherForFewSubjects(db_fhand.name, self.oligos,
+        matcher = BlasterForFewSubjects(db_fhand.name, self.oligos,
                                              program='blastn', filters=filters,
                                              params=params,
                                              elongate_for_global=True)

@@ -17,7 +17,7 @@ import unittest
 import os.path
 from tempfile import NamedTemporaryFile
 
-from crumbs.blast import (do_blast, BlastMatcherForFewSubjects, get_or_create_blastdb,
+from crumbs.blast import (do_blast, BlasterForFewSubjects, get_or_create_blastdb,
                           _blastdb_exists)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import LINKERS, TITANIUM_LINKER
@@ -109,7 +109,7 @@ class BlastMater(unittest.TestCase):
         mate_fhand = create_a_matepair_file()
 
         expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
-        matcher = BlastMatcherForFewSubjects(mate_fhand.name, LINKERS,
+        matcher = BlasterForFewSubjects(mate_fhand.name, LINKERS,
                                              program='blastn',
                                              elongate_for_global=True)
         linker_region = matcher.get_matched_segments_for_read('seq1')[0]

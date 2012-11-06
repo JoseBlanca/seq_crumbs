@@ -24,7 +24,7 @@ from crumbs.utils.bin_utils import (get_binary_path, popen,
 from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
                                FIVE_PRIME, THREE_PRIME)
 from crumbs.seqio import write_seqrecords, read_seqrecords
-from crumbs.blast import BlastMatcher
+from crumbs.blast import Blaster
 from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
 
 # pylint: disable=R0903
@@ -252,7 +252,7 @@ class BlastAnnotator(object):
         'It does the work'
         stats = self._stats
         stats[PROCESSED_PACKETS] += 1
-        matcher = BlastMatcher(seqrecords, self._blastdb, self._program,
+        matcher = Blaster(seqrecords, self._blastdb, self._program,
                                self._dbtype, filters=self._filters,
                                params=self._params)
         blasts = matcher.blasts

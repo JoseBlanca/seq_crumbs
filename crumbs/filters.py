@@ -18,7 +18,7 @@ from __future__ import division
 from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.exceptions import WrongFormatError
-from crumbs.blast import BlastMatcher
+from crumbs.blast import Blaster
 # pylint: disable=R0903
 
 
@@ -184,7 +184,7 @@ class FilterBlastMatch(object):
         filtered_seqrecords = []
         stats = self._stats
 
-        matcher = BlastMatcher(seqrecords, self._blast_db,
+        matcher = Blaster(seqrecords, self._blast_db,
                                program=self._blast_program,
                                filters=self._filters)
         for seqrec in seqrecords:
