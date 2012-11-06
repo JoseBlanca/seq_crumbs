@@ -13,6 +13,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import subprocess
+import os.path
 from tempfile import NamedTemporaryFile
 from collections import Counter
 from random import randint
@@ -256,6 +257,7 @@ class BlastAnnotator(object):
                                self._dbtype, filters=self._filters,
                                params=self._params)
         blasts = matcher.blasts
+        blastdb = os.path.basename(self._blastdb)
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1
             align_result = blasts.get(seqrecord.id, None)
@@ -284,6 +286,7 @@ class BlastAnnotator(object):
                                             'name': subject}
                     qualifiers['score'] = match_part['scores']['expect']
                     qualifiers['identity'] = match_part['scores']['identity']
+                    qualifiers['blastdb'] = blastdb
                     location = FeatureLocation(query_start, query_end, strand)
                     feature = SeqFeature(location=location, type='match_part',
                                          qualifiers=qualifiers,

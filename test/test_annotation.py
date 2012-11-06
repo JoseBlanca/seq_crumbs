@@ -158,6 +158,7 @@ class AnnotationTest(unittest.TestCase):
         assert seq1.features[0].location.start.position == 0
         assert seq1.features[0].qualifiers['score']
         assert seq1.features[0].qualifiers['identity'] == 100.0
+        assert seq1.features[0].qualifiers['blastdb'] == 'arabidopsis_genes'
 
         assert seq2.features[0].location.strand == -1
         assert seq2.features[0].location.start.position == 0
