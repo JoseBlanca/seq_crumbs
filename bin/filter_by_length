@@ -27,8 +27,10 @@ from crumbs.filters import FilterByLength
 def _setup_argparse(description):
     'It returns the argument parser'
     parser = create_basic_process_argparse(description=description)
-    parser.add_argument('-l', '--threshold', type=int, help='Length threshold',
-                        required=True)
+    parser.add_argument('-x', '--max', type=int, help='max length kept',
+                        required=False)
+    parser.add_argument('-n', '--min', type=int, help='min length kept',
+                        required=False)
     parser.add_argument('-m', '--ignore_masked',
                         help='Count only the uppercased residues',
                         action='store_true', default=False)
@@ -41,7 +43,8 @@ def _setup_argparse(description):
 def _parse_args(parser):
     'It parses the arguments'
     args, parsed_args = parse_basic_process_args(parser)
-    args['threshold'] = parsed_args.threshold
+    args['max'] = parsed_args.max
+    args['min'] = parsed_args.min
     args['ignore_masked'] = parsed_args.ignore_masked
     args['reverse'] = parsed_args.reverse
     return args
@@ -57,8 +60,7 @@ def filter_by_length():
     out_fhand = args['out_fhand']
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
-    filter_by_length = FilterByLength(threshold=args['threshold'],
-                                      reverse=args['reverse'],
+    filter_by_length = FilterByLength(minimum=args['min'], maximum=args['max'],
                                       ignore_masked=args['ignore_masked'])
     seq_packets, workers = process_seq_packets(seq_packets, [filter_by_length],
                                                processes=args['processes'])

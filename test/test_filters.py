@@ -57,27 +57,34 @@ class LengthFilterTest(unittest.TestCase):
         seq2 = _create_seqrecord('AC')
         seqs = [seq1, seq2]
 
-        filter_by_length = FilterByLength(threshold=4)
+        filter_by_length = FilterByLength(minimum=4)
         assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg']
 
-        filter_by_length = FilterByLength(threshold=4, reverse=True)
+        filter_by_length = FilterByLength(minimum=5)
+        assert [str(s.seq) for s in filter_by_length(seqs)] == []
+
+        filter_by_length = FilterByLength(minimum=2, ignore_masked=True)
+        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg', 'AC']
+
+        filter_by_length = FilterByLength(minimum=3, ignore_masked=True)
+        assert [str(s.seq) for s in filter_by_length(seqs)] == []
+
+        filter_by_length = FilterByLength(maximum=3, ignore_masked=True)
+        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg', 'AC']
+
+        filter_by_length = FilterByLength(maximum=3)
         assert [str(s.seq) for s in filter_by_length(seqs)] == ['AC']
 
-        filter_by_length = FilterByLength(threshold=5)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == []
+        seq1 = _create_seqrecord('aCTTATg')
+        seq2 = _create_seqrecord('ACCGCGC')
+        seqs = [seq1, seq2]
+        filter_by_length = FilterByLength(minimum=7, maximum=8,
+                                          ignore_masked=True)
+        assert len([str(s.seq) for s in filter_by_length(seqs)]) == 1
 
-        filter_by_length = FilterByLength(threshold=5, reverse=True)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg', 'AC']
+        filter_by_length = FilterByLength(minimum=7, maximum=8)
+        assert len([str(s.seq) for s in filter_by_length(seqs)]) == 2
 
-        filter_by_length = FilterByLength(threshold=2, ignore_masked=True)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg', 'AC']
-
-        filter_by_length = FilterByLength(threshold=3, ignore_masked=True)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == []
-
-        filter_by_length = FilterByLength(threshold=3, ignore_masked=True,
-                                          reverse=True)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg', 'AC']
 
     def test_filter_by_length_bin(self):
         'It uses the filter_by_length binary'
@@ -86,13 +93,13 @@ class LengthFilterTest(unittest.TestCase):
 
         fasta = '>s1\naCTg\n>s2\nAC\n'
         fasta_fhand = _make_fhand(fasta)
-        result = check_output([filter_bin, '-l', '4', fasta_fhand.name])
+        result = check_output([filter_bin, '-n', '4', fasta_fhand.name])
         assert '>s1\naCTg\n' in result
 
-        result = check_output([filter_bin, '-l', '4', '-r', fasta_fhand.name])
+        result = check_output([filter_bin, '-x', '4', '-r', fasta_fhand.name])
         assert '>s2\nAC\n' in result
 
-        result = check_output([filter_bin, '-rml', '4', fasta_fhand.name])
+        result = check_output([filter_bin, '-rmx', '4', fasta_fhand.name])
         assert '>s1\naCTg\n>s2\nAC\n' in result
 
 

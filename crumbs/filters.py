@@ -24,15 +24,17 @@ from crumbs.blast import Blaster
 
 class FilterByLength(object):
     'It removes the sequences according to their length.'
-    def __init__(self, threshold, reverse=False, ignore_masked=False):
+    def __init__(self, minimum=None, maximum=None, ignore_masked=False):
         '''The initiator.
 
         threshold - minimum length to pass the filter (integer)
         reverse - if True keep the short sequences and discard the long ones
         ignore_masked - If True only uppercase letters will be counted.
         '''
-        self.threshold = threshold
-        self.reverse = reverse
+        if min is None and max is None:
+            raise ValueError('min or max threshold must be given')
+        self.min = minimum
+        self.max = maximum
         self.ignore_masked = ignore_masked
         self._stats = {PROCESSED_SEQS: 0,
                        PROCESSED_PACKETS: 0,
@@ -46,8 +48,8 @@ class FilterByLength(object):
     def __call__(self, seqrecords):
         'It filters out the short seqrecords.'
         stats = self._stats
-        threshold = self.threshold
-        reverse = self.reverse
+        min_ = self.min
+        max_ = self.max
         ignore_masked = self.ignore_masked
         stats[PROCESSED_PACKETS] += 1
         processed_seqs = []
@@ -55,9 +57,12 @@ class FilterByLength(object):
             stats[PROCESSED_SEQS] += 1
             seq = str(seqrecord.seq)
             length = uppercase_length(seq) if ignore_masked else len(seq)
-            passed = True if length >= threshold else False
-            if reverse:
-                passed = not(passed)
+            passed = True
+            if min_ is not None and length < min_:
+                passed = False
+            if max_ is not None and length > max_:
+                passed = False
+
             if passed:
                 processed_seqs.append(seqrecord)
                 stats[YIELDED_SEQS] += 1
