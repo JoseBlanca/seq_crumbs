@@ -11,7 +11,7 @@ filter_by_quality
     It filters the sequences according to its mean quality.
 
 filter_by_length
-    It filters sequences according to a length threshold.
+    It filters sequences according to maximum and minimum length thresholds.
 
 filter_by_name
   It filters the sequences with a list of names given in a file.

@@ -4,6 +4,19 @@ Download
 
 The recommended method to get seq_crumbs is to download one of the releases, but if you want to access to the latest code you can do it at github_.
 
+seq_crumbs 0.1.4
+----------------
+
+Changelog:
+
+  * filter_by_length accepts maximum and minimum length thresholds
+  * ascii bloxplot now fits in smaller terminals
+
+Released on 7-11-12
+
+  * :download:`Source distribution <downloads/seq_crumbs-0.1.4.tar.gz>`.
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.4-x64-linux.tar.gz>
+
 seq_crumbs 0.1.3
 ----------------
 
