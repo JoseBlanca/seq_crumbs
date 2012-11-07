@@ -15,7 +15,7 @@ Changelog:
 Released on 7-11-12
 
   * :download:`Source distribution <downloads/seq_crumbs-0.1.4.tar.gz>`.
-  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.4-x64-linux.tar.gz>
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.4-x64-linux.tar.gz>`
 
 seq_crumbs 0.1.3
 ----------------
