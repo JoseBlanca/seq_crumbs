@@ -14,17 +14,17 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 from itertools import compress
-from random import choice
 import os.path
 
 from crumbs.annotation import (PolyaAnnotator, EstscanOrfAnnotator,
                                BlastAnnotator)
-from crumbs.utils.tags import REVERSE, FORWARD
+from crumbs.utils.tags import REVERSE
 
 
 class TranscriptOrientator(object):
-    '''This class orientates the transcript seqs looking into the polia, orf
-    and blast matches against other databases. In this order'''
+    '''This class orientates the transcripts
+
+    It can take into account: poly-A, ORFs and blast matches'''
 
     def __init__(self, polya_params=None, estscan_params=None,
                  blast_params=None):
@@ -33,10 +33,10 @@ class TranscriptOrientator(object):
         self._annotators = self._create_pipeline(polya_params,
                                                    estscan_params,
                                                    blast_params)
-        # analises
 
     def _create_pipeline(self, polya_params, estscan_params, blast_params):
         'It creates the annotation pipeline'
+        # pylint: disable=W0142
         annotators = []
         if polya_params:
             annotator = PolyaAnnotator(**polya_params)
@@ -52,50 +52,47 @@ class TranscriptOrientator(object):
                 annotator = BlastAnnotator(**blast_param)
                 annotators.append({'annotator': annotator,
                                    'feat_selector': self._match_part_selector})
-
         return annotators
 
     @staticmethod
     def _select_features_by_type(features, kind):
         'it selects features by type'
-        for feature in features:
-            if feature.type == kind:
-                yield feature
+        return [feat for feat in features if feat.type == kind]
 
-    def _polya_selector(self, features, db=None):
+    def _polya_selector(self, features, blastdb=None):
         'It selects the polya'
-        feats = list(self._select_features_by_type(features, 'polyA_sequence'))
+        # pylint: disable=W0613
+        feats = self._select_features_by_type(features, 'polyA_sequence')
         if feats:
             return feats[0]
 
-    def _orf_selector(self, features, db=None):
+    def _orf_selector(self, features, blastdb=None):
         'it returns the longest feature'
-        features = list(self._select_features_by_type(features, 'ORF'))
+        # pylint: disable=W0613
+        features = self._select_features_by_type(features, 'ORF')
         if not features:
             return None
 
         lengths = [len(feat) for feat in features]
         return features[lengths.index(max(lengths))]
 
-    def _match_part_selector(self, features, db):
+    def _match_part_selector(self, features, blastdb):
         'it return the match_part with the best e-value'
-        features = list(self._select_features_by_type(features, 'match_part'))
-        features = [f for f in features if f.qualifiers['blastdb'] == db]
+        features = self._select_features_by_type(features, 'match_part')
+        features = [f for f in features if f.qualifiers['blastdb'] == blastdb]
 
         if not features:
             return None
         scores = [feat.qualifiers['score'] for feat in features]
         return features[scores.index(min(scores))]
 
-    def _guess_orientations(self, seqrecords, feat_selector, db):
-        '''It returns the orientation of the transcripts.'''
+    @staticmethod
+    def _guess_orientations(seqrecords, feat_selector, blastdb):
+        '''It returns the orientation of the annotated transcripts.'''
         orientations = []
         for seqrecord in seqrecords:
-            feature = feat_selector(seqrecord.features, db=db)
-            if feature is not None:
-                orientation = feature.strand
-            else:
-                orientation = None
+            feature = feat_selector(seqrecord.features, blastdb=blastdb)
+            orientation = None if feature is None else feature.strand
             orientations.append(orientation)
         return orientations
 
@@ -115,24 +112,24 @@ class TranscriptOrientator(object):
             feat_selector = annotator['feat_selector']
             annotator = annotator['annotator']
             try:
-                db = os.path.basename(annotator.blastdb)
+                blastdb = os.path.basename(annotator.blastdb)
             except AttributeError:
-                db = None
+                blastdb = None
             annot_seqrecords = annotator(seqrecords_to_annalyze)
             annot_strands = self._guess_orientations(annot_seqrecords,
-                                                     feat_selector, db=db)
+                                                     feat_selector,
+                                                     blastdb=blastdb)
 
-            counter = 0
+            analyzed_seqs_index = 0
             for index, orientation in enumerate(orientations):
                 if orientation is None:
-                    orientations[index] = annot_strands[counter]
-                    counter += 1
+                    orientations[index] = annot_strands[analyzed_seqs_index]
+                    analyzed_seqs_index += 1
+
+        # Now we reverse the seqs that we have guess that are reversed
         reorientated_seqrecords = []
         for orientation, seqrecord in zip(orientations, seqrecords):
-            if orientation == None:
-                orientation = choice([REVERSE, FORWARD])
             if orientation == REVERSE:
                 seqrecord = seqrecord.reverse_complement()
             reorientated_seqrecords.append(seqrecord)
         return reorientated_seqrecords
-
