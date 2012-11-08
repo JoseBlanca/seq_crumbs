@@ -57,16 +57,16 @@ def copy_seqrecord(seqrec, seq=None, name=None, id_=None):
     if name is None:
         name = seqrec.name
 
-    #the letter annotations
+    # the letter annotations
     let_annot = {annot: v for annot, v in seqrec.letter_annotations.items()}
 
-    #the rest of parameters
+    # the rest of parameters
     description = seqrec.description
     dbxrefs = seqrec.dbxrefs[:]
-    features = seqrec.features[:]   # the features are not copied
+    features = seqrec.features[:]  # the features are not copied
     annotations = deepcopy(seqrec.annotations)
 
-    #the new sequence
+    # the new sequence
     new_seq = SeqRecord(seq=seq, id=id_, name=name, description=description,
                         dbxrefs=dbxrefs, features=features,
                         annotations=annotations, letter_annotations=let_annot)
@@ -152,7 +152,7 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
             sanger_chars = [q for q in qual if q < 64]
             if sanger_chars:
                 fhand.seek(0)
-                return None, True     # no quals, no lengths, is_sanger
+                return None, True  # no quals, no lengths, is_sanger
             lengths.append(len(qual))
             seqs_analyzed += 1
             if seqs_analyzed > seqs_to_peek:
@@ -161,7 +161,7 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
         raise UnknownFormatError('Malformed fastq')
     finally:
         fhand.seek(0)
-    return lengths, None     # quals, lengths, don't know if it's sanger
+    return lengths, None  # quals, lengths, don't know if it's sanger
 
 
 def _guess_fastq_version(fhand, force_file_as_non_seek):
@@ -227,7 +227,7 @@ def _guess_format(fhand, force_file_as_non_seek):
     raise UnknownFormatError('Sequence file of unknown format.')
 
 
-class FunctionRunner(object):
+class _FunctionRunner(object):
     'a class to join all the mapper functions in a single function'
     def __init__(self, map_functions):
         'Class initiator'
@@ -250,7 +250,7 @@ def process_seq_packets(seq_packets, map_functions, processes=1,
     else:
         workers = None
         mapper = itertools.imap
-    run_functions = FunctionRunner(map_functions)
+    run_functions = _FunctionRunner(map_functions)
 
     seq_packets = mapper(run_functions, seq_packets)
 
