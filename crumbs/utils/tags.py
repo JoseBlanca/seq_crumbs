@@ -47,3 +47,6 @@ ERROR_ENVIRON_VARIABLE = 'seq_crumbs_error_debugging'
 
 FIVE_PRIME = "5'"
 THREE_PRIME = "3'"
+
+REVERSE = -1
+FORWARD = 1

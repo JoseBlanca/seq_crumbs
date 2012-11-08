@@ -50,7 +50,8 @@ def _read_estcan_result(fhand, result, file_type):
         items = [i.strip() for i in seq.description.split(';')]
         strand = -1 if 'minus strand' in items else 1
         start, end = items[0].split(' ', 3)[1:3]
-        seqid = seq.id
+        # estscan changes the name, we have to fix it
+        seqid = seq.id.strip(';')
         try:
             seq_orfs = result[seqid]
         except KeyError:
@@ -96,7 +97,6 @@ class EstscanOrfAnnotator(object):
         # now we read the result files
         estscan_result = _read_estcan_results(open(pep_fhand.name),
                                               open(dna_fhand.name))
-
         for seq in seqrecords:
             stats[PROCESSED_SEQS] += 1
             seq_name = seq.id
@@ -237,7 +237,7 @@ class BlastAnnotator(object):
     def __init__(self, blastdb, program, dbtype=None, filters=None,
                  params=None):
         'Initializes the class'
-        self._blastdb = blastdb
+        self.blastdb = blastdb
         self._program = program
         self._filters = [] if filters is None else filters
         self._params = params
@@ -253,11 +253,11 @@ class BlastAnnotator(object):
         'It does the work'
         stats = self._stats
         stats[PROCESSED_PACKETS] += 1
-        matcher = Blaster(seqrecords, self._blastdb, self._program,
+        matcher = Blaster(seqrecords, self.blastdb, self._program,
                                self._dbtype, filters=self._filters,
                                params=self._params)
         blasts = matcher.blasts
-        blastdb = os.path.basename(self._blastdb)
+        blastdb = os.path.basename(self.blastdb)
         for seqrecord in seqrecords:
             stats[PROCESSED_SEQS] += 1
             align_result = blasts.get(seqrecord.id, None)
