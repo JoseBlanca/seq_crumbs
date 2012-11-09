@@ -17,8 +17,8 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
-                                    create_basic_parallel_argparse)
+from crumbs.utils.bin_utils import (main, parse_trimmer_args,
+                                    create_trimmer_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.trim import TrimEdges, TrimOrMask
 from crumbs.seqio import read_seq_packets, write_seq_packets
@@ -27,7 +27,7 @@ from crumbs.seqio import read_seq_packets, write_seq_packets
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It trims a fixed number of bases.'
-    parser = create_basic_parallel_argparse(description=description)
+    parser = create_trimmer_argparse(description=description)
 
     hlp_ = 'Number of bases to trim on the left side (default: %(default)s)'
     parser.add_argument('-l', '--left', dest='left', help=hlp_, default=0,
@@ -35,19 +35,14 @@ def _setup_argparse():
     hlp_ = 'Number of bases to trim on the right side (default: %(default)s)'
     parser.add_argument('-r', '--right', dest='right', help=hlp_, default=0,
                         type=int)
-    parser.add_argument('-m', '--mask', dest='mask',
-                        help='Do not trim, only mask by lowering the case',
-                        action='store_true', default=False)
-
     return parser
 
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
-    args, parsed_args = parse_basic_parallel_args(parser)
+    args, parsed_args = parse_trimmer_args(parser)
     args['right'] = parsed_args.right
     args['left'] = parsed_args.left
-    args['mask'] = parsed_args.mask
     return args
 
 

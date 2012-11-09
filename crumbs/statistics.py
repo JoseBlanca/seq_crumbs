@@ -28,7 +28,6 @@ from crumbs.utils import approx_equal
 # pylint: disable=R0912
 # pylint: disable=R0914
 # pylint: disable=R0915
-# pylint: disable=W1401
 # pylint: disable=W0223
 
 

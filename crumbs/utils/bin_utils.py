@@ -279,6 +279,15 @@ def create_filter_argparse(**kwargs):
     return parser
 
 
+def create_trimmer_argparse(**kwargs):
+    'It returns a cmd parser for the filter executables'
+    parser = create_basic_parallel_argparse(**kwargs)
+    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
+    parser.add_argument('-m', '--mask', dest='mask', action='store_true',
+                        help='Do not trim, only mask by lowering the case')
+    return parser
+
+
 def get_requested_compression(parsed_args):
     'It looks in the selected options and return the selected compression kind'
     comp_kind = None
@@ -353,4 +362,11 @@ def parse_filter_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_parallel_args(parser)
     args['reverse'] = parsed_args.reverse
+    return args, parsed_args
+
+
+def parse_trimmer_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_parallel_args(parser)
+    args['mask'] = parsed_args.mask
     return args, parsed_args
