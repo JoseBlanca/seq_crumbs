@@ -61,4 +61,7 @@ deinterleave_pairs
 calculate_stats
     It generates basic statistics for the given sequence files
 
+orientate_transcripts
+    It reverse complements transcripts according to polyA, ORF or blast hits
+
 .. include:: links.txt
