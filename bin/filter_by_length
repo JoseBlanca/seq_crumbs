@@ -17,8 +17,8 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_basic_process_args,
-                                    create_basic_process_argparse)
+from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
+                                    create_basic_parallel_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.filters import FilterByLength
@@ -26,7 +26,7 @@ from crumbs.filters import FilterByLength
 
 def _setup_argparse(description):
     'It returns the argument parser'
-    parser = create_basic_process_argparse(description=description)
+    parser = create_basic_parallel_argparse(description=description)
     parser.add_argument('-x', '--max', type=int, help='max length kept')
     parser.add_argument('-n', '--min', type=int, help='min length kept')
     parser.add_argument('-m', '--ignore_masked', action='store_true',
@@ -38,7 +38,7 @@ def _setup_argparse(description):
 
 def _parse_args(parser):
     'It parses the arguments'
-    args, parsed_args = parse_basic_process_args(parser)
+    args, parsed_args = parse_basic_parallel_args(parser)
     args['max'] = parsed_args.max
     args['min'] = parsed_args.min
     args['ignore_masked'] = parsed_args.ignore_masked

@@ -17,8 +17,8 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_basic_process_args,
-                                    create_basic_process_argparse)
+from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
+                                    create_basic_parallel_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.trim import TrimByQuality, TrimOrMask
 from crumbs.seqio import read_seq_packets, write_seq_packets
@@ -29,7 +29,7 @@ from crumbs.settings import (DEFAULT_QUALITY_TRIM_TRESHOLD,
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It trims a fixed number of bases.'
-    parser = create_basic_process_argparse(description=description)
+    parser = create_basic_parallel_argparse(description=description)
 
     parser.add_argument('-q', '--qual_threshold', dest='threshold',
                         help='Quality threshold (default: %(default)s)',
@@ -51,7 +51,7 @@ def _setup_argparse():
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
-    args, parsed_args = parse_basic_process_args(parser)
+    args, parsed_args = parse_basic_parallel_args(parser)
     args['threshold'] = parsed_args.threshold
     args['window'] = parsed_args.window
     args['mask'] = parsed_args.mask

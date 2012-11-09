@@ -17,8 +17,8 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_basic_process_args,
-                                    create_basic_process_argparse)
+from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
+                                    create_basic_parallel_argparse)
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.filters import FilterBlastMatch
@@ -27,7 +27,7 @@ from crumbs.filters import FilterBlastMatch
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It filters sequences using blast'
-    parser = create_basic_process_argparse(description=description)
+    parser = create_basic_parallel_argparse(description=description)
     parser.add_argument('-b', '--blastdb', dest='blastdb', required=True,
                      help='Blast database or path to sequence file (required)')
     default_blast_program = 'blastn'
@@ -52,7 +52,7 @@ def _setup_argparse():
 
 def _parse_args(parser):
     'It parses the arguments'
-    args, parsed_args = parse_basic_process_args(parser)
+    args, parsed_args = parse_basic_parallel_args(parser)
     if parsed_args.blastdb is None:
         return parser.error('path to blast parser is mandatory')
     else:

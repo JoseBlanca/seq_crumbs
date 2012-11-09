@@ -16,8 +16,8 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from crumbs.utils.bin_utils import (main, parse_basic_process_args,
-                                    create_basic_process_argparse)
+from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
+                                    create_basic_parallel_argparse)
 from crumbs.transcript_orientations import TranscriptOrientator
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import write_seq_packets, read_seq_packets
@@ -27,7 +27,7 @@ from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'fix transcript orientations'
-    parser = create_basic_process_argparse(description=description)
+    parser = create_basic_parallel_argparse(description=description)
     help_ = 'minimum number of consecutive As (or Ts) to extend the tail'
     help_ += '(default: %(default)s)'
     parser.add_argument('-m', '--polya_min_len', type=int,
@@ -70,7 +70,7 @@ def _prepare_blast_params(parser, blastdbs, programs, evalues):
 
 def _parse_args(parser):
     'It parses the arguments'
-    args, parsed_args = parse_basic_process_args(parser)
+    args, parsed_args = parse_basic_parallel_args(parser)
     args['polya_params'] = {'min_len': parsed_args.polya_min_len,
                        'max_cont_mismatches': parsed_args.polya_max_mixmatches}
     if parsed_args.estscan_usage_matrix:

@@ -260,7 +260,7 @@ def create_basic_argparse(**kwargs):
     return parser
 
 
-def create_basic_process_argparse(**kwargs):
+def create_basic_parallel_argparse(**kwargs):
     'It returns a cmd parser with inputs, output, format, num_processes'
     parser = create_basic_argparse(**kwargs)
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
@@ -333,7 +333,7 @@ def parse_basic_args(parser):
     return args, parsed_args
 
 
-def parse_basic_process_args(parser):
+def parse_basic_parallel_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_args(parser)
     args['processes'] = parsed_args.processes
