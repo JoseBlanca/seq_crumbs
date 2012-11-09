@@ -2,6 +2,9 @@
 TODO
 -----
 
+add option to keep filtered sequences
+defaults should be printed by argparse
+
 trim_blast_contanimant
 ----------------------
 
@@ -29,7 +32,11 @@ mask poli A
 
 mask low complexity
 --------------------
+with blast dust
 
+filter low complexity
+---------------------
+Take a look at https://stat.ethz.ch/pipermail/bioc-sig-sequencing/2009-February/000170.html
 
 
 

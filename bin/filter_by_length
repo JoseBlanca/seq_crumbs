@@ -35,7 +35,7 @@ def _setup_argparse(description):
                         help='Count only the uppercased residues',
                         action='store_true', default=False)
     parser.add_argument('-r', '--reverse',
-                        help='Reverses the filtering (keep small sequences)',
+                        help='Reverse the filtering',
                         action='store_true', default=False)
     return parser
 
