@@ -32,8 +32,8 @@ def _setup_argparse():
     parser = argparse.ArgumentParser(parents=[parent],
                                      conflict_handler='resolve')
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
-                        help='Sequence output file to process', nargs=2,
-                        type=argparse.FileType('wt'))
+                       help='Sequence output file to process (default STDOUT)',
+                       nargs=2, type=argparse.FileType('wt'))
     return parser
 
 

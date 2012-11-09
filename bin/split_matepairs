@@ -33,7 +33,8 @@ def _setup_argparse():
     description = 'It splits mate pair sequences'
     parser = create_basic_process_argparse(description=description)
 
-    hlp = 'platform or linker sequence (several can be given) (default 454)'
+    hlp = 'platform (454, flx, titanium) or linker sequence (several can be '
+    hlp += 'given) (required)'
     parser.add_argument('-l', '--linker', dest='linkers', help=hlp,
                         action='append', required=True)
     return parser

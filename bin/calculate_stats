@@ -31,20 +31,19 @@ def _setup_argparse():
     'It returns the argument parser'
     description = 'Calculate statistics of the given files'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('input', help='Sequence input files to process',
-                        default=sys.stdin, nargs='*',
+    parser.add_argument('input', default=sys.stdin, nargs='*',
+                        help='Sequence input files to process (default STDIN)',
                         type=argparse.FileType('rt'))
-    parser.add_argument('-t', '--in_format', help='Format of the input files',
-                        default=GUESS_FORMAT)
+    parser.add_argument('-t', '--in_format', default=GUESS_FORMAT,
+                       help='Format of the input files (default: %(default)s)')
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
-                        help='Sequence output file to process',
+                        help='Sequence output file (default STDOUT)',
                         type=argparse.FileType('wt'))
-    help_kmer_size = 'kmer size to calculate kmer stats, default:{}'.format(
-                                                            DEFAULT_KMER_SIZE)
+    help_kmer_size = 'kmer size to calculate (default: %(default)s)'
     parser.add_argument('-k', '--kmer_size', type=int, help=help_kmer_size,
                         default=DEFAULT_KMER_SIZE, dest='kmer_size')
     parser.add_argument('-c', '--complexity_stats', action='store_true',
-                        help='Do complexity (kmer) stats, default False',
+                        help='Do complexity (kmer) stats, (default False)',
                         default=False, dest='complex_stats')
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
@@ -103,4 +102,5 @@ def run():
     out_fhand.write(lengths_srt + qual_str + freq_str + qual_boxplot + kmers)
 
 if __name__ == '__main__':
+    #sys.argv.append('-h')
     sys.exit(main(run))

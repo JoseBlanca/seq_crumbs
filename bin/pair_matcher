@@ -24,20 +24,21 @@ from crumbs.utils.bin_utils import (main, create_basic_argparse,
 from crumbs.utils.file_utils import compress_fhand
 from crumbs.pairs import match_pairs, match_pairs_unordered
 from crumbs.seqio import read_seqrecords
+from crumbs.settings import DEFAULT_SEQS_IN_MEM_LIMIT
 
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
-    description = 'It matches pair seqs and splits orphaned seqs in another'
+    description = 'It matches paired reads and splits orphaned reads in other'
     description += ' file'
     parser = create_basic_argparse(description=description)
     #orphan
-    parser.add_argument('-p', '--orphan', dest='orphan',
-                       help='Output orphan file', type=argparse.FileType('wt'),
-                       required=True)
-    parser.add_argument('-l', '--limit', dest='limit',
-                       help='limit Number of seqs in memory', type=int,
-                       default=500000)
+    parser.add_argument('-p', '--orphan', dest='orphan', required=True,
+                       help='Output orphan file (required)',
+                       type=argparse.FileType('wt'))
+    hlp = 'Maximum number of reads in memory (default: %(default)s)'
+    parser.add_argument('-l', '--limit', dest='limit', help=hlp, type=int,
+                        default=DEFAULT_SEQS_IN_MEM_LIMIT)
     unor_help = 'paired reads are unordered and not just interleaved'
     parser.add_argument('-u', '--unordered', dest='unordered',
                         help=unor_help, action='store_true', default=False)
@@ -86,4 +87,5 @@ def run():
                     memory_limit=args['memory_limit'])
 
 if __name__ == '__main__':
+    #sys.argv.append('-h')
     sys.exit(main(run))

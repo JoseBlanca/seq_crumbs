@@ -3,7 +3,6 @@ TODO
 -----
 
 add option to keep filtered sequences
-defaults should be printed by argparse
 
 trim_blast_contanimant
 ----------------------

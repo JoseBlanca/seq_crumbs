@@ -28,10 +28,10 @@ def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It filters sequences using blast'
     parser = create_basic_process_argparse(description=description)
-    parser.add_argument('-b', '--blastdb', dest='blastdb',
-                        help='Blast database or path to sequence file')
+    parser.add_argument('-b', '--blastdb', dest='blastdb', required=True,
+                     help='Blast database or path to sequence file (required)')
     default_blast_program = 'blastn'
-    hlp = 'blast program to use (default' + default_blast_program + ')'
+    hlp = 'blast program to use (default: %(default)s)'
     parser.add_argument('-g', '--blast_program', dest='blast_program',
                         help=hlp, default=default_blast_program)
     parser.add_argument('-e', '--expected', dest='expected',
@@ -113,5 +113,7 @@ def filter_by_blast():
     write_seq_packets(out_fhand, seq_packets, args['out_format'],
                       workers=workers)
     out_fhand.flush()
+
 if __name__ == '__main__':
+    #sys.argv.append('-h')
     sys.exit(main(filter_by_blast))

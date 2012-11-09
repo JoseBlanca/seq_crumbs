@@ -34,17 +34,14 @@ def _setup_argparse():
     parser.add_argument('input', help="SFF input files to process", nargs='*')
 
     parser.add_argument('-o', '--output', dest='output',
-                        help='output file (default stdout)', default='stdout')
-
-    msg = 'clip (completely remove) ends with low qual and/or adaptor sequence'
+                        help='output file (default STDOUT)', default='stdout')
     parser.add_argument('-c', '--clip', action="store_true", dest='clip',
-                        help=msg, default=False)
-    msg = 'if the left clip coming from the SFF is smaller than this value, '
-    msg += 'override it'
+                        help='Do recommended trims')
+    msg = 'Clip at least this number of nucleotides (default: %(default)s)'
     parser.add_argument('--min_left_clip', dest='min_left_clip', type=int,
                         help=msg, default=0)
-    msg = 'consider a SFF file as "strange" if too many reads start with the '
-    msg += 'same word  (default 50)'
+    msg = 'nucleotide abundance to consider a SFF file as "strange"'
+    msg += ' (default: %(default)s)'
     parser.add_argument('--max_percentage', dest='max_percent', type=float,
                      help=msg, default=50.0)
     parser.add_argument('--version', action='version',
@@ -116,4 +113,5 @@ def extract_sff():
     return an_error_apeared
 
 if __name__ == '__main__':
+    #sys.argv.append('-h')
     sys.exit(main(extract_sff))

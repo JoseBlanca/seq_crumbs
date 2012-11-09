@@ -29,21 +29,23 @@ def _setup_argparse():
     description = 'fix transcript orientations'
     parser = create_basic_process_argparse(description=description)
     help_ = 'minimum number of consecutive As (or Ts) to extend the tail'
+    help_ += '(default: %(default)s)'
     parser.add_argument('-m', '--polya_min_len', type=int,
                         default=POLYA_ANNOTATOR_MIN_LEN, help=help_)
-    help_ = 'maximum number of consecutive no A (or Ts) to break a tail.'
+    help_ = 'maximum number of consecutive no A (or Ts) to break a tail'
+    help_ += '(default: %(default)s)'
     parser.add_argument('-c', '--polya_max_mixmatches', type=int,
                         default=POLYA_ANNOTATOR_MISMATCHES, help=help_)
     parser.add_argument('-u', '--estscan_usage_matrix',
                         dest='estscan_usage_matrix',
-                        help='estscan_usage matrix')
+                        help='estscan usage matrix')
     parser.add_argument('-d', '--blast_db', dest='blastdb', action='append',
                         help='Blast databases to use')
     parser.add_argument('-g', '--blast_program', dest='blast_program',
                         action='append', help='Blast program to use')
     parser.add_argument('-v', '--blast_evalue', dest='blast_evalue',
                         action='append', type=float,
-                        help='Evalue to use with each blast databse')
+                        help='evalue to use with each blast database')
 
     return parser
 

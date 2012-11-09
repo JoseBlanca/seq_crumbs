@@ -29,11 +29,10 @@ def _setup_argparse(description):
     'It returns the argument parser'
     parser = create_basic_process_argparse(description=description)
     parser.add_argument('-l', '--seq_list', type=argparse.FileType('rt'),
-                        help='File with the list of sequence names',
+                        help='File with the list of sequence names (required)',
                         required=True)
-    parser.add_argument('-r', '--reverse',
-                        help='Reverses the filtering (keep small sequences)',
-                        action='store_true', default=False)
+    parser.add_argument('-r', '--reverse', action='store_true',
+                        help='Reverses the filtering')
     return parser
 
 

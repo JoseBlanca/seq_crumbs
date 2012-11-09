@@ -29,7 +29,7 @@ def _setup_argparse():
     description = 'It guesses the format of the sequence input file.'
     epilog = 'This program ignores the possibility of the old solexa fastq '
     epilog += 'format.'
-    hlp = 'Sequence input file to process (default stdin)'
+    hlp = 'Sequence input file to process (default STDIN)'
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument('input', help=hlp, default=sys.stdin, nargs='?',
                         type=argparse.FileType('r'))

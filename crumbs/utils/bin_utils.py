@@ -221,15 +221,15 @@ def create_io_argparse(**kwargs):
     'It returns a parser with several inputs and one output'
     parser = argparse.ArgumentParser(**kwargs)
 
-    parser.add_argument('input', help='Sequence input files to process',
-                        default=sys.stdin, nargs='*',
+    parser.add_argument('input', default=sys.stdin, nargs='*',
+                        help='Sequence input files to process (default STDIN)',
                         type=argparse.FileType('rt'))
 
-    parser.add_argument('-t', '--in_format', help='Format of the input files',
-                        default=GUESS_FORMAT)
+    parser.add_argument('-t', '--in_format', default=GUESS_FORMAT,
+                       help='Format of the input files (default: %(default)s)')
 
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
-                        help='Sequence output file to process',
+                        help='Sequence output file (default: STDOUT)',
                         type=argparse.FileType('wt'))
 
     parser.add_argument('--version', action='version',
@@ -255,7 +255,7 @@ def create_basic_argparse(**kwargs):
     parser = create_io_argparse(**kwargs)
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
     parser.add_argument('-f', '--out_format', dest='out_format',
-                        help='output file format',
+                        help='output file format (default: same as input)',
                         choices=SUPPORTED_OUTPUT_FORMATS)
     return parser
 
@@ -265,7 +265,8 @@ def create_basic_process_argparse(**kwargs):
     parser = create_basic_argparse(**kwargs)
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
     parser.add_argument('-p', '--processes', dest='processes', type=int,
-                        help='Num. of processes to use', default=1)
+                        help='Num. of processes to use (default: %(default)s)',
+                        default=1)
     return parser
 
 
@@ -279,7 +280,6 @@ def get_requested_compression(parsed_args):
     elif gzip:
         comp_kind = GZIP
     return comp_kind
-
 
 
 def parse_basic_args(parser):
@@ -308,7 +308,6 @@ def parse_basic_args(parser):
             try:
                 out_f = compress_fhand(out_f, compression_kind=comp_kind)
             except RuntimeError, error:
-                print 'hello', error
                 parser.error(error)
 
             new_out_fhands.append(out_f)

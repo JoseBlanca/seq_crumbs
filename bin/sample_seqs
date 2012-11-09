@@ -28,8 +28,10 @@ def _setup_argparse():
     'It returns the argument parser'
     dsc = 'It selects some random sequences from the given files'
     parser = create_basic_argparse(description=dsc)
+    hlp = 'Number of sequences to print (default: %(default)s)'
     parser.add_argument('-n', '--num_seqs', default=10, type=int,
-                        dest='num_seqs', help='Number of sequences to print')
+                        dest='num_seqs',
+                        help=hlp)
     return parser
 
 

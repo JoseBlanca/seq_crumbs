@@ -28,11 +28,11 @@ def _setup_argparse(description):
     'It returns the argument parser'
     parser = create_basic_process_argparse(description=description)
     parser.add_argument('-q', '--threshold', type=float, required=True,
-                        help='Quality threshold')
+                        help='Quality threshold (required)')
     parser.add_argument('-m', '--ignore_masked', action='store_true',
                         help='Count only the uppercased residues')
     parser.add_argument('-r', '--reverse', action='store_true',
-                    help='Reverses the filtering (keep low quality sequences)')
+                        help='Reverses the filtering')
     return parser
 
 

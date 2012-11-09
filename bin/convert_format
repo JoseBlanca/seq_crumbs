@@ -32,17 +32,17 @@ def _setup_argparse():
     description = 'Convert between sequence file formats'
     parser = argparse.ArgumentParser(description=description)
 
-    parser.add_argument('input', help='Sequence input files to process',
-                        default=sys.stdin, nargs='*',
+    parser.add_argument('input', default=sys.stdin, nargs='*',
+                        help='Sequence input files to process (default STDIN)',
                         type=argparse.FileType('rt'))
 
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
-                        help='Sequence output file', nargs='*',
-                        type=argparse.FileType('wt'))
+                        help='Sequence output file (default STDOUT)',
+                        nargs='*', type=argparse.FileType('wt'))
 
     parser.add_argument('-f', '--out_format', dest='out_format',
-                        help='format of the output file',
-                        choices=SUPPORTED_OUTPUT_FORMATS)
+                     help='format of the output file (default: same as input)',
+                     choices=SUPPORTED_OUTPUT_FORMATS)
 
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
@@ -127,4 +127,5 @@ def main_seqio():
 
 
 if __name__ == '__main__':
+    #sys.argv.append('-h')
     sys.exit(main(main_seqio))

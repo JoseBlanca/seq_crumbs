@@ -29,12 +29,12 @@ def _setup_argparse():
     description = 'It trims a fixed number of bases.'
     parser = create_basic_process_argparse(description=description)
 
-    parser.add_argument('-l', '--left', dest='left',
-                        help='Number of bases to trim on the left side',
-                        default=0, type=int)
-    parser.add_argument('-r', '--right', dest='right',
-                        help='Number of bases to trim on the right side',
-                        default=0, type=int)
+    hlp_ = 'Number of bases to trim on the left side (default: %(default)s)'
+    parser.add_argument('-l', '--left', dest='left', help=hlp_, default=0,
+                        type=int)
+    hlp_ = 'Number of bases to trim on the right side (default: %(default)s)'
+    parser.add_argument('-r', '--right', dest='right', help=hlp_, default=0,
+                        type=int)
     parser.add_argument('-m', '--mask', dest='mask',
                         help='Do not trim, only mask by lowering the case',
                         action='store_true', default=False)
