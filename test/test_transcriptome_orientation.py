@@ -15,6 +15,7 @@
 
 import unittest
 import os
+from subprocess import check_output, CalledProcessError
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -22,6 +23,9 @@ from Bio.Seq import Seq
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.transcript_orientations import TranscriptOrientator
 from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
+from crumbs.utils.bin_utils import BIN_DIR
+from tempfile import NamedTemporaryFile
+from crumbs.seqio import read_seqrecords
 
 
 class TestTranscriptomeOrientator(unittest.TestCase):
@@ -106,7 +110,80 @@ class TestTranscriptomeOrientator(unittest.TestCase):
         assert str(seq6.seq) == str(seqrecords[5].seq)
         assert str(seq7.seq) == str(seqrecords[6].seq.reverse_complement())
 
+    def test_bin_transcrip_orientator(self):
+        'it tests the transcript orientator binary'
+        orientate_bin = os.path.join(BIN_DIR, 'orientate_transcripts')
+        assert 'usage' in check_output([orientate_bin, '-h'])
+
+        in_fpath = os.path.join(TEST_DATA_DIR, 'seqs_to_orientate.fasta')
+        estscan_matrix = os.path.join(TEST_DATA_DIR,
+                                      'Arabidopsis_thaliana.smat')
+        blastdb1 = os.path.join(TEST_DATA_DIR, 'blastdbs', 'arabidopsis_genes')
+        blastdb2 = os.path.join(TEST_DATA_DIR, 'blastdbs', 'calabaza')
+
+        out_fhand = NamedTemporaryFile()
+        cmd = [orientate_bin, '-u', estscan_matrix, '-d', blastdb1, '-d',
+               blastdb2, '-g', 'blastn', '-g', 'blastn', '-v', '0.0001',
+               '-v', '0.0001', in_fpath, '-o', out_fhand.name]
+        check_output(cmd)
+
+        out_seqs = list(read_seqrecords([open(out_fhand.name)]))
+        init_seqs = list(read_seqrecords([open(in_fpath)]))
+
+        assert str(init_seqs[0].seq) == str(out_seqs[0].seq)
+        out_seq1 = str(out_seqs[1].seq.reverse_complement())
+        assert str(init_seqs[1].seq) == out_seq1
+        assert 'polyA' in  out_seqs[1].description
+        assert str(init_seqs[3].seq) == str(out_seqs[3].seq)
+        out_seq4 = str(out_seqs[4].seq.reverse_complement())
+        assert str(init_seqs[4].seq) == out_seq4
+        assert 'estscan_orf' in  out_seqs[4].description
+        assert str(init_seqs[5].seq) == str(out_seqs[5].seq)
+        out_seq6 = str(out_seqs[6].seq.reverse_complement())
+        assert str(init_seqs[6].seq) == out_seq6
+        assert 'blast arabidopsis_genes' in  out_seqs[6].description
+        cmd = [orientate_bin, '-u', estscan_matrix, '-d', blastdb1, '-d',
+               blastdb2, '-g', 'blastn', '-g', 'blastn', '-v', '0.0001',
+               in_fpath]
+        stderr = NamedTemporaryFile()
+        try:
+            check_output(cmd, stderr=stderr)
+            self.fail()
+        except CalledProcessError:
+            stde = open(stderr.name).read()
+            assert 'Blast parameters are not well defined' in stde
+
+        # witouth parameters
+        out_fhand = NamedTemporaryFile()
+        check_output([orientate_bin, in_fpath, '-o', out_fhand.name])
+
+        out_seqs = list(read_seqrecords([open(out_fhand.name)]))
+        init_seqs = list(read_seqrecords([open(in_fpath)]))
+
+        assert str(init_seqs[0].seq) == str(out_seqs[0].seq)
+        out_seq1 = str(out_seqs[1].seq.reverse_complement())
+        assert str(init_seqs[1].seq) == out_seq1
+        assert str(init_seqs[3].seq) == str(out_seqs[3].seq)
+        assert str(init_seqs[4].seq) == str(out_seqs[4].seq)
+        assert str(init_seqs[5].seq) == str(out_seqs[5].seq)
+        assert str(init_seqs[6].seq) == str(out_seqs[6].seq)
+
+        # only with orf annotator
+        check_output([orientate_bin, in_fpath, '-o', out_fhand.name, '-u',
+                      estscan_matrix])
+
+        out_seqs = list(read_seqrecords([open(out_fhand.name)]))
+        init_seqs = list(read_seqrecords([open(in_fpath)]))
+
+        assert str(init_seqs[0].seq) == str(out_seqs[0].seq)
+        out_seq1 = str(out_seqs[1].seq.reverse_complement())
+        assert str(init_seqs[1].seq) == out_seq1
+        assert str(init_seqs[3].seq) == str(out_seqs[3].seq)
+        out_seq4 = str(out_seqs[4].seq.reverse_complement())
+        assert str(init_seqs[4].seq) == out_seq4
+        assert str(init_seqs[5].seq) == str(out_seqs[5].seq)
+        assert str(init_seqs[6].seq) == str(out_seqs[6].seq)
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'Test.test_transcriptome_orientator']
+#    import sys;sys.argv = ['', 'TestTranscriptomeOrientator.test_bin_transcrip_orientator']
     unittest.main()

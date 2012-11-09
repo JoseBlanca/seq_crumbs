@@ -1,0 +1,109 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from crumbs.utils.bin_utils import (main, parse_basic_process_args,
+                                    create_basic_process_argparse)
+from crumbs.transcript_orientations import TranscriptOrientator
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.seqio import write_seq_packets, read_seq_packets
+from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'fix transcript orientations'
+    parser = create_basic_process_argparse(description=description)
+    help_ = 'minimum number of consecutive As (or Ts) to extend the tail'
+    parser.add_argument('-m', '--polya_min_len', type=int,
+                        default=POLYA_ANNOTATOR_MIN_LEN, help=help_)
+    help_ = 'maximum number of consecutive no A (or Ts) to break a tail.'
+    parser.add_argument('-c', '--polya_max_mixmatches', type=int,
+                        default=POLYA_ANNOTATOR_MISMATCHES, help=help_)
+    parser.add_argument('-u', '--estscan_usage_matrix',
+                        dest='estscan_usage_matrix',
+                        help='estscan_usage matrix')
+    parser.add_argument('-d', '--blast_db', dest='blastdb', action='append',
+                        help='Blast databases to use')
+    parser.add_argument('-g', '--blast_program', dest='blast_program',
+                        action='append', help='Blast program to use')
+    parser.add_argument('-v', '--blast_evalue', dest='blast_evalue',
+                        action='append', type=float,
+                        help='Evalue to use with each blast databse')
+
+    return parser
+
+
+def _prepare_blast_params(parser, blastdbs, programs, evalues):
+    'It prepares the blast params using argparse parameters'
+    if blastdbs is None and programs is None and evalues is None:
+        return []
+    if ((blastdbs is None or programs is None or evalues is None) or
+        (not len(blastdbs) == len(programs) == len(evalues))):
+        parser.error('Blast parameters are not well defined')
+
+    blast_params = []
+    for blastdb, program, evalue in zip(blastdbs, programs, evalues):
+        filters = [{'kind': 'score_threshold', 'score_key': 'expect',
+                    'max_score': evalue}]
+        blast_param = {'blastdb': blastdb, 'program': program,
+                       'filters': filters}
+        blast_params.append(blast_param)
+    return blast_params
+
+
+def _parse_args(parser):
+    'It parses the arguments'
+    args, parsed_args = parse_basic_process_args(parser)
+    args['polya_params'] = {'min_len': parsed_args.polya_min_len,
+                       'max_cont_mismatches': parsed_args.polya_max_mixmatches}
+    if parsed_args.estscan_usage_matrix:
+        estscan_par = {'usage_matrix': parsed_args.estscan_usage_matrix}
+        args['estscan_params'] = estscan_par
+    else:
+        args['estscan_params'] = None
+    blast_params = _prepare_blast_params(parser, parsed_args.blastdb,
+                                         parsed_args.blast_program,
+                                         parsed_args.blast_evalue)
+    args['blast_params'] = blast_params
+
+    return args
+
+
+def orientate_transcripts():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    polya_params = args['polya_params']
+    estscan_params = args['estscan_params']
+    blast_params = args['blast_params']
+    orientator = TranscriptOrientator(polya_params, estscan_params,
+                                      blast_params)
+
+    seq_packets, workers = process_seq_packets(seq_packets, [orientator],
+                                               processes=args['processes'])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
+                      workers=workers)
+
+if __name__ == '__main__':
+#    sys.argv.append("-h")
+    sys.exit(main(orientate_transcripts))

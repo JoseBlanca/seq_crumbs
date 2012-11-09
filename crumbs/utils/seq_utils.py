@@ -227,6 +227,15 @@ def _guess_format(fhand, force_file_as_non_seek):
     raise UnknownFormatError('Sequence file of unknown format.')
 
 
+def append_to_description(seqrecord, text):
+    'it appends the text to the seqrecord description'
+    desc = seqrecord.description
+    if desc == '<unknown description>' or desc == seqrecord.id:
+        desc = ''
+    desc += text
+    seqrecord.description = desc
+
+
 class _FunctionRunner(object):
     'a class to join all the mapper functions in a single function'
     def __init__(self, map_functions):
