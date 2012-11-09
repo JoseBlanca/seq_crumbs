@@ -18,8 +18,8 @@
 import sys
 import argparse
 
-from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
-                                    create_basic_parallel_argparse)
+from crumbs.utils.bin_utils import (main, parse_filter_args,
+                                    create_filter_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.filters import FilterById
@@ -27,20 +27,17 @@ from crumbs.filters import FilterById
 
 def _setup_argparse(description):
     'It returns the argument parser'
-    parser = create_basic_parallel_argparse(description=description)
+    parser = create_filter_argparse(description=description)
     parser.add_argument('-l', '--seq_list', type=argparse.FileType('rt'),
                         help='File with the list of sequence names (required)',
                         required=True)
-    parser.add_argument('-r', '--reverse', action='store_true',
-                        help='Reverses the filtering')
     return parser
 
 
 def _parse_args(parser):
     'It parses the arguments'
-    args, parsed_args = parse_basic_parallel_args(parser)
+    args, parsed_args = parse_filter_args(parser)
     args['seq_ids'] = {l.strip() for l in parsed_args.seq_list}
-    args['reverse'] = parsed_args.reverse
     return args
 
 
