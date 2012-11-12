@@ -36,6 +36,10 @@ BLAST_FIELDS = {'query': 'qseqid', 'subject': 'sseqid', 'identity': 'pident',
                 'subject_end': 'send', 'expect': 'evalue', 'score': 'bitscore',
                 'subject_length': 'slen', 'query_length': 'qlen'}
 
+TASKS = {'blastn': ('megablast', 'blastn', 'blastn-short', 'dc-megablast',
+                   'rmblastn'),
+        'blastp': ('blastp', 'blastp-short', 'deltablast')}
+
 
 def generate_tabblast_format(fmt):
     'Given a list with fields with our names it return one with the blast ones'
@@ -109,17 +113,21 @@ def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
     if not params:
         params = {}
     evalue = params.get('evalue', 0.001)
-    task = params.get('task', 'megablast')
+    available_tasks = TASKS.get(program, None)
+    if available_tasks:
+        task = params.get('task', available_tasks[0])
+        assert task in available_tasks
+    else:
+        task = None
     outfmt = str(params.get('outfmt', 5))
-    assert task in ('blastn', 'blastn-short', 'dc-megablast', 'megablast',
-                    'rmblastn')
 
     if program not in ('blastn', 'blastp', 'blastx', 'tblastx', 'tblastn'):
         raise ValueError('The given program is invalid: ' + str(program))
     binary = get_binary_path(program)
     cmd = [binary, '-query', query_fpath, '-db', db_fpath, '-out', out_fpath]
-    cmd.extend(['-evalue', str(evalue), '-task', task])
-    cmd.extend(['-outfmt', outfmt])
+    cmd.extend(['-evalue', str(evalue), '-outfmt', outfmt])
+    if task:
+        cmd.extend(['-task', task])
     process = popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     check_process_finishes(process, binary=cmd[0])
 
