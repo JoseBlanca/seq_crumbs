@@ -184,6 +184,29 @@ class TestTranscriptomeOrientator(unittest.TestCase):
         assert str(init_seqs[5].seq) == str(out_seqs[5].seq)
         assert str(init_seqs[6].seq) == str(out_seqs[6].seq)
 
+        # multiprocessor
+        out_fhand = NamedTemporaryFile()
+        cmd = [orientate_bin, '-u', estscan_matrix, '-d', blastdb1, '-d',
+               blastdb2, '-g', 'blastn', '-g', 'blastn', '-v', '0.0001',
+               '-v', '0.0001', in_fpath, '-o', out_fhand.name, '-p', '2']
+        check_output(cmd)
+        out_seqs = list(read_seqrecords([open(out_fhand.name)]))
+        init_seqs = list(read_seqrecords([open(in_fpath)]))
+
+        assert str(init_seqs[0].seq) == str(out_seqs[0].seq)
+        out_seq1 = str(out_seqs[1].seq.reverse_complement())
+        assert str(init_seqs[1].seq) == out_seq1
+        assert 'polyA' in  out_seqs[1].description
+        assert str(init_seqs[3].seq) == str(out_seqs[3].seq)
+        out_seq4 = str(out_seqs[4].seq.reverse_complement())
+        assert str(init_seqs[4].seq) == out_seq4
+        assert 'estscan_orf' in  out_seqs[4].description
+        assert str(init_seqs[5].seq) == str(out_seqs[5].seq)
+        out_seq6 = str(out_seqs[6].seq.reverse_complement())
+        assert str(init_seqs[6].seq) == out_seq6
+        assert 'blast arabidopsis_genes' in  out_seqs[6].description
+
+
 if __name__ == "__main__":
 #    import sys;sys.argv = ['', 'TestTranscriptomeOrientator.test_bin_transcrip_orientator']
     unittest.main()
