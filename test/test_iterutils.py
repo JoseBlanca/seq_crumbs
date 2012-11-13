@@ -72,14 +72,14 @@ class IterutilsTest(unittest.TestCase):
 
     def test_rolling_window(self):
         'We get the items along a rolling window'
-        #with series
+        # with series
         serie = '12345'
         assert [''.join(win) for win in rolling_window(serie, 3)] == ['123',
                                                                   '234', '345']
         assert not [''.join(win) for win in rolling_window(serie, 6)]
         assert [''.join(w) for w in rolling_window(serie, 5)] == ['12345']
 
-        #with iterator
+        # with iterator
         iterator = iter(serie)
         assert [''.join(win) for win in rolling_window(iterator, 3)] == ['123',
                                                                   '234', '345']
@@ -88,6 +88,17 @@ class IterutilsTest(unittest.TestCase):
         iterator = iter(serie)
         assert [''.join(w) for w in rolling_window(iterator, 5)] == ['12345']
 
+        # with step
+        series = ['1234567890', '123456789', '12345678', '1234567']
+        expected = [['1234', '3456', '5678', '7890'], ['1234', '3456', '5678'],
+                    ['1234', '3456', '5678'], ['1234', '3456']]
+        for serie, exp in zip(series, expected):
+            wins1 = [''.join(win) for win in rolling_window(serie, 4, 2)]
+            assert wins1 == exp
+
+            iterator = iter(serie)
+            wins2 = [''.join(win) for win in rolling_window(iterator, 4, 2)]
+            assert wins1 == wins2
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']

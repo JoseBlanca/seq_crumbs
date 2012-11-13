@@ -128,31 +128,31 @@ def flat_zip_longest(iter1, iter2, fillvalue=None):
             yield item2
 
 
-def rolling_window(iterator, window):
+def rolling_window(iterator, window, step=1):
     'It yields lists of items with a window number of elements'
     try:
         length_ = len(iterator)
     except TypeError:
         length_ = None
     if length_ is None:
-        return _rolling_window_iter(iterator, window)
+        return _rolling_window_iter(iterator, window, step)
     else:
-        return _rolling_window_serie(iterator, window, length_)
+        return _rolling_window_serie(iterator, window, length_, step)
 
 
-def _rolling_window_serie(serie, window, length_):
+def _rolling_window_serie(serie, window, length_, step):
     '''It yields lists of items with a window number of elements'''
-    return (serie[i:i + window] for i in range(length_ - window + 1))
+    return (serie[i:i + window] for i in range(0, length_ - window + 1, step))
 
 
-def _rolling_window_iter(iterator, window):
+def _rolling_window_iter(iterator, window, step):
     '''It yields lists of items with a window number of elements giving
      an iterator'''
     items = []
     for item in iterator:
         if len(items) >= window:
             yield items
-            items = items[1:]
+            items = items[step:]
         items.append(item)
     else:
         if len(items) >= window:

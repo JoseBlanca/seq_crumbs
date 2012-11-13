@@ -28,7 +28,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
-                            FilterBlastMatch)
+                            FilterBlastMatch, _calculate_dust_score)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL
@@ -84,7 +84,6 @@ class LengthFilterTest(unittest.TestCase):
 
         filter_by_length = FilterByLength(minimum=7, maximum=8)
         assert len([str(s.seq) for s in filter_by_length(seqs)]) == 2
-
 
     def test_filter_by_length_bin(self):
         'It uses the filter_by_length binary'
@@ -208,7 +207,7 @@ class BlastMatchFilterTest(unittest.TestCase):
         new_seqs = filter_(seqs)
         assert new_seqs == []
 
-    def test_blastmatch_bin(self):
+    def test_filter_blast_bin(self):
         'It test the binary of the filter_by_blast'
         filter_bin = os.path.join(BIN_DIR, 'filter_by_blast')
         assert 'usage' in check_output([filter_bin, '-h'])
@@ -269,6 +268,30 @@ class BlastMatchFilterTest(unittest.TestCase):
         result = check_output([filter_bin, '-b', blastdb, '-a', '80', '-r',
                                seq_fhand.name])
         assert result == ''
+
+
+class ComplexityFilterTest(unittest.TestCase):
+    'It tests the filtering by complexity'
+    @staticmethod
+    def test_complexity_filter():
+        'It tests the complexity filter'
+
+        seqs = ['TTTTTTTTTTTTTTTTTTTTTTTTTTTT', 'TATATATATATATATATATATATATATA',
+                'GAAGAAGAAGAAGAAGAAGAAGAAGAAG', 'AACTGCAGTCGATGCTGATTCGATCGAT',
+                'AACTGAAAAAAAATTTTTTTAAAAAAAA']
+
+        # short sequences
+        scores = [100, 48, 30.76, 4.31, 23.38]
+        scoresx3 = [100, 48.68, 28.65, 5.62, 27.53]
+        scoresx4 = [100, 48.55, 28.25, 5.79, 28.00]
+        for seq, score, scorex3, scorex4 in zip(seqs, scores, scoresx3,
+                                                scoresx4):
+            seqrec = SeqRecord(Seq(seq))
+            assert _calculate_dust_score(seqrec) - score < 0.01
+            seqrec = SeqRecord(Seq(seq * 3))
+            assert _calculate_dust_score(seqrec) - scorex3 < 0.01
+            seqrec = SeqRecord(Seq(seq * 4))
+            assert _calculate_dust_score(seqrec) - scorex4 < 0.01
 
 
 if __name__ == "__main__":
