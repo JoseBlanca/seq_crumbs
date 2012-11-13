@@ -93,7 +93,7 @@ def _prepare_filters(args):
 
 
 def filter_by_blast():
-    'Tha main function of the binary'
+    'The main function of the binary'
     parser = _setup_argparse()
     args = _parse_args(parser)
 
