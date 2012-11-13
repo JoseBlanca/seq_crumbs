@@ -135,18 +135,17 @@ def rolling_window(iterator, window):
     except TypeError:
         length_ = None
     if length_ is None:
-        return rolling_window_iter(iterator, window)
+        return _rolling_window_iter(iterator, window)
     else:
-        return rolling_window_serie(iterator, window, length_)
+        return _rolling_window_serie(iterator, window, length_)
 
 
-def rolling_window_serie(serie, window, length_):
-    '''It yields lists of items with a window number of elements giving
-     an serie'''
+def _rolling_window_serie(serie, window, length_):
+    '''It yields lists of items with a window number of elements'''
     return (serie[i:i + window] for i in range(length_ - window + 1))
 
 
-def rolling_window_iter(iterator, window):
+def _rolling_window_iter(iterator, window):
     '''It yields lists of items with a window number of elements giving
      an iterator'''
     items = []
