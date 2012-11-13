@@ -30,32 +30,24 @@ class TranscriptOrientator(object):
     def __init__(self, polya_params=None, estscan_params=None,
                  blast_params=None):
         'Initiatilzes the class'
+        self._polya_params = polya_params
+        self._estscan_params = estscan_params
+        self._blast_params = blast_params
 
-        self._annotators = self._create_pipeline(polya_params,
-                                                   estscan_params,
-                                                   blast_params)
+        self._annotators = self._create_pipeline()
 
-    def _create_pipeline(self, polya_params, estscan_params, blast_params):
+    def _create_pipeline(self):
         'It creates the annotation pipeline'
         # pylint: disable=W0142
         annotators = []
-        if polya_params:
-            annotator = PolyaAnnotator(**polya_params)
-            annotators.append({'name': 'polyA',
-                               'annotator': annotator,
-                               'feat_selector': self._polya_selector})
-        if estscan_params:
-            annotator = EstscanOrfAnnotator(**estscan_params)
-            annotators.append({'name': 'estscan_orf',
-                               'annotator': annotator,
-                               'feat_selector': self._orf_selector})
-
-        if blast_params:
-            for blast_param in blast_params:
-                annotator = BlastAnnotator(**blast_param)
+        if self._polya_params:
+            annotators.append({'name': 'polyA'})
+        if self._estscan_params:
+            annotators.append({'name': 'estscan_orf'})
+        if self._blast_params:
+            for blast_param in self._blast_params:
                 annotators.append({'name': 'blast',
-                                   'annotator': annotator,
-                                   'feat_selector': self._match_part_selector})
+                                   'blastdb': blast_param['blastdb']})
         return annotators
 
     @staticmethod
@@ -63,14 +55,14 @@ class TranscriptOrientator(object):
         'it selects features by type'
         return [feat for feat in features if feat.type == kind]
 
-    def _polya_selector(self, features, blastdb=None):
+    def _polya_selector(self, features):
         'It selects the polya'
         # pylint: disable=W0613
         feats = self._select_features_by_type(features, 'polyA_sequence')
         if feats:
             return feats[0]
 
-    def _orf_selector(self, features, blastdb=None):
+    def _orf_selector(self, features):
         'it returns the longest feature'
         # pylint: disable=W0613
         features = self._select_features_by_type(features, 'ORF')
@@ -82,6 +74,7 @@ class TranscriptOrientator(object):
 
     def _match_part_selector(self, features, blastdb):
         'it return the match_part with the best e-value'
+        blastdb = os.path.basename(blastdb)
         features = self._select_features_by_type(features, 'match_part')
         features = [f for f in features if f.qualifiers['blastdb'] == blastdb]
 
@@ -90,15 +83,40 @@ class TranscriptOrientator(object):
         scores = [feat.qualifiers['score'] for feat in features]
         return features[scores.index(min(scores))]
 
-    @staticmethod
-    def _guess_orientations(seqrecords, feat_selector, blastdb):
+    def _guess_orientations(self, seqrecords, annotator_name, blastdb):
         '''It returns the orientation of the annotated transcripts.'''
         orientations = []
         for seqrecord in seqrecords:
-            feature = feat_selector(seqrecord.features, blastdb=blastdb)
+            if annotator_name == 'polyA':
+                feature = self._polya_selector(seqrecord.features)
+            elif annotator_name == 'estscan_orf':
+                feature = self._orf_selector(seqrecord.features)
+            elif  annotator_name == 'blast':
+                feature = self._match_part_selector(seqrecord.features,
+                                                    blastdb=blastdb)
+            else:
+                raise NotImplementedError('this annotator type not supported')
+
             orientation = None if feature is None else feature.strand
             orientations.append(orientation)
         return orientations
+
+    def _get_annotator(self, annotator_name, blastdb):
+        'It prepares and returns the annotator'
+        if annotator_name == 'polyA':
+            annotator = PolyaAnnotator(**self._polya_params)
+        elif annotator_name == 'estscan_orf':
+            annotator = EstscanOrfAnnotator(**self._estscan_params)
+        elif annotator_name == 'blast':
+            blast_param = None
+            for blast_param_ in self._blast_params:
+                if blastdb == blast_param_['blastdb']:
+                    blast_param = blast_param_
+                    break
+            annotator = BlastAnnotator(**blast_param)
+        else:
+            raise NotImplementedError('this annotator type not supported')
+        return annotator
 
     def __call__(self, seqrecords):
         'It makes the job'
@@ -114,19 +132,17 @@ class TranscriptOrientator(object):
                 orientations = [None] * len(seqrecords)
                 seqrecords_to_annalyze = seqrecords
 
-            feat_selector = annotator['feat_selector']
             annotator_name = annotator['name']
-            annotator = annotator['annotator']
-            try:
-                blastdb = os.path.basename(annotator.blastdb)
-            except AttributeError:
-                blastdb = None
+            blastdb = annotator.get('blastdb', None)
+            annotator = self._get_annotator(annotator_name, blastdb)
+
             annot_seqrecords = annotator(seqrecords_to_annalyze)
             annot_strands = self._guess_orientations(annot_seqrecords,
-                                                     feat_selector,
+                                                     annotator_name,
                                                      blastdb=blastdb)
+
             if blastdb:
-                annotator_name += ' ' + blastdb
+                annotator_name += ' ' + os.path.basename(blastdb)
 
             analyzed_seqs_index = 0
             for index, orientation in enumerate(orientations):
@@ -135,7 +151,6 @@ class TranscriptOrientator(object):
                     if annot_strands[analyzed_seqs_index] == REVERSE:
                         orientation_log[index] = annotator_name
                     analyzed_seqs_index += 1
-
         # Now we reverse the seqs that we have guess that are reversed
         reorientated_seqrecords = []
         for orientation, seqrecord, reason in zip(orientations, seqrecords,

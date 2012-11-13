@@ -16,8 +16,8 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
-                                    create_basic_parallel_argparse)
+from crumbs.utils.bin_utils import (main, create_basic_parallel_argparse,
+                                    parse_basic_parallel_args)
 from crumbs.transcript_orientations import TranscriptOrientator
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import write_seq_packets, read_seq_packets
