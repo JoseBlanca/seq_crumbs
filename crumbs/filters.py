@@ -181,6 +181,7 @@ class FilterBlastMatch(object):
         self._blast_program = program
         self._filters = filters
         self._reverse = reverse
+        self._dbtype = dbtype
         self._stats = {PROCESSED_SEQS: 0,
                        PROCESSED_PACKETS: 0,
                        YIELDED_SEQS: 0}
@@ -194,10 +195,8 @@ class FilterBlastMatch(object):
         'It filters the seq by blast match'
         filtered_seqrecords = []
         stats = self._stats
-
-        matcher = Blaster(seqrecords, self._blast_db,
-                               program=self._blast_program,
-                               filters=self._filters)
+        matcher = Blaster(seqrecords, self._blast_db, dbtype=self._dbtype,
+                          program=self._blast_program, filters=self._filters)
         for seqrec in seqrecords:
             stats[PROCESSED_SEQS] += 1
             segments = matcher.get_matched_segments(seqrec.id)
