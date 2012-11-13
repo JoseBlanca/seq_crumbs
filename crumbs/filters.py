@@ -24,6 +24,7 @@ from crumbs.blast import Blaster
 from crumbs.iterutils import rolling_window
 from crumbs.settings import DUST_WINDOWSIZE as WINDOWSIZE
 from crumbs.settings import DUST_WINDOWSTEP as WINDOWSTEP
+from crumbs.settings import DEFATULT_DUST_THRESHOLD
 
 # pylint: disable=R0903
 
@@ -258,3 +259,37 @@ def _calculate_dust_score(seqrecord):
     # max score should be 100 not 31
     dustscore = sum(dustscores) / len(dustscores) * 100 / 31
     return dustscore
+
+
+class FilterDustComplexity(object):
+    'It filters a sequence according to its dust score'
+    def __init__(self, threshold=DEFATULT_DUST_THRESHOLD, reverse=False):
+        '''The initiator
+        '''
+        self._threshold = threshold
+        self._reverse = reverse
+        self._stats = {PROCESSED_SEQS: 0,
+                       PROCESSED_PACKETS: 0,
+                       YIELDED_SEQS: 0}
+
+    @property
+    def stats(self):
+        'The process stats'
+        return self._stats
+
+    def __call__(self, seqrecords):
+        'It filters the seq by blast match'
+        filtered_seqs = []
+        stats = self._stats
+        threshold = self._threshold
+        reverse = self._reverse
+        for seqrec in seqrecords:
+            stats[PROCESSED_SEQS] += 1
+            dustscore = _calculate_dust_score(seqrec)
+            passed = True if dustscore < threshold else False
+            if reverse:
+                passed = not(passed)
+            if passed:
+                filtered_seqs.append(seqrec)
+                stats[YIELDED_SEQS] += 1
+        return filtered_seqs

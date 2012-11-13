@@ -3,12 +3,13 @@ TODO
 -----
 
 add option to keep filtered sequences
+add option to calculate_stats to calculate the dustscore distribution
 
 trim_blast_contanimant
 ----------------------
 
 It trims the regions that match with a given fasta file or blast database.
-for instance the vector
+for instance the vector (Univec)
 
 Enmascara las regiones que tienen un match_part contra una base de datos
 
@@ -33,24 +34,11 @@ mask low complexity
 --------------------
 with blast dust
 
-filter low complexity
----------------------
-Take a look at https://stat.ethz.ch/pipermail/bioc-sig-sequencing/2009-February/000170.html
 
-
-
-filter with blast
------------------
-
-elimina o deja las secuencias que dan match en una base de datos
 
 filter with re en título
 ------------------------
 grep en el nombre y la descripción
-
-
-trim_by_quality
----------------
 
 
 trim longest fragemnt trim all fragments
@@ -61,10 +49,6 @@ a lo mejor el mismo ejecutable con una opción de método
 
 separar flags
 -------------
-
-
-seq stats
-----------
 
 
 crumbs_catalog

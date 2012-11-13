@@ -28,7 +28,8 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
-                            FilterBlastMatch, _calculate_dust_score)
+                            FilterBlastMatch, _calculate_dust_score,
+                            FilterDustComplexity)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL
@@ -273,9 +274,8 @@ class BlastMatchFilterTest(unittest.TestCase):
 class ComplexityFilterTest(unittest.TestCase):
     'It tests the filtering by complexity'
     @staticmethod
-    def test_complexity_filter():
-        'It tests the complexity filter'
-
+    def test_dustscore_calculation():
+        'It calculates the dust score'
         seqs = ['TTTTTTTTTTTTTTTTTTTTTTTTTTTT', 'TATATATATATATATATATATATATATA',
                 'GAAGAAGAAGAAGAAGAAGAAGAAGAAG', 'AACTGCAGTCGATGCTGATTCGATCGAT',
                 'AACTGAAAAAAAATTTTTTTAAAAAAAA']
@@ -292,6 +292,38 @@ class ComplexityFilterTest(unittest.TestCase):
             assert _calculate_dust_score(seqrec) - scorex3 < 0.01
             seqrec = SeqRecord(Seq(seq * 4))
             assert _calculate_dust_score(seqrec) - scorex4 < 0.01
+
+    @staticmethod
+    def test_dust_filter():
+        'It tests the complexity filter'
+        seq1 = 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAAAAAAAAAAAAAAAAAAAAAAAAA'
+        seq2 = 'CATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGCTAGCTAGTT'
+        seqs = [SeqRecord(Seq(seq1), id='seq1'),
+                SeqRecord(Seq(seq2), id='seq2')]
+        filter_dust = FilterDustComplexity()
+        new_seqs = filter_dust(seqs)
+        assert len(new_seqs) == 1
+        assert new_seqs[0].id == 'seq2'
+
+    @staticmethod
+    def test_filter_by_dust_bin():
+        'It uses the filter_by_complexity binary'
+        filter_bin = os.path.join(BIN_DIR, 'filter_by_complexity')
+        assert 'usage' in check_output([filter_bin, '-h'])
+
+        fasta = '>s1\nTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n'
+        fasta += '>s2\nCATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGT\n'
+        fasta_fhand = _make_fhand(fasta)
+        result = check_output([filter_bin, fasta_fhand.name])
+        assert '>s1\n' not in result
+        assert '>s2\n' in result
+
+        result = check_output([filter_bin, '-r', fasta_fhand.name])
+        assert '>s1\n' in result
+        assert '>s2\n' not in result
+
+        result = check_output([filter_bin, '-c', '1', fasta_fhand.name])
+        assert result == ''
 
 
 if __name__ == "__main__":

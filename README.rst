@@ -28,6 +28,9 @@ filter_by_name
 filter_by_blast
     It filters the sequences using blast
 
+filter_by_complexity
+	It filters the sequences according to its complexity.
+
 trim_by_case
     It trims the sequences according to its case.
 
