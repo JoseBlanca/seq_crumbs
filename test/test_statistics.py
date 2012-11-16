@@ -26,7 +26,8 @@ from Bio.Seq import Seq
 
 from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                calculate_sequence_stats, NuclFreqsPlot,
-                               KmerCounter, calculate_dust_score)
+                               KmerCounter, calculate_dust_score,
+                               calculate_nx)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
@@ -228,6 +229,17 @@ class DustCalculationTest(unittest.TestCase):
             assert calculate_dust_score(seqrec) - scorex4 < 0.01
 
 
+class NxCalculationTest(unittest.TestCase):
+    'It calculates N50 and N95'
+    @staticmethod
+    def test_n50_calculation():
+        'It calculates N50.'
+        assert calculate_nx(IntCounter([2, 2, 2, 3, 3, 4, 8, 8]), 50) == 8
+        assert calculate_nx(IntCounter([2, 2, 2, 3, 3, 4, 8, 8]), 95) == 2
+        assert calculate_nx(IntCounter([8, 8, 8, 8, 8, 8, 8, 8]), 50) == 8
+        assert calculate_nx(IntCounter(), 50) is None
+
+
 class CalculateStatsTest(unittest.TestCase):
     'It tests the calculate stats functions'
 
@@ -246,8 +258,9 @@ class CalculateStatsTest(unittest.TestCase):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
         seqs = read_seqrecords(in_fhands, file_format='fastq')
-        results = calculate_sequence_stats(seqs)
+        results = calculate_sequence_stats(seqs, nxs=[50])
         assert 'maximum: 4' in results['length']
+        assert 'N50' in results['length']
         assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in results['qual_boxplot']
         assert '[30 , 31[ (96): **********' in results['quality']
         assert 'Q30: 100.0' in results['quality']
@@ -283,6 +296,7 @@ class CalculateStatsTest(unittest.TestCase):
         in_fhand2 = self.make_fasta()
         result = check_output([bin_, in_fhand1.name, in_fhand2.name])
         assert 'Length stats and distribution.\n-------------------' in result
+        assert 'N95:' in result
 
         # fastq
         cmd = [bin_]

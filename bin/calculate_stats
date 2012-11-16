@@ -101,7 +101,7 @@ def run():
     do_dust_stats = args['do_dust_stats']
 
     seqs = read_seqrecords(in_fhands, file_format=in_format)
-    stat_strs = calculate_sequence_stats(seqs, kmer_size,
+    stat_strs = calculate_sequence_stats(seqs, kmer_size, nxs=[50, 95],
                                          do_dust_stats=do_dust_stats)
     out_fhand.write(stat_strs['length'])
     out_fhand.write(stat_strs['quality'])

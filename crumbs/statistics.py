@@ -608,7 +608,28 @@ def calculate_dust_score(seqrecord):
     return dustscore
 
 
-def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False):
+def calculate_nx(int_counter, percentage):
+    '''It calcalutes N50, N90 etc.
+
+    Modified from wikipedia:
+    Given a set of sequences of varying lengths, the N50 length is defined as
+    the length N for which half of all bases in the sequences are in a sequence
+    of length L >= N
+    '''
+    if not int_counter:
+        return None
+    total_len = int_counter.sum
+    len_desired = int(total_len * percentage / 100)
+    accum_len = 0
+    for length, n_seqs in sorted(int_counter.viewitems(),
+                                 key=operator.itemgetter(0), reverse=True):
+        accum_len += length * n_seqs
+        if accum_len >= len_desired:
+            return length
+
+
+def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
+                             nxs=None):
     'It calculates some stats for the given seqs.'
     # get data
     lengths = IntCounter()
@@ -636,6 +657,9 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False):
     # length distribution
     lengths_srt = 'Length stats and distribution.\n'
     lengths_srt += '------------------------------\n'
+    nxs = sorted(nxs) if nxs else []
+    for nx in sorted(nxs):
+        lengths_srt += 'N{:d}: {:d}\n'.format(nx, calculate_nx(lengths, nx))
     lengths_srt += str(lengths)
     lengths_srt += '\n'
 
