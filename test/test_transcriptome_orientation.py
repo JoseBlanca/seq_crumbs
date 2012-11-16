@@ -22,10 +22,13 @@ from Bio.Seq import Seq
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.transcript_orientations import TranscriptOrientator
-from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
+from crumbs.settings import POLYA_ANNOTATOR_MISMATCHES
 from crumbs.utils.bin_utils import BIN_DIR
 from tempfile import NamedTemporaryFile
 from crumbs.seqio import read_seqrecords
+
+# pylint: disable=R0201
+# pylint: disable=R0904
 
 
 class TestTranscriptomeOrientator(unittest.TestCase):
@@ -88,7 +91,7 @@ class TestTranscriptomeOrientator(unittest.TestCase):
 
         seqrecords = [seq1, seq2, seq3, seq4, seq5, seq6, seq7, seq8, seq9]
         estscan_params = {'usage_matrix': estscan_matrix}
-        polya_params = {'min_len': POLYA_ANNOTATOR_MIN_LEN,
+        polya_params = {'min_len': 4,
                         'max_cont_mismatches': POLYA_ANNOTATOR_MISMATCHES}
         ara_blastdb = os.path.join(TEST_DATA_DIR, 'blastdbs',
                                    'arabidopsis_genes')
@@ -124,7 +127,8 @@ class TestTranscriptomeOrientator(unittest.TestCase):
         out_fhand = NamedTemporaryFile()
         cmd = [orientate_bin, '-u', estscan_matrix, '-d', blastdb1, '-d',
                blastdb2, '-g', 'blastn', '-g', 'blastn', '-v', '0.0001',
-               '-v', '0.0001', in_fpath, '-o', out_fhand.name]
+               '-v', '0.0001', in_fpath, '-o', out_fhand.name,
+               '--polya_min_len', '4']
         check_output(cmd)
 
         out_seqs = list(read_seqrecords([open(out_fhand.name)]))
@@ -155,7 +159,8 @@ class TestTranscriptomeOrientator(unittest.TestCase):
 
         # witouth parameters
         out_fhand = NamedTemporaryFile()
-        check_output([orientate_bin, in_fpath, '-o', out_fhand.name])
+        check_output([orientate_bin, in_fpath, '-o', out_fhand.name,
+                      '--polya_min_len', '4'])
 
         out_seqs = list(read_seqrecords([open(out_fhand.name)]))
         init_seqs = list(read_seqrecords([open(in_fpath)]))
@@ -170,7 +175,7 @@ class TestTranscriptomeOrientator(unittest.TestCase):
 
         # only with orf annotator
         check_output([orientate_bin, in_fpath, '-o', out_fhand.name, '-u',
-                      estscan_matrix])
+                      estscan_matrix, '--polya_min_len', '4'])
 
         out_seqs = list(read_seqrecords([open(out_fhand.name)]))
         init_seqs = list(read_seqrecords([open(in_fpath)]))
@@ -188,7 +193,8 @@ class TestTranscriptomeOrientator(unittest.TestCase):
         out_fhand = NamedTemporaryFile()
         cmd = [orientate_bin, '-u', estscan_matrix, '-d', blastdb1, '-d',
                blastdb2, '-g', 'blastn', '-g', 'blastn', '-v', '0.0001',
-               '-v', '0.0001', in_fpath, '-o', out_fhand.name, '-p', '2']
+               '-v', '0.0001', in_fpath, '-o', out_fhand.name, '-p', '2',
+               '--polya_min_len', '4']
         check_output(cmd)
         out_seqs = list(read_seqrecords([open(out_fhand.name)]))
         init_seqs = list(read_seqrecords([open(in_fpath)]))
