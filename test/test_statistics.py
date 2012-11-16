@@ -246,25 +246,29 @@ class CalculateStatsTest(unittest.TestCase):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
         seqs = read_seqrecords(in_fhands, file_format='fastq')
-        (lengths_srt, qual_str, freq_str,
-                          qual_boxplot, kmers) = calculate_sequence_stats(seqs)
-        assert 'maximum: 4' in lengths_srt
-        assert 'Q30: 100.0' in qual_str
-        assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in qual_boxplot
-        assert '[30 , 31[ (96): **********' in qual_str
-        assert '0 (A: 1.00, C: 0.00, G: 0.00, T: 0.00, N: 0.00) |' in  freq_str
-        assert kmers == ''
+        results = calculate_sequence_stats(seqs)
+        assert 'maximum: 4' in results['length']
+        assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in results['qual_boxplot']
+        assert '[30 , 31[ (96): **********' in results['quality']
+        assert 'Q30: 100.0' in results['quality']
+        assert '0 (A: 1.00, C: 0.00, G: 0.00, T: 0.00' in  results['nucl_freq']
+        assert results['kmer'] == ''
 
         infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
-        seqs = read_seqrecords(infhands, file_format='fasta')
-        kmers = calculate_sequence_stats(seqs)[-1]
+        seqs = list(read_seqrecords(infhands, file_format='fasta'))
+        kmers = calculate_sequence_stats(seqs)['kmer']
         assert not 'Kmer distribution' in kmers
 
-        infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
-        seqs = read_seqrecords(infhands, file_format='fasta')
-        kmers = calculate_sequence_stats(seqs, kmer_size=3)[-1]
+        kmers = calculate_sequence_stats(seqs, kmer_size=3)['kmer']
         assert 'Kmer distribution' in kmers
         assert 'TCT: 167' in kmers
+
+        # dust
+        dust = calculate_sequence_stats(seqs)['dustscore']
+        assert not dust
+        dust = calculate_sequence_stats(seqs, do_dust_stats=True)['dustscore']
+        assert 'average: 1.83\nvariance: 0.14\nnum. seqs.: 6\n' in dust
+        assert '% above 7 (low complexity): 0.00' in dust
 
     def test_stats_bin(self):
         'It tests the statistics binary'
@@ -303,6 +307,12 @@ class CalculateStatsTest(unittest.TestCase):
             cmd.append(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
         result = check_output(cmd)
         assert 'Kmer distribution' in result
+
+        # dustscore distribution
+        cmd = [bin_, '-d']
+        cmd.append(join(TEST_DATA_DIR, 'arabidopsis_genes'))
+        result = check_output(cmd)
+        assert 'Dustscores' in result
 
 
 class BaseFreqPlotTest(unittest.TestCase):

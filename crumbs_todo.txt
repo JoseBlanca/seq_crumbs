@@ -3,7 +3,7 @@ TODO
 -----
 
 add option to keep filtered sequences
-add option to calculate_stats to calculate the dustscore distribution
+add n50, n75, n90 and n95 calculations to length in calculate_stats
 
 trim_blast_contanimant
 ----------------------

@@ -42,9 +42,11 @@ def _setup_argparse():
     help_kmer_size = 'kmer size to calculate (default: %(default)s)'
     parser.add_argument('-k', '--kmer_size', type=int, help=help_kmer_size,
                         default=DEFAULT_KMER_SIZE, dest='kmer_size')
-    parser.add_argument('-c', '--complexity_stats', action='store_true',
+    parser.add_argument('-c', '--complexity', action='store_true',
                         help='Do complexity (kmer) stats, (default False)',
-                        default=False, dest='complex_stats')
+                        dest='complex_stats')
+    parser.add_argument('-d', '--dust', action='store_true',
+                        help='Do dustscore stats, (default False)')
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
     return parser
@@ -76,13 +78,14 @@ def _parse_args(parser):
     out_fhand = getattr(parsed_args, OUTFILE)
     kmer_size = parsed_args.kmer_size
     complexity_stats = parsed_args.complex_stats
+    do_dust_stats = parsed_args.dust
 
     if not complexity_stats:
         kmer_size = None
 
     args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
             'original_in_fhands': in_fhands, 'in_format': in_format,
-            'kmer_size': kmer_size}
+            'kmer_size': kmer_size, 'do_dust_stats': do_dust_stats}
     return args, parsed_args
 
 
@@ -95,11 +98,18 @@ def run():
     in_format = args['in_format']
     out_fhand = args['out_fhand']
     kmer_size = args['kmer_size']
+    do_dust_stats = args['do_dust_stats']
 
     seqs = read_seqrecords(in_fhands, file_format=in_format)
-    (lengths_srt, qual_str, freq_str, qual_boxplot,
-                             kmers) = calculate_sequence_stats(seqs, kmer_size)
-    out_fhand.write(lengths_srt + qual_str + freq_str + qual_boxplot + kmers)
+    stat_strs = calculate_sequence_stats(seqs, kmer_size,
+                                         do_dust_stats=do_dust_stats)
+    out_fhand.write(stat_strs['length'])
+    out_fhand.write(stat_strs['quality'])
+    out_fhand.write(stat_strs['nucl_freq'])
+    out_fhand.write(stat_strs['qual_boxplot'])
+    out_fhand.write(stat_strs['kmer'])
+    out_fhand.write(stat_strs['dustscore'])
+    out_fhand.close()
 
 if __name__ == '__main__':
     #sys.argv.append('-h')

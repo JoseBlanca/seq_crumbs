@@ -608,13 +608,14 @@ def calculate_dust_score(seqrecord):
     return dustscore
 
 
-def calculate_sequence_stats(seqs, kmer_size=None):
+def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False):
     'It calculates some stats for the given seqs.'
     # get data
     lengths = IntCounter()
     quals_per_pos = IntBoxplot()
     nucl_freq = NuclFreqsPlot()
     kmer_counter = KmerCounter(kmer_size) if kmer_size else None
+    dustscores = IntCounter()
     for seq in seqs:
         lengths[len(seq)] += 1
         if 'phred_quality' in seq.letter_annotations:
@@ -625,6 +626,11 @@ def calculate_sequence_stats(seqs, kmer_size=None):
             nucl_freq.append(index, nucl)
         if kmer_counter is not None:
             kmer_counter.count_seq(str(seq.seq))
+        if do_dust_stats:
+            dustscore = calculate_dust_score(seq)
+            if dustscore is not None:
+                dustscores[int(dustscore)] += 1
+
     lengths.update_labels({'sum': 'tot. residues', 'items': 'num. seqs.'})
 
     # length distribution
@@ -681,4 +687,20 @@ def calculate_sequence_stats(seqs, kmer_size=None):
             for kmer, number in kmer_counter.most_common(20):
                 kmer_str += '\t{}: {}\n'.format(kmer, number)
 
-    return lengths_srt, qual_str, freq_str, qual_boxplot, kmer_str
+    dust_str = ''
+    if dustscores:
+        dustscores.update_labels({'sum': None, 'items': 'num. seqs.'})
+        dust_str = 'Dustscores stats and distribution.\n'
+        dust_str += '----------------------------------\n'
+        dust7 = (dustscores.count_relative_to_value(7, operator.gt) /
+                 dustscores.count)
+        dust_str += '% above 7 (low complexity): {:.2f}\n'.format(dust7)
+        dust_str += str(dustscores)
+        dust_str += '\n'
+
+    return {'length': lengths_srt,
+            'quality': qual_str,
+            'nucl_freq': freq_str,
+            'qual_boxplot': qual_boxplot,
+            'kmer': kmer_str,
+            'dustscore': dust_str}
