@@ -20,15 +20,10 @@ import re
 
 from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
                              MAX_WIDTH_ASCII_PLOT, DEF_PLOT_FREQS_UP_TO_BASE,
-                             DEFAULT_KMER_SIZE)
+                             DEFAULT_KMER_SIZE, DUST_WINDOWSIZE,
+                             DUST_WINDOWSTEP)
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
-
-# pylint: disable=R0904
-# pylint: disable=R0912
-# pylint: disable=R0914
-# pylint: disable=R0915
-# pylint: disable=W0223
 
 
 class IntCounter(Counter):
@@ -559,6 +554,58 @@ class KmerCounter(object):
     def most_common(self, num_items):
         'return most common kmers with their counts'
         return self._counter.most_common(num_items)
+
+
+def _calculate_rawscore(string):
+    'It returns a non-normalized dustscore'
+    triplet_counts = Counter()
+    for triplet in rolling_window(string, 3):
+        # It should do something with non ATCG, but we sacrifice purity for
+        # speed. Maybe we should reconsider this
+        triplet_counts[triplet.upper()] += 1
+
+    return sum(tc * (tc - 1) * 0.5 for tc in triplet_counts.viewvalues())
+
+
+def calculate_dust_score(seqrecord):
+    '''It returns the dust score.
+
+    From: "A Fast and Symmetric DUST Implementation to Mask Low-Complexity DNA
+    Sequences"
+    doi:10.1089/cmb.2006.13.1028
+
+    and re-implemented from PRINSEQ
+    '''
+    seq = str(seqrecord.seq)
+    length = len(seq)
+    if length == 3:
+        return 0
+    if length <= 5:
+        return None
+
+    windowsize = DUST_WINDOWSIZE
+    windowstep = DUST_WINDOWSTEP
+
+    dustscores = []
+    if length > windowsize:
+        windows = 0
+        for seq_in_win in rolling_window(seq, windowsize, windowstep):
+            score = _calculate_rawscore(seq_in_win)
+            dustscores.append(score / (windowsize - 2))
+            windows += 1
+        remaining_seq = seq[windows * windowstep:]
+    else:
+        remaining_seq = seq
+
+    if remaining_seq > 5:
+        length = len(remaining_seq)
+        score = _calculate_rawscore(remaining_seq)
+        dustscore = score / (length - 3) * (windowsize - 2) / (length - 2)
+        dustscores.append(dustscore)
+
+    # max score should be 100 not 31
+    dustscore = sum(dustscores) / len(dustscores) * 100 / 31
+    return dustscore
 
 
 def calculate_sequence_stats(seqs, kmer_size=None):

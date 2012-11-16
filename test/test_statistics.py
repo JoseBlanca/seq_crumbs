@@ -21,9 +21,12 @@ from subprocess import check_output
 from tempfile import NamedTemporaryFile
 import operator
 
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+
 from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                calculate_sequence_stats, NuclFreqsPlot,
-    KmerCounter)
+                               KmerCounter, calculate_dust_score)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
@@ -200,6 +203,29 @@ class KmerCounterTest(unittest.TestCase):
         assert list(kmers.values) == [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         kmers.count_seq('ATCATGGCTACGACT')
         assert list(kmers.values) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+
+
+class DustCalculationTest(unittest.TestCase):
+    'It calculates dust scores'
+    @staticmethod
+    def test_dustscore_calculation():
+        'It calculates the dust score'
+        seqs = ['TTTTTTTTTTTTTTTTTTTTTTTTTTTT', 'TATATATATATATATATATATATATATA',
+                'GAAGAAGAAGAAGAAGAAGAAGAAGAAG', 'AACTGCAGTCGATGCTGATTCGATCGAT',
+                'AACTGAAAAAAAATTTTTTTAAAAAAAA']
+
+        # short sequences
+        scores = [100, 48, 30.76, 4.31, 23.38]
+        scoresx3 = [100, 48.68, 28.65, 5.62, 27.53]
+        scoresx4 = [100, 48.55, 28.25, 5.79, 28.00]
+        for seq, score, scorex3, scorex4 in zip(seqs, scores, scoresx3,
+                                                scoresx4):
+            seqrec = SeqRecord(Seq(seq))
+            assert calculate_dust_score(seqrec) - score < 0.01
+            seqrec = SeqRecord(Seq(seq * 3))
+            assert calculate_dust_score(seqrec) - scorex3 < 0.01
+            seqrec = SeqRecord(Seq(seq * 4))
+            assert calculate_dust_score(seqrec) - scorex4 < 0.01
 
 
 class CalculateStatsTest(unittest.TestCase):
