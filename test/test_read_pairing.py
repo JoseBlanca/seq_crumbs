@@ -340,7 +340,6 @@ class InterleaveBinTest(unittest.TestCase):
         assert open(in_fpath1).read() == BgzfReader(out_fhand1.name).read(2000)
         assert open(in_fpath2).read() == BgzfReader(out_fhand2.name).read(2000)
 
-
         # skip checks
         in_fpath1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         in_fpath2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')

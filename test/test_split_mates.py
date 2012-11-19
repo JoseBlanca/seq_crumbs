@@ -27,7 +27,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.split_mates import MatePairSplitter
-from crumbs.settings import LINKERS, TITANIUM_LINKER, FLX_LINKER
+from crumbs.settings import TITANIUM_LINKER, FLX_LINKER
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
 
@@ -158,6 +158,12 @@ class SplitMatesBinTest(unittest.TestCase):
         out_fhand = NamedTemporaryFile(suffix='.fasta')
 
         cmd = [mate_bin, '-o', out_fhand.name, '-l', TITANIUM_LINKER,
+               mate_fhand.name]
+        check_output(cmd)
+        result = open(out_fhand.name).read()
+        assert result.startswith('>seq1\1\n')
+
+        cmd = [mate_bin, '-o', out_fhand.name, '-l', '454',
                mate_fhand.name]
         check_output(cmd)
         result = open(out_fhand.name).read()

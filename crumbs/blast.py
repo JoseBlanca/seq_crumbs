@@ -180,7 +180,7 @@ class BlasterForFewSubjects(object):
     subject changed.
     '''
     def __init__(self, seqs_fpath, seqrecords, program, params=None,
-                 filters=None, elongate_for_global=False):
+                 filters=None, elongate_for_global=False, seqs_type=None):
         '''It inits the class.'''
         self._subjects = seqrecords
         self.program = program
@@ -192,9 +192,10 @@ class BlasterForFewSubjects(object):
         self.filters = filters
         self.elongate_for_global = elongate_for_global
         self._match_parts = self._look_for_blast_matches(seqs_fpath,
-                                                         seqrecords)
+                                                         seqrecords,
+                                                         seqs_type)
 
-    def _look_for_blast_matches(self, seq_fpath, oligos):
+    def _look_for_blast_matches(self, seq_fpath, oligos, seqs_type):
         'It looks for the oligos in the given sequence files'
         # we need to keep the blast_fhands, because they're temp files and
         # otherwise they might be removed
@@ -204,7 +205,8 @@ class BlasterForFewSubjects(object):
               copy_if_same_format=False)
 
         blasts, blast_fhand = _do_blast_2(dbpath, oligos, params=self.params,
-                                          program=self.program)
+                                          program=self.program,
+                                          dbtype=seqs_type)
         if self.filters is not None:
             blasts = filter_alignments(blasts, config=self.filters)
 

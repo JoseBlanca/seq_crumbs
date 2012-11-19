@@ -19,7 +19,7 @@ from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqrecords
 
 from crumbs.settings import LINKERS
-from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
+from crumbs.utils.tags import NUCL
 
 # pylint: disable=R0903
 
@@ -44,9 +44,10 @@ class MatePairSplitter(object):
                    'min_score': min_identity}]
 
         matcher = BlasterForFewSubjects(seq_fhand.name, self.linkers,
-                                             program='blastn', filters=filters,
-                                             params={'task': 'blastn-short'},
-                                             elongate_for_global=True)
+                                        program='blastn', filters=filters,
+                                        params={'task': 'blastn-short'},
+                                        elongate_for_global=True,
+                                        seqs_type=NUCL)
         new_seqs = []
         for seqrec in seqs:
             segments = matcher.get_matched_segments_for_read(seqrec.id)
