@@ -34,29 +34,14 @@ from crumbs.seqio import write_seqrecords
 class TrimLowercasedLetters(object):
     'It trims the masked segments of the seqrecords.'
 
-    def __init__(self):
-        'The initiator'
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
-
     def __call__(self, seqrecords):
         'It trims the masked segments of the seqrecords.'
-        stats = self._stats
-        stats[PROCESSED_PACKETS] += 1
         trimmed_seqs = []
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             seq = str(seqrecord.seq)
             unmasked_segments = get_uppercase_segments(seq)
             segment = get_longest_segment(unmasked_segments)
             if segment is not None:
-                stats[YIELDED_SEQS] += 1
                 segments = []
                 if segment[0] != 0:
                     segments.append((0, segment[0] - 1))
@@ -95,30 +80,18 @@ class TrimEdges(object):
         '''
         self.left = left
         self.right = right
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It trims the edges of the given seqrecords.'
-        stats = self._stats
         left = self.left
         right = self.right
-        stats[PROCESSED_PACKETS] += 1
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
 
             segments = [(0, left - 1)] if left else []
             if right:
                 seq_len = len(seqrecord)
                 segments.append((seq_len - right, seq_len - 1))
             _add_trim_segments(segments, seqrecord, kind=OTHER)
-            stats[YIELDED_SEQS] += 1
         return seqrecords
 
 
@@ -149,24 +122,12 @@ class TrimOrMask(object):
     def __init__(self, mask=False):
         '''The initiator.'''
         self.mask = mask
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It trims the edges of the given seqrecords.'
-        stats = self._stats
-        stats[PROCESSED_PACKETS] += 1
         mask = self.mask
         processed_seqs = []
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
-
             if not TRIMMING_RECOMMENDATIONS in seqrecord.annotations:
                 processed_seqs.append(copy_seqrecord(seqrecord))
                 continue
@@ -199,7 +160,6 @@ class TrimOrMask(object):
 
             processed_seqs.append(seqrecord)
 
-            stats[YIELDED_SEQS] += 1
         return processed_seqs
 
 
@@ -259,14 +219,6 @@ class TrimByQuality(object):
         self.threshold = threshold
         self.trim_left = trim_left
         self.trim_right = trim_right
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It trims the masked segments of the seqrecords.'
@@ -274,11 +226,8 @@ class TrimByQuality(object):
         threshold = self.threshold
         trim_left = self.trim_left
         trim_right = self.trim_right
-        stats = self._stats
-        stats[PROCESSED_PACKETS] += 1
         trimmed_seqs = []
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             try:
                 quals = seqrecord.letter_annotations['phred_quality']
             except KeyError:
@@ -288,7 +237,6 @@ class TrimByQuality(object):
                                                 trim_left, trim_right)
             if segments is not None:
                 _add_trim_segments(segments, seqrecord, kind=QUALITY)
-            stats[YIELDED_SEQS] += 1
             trimmed_seqs.append(seqrecord)
         return trimmed_seqs
 
@@ -298,18 +246,9 @@ class TrimWithBlastShort(object):
     def __init__(self, oligos):
         'The initiator'
         self.oligos = oligos
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It trims the masked segments of the seqrecords.'
-        stats = self.stats
         db_fhand = write_seqrecords(seqrecords, file_format='fasta')
         db_fhand.flush()
         params = {'task': 'blastn-short', 'expect': '0.0001'}
@@ -322,9 +261,7 @@ class TrimWithBlastShort(object):
                                              params=params,
                                              elongate_for_global=True)
         for seqrec in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             segments = matcher.get_matched_segments_for_read(seqrec.id)
             if segments is not None:
                 _add_trim_segments(segments[0], seqrec, kind=VECTOR)
-            stats[YIELDED_SEQS] += 1
         return seqrecords

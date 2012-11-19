@@ -79,17 +79,9 @@ class EstscanOrfAnnotator(object):
     def __init__(self, usage_matrix):
         'Initiator'
         self._usage_matrix = usage_matrix
-        self._stats = Counter()
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It runs the actual annotations'
-        stats = self._stats
-        stats[PROCESSED_PACKETS] += 1
         pep_fhand = NamedTemporaryFile()
         dna_fhand = NamedTemporaryFile()
         _run_estscan(seqrecords, pep_fhand.name, dna_fhand.name,
@@ -98,7 +90,6 @@ class EstscanOrfAnnotator(object):
         estscan_result = _read_estcan_results(open(pep_fhand.name),
                                               open(dna_fhand.name))
         for seq in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             seq_name = seq.id
             orfs = estscan_result.get(seq_name, {})
             feats = []
@@ -110,7 +101,6 @@ class EstscanOrfAnnotator(object):
                 feats.append(feat)
             if feats:
                 seq.features.extend(feats)
-            stats[YIELDED_SEQS] += 1
 
         dna_fhand.close()
         pep_fhand.close()
@@ -211,23 +201,13 @@ class PolyaAnnotator(object):
         '''
         self._min_len = min_len
         self._max_cont_mismatches = max_cont_mismatches
-        self._stats = Counter()
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It runs the actual annotations'
-        stats = self._stats
-        stats[PROCESSED_PACKETS] += 1
         max_cont_mismatches = self._max_cont_mismatches
         min_len = self._min_len
 
         for seq in seqrecords:
-            stats[PROCESSED_SEQS] += 1
-            stats[YIELDED_SEQS] += 1
             _annotate_polya(seq, min_len, max_cont_mismatches)
         return seqrecords
 
@@ -242,28 +222,18 @@ class BlastAnnotator(object):
         self._filters = [] if filters is None else filters
         self._params = params
         self._dbtype = dbtype
-        self._stats = Counter()
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It does the work'
-        stats = self._stats
-        stats[PROCESSED_PACKETS] += 1
         matcher = Blaster(seqrecords, self.blastdb, self._program,
                                self._dbtype, filters=self._filters,
                                params=self._params)
         blasts = matcher.blasts
         blastdb = os.path.basename(self.blastdb)
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             align_result = blasts.get(seqrecord.id, None)
             if not align_result:
                 continue
-            stats[YIELDED_SEQS] += 1
             match_counter = 0
             for match in align_result['matches']:
                 subject = match['subject']['name']

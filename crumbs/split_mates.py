@@ -30,19 +30,9 @@ class MatePairSplitter(object):
     def __init__(self, linkers=None):
         'The initiator'
         self.linkers = LINKERS if linkers is None else linkers
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqs):
         'It splits a list of sequences with the provided linkers'
-        stats = self._stats
-        stats[PROCESSED_PACKETS] += 1
         seq_fhand = write_seqrecords(seqs, file_format='fasta')
         seq_fhand.flush()
 
@@ -59,7 +49,6 @@ class MatePairSplitter(object):
                                              elongate_for_global=True)
         new_seqs = []
         for seqrec in seqs:
-            stats[PROCESSED_SEQS] += 1
             segments = matcher.get_matched_segments_for_read(seqrec.id)
             if segments is not None:
                 split_seqs = self._split_by_mate_linker(seqrec, segments)
@@ -67,7 +56,6 @@ class MatePairSplitter(object):
                 split_seqs = [seqrec]
             for seq in split_seqs:
                 new_seqs.append(seq)
-                stats[YIELDED_SEQS] += 1
         return new_seqs
 
     def _split_by_mate_linker(self, seqrec, (segments, is_partial)):
