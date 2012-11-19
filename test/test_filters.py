@@ -28,10 +28,21 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
-                            FilterBlastMatch, FilterDustComplexity)
+                            FilterBlastMatch, FilterDustComplexity,
+                            seq_to_filterpackets)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.tags import NUCL
+from crumbs.utils.tags import NUCL, SEQS_FILTERED_OUT, SEQS_PASSED
+
+
+class PacketConversionTest(unittest.TestCase):
+    'It tests the seqs and filter packet conversion'
+    def test_seqs_to_filter_packets(self):
+        'It converts seq packets into filter packets'
+        seqpackets = [['ACT'], ['CTG', 'TTT']]
+        filter_packets = list(seq_to_filterpackets(iter(seqpackets)))
+        assert [p[SEQS_PASSED] for p in filter_packets] == seqpackets
+        assert [p[SEQS_FILTERED_OUT] for p in filter_packets] == [[], []]
 
 
 def _create_seqrecord(string):
@@ -55,35 +66,53 @@ class LengthFilterTest(unittest.TestCase):
         'It filters the seqs according to its length'
         seq1 = _create_seqrecord('aCTg')
         seq2 = _create_seqrecord('AC')
-        seqs = [seq1, seq2]
+        seqs = {SEQS_PASSED: [seq1, seq2]}
 
         filter_by_length = FilterByLength(minimum=4)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg']
+        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        assert passed == ['aCTg']
+        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        assert filtr == ['AC']
 
         filter_by_length = FilterByLength(minimum=5)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == []
+        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        assert passed == []
+        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        assert filtr == ['aCTg', 'AC']
 
         filter_by_length = FilterByLength(minimum=2, ignore_masked=True)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg', 'AC']
+        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        assert passed == ['aCTg', 'AC']
+        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        assert filtr == []
 
         filter_by_length = FilterByLength(minimum=3, ignore_masked=True)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == []
+        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        assert passed == []
+        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        assert filtr == ['aCTg', 'AC']
 
         filter_by_length = FilterByLength(maximum=3, ignore_masked=True)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == ['aCTg', 'AC']
+        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        assert passed == ['aCTg', 'AC']
+        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        assert filtr == []
 
         filter_by_length = FilterByLength(maximum=3)
-        assert [str(s.seq) for s in filter_by_length(seqs)] == ['AC']
+        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        assert passed == ['AC']
+        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        assert filtr == ['aCTg']
 
         seq1 = _create_seqrecord('aCTTATg')
         seq2 = _create_seqrecord('ACCGCGC')
-        seqs = [seq1, seq2]
+        filter_packet = {SEQS_PASSED: [seq1, seq2]}
         filter_by_length = FilterByLength(minimum=7, maximum=8,
                                           ignore_masked=True)
-        assert len([str(s.seq) for s in filter_by_length(seqs)]) == 1
+        assert len(filter_by_length(filter_packet)[SEQS_PASSED]) == 1
 
         filter_by_length = FilterByLength(minimum=7, maximum=8)
-        assert len([str(s.seq) for s in filter_by_length(seqs)]) == 2
+        assert len(filter_by_length(filter_packet)[SEQS_PASSED]) == 2
 
     def test_filter_by_length_bin(self):
         'It uses the filter_by_length binary'
@@ -95,11 +124,17 @@ class LengthFilterTest(unittest.TestCase):
         result = check_output([filter_bin, '-n', '4', fasta_fhand.name])
         assert '>s1\naCTg\n' in result
 
-        result = check_output([filter_bin, '-x', '4', '-r', fasta_fhand.name])
+        result = check_output([filter_bin, '-x', '4', fasta_fhand.name])
         assert '>s2\nAC\n' in result
 
-        result = check_output([filter_bin, '-rmx', '4', fasta_fhand.name])
+        result = check_output([filter_bin, '-mx', '4', fasta_fhand.name])
         assert '>s1\naCTg\n>s2\nAC\n' in result
+
+        filtered_fhand = NamedTemporaryFile()
+        result = check_output([filter_bin, '-mx', '1',
+                               '-e', filtered_fhand.name, fasta_fhand.name])
+        assert not result
+        assert '>s1\naCTg\n>s2\nAC\n' in open(filtered_fhand.name).read()
 
 
 class SeqListFilterTest(unittest.TestCase):
@@ -306,6 +341,5 @@ class ComplexityFilterTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_filter']
-    # import sys;sys.argv = ['', 'BlastMatchFilterTest.test_blastmatch_bin']
+    import sys;sys.argv = ['', 'LengthFilterTest.test_filter_by_length_bin']
     unittest.main()

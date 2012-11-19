@@ -24,12 +24,12 @@ from Bio.SeqIO import FastaIO
 from Bio.SeqIO import QualityIO
 from Bio.Alphabet import IUPAC
 
-from crumbs.exceptions import MalformedFile, error_quality_disagree, \
-    UnknownFormatError
+from crumbs.exceptions import (MalformedFile, error_quality_disagree,
+                               UnknownFormatError)
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
 from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
-from crumbs.utils.tags import GUESS_FORMAT
+from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT)
 from crumbs.settings import PACKET_SIZE
 
 
@@ -60,6 +60,25 @@ def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
         if workers is not None:
             workers.terminate()
         raise
+
+
+def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
+                         file_format='fastq', workers=None):
+    'It writes the filter stream into passed and filtered out sequence files'
+    if filtered_fhand is None:
+        seq_packets = (p[SEQS_PASSED] for p in filter_packets)
+        return write_seq_packets(fhand=passed_fhand, seq_packets=seq_packets,
+                                 file_format=file_format, workers=workers)
+    for packet in filter_packets:
+        try:
+            write_seqrecords(packet[SEQS_PASSED], fhand=passed_fhand,
+                             file_format=file_format)
+            write_seqrecords(packet[SEQS_FILTERED_OUT], fhand=filtered_fhand,
+                             file_format=file_format)
+        except BaseException:
+            if workers is not None:
+                workers.terminate()
+            raise
 
 
 def title2ids(title):

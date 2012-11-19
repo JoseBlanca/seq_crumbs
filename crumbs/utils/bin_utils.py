@@ -270,12 +270,16 @@ def create_basic_parallel_argparse(**kwargs):
     return parser
 
 
-def create_filter_argparse(**kwargs):
+def create_filter_argparse(add_reverse=True, **kwargs):
     'It returns a cmd parser for the filter executables'
     parser = create_basic_parallel_argparse(**kwargs)
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
-    parser.add_argument('-r', '--reverse', action='store_true',
-                        help='Reverses the filtering')
+    if add_reverse:
+        parser.add_argument('-r', '--reverse', action='store_true',
+                            help='Reverses the filtering')
+    parser.add_argument('-e', '--filtered_file',
+                        help='Filtered out sequences output file',
+                        type=argparse.FileType('wt'))
     return parser
 
 
@@ -358,10 +362,12 @@ def parse_basic_parallel_args(parser):
     return args, parsed_args
 
 
-def parse_filter_args(parser):
+def parse_filter_args(parser, add_reverse=True):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_parallel_args(parser)
-    args['reverse'] = parsed_args.reverse
+    if add_reverse:
+        args['reverse'] = parsed_args.reverse
+    args['filtered_fhand'] = parsed_args.filtered_file
     return args, parsed_args
 
 

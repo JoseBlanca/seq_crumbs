@@ -50,3 +50,6 @@ THREE_PRIME = "3'"
 
 REVERSE = -1
 FORWARD = 1
+
+SEQS_PASSED = 'seqs_passed'
+SEQS_FILTERED_OUT = 'seqs_filtered_out'

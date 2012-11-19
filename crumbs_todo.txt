@@ -2,7 +2,6 @@
 TODO
 -----
 
-add option to keep filtered sequences
 
 trim_blast_contanimant
 ----------------------

@@ -15,12 +15,18 @@
 
 from __future__ import division
 
-from crumbs.utils.tags import PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS
+from crumbs.utils.tags import SEQS_PASSED, SEQS_FILTERED_OUT
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
 from crumbs.settings import DEFATULT_DUST_THRESHOLD
+
+
+def seq_to_filterpackets(seq_packets):
+    'It yields packets suitable for the filters'
+    for packet in seq_packets:
+        yield {SEQS_PASSED: packet, SEQS_FILTERED_OUT: []}
 
 
 class FilterByLength(object):
@@ -37,25 +43,15 @@ class FilterByLength(object):
         self.min = minimum
         self.max = maximum
         self.ignore_masked = ignore_masked
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
 
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
-
-    def __call__(self, seqrecords):
+    def __call__(self, filterpacket):
         'It filters out the short seqrecords.'
-        stats = self._stats
         min_ = self.min
         max_ = self.max
         ignore_masked = self.ignore_masked
-        stats[PROCESSED_PACKETS] += 1
-        processed_seqs = []
-        for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
+        seqs_passed = []
+        filtered_out = []
+        for seqrecord in filterpacket[SEQS_PASSED]:
             seq = str(seqrecord.seq)
             length = uppercase_length(seq) if ignore_masked else len(seq)
             passed = True
@@ -65,9 +61,10 @@ class FilterByLength(object):
                 passed = False
 
             if passed:
-                processed_seqs.append(seqrecord)
-                stats[YIELDED_SEQS] += 1
-        return processed_seqs
+                seqs_passed.append(seqrecord)
+            else:
+                filtered_out.append(seqrecord)
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
 class FilterById(object):
@@ -82,30 +79,18 @@ class FilterById(object):
             seq_ids = set(seq_ids)
         self.seq_ids = seq_ids
         self.reverse = reverse
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It filters out the seqrecords not found in the list.'
-        stats = self._stats
         seq_ids = self.seq_ids
         reverse = self.reverse
-        stats[PROCESSED_PACKETS] += 1
         processed_seqs = []
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             passed = True if seqrecord.id in seq_ids else False
             if reverse:
                 passed = not(passed)
             if passed:
                 processed_seqs.append(seqrecord)
-                stats[YIELDED_SEQS] += 1
         return processed_seqs
 
 
@@ -120,26 +105,15 @@ class FilterByQuality(object):
         self.threshold = float(threshold)
         self.reverse = reverse
         self.ignore_masked = ignore_masked
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It filters out the seqrecords not found in the list.'
-        stats = self._stats
         threshold = self.threshold
         reverse = self.reverse
         ignore_masked = self.ignore_masked
 
-        stats[PROCESSED_PACKETS] += 1
         processed_seqs = []
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             try:
                 quals = seqrecord.letter_annotations['phred_quality']
             except KeyError:
@@ -158,7 +132,6 @@ class FilterByQuality(object):
                 passed = not(passed)
             if passed:
                 processed_seqs.append(seqrecord)
-                stats[YIELDED_SEQS] += 1
         return processed_seqs
 
 
@@ -177,28 +150,17 @@ class FilterBlastMatch(object):
         self._filters = filters
         self._reverse = reverse
         self._dbtype = dbtype
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It filters the seq by blast match'
         filtered_seqrecords = []
-        stats = self._stats
         matcher = Blaster(seqrecords, self._blast_db, dbtype=self._dbtype,
                           program=self._blast_program, filters=self._filters)
         for seqrec in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             segments = matcher.get_matched_segments(seqrec.id)
             if ((not self._reverse and segments is None) or
                 (self._reverse and segments)):
                 filtered_seqrecords.append(seqrec)
-                stats[YIELDED_SEQS] += 1
 
         return filtered_seqrecords
 
@@ -210,14 +172,6 @@ class FilterDustComplexity(object):
         '''
         self._threshold = threshold
         self._reverse = reverse
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It filters the seq by blast match'
@@ -226,12 +180,10 @@ class FilterDustComplexity(object):
         threshold = self._threshold
         reverse = self._reverse
         for seqrec in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             dustscore = calculate_dust_score(seqrec)
             passed = True if dustscore < threshold else False
             if reverse:
                 passed = not(passed)
             if passed:
                 filtered_seqs.append(seqrec)
-                stats[YIELDED_SEQS] += 1
         return filtered_seqs
