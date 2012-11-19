@@ -17,24 +17,24 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
-                                    create_basic_parallel_argparse)
-from crumbs.seqio import read_seq_packets, write_seq_packets
+from crumbs.utils.bin_utils import (main, parse_filter_args,
+                                    create_filter_argparse)
+from crumbs.seqio import read_seq_packets, write_filter_packets
 from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.filters import FilterBlastMatch
+from crumbs.filters import FilterBlastMatch, seq_to_filterpackets
 
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It filters sequences using blast'
-    parser = create_basic_parallel_argparse(description=description)
+    parser = create_filter_argparse(description=description)
     parser.add_argument('-b', '--blastdb', dest='blastdb', required=True,
                      help='Blast database or path to sequence file (required)')
     default_blast_program = 'blastn'
     hlp = 'blast program to use (default: %(default)s)'
     parser.add_argument('-g', '--blast_program', dest='blast_program',
                         help=hlp, default=default_blast_program)
-    parser.add_argument('-e', '--expected', dest='expected',
+    parser.add_argument('-x', '--expected', dest='expected',
                         help='Maximum e-value', type=float)
     parser.add_argument('-s', '--similarity', dest='similarity', type=float,
                         help='Minimum percentage of similarity')
@@ -43,16 +43,13 @@ def _setup_argparse():
                         help='Percentage of the length that should match')
     group.add_argument('-a', '--abs_len', dest='abs_len', type=int,
                         help='Length of the query that should match')
-    parser.add_argument('-r', '--reverse',
-                        help='Reverses the filtering (keep matched sequences)',
-                        action='store_true', default=False)
 
     return parser
 
 
 def _parse_args(parser):
     'It parses the arguments'
-    args, parsed_args = parse_basic_parallel_args(parser)
+    args, parsed_args = parse_filter_args(parser)
     if parsed_args.blastdb is None:
         return parser.error('path to blast parser is mandatory')
     else:
@@ -62,7 +59,6 @@ def _parse_args(parser):
     args['similarity'] = parsed_args.similarity
     args['min_len'] = parsed_args.min_len
     args['abs_len'] = parsed_args.abs_len
-    args['reverse'] = parsed_args.reverse
 
     is_none = lambda x: True if x is None else False
     if all([is_none(arg) for arg in args['expected'], args['similarity'],
@@ -98,9 +94,11 @@ def filter_by_blast():
     args = _parse_args(parser)
 
     in_fhands = args['in_fhands']
-    out_fhand = args['out_fhand']
+    passed_fhand = args['out_fhand']
+    filtered_fhand = args['filtered_fhand']
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    filter_packets = seq_to_filterpackets(seq_packets)
 
     database = args['blastdb']
     program = args['blast_program']
@@ -108,12 +106,17 @@ def filter_by_blast():
     filter_by_blast = FilterBlastMatch(database, program, filters,
                                        reverse=args['reverse'])
 
-    seq_packets, workers = process_seq_packets(seq_packets, [filter_by_blast],
-                                               processes=args['processes'])
-    write_seq_packets(out_fhand, seq_packets, args['out_format'],
-                      workers=workers)
-    out_fhand.flush()
+    filter_packets, workers = process_seq_packets(filter_packets,
+                                                  [filter_by_blast],
+                                                  processes=args['processes'])
+
+    write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
+                         args['out_format'], workers=workers)
+    passed_fhand.flush()
+    if filtered_fhand is not None:
+        filtered_fhand.flush()
+
 
 if __name__ == '__main__':
-    #sys.argv.append('-h')
+    # sys.argv.append('-h')
     sys.exit(main(filter_by_blast))

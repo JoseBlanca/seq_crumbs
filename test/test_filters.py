@@ -66,7 +66,7 @@ class LengthFilterTest(unittest.TestCase):
         'It filters the seqs according to its length'
         seq1 = _create_seqrecord('aCTg')
         seq2 = _create_seqrecord('AC')
-        seqs = {SEQS_PASSED: [seq1, seq2]}
+        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
 
         filter_by_length = FilterByLength(minimum=4)
         passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
@@ -106,7 +106,7 @@ class LengthFilterTest(unittest.TestCase):
 
         seq1 = _create_seqrecord('aCTTATg')
         seq2 = _create_seqrecord('ACCGCGC')
-        filter_packet = {SEQS_PASSED: [seq1, seq2]}
+        filter_packet = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
         filter_by_length = FilterByLength(minimum=7, maximum=8,
                                           ignore_masked=True)
         assert len(filter_by_length(filter_packet)[SEQS_PASSED]) == 1
@@ -143,14 +143,15 @@ class SeqListFilterTest(unittest.TestCase):
         'It filters the reads given a list of ids'
         seq1 = SeqRecord(Seq('ACTG'), id='seq1')
         seq2 = SeqRecord(Seq('ACTG'), id='seq2')
-        seqs = [seq1, seq2]
-
+        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
         ids = ['seq1']
         filter_by_id = FilterById(ids)
-        assert [s.id for s in filter_by_id(seqs)] == ['seq1']
+        passed = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+        assert passed == ['seq1']
 
         filter_by_id = FilterById(set(ids), reverse=True)
-        assert [s.id for s in filter_by_id(seqs)] == ['seq2']
+        filtered = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+        assert filtered == ['seq2']
 
     def test_filter_by_name_bin(self):
         'It uses the filter_by_name binary'
@@ -174,16 +175,19 @@ class QualityFilterTest(unittest.TestCase):
                     letter_annotations={'phred_quality': [42, 42, 40, 42, 40]})
         seq2 = SeqRecord(Seq('AAcTg'), id='seq2',
                     letter_annotations={'phred_quality': [40, 40, 42, 40, 42]})
-        seqs = [seq1, seq2]
+        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
 
         filter_by_id = FilterByQuality(threshold=41)
-        assert [s.id for s in filter_by_id(seqs)] == ['seq1']
+        passed = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+        assert passed == ['seq1']
 
         filter_by_id = FilterByQuality(threshold=41, reverse=True)
-        assert [s.id for s in filter_by_id(seqs)] == ['seq2']
+        filtered = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+        assert filtered == ['seq2']
 
         filter_by_id = FilterByQuality(threshold=41.5, ignore_masked=True)
-        assert [s.id for s in filter_by_id(seqs)] == ['seq1']
+        passed = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+        assert passed == ['seq1']
 
     def test_filter_by_qual_bin(self):
         'It uses the filter_by_quality binary'
@@ -192,14 +196,26 @@ class QualityFilterTest(unittest.TestCase):
 
         fastq = '@s1\naCTg\n+\n"DD"\n@s2\nAC\n+\n""\n'
         fastq_fhand = _make_fhand(fastq)
-        result = check_output([filter_bin, '-mrq', '34', fastq_fhand.name])
-        assert '@s1\n' not in result
+        filtered_fhand = NamedTemporaryFile()
+        result = check_output([filter_bin, '-mq', '34', fastq_fhand.name,
+                               '-e', filtered_fhand.name])
+        assert '@s1\n' in result
+        filtered = open(filtered_fhand.name).read()
+        assert '@s2\n' in filtered
+
+        # reverse
+        filtered_fhand = NamedTemporaryFile()
+        result = check_output([filter_bin, '-rmq', '34', fastq_fhand.name,
+                               '-e', filtered_fhand.name])
         assert '@s2\n' in result
+        filtered = open(filtered_fhand.name).read()
+        assert '@s1\n' in filtered
 
         # Using a fasta file it will fail
         fasta = '>s1\naCTg\n>s2\nAC\n'
         fasta_fhand = _make_fhand(fasta)
         stderr = NamedTemporaryFile()
+
         result = call([filter_bin, '-q', '35', fasta_fhand.name],
                       stderr=stderr)
         assert result
@@ -216,8 +232,8 @@ class BlastMatchFilterTest(unittest.TestCase):
         match = 'CCAAAGTACGGTCTCCCAAGCGGTCTCTTACCGGACACCGTCACCGATTTCACCCTCT'
         seq = 'ATCATGTAGTTACACATGAACACACACATG'
         seq += match
-
-        seqs = [SeqRecord(Seq(seq), id='seq')]
+        seq1 = SeqRecord(Seq(seq), id='seq')
+        seqs = {SEQS_PASSED: [seq1], SEQS_FILTERED_OUT: []}
         filters = [{'kind': 'score_threshold', 'score_key': 'expect',
                     'max_score': 0.001},
                    {'kind': 'score_threshold', 'score_key': 'identity',
@@ -227,20 +243,21 @@ class BlastMatchFilterTest(unittest.TestCase):
 
         filter_ = FilterBlastMatch(blastdb, 'blastn', filters=filters,
                                    dbtype=NUCL)
-        new_seqs = filter_(seqs)
+        new_seqs = filter_(seqs)[SEQS_PASSED]
         assert  new_seqs == []
 
         filters = [{'kind': 'score_threshold', 'score_key': 'expect',
                     'max_score': 1e-28}]
         filter_ = FilterBlastMatch(blastdb, 'blastn', filters)
-        new_seqs = filter_(seqs)
+        new_seqs = filter_(seqs)[SEQS_PASSED]
         assert len(new_seqs) == 1
 
         filters = [{'kind': 'score_threshold', 'score_key': 'expect',
                     'max_score': 1e-28}]
         filter_ = FilterBlastMatch(blastdb, 'blastn', filters, reverse=True)
-        new_seqs = filter_(seqs)
-        assert new_seqs == []
+        filter_packets = filter_(seqs)
+        assert  filter_packets[SEQS_PASSED] == []
+        assert len(filter_packets[SEQS_FILTERED_OUT]) == 1
 
     def test_filter_blast_bin(self):
         'It test the binary of the filter_by_blast'
@@ -262,7 +279,7 @@ class BlastMatchFilterTest(unittest.TestCase):
             assert 'At least a filter must be Used' in open(stderr.name).read()
 
         # expected_filter
-        result = check_output([filter_bin, '-b', blastdb, '-e', '1e-27',
+        result = check_output([filter_bin, '-b', blastdb, '-x', '1e-27',
                                seq_fhand.name])
 
         assert 'CATGAACACACACAT' in result
@@ -282,8 +299,10 @@ class BlastMatchFilterTest(unittest.TestCase):
             assert 'not allowed with argument'  in open(stderr.name).read()
 
         # minlen percentaje_filter
+        filtered_fhand = NamedTemporaryFile()
         result = check_output([filter_bin, '-b', blastdb, '-l', '40',
-                               seq_fhand.name])
+                               seq_fhand.name, '-e', filtered_fhand.name])
+        assert ">seq\nATCATGTAGTTACACATG" in open(filtered_fhand.name).read()
         assert result == ''
 
         result = check_output([filter_bin, '-b', blastdb, '-l', '80',
@@ -300,9 +319,11 @@ class BlastMatchFilterTest(unittest.TestCase):
         assert 'CATGAACACACACAT' in result
 
         # reverse
+        filtered_fhand = NamedTemporaryFile()
         result = check_output([filter_bin, '-b', blastdb, '-a', '80', '-r',
-                               seq_fhand.name])
+                               seq_fhand.name, '-e', filtered_fhand.name])
         assert result == ''
+        assert ">seq\nATCATGTAGTTACACATG" in open(filtered_fhand.name).read()
 
 
 class ComplexityFilterTest(unittest.TestCase):
@@ -312,12 +333,26 @@ class ComplexityFilterTest(unittest.TestCase):
         'It tests the complexity filter'
         seq1 = 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAAAAAAAAAAAAAAAAAAAAAAAAA'
         seq2 = 'CATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGCTAGCTAGTT'
-        seqs = [SeqRecord(Seq(seq1), id='seq1'),
-                SeqRecord(Seq(seq2), id='seq2')]
+        seqs = {SEQS_PASSED: [SeqRecord(Seq(seq1), id='seq1'),
+                              SeqRecord(Seq(seq2), id='seq2')],
+                SEQS_FILTERED_OUT: []}
+
         filter_dust = FilterDustComplexity()
-        new_seqs = filter_dust(seqs)
-        assert len(new_seqs) == 1
-        assert new_seqs[0].id == 'seq2'
+        filter_packet = filter_dust(seqs)
+        assert len(filter_packet[SEQS_PASSED]) == 1
+        assert len(filter_packet[SEQS_FILTERED_OUT]) == 1
+
+        assert filter_packet[SEQS_PASSED][0].id == 'seq2'
+        assert filter_packet[SEQS_FILTERED_OUT][0].id == 'seq1'
+
+        # reverse
+        filter_dust = FilterDustComplexity(reverse=True)
+        filter_packet = filter_dust(seqs)
+        assert len(filter_packet[SEQS_PASSED]) == 1
+        assert len(filter_packet[SEQS_FILTERED_OUT]) == 1
+
+        assert filter_packet[SEQS_PASSED][0].id == 'seq1'
+        assert filter_packet[SEQS_FILTERED_OUT][0].id == 'seq2'
 
     @staticmethod
     def test_filter_by_dust_bin():
@@ -339,7 +374,13 @@ class ComplexityFilterTest(unittest.TestCase):
         result = check_output([filter_bin, '-c', '1', fasta_fhand.name])
         assert result == ''
 
+        filtered_fhand = NamedTemporaryFile()
+        result = check_output([filter_bin, fasta_fhand.name,
+                               '-e', filtered_fhand.name])
+        assert '>s1\n' in open(filtered_fhand.name).read()
+        assert '>s2\n' in result
+
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'LengthFilterTest.test_filter_by_length_bin']
+    # import sys;sys.argv = ['', 'ComplexityFilterTest']
     unittest.main()

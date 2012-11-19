@@ -50,7 +50,7 @@ class FilterByLength(object):
         max_ = self.max
         ignore_masked = self.ignore_masked
         seqs_passed = []
-        filtered_out = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
         for seqrecord in filterpacket[SEQS_PASSED]:
             seq = str(seqrecord.seq)
             length = uppercase_length(seq) if ignore_masked else len(seq)
@@ -80,18 +80,23 @@ class FilterById(object):
         self.seq_ids = seq_ids
         self.reverse = reverse
 
-    def __call__(self, seqrecords):
+    def __call__(self, filterpacket):
         'It filters out the seqrecords not found in the list.'
         seq_ids = self.seq_ids
         reverse = self.reverse
-        processed_seqs = []
-        for seqrecord in seqrecords:
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+        for seqrecord in filterpacket[SEQS_PASSED]:
             passed = True if seqrecord.id in seq_ids else False
             if reverse:
                 passed = not(passed)
+
             if passed:
-                processed_seqs.append(seqrecord)
-        return processed_seqs
+                seqs_passed.append(seqrecord)
+            else:
+                filtered_out.append(seqrecord)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
 class FilterByQuality(object):
@@ -106,14 +111,15 @@ class FilterByQuality(object):
         self.reverse = reverse
         self.ignore_masked = ignore_masked
 
-    def __call__(self, seqrecords):
+    def __call__(self, filterpacket):
         'It filters out the seqrecords not found in the list.'
         threshold = self.threshold
         reverse = self.reverse
         ignore_masked = self.ignore_masked
 
-        processed_seqs = []
-        for seqrecord in seqrecords:
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+        for seqrecord in filterpacket[SEQS_PASSED]:
             try:
                 quals = seqrecord.letter_annotations['phred_quality']
             except KeyError:
@@ -131,8 +137,11 @@ class FilterByQuality(object):
             if reverse:
                 passed = not(passed)
             if passed:
-                processed_seqs.append(seqrecord)
-        return processed_seqs
+                seqs_passed.append(seqrecord)
+            else:
+                filtered_out.append(seqrecord)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
 class FilterBlastMatch(object):
@@ -151,18 +160,30 @@ class FilterBlastMatch(object):
         self._reverse = reverse
         self._dbtype = dbtype
 
-    def __call__(self, seqrecords):
+    def __call__(self, filterpacket):
         'It filters the seq by blast match'
-        filtered_seqrecords = []
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+        seqrecords = filterpacket[SEQS_PASSED]
         matcher = Blaster(seqrecords, self._blast_db, dbtype=self._dbtype,
                           program=self._blast_program, filters=self._filters)
-        for seqrec in seqrecords:
-            segments = matcher.get_matched_segments(seqrec.id)
-            if ((not self._reverse and segments is None) or
-                (self._reverse and segments)):
-                filtered_seqrecords.append(seqrec)
 
-        return filtered_seqrecords
+        for seqrecord in seqrecords:
+            segments = matcher.get_matched_segments(seqrecord.id)
+            if segments is None:
+                passed = True
+            else:
+                passed = False
+
+            if self._reverse:
+                passed = not(passed)
+
+            if passed:
+                seqs_passed.append(seqrecord)
+            else:
+                filtered_out.append(seqrecord)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
 class FilterDustComplexity(object):
@@ -173,17 +194,21 @@ class FilterDustComplexity(object):
         self._threshold = threshold
         self._reverse = reverse
 
-    def __call__(self, seqrecords):
+    def __call__(self, filterpacket):
         'It filters the seq by blast match'
-        filtered_seqs = []
-        stats = self._stats
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+
         threshold = self._threshold
         reverse = self._reverse
-        for seqrec in seqrecords:
-            dustscore = calculate_dust_score(seqrec)
+        for seqrecord in filterpacket[SEQS_PASSED]:
+            dustscore = calculate_dust_score(seqrecord)
             passed = True if dustscore < threshold else False
             if reverse:
                 passed = not(passed)
             if passed:
-                filtered_seqs.append(seqrec)
-        return filtered_seqs
+                seqs_passed.append(seqrecord)
+            else:
+                filtered_out.append(seqrecord)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
