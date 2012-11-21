@@ -15,6 +15,7 @@
 
 import unittest
 import os
+import sys
 from subprocess import Popen, PIPE, check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
@@ -132,7 +133,23 @@ class SettingsTest(unittest.TestCase):
     'It tests the get_settings function'
     def test_get_settings(self):
         'We get the settings'
-        assert get_setting('DEFAULT_KMER_SIZE')
+        kmer_size = get_setting('DEFAULT_KMER_SIZE')
+        assert kmer_size
+
+    def test_environment_settings(self):
+        'It sets settings with the environment variables'
+        code = 'from crumbs.settings import get_setting\n'
+        code += 'print get_setting("DEFAULT_KMER_SIZE")\n'
+
+        test_script = NamedTemporaryFile()
+        test_script.write(code)
+        test_script.flush()
+
+        environ = {key: val for key, val in os.environ.items()}
+        environ['SEQ_CRUMBS_DEFAULT_KMER_SIZE'] = '1'
+        cmd = [sys.executable, test_script.name]
+        out = check_output(cmd, env=environ)
+        assert out == '1\n'
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'ErrorHandlingTest.test_error_handling']

@@ -14,6 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import tempfile
+import os
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -106,6 +107,14 @@ class _Settings(dict):
                 continue
             key = key[1:]   # strip the underscore
             super(_Settings, self).__setitem__(key, val)
+
+        # Are there any environment variable to update the settings?
+        for key, value in os.environ.items():
+            if key.startswith('SEQ_CRUMBS_'):
+                key = key[11:]
+                if key in self.viewkeys():
+                    value = type(key)(value)
+                    super(_Settings, self).__setitem__(key, value)
 
 _settings = _Settings()
 
