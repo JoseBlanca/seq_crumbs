@@ -20,10 +20,9 @@ import sys
 from crumbs.utils.bin_utils import (main, parse_filter_args,
                                     create_filter_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.seqio import read_seq_packets, write_seq_packets, \
-    write_filter_packets
+from crumbs.seqio import read_seq_packets, write_filter_packets
 from crumbs.filters import FilterDustComplexity, seq_to_filterpackets
-from crumbs.settings import DEFATULT_DUST_THRESHOLD
+from crumbs.settings import get_setting
 
 
 def _setup_argparse(description):
@@ -31,7 +30,7 @@ def _setup_argparse(description):
     parser = create_filter_argparse(description=description)
     hlp = 'Dust score (0-100) (default: %(default)s), if lower will be kept'
     parser.add_argument('-c', '--threshold', type=float, help=hlp,
-                        default=DEFATULT_DUST_THRESHOLD)
+                        default=get_setting('DEFATULT_DUST_THRESHOLD'))
     return parser
 
 

@@ -13,12 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 21/06/2012
-
-@author: jose
-'''
-
 # pylint: disable=W0232
 # pylint: disable=R0903
 

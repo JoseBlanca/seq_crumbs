@@ -18,10 +18,7 @@ from collections import Counter
 import operator
 import re
 
-from crumbs.settings import (MAX_BINS, MIN_BINS, MEAN_VALUES_IN_BIN,
-                             MAX_WIDTH_ASCII_PLOT, DEF_PLOT_FREQS_UP_TO_BASE,
-                             DEFAULT_KMER_SIZE, DUST_WINDOWSIZE,
-                             DUST_WINDOWSTEP)
+from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
 
@@ -171,18 +168,20 @@ class IntCounter(Counter):
 
     def calculate_bin_edges(self, min_, max_, n_bins=None):
         'It calculates the bin_edges'
+        min_bins = get_setting('MIN_BINS')
+        max_bins = get_setting('MAX_BINS')
         if n_bins is None:
             num_values = max_ - min_
             if num_values == 0:
                 n_bins = 1
-            elif num_values < MIN_BINS:
+            elif num_values < min_bins:
                 n_bins = num_values
             else:
-                n_bins = int(self.count / MEAN_VALUES_IN_BIN)
-                if n_bins < MIN_BINS:
-                    n_bins = MIN_BINS
-                if n_bins > MAX_BINS:
-                    n_bins = MAX_BINS
+                n_bins = int(self.count / get_setting('MEAN_VALUES_IN_BIN'))
+                if n_bins < min_bins:
+                    n_bins = min_bins
+                if n_bins > max_bins:
+                    n_bins = max_bins
                 if n_bins > num_values:
                     n_bins = num_values
 
@@ -310,7 +309,7 @@ def draw_histogram(bin_limits, counts):
     # pylint: disable=W0141
     max_count = max(counts)
     max_header_len = max(map(len, result))
-    max_hist_width = MAX_WIDTH_ASCII_PLOT - max_header_len
+    max_hist_width = get_setting('MAX_WIDTH_ASCII_PLOT') - max_header_len
     counts_ratio = max_hist_width / max_count
 
     result2 = []
@@ -409,7 +408,7 @@ class IntBoxplot(object):
             headers.append(header)
             distribs.append(distrib)
 
-        plot_width = (MAX_WIDTH_ASCII_PLOT - widths['labels'] -
+        plot_width = (get_setting('MAX_WIDTH_ASCII_PLOT') - widths['labels'] -
                       len(str(max_value)) - header_len)
         val_per_pixel = (max_value - min_value) / plot_width
         if val_per_pixel == 0:
@@ -459,7 +458,8 @@ class IntBoxplot(object):
 
 class NuclFreqsPlot(object):
     'It represents the base frequencies along the read lengts'
-    def __init__(self, count_up_to_base=DEF_PLOT_FREQS_UP_TO_BASE):
+    def __init__(self,
+                 count_up_to_base=get_setting('DEF_PLOT_FREQS_UP_TO_BASE')):
         'The init'
         self.counts = {}
         self.count_up_to_base = count_up_to_base
@@ -507,7 +507,7 @@ class NuclFreqsPlot(object):
             return header, freqs
 
         header_len = len(_header_for_nucl(0)[0])
-        plot_width = MAX_WIDTH_ASCII_PLOT - header_len
+        plot_width = get_setting('MAX_WIDTH_ASCII_PLOT') - header_len
         val_per_pixel = 1 / plot_width
         plot = ''
         for loc in range(loc_min, loc_max + 1):
@@ -536,7 +536,7 @@ class NuclFreqsPlot(object):
 
 class KmerCounter(object):
     'It counts kmers in the given sequences'
-    def __init__(self, kmer_size=DEFAULT_KMER_SIZE):
+    def __init__(self, kmer_size=get_setting('DEFAULT_KMER_SIZE')):
         'initiator'
         self._kmer_size = kmer_size
         self._counter = Counter()
@@ -583,8 +583,8 @@ def calculate_dust_score(seqrecord):
     if length <= 5:
         return None
 
-    windowsize = DUST_WINDOWSIZE
-    windowstep = DUST_WINDOWSTEP
+    windowsize = get_setting('DUST_WINDOWSIZE')
+    windowstep = get_setting('DUST_WINDOWSTEP')
 
     dustscores = []
     if length > windowsize:

@@ -13,11 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on 18/06/2012
-
-@author: jose
-'''
 from __future__ import division
 from array import array
 

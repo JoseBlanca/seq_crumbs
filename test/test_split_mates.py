@@ -27,9 +27,12 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.split_mates import MatePairSplitter
-from crumbs.settings import TITANIUM_LINKER, FLX_LINKER
+from crumbs.settings import get_setting
 from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.utils.bin_utils import BIN_DIR
+
+TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
+FLX_LINKER = get_setting('FLX_LINKER')
 
 # pylint: disable=R0201
 # pylint: disable=R0904

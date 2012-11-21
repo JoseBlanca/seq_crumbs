@@ -31,8 +31,7 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, compress_fhand)
 from crumbs.utils.seq_utils import guess_format
-from crumbs.settings import (SUPPORTED_OUTPUT_FORMATS, USE_EXTERNAL_BIN_PREFIX,
-                              EXTERNAL_BIN_PREFIX, ADD_PATH_TO_EXT_BIN)
+from crumbs.settings import get_setting
 from crumbs.utils.tags import (OUTFILE, GUESS_FORMAT, BGZF, GZIP,
                                ERROR_ENVIRON_VARIABLE)
 from crumbs import __version__ as version
@@ -175,10 +174,10 @@ def get_binary_path(binary_name):
 
     Fails if there is not binary for that architecture
     '''
-    if USE_EXTERNAL_BIN_PREFIX:
-        binary_name = EXTERNAL_BIN_PREFIX + binary_name
+    if get_setting('USE_EXTERNAL_BIN_PREFIX'):
+        binary_name = get_setting('EXTERNAL_BIN_PREFIX') + binary_name
 
-    if not ADD_PATH_TO_EXT_BIN:
+    if not get_setting('ADD_PATH_TO_EXT_BIN'):
         # I have to check if the bynary is on my current directory.
         # If it is there use it, else assumes that it is on the path
         if os.path.exists(os.path.join(os.getcwd(), binary_name)):
@@ -256,7 +255,7 @@ def create_basic_argparse(**kwargs):
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
     parser.add_argument('-f', '--out_format', dest='out_format',
                         help='output file format (default: same as input)',
-                        choices=SUPPORTED_OUTPUT_FORMATS)
+                        choices=get_setting('SUPPORTED_OUTPUT_FORMATS'))
     return parser
 
 

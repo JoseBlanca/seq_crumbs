@@ -23,7 +23,7 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
                                     create_basic_parallel_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.settings import FWD_454_LINKERS, FLX_LINKER, TITANIUM_LINKER
+from crumbs.settings import get_setting
 from crumbs.split_mates import MatePairSplitter
 from crumbs.seqio import read_seq_packets, write_seq_packets
 
@@ -48,11 +48,11 @@ def _parse_args(parser):
     new_linkers = []
     for linker in linkers:
         if linker == '454':
-            new_linkers.extend(FWD_454_LINKERS)
+            new_linkers.extend(get_setting('FWD_454_LINKERS'))
         elif linker.lower() == 'flx':
-            new_linkers.append(FLX_LINKER)
+            new_linkers.append(get_setting('FLX_LINKER'))
         elif linker.lower() == 'titanium':
-            new_linkers.append(TITANIUM_LINKER)
+            new_linkers.append(get_setting('TITANIUM_LINKER'))
         else:
             # TODO, check that the linker is a DNA sequence
             new_linkers.append(linker)

@@ -26,7 +26,7 @@ from crumbs.alignment_result import (filter_alignments, ELONGATED, QUERY,
                                      elongate_match_parts_till_global,
                                      TabularBlastParser)
 from crumbs.utils.file_utils import TemporaryDir
-from crumbs.settings import DEFAULT_IGNORE_ELONGATION_SHORTER
+from crumbs.settings import get_setting
 
 
 BLAST_FIELDS = {'query': 'qseqid', 'subject': 'sseqid', 'identity': 'pident',
@@ -239,7 +239,8 @@ class BlasterForFewSubjects(object):
 
     def get_matched_segments_for_read(self, read_name):
         'It returns the matched segments for any oligo'
-        ignore_elongation_shorter = DEFAULT_IGNORE_ELONGATION_SHORTER
+        setting_key = 'DEFAULT_IGNORE_ELONGATION_SHORTER'
+        ignore_elongation_shorter = get_setting(setting_key)
 
         try:
             match_parts = self._match_parts[read_name]

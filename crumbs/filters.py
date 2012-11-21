@@ -20,7 +20,7 @@ from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
-from crumbs.settings import DEFATULT_DUST_THRESHOLD
+from crumbs.settings import get_setting
 
 
 def seq_to_filterpackets(seq_packets):
@@ -188,7 +188,8 @@ class FilterBlastMatch(object):
 
 class FilterDustComplexity(object):
     'It filters a sequence according to its dust score'
-    def __init__(self, threshold=DEFATULT_DUST_THRESHOLD, reverse=False):
+    def __init__(self, threshold=get_setting('DEFATULT_DUST_THRESHOLD'),
+                 reverse=False):
         '''The initiator
         '''
         self._threshold = threshold

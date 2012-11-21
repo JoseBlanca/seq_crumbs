@@ -30,7 +30,7 @@ from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
 from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT)
-from crumbs.settings import PACKET_SIZE
+from crumbs.settings import get_setting
 
 
 def clean_seq_stream(seqs):
@@ -96,7 +96,8 @@ def title2ids(title):
     return id_, name, desc
 
 
-def read_seq_packets(fhands, size=PACKET_SIZE, file_format=GUESS_FORMAT):
+def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'),
+                     file_format=GUESS_FORMAT):
     '''It yields SeqRecords in packets of the given size.'''
 
     seqs = read_seqrecords(fhands, file_format=file_format)

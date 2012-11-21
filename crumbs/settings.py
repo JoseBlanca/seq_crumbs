@@ -16,72 +16,102 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
+_SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
 # number of sequences to process in a chunk. Lenght of the sequence list to
 # hold in memory
-PACKET_SIZE = 1000
+_PACKET_SIZE = 1000
 
 # number of sequences to analyze in the fastq version guessing of a seekable
 # file
-SEQS_TO_GUESS_FASTQ_VERSION = 1000
+_SEQS_TO_GUESS_FASTQ_VERSION = 1000
 
 # number of bytes to analyze in the fastq version guessing of a non-seekable
 # file
-CHUNK_TO_GUESS_FASTQ_VERSION = 50000
+_CHUNK_TO_GUESS_FASTQ_VERSION = 50000
 
 # maximum length expected for an Illumina read
-LONGEST_EXPECTED_ILLUMINA_READ = 250
+_LONGEST_EXPECTED_ILLUMINA_READ = 250
 
 
 # 454 FLX mate pair linker
-FLX_LINKER = 'GTTGGAACCGAAAGGGTTTGAATTCAAACCCTTTCGGTTCCAAC'
+_FLX_LINKER = 'GTTGGAACCGAAAGGGTTTGAATTCAAACCCTTTCGGTTCCAAC'
 # Titanium mate pair linker. It could be found forward or reverse
-TITANIUM_LINKER = 'TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACG'
-TITANIUM_LINKER_REV = 'CGTAATAACTTCGTATAGCATACATTATACGAAGTTATACGA'
-FWD_454_LINKERS = [FLX_LINKER, TITANIUM_LINKER]
-LINKERS = [SeqRecord(Seq(FLX_LINKER), id='flx_linker'),
-           SeqRecord(Seq(TITANIUM_LINKER), id='titanium_linker')]
+_TITANIUM_LINKER = 'TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACG'
+_TITANIUM_LINKER_REV = 'CGTAATAACTTCGTATAGCATACATTATACGAAGTTATACGA'
+_FWD_454_LINKERS = [_FLX_LINKER, _TITANIUM_LINKER]
+_LINKERS = [SeqRecord(Seq(_FLX_LINKER), id='flx_linker'),
+            SeqRecord(Seq(_TITANIUM_LINKER), id='titanium_linker')]
 
 
 # # Use this to modify how get_binary path works
 # if need to modify the binary's name
-USE_EXTERNAL_BIN_PREFIX = False
+_USE_EXTERNAL_BIN_PREFIX = False
 # prefix to add to the binary name
-EXTERNAL_BIN_PREFIX = 'crumbs_'
+_EXTERNAL_BIN_PREFIX = 'crumbs_'
 # mark True if need the path or assumes that is on the path
-ADD_PATH_TO_EXT_BIN = True
+_ADD_PATH_TO_EXT_BIN = True
 
 # how many reads can be hold in memory by default
-DEFAULT_SEQS_IN_MEM_LIMIT = 500000
+_DEFAULT_SEQS_IN_MEM_LIMIT = 500000
 
 # max width of a line of an ASCII plot
-MAX_WIDTH_ASCII_PLOT = 100
+_MAX_WIDTH_ASCII_PLOT = 100
 
 # default minimum number of bins in an histogram
-MIN_BINS = 20
+_MIN_BINS = 20
 # default maximum number of bins in an histogram
-MAX_BINS = 500
-MEAN_VALUES_IN_BIN = 10000
+_MAX_BINS = 500
+_MEAN_VALUES_IN_BIN = 10000
 
 # default number of location to plot in a nucleotide frequency plot
-DEF_PLOT_FREQS_UP_TO_BASE = 40
+_DEF_PLOT_FREQS_UP_TO_BASE = 40
 
 # when 2 match parts are in this distance they are merges as just one matchpart
-DEFAULT_IGNORE_ELONGATION_SHORTER = 3
+_DEFAULT_IGNORE_ELONGATION_SHORTER = 3
 
 # default kmer size to do the kmer stats
-DEFAULT_KMER_SIZE = 20
+_DEFAULT_KMER_SIZE = 20
 
 # trimest polyannotator
-POLYA_ANNOTATOR_MIN_LEN = 5
-POLYA_ANNOTATOR_MISMATCHES = 1
+_POLYA_ANNOTATOR_MIN_LEN = 5
+_POLYA_ANNOTATOR_MISMATCHES = 1
 
 # quality trim
-DEFAULT_QUALITY_TRIM_TRESHOLD = 25
-DEFAULT_QUALITY_TRIM_WINDOW = 5
+_DEFAULT_QUALITY_TRIM_TRESHOLD = 25
+_DEFAULT_QUALITY_TRIM_WINDOW = 5
 
 # dust score parameters
-DUST_WINDOWSIZE = 64
-DUST_WINDOWSTEP = 32
-DEFATULT_DUST_THRESHOLD = 7
+_DUST_WINDOWSIZE = 64
+_DUST_WINDOWSTEP = 32
+_DEFATULT_DUST_THRESHOLD = 7
+
+
+class _Settings(dict):
+    '''A class that stores the seq_crumbs settings.'''
+    def __init__(self):
+        'It inits the class'
+        super(_Settings, self).__init__()
+        self.load_settings()
+
+    def load_settings(self):
+        'It loads the settings defined in this module'
+        for key, val in globals().viewitems():
+            if not key.isupper():
+                continue
+            key = key[1:]   # strip the underscore
+            super(_Settings, self).__setitem__(key, val)
+
+
+_settings = _Settings()
+
+
+def get_settings():
+    'It returns the settings'
+    # load the settings defined in this module
+    return _settings
+
+
+def get_setting(key):
+    'It returns the value for one setting'
+    return _settings[key]

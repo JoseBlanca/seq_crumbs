@@ -18,7 +18,7 @@
 from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqrecords
 
-from crumbs.settings import LINKERS
+from crumbs.settings import get_setting
 from crumbs.utils.tags import NUCL
 
 # pylint: disable=R0903
@@ -29,7 +29,7 @@ class MatePairSplitter(object):
 
     def __init__(self, linkers=None):
         'The initiator'
-        self.linkers = LINKERS if linkers is None else linkers
+        self.linkers = get_setting('LINKERS') if linkers is None else linkers
 
     def __call__(self, seqs):
         'It splits a list of sequences with the provided linkers'

@@ -22,10 +22,12 @@ from Bio.Seq import Seq
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.transcript_orientations import TranscriptOrientator
-from crumbs.settings import POLYA_ANNOTATOR_MISMATCHES
+from crumbs.settings import get_setting
 from crumbs.utils.bin_utils import BIN_DIR
 from tempfile import NamedTemporaryFile
 from crumbs.seqio import read_seqrecords
+
+POLYA_ANNOTATOR_MISMATCHES = get_setting('POLYA_ANNOTATOR_MISMATCHES')
 
 # pylint: disable=R0201
 # pylint: disable=R0904

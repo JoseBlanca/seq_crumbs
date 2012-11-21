@@ -25,9 +25,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
-from crumbs.settings import (CHUNK_TO_GUESS_FASTQ_VERSION,
-                             SEQS_TO_GUESS_FASTQ_VERSION,
-                             LONGEST_EXPECTED_ILLUMINA_READ)
+from crumbs.settings import get_setting
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
 from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE,
                                PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS)
@@ -135,8 +133,8 @@ class ChangeCase(object):
 
 def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
     'It returns the quality characters and the lengths'
-    seqs_to_peek = SEQS_TO_GUESS_FASTQ_VERSION
-    chunk_size = CHUNK_TO_GUESS_FASTQ_VERSION
+    seqs_to_peek = get_setting('SEQS_TO_GUESS_FASTQ_VERSION')
+    chunk_size = get_setting('CHUNK_TO_GUESS_FASTQ_VERSION')
 
     lengths = array('I')
     seqs_analyzed = 0
@@ -175,7 +173,8 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
         return 'fastq'
     elif is_sanger is False:
         return 'fastq-illumina'
-    n_long_seqs = [l for l in lengths if l > LONGEST_EXPECTED_ILLUMINA_READ]
+    longest_expected_illumina = get_setting('LONGEST_EXPECTED_ILLUMINA_READ')
+    n_long_seqs = [l for l in lengths if l > longest_expected_illumina]
     if n_long_seqs:
         msg = 'It was not possible to guess the format of '
         if hasattr(fhand, 'name'):
@@ -184,7 +183,7 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
             msg += 'a file '
         msg = '\n. The quality values could be Illumina, but there are '
         msg += 'sequences longer than %i bp.'
-        msg %= LONGEST_EXPECTED_ILLUMINA_READ
+        msg %= longest_expected_illumina
         raise UndecidedFastqVersionError(msg)
     else:
         return 'fastq-illumina'

@@ -21,7 +21,7 @@ from crumbs.utils.bin_utils import (main, create_basic_parallel_argparse,
 from crumbs.transcript_orientations import TranscriptOrientator
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.seqio import write_seq_packets, read_seq_packets
-from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
+from crumbs.settings import get_setting
 
 
 def _setup_argparse():
@@ -31,11 +31,13 @@ def _setup_argparse():
     help_ = 'minimum number of consecutive As (or Ts) to extend the tail'
     help_ += '(default: %(default)s)'
     parser.add_argument('-m', '--polya_min_len', type=int,
-                        default=POLYA_ANNOTATOR_MIN_LEN, help=help_)
+                        default=get_setting('POLYA_ANNOTATOR_MIN_LEN'),
+                        help=help_)
     help_ = 'maximum number of consecutive no A (or Ts) to break a tail'
     help_ += '(default: %(default)s)'
     parser.add_argument('-c', '--polya_max_mixmatches', type=int,
-                        default=POLYA_ANNOTATOR_MISMATCHES, help=help_)
+                        default=get_setting('POLYA_ANNOTATOR_MISMATCHES'),
+                        help=help_)
     parser.add_argument('-u', '--estscan_usage_matrix',
                         dest='estscan_usage_matrix',
                         help='estscan usage matrix')

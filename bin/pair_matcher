@@ -24,7 +24,7 @@ from crumbs.utils.bin_utils import (main, create_basic_argparse,
 from crumbs.utils.file_utils import compress_fhand
 from crumbs.pairs import match_pairs, match_pairs_unordered
 from crumbs.seqio import read_seqrecords
-from crumbs.settings import DEFAULT_SEQS_IN_MEM_LIMIT
+from crumbs.settings import get_setting
 
 
 def _setup_argparse():
@@ -38,7 +38,7 @@ def _setup_argparse():
                        type=argparse.FileType('wt'))
     hlp = 'Maximum number of reads in memory (default: %(default)s)'
     parser.add_argument('-l', '--limit', dest='limit', help=hlp, type=int,
-                        default=DEFAULT_SEQS_IN_MEM_LIMIT)
+                        default=get_setting('DEFAULT_SEQS_IN_MEM_LIMIT'))
     unor_help = 'paired reads are unordered and not just interleaved'
     parser.add_argument('-u', '--unordered', dest='unordered',
                         help=unor_help, action='store_true', default=False)

@@ -17,12 +17,15 @@ import unittest
 import os.path
 from tempfile import NamedTemporaryFile
 
-from crumbs.blast import (do_blast, BlasterForFewSubjects, get_or_create_blastdb,
-                          _blastdb_exists)
+from crumbs.blast import (do_blast, BlasterForFewSubjects,
+                          get_or_create_blastdb, _blastdb_exists)
 from crumbs.utils.file_utils import TemporaryDir
-from crumbs.settings import LINKERS, TITANIUM_LINKER
+from crumbs.settings import get_setting
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL
+
+LINKERS = get_setting('LINKERS')
+TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
 
 # pylint: disable=R0201
 # pylint: disable=R0904

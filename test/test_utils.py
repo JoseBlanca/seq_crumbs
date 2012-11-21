@@ -26,6 +26,7 @@ from crumbs.exceptions import ExternalBinaryError, MissingBinaryError
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import ERROR_ENVIRON_VARIABLE
 from crumbs.seqio import guess_seq_type
+from crumbs.settings import get_setting
 
 
 # pylint: disable=R0201
@@ -125,6 +126,13 @@ class ErrorHandlingTest(unittest.TestCase):
         finally:
             del os.environ[ERROR_ENVIRON_VARIABLE]
             stderr.close()
+
+
+class SettingsTest(unittest.TestCase):
+    'It tests the get_settings function'
+    def test_get_settings(self):
+        'We get the settings'
+        assert get_setting('DEFAULT_KMER_SIZE')
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'ErrorHandlingTest.test_error_handling']

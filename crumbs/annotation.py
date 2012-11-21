@@ -15,18 +15,16 @@
 import subprocess
 import os.path
 from tempfile import NamedTemporaryFile
-from collections import Counter
 from random import randint
 
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from crumbs.utils.bin_utils import (get_binary_path, popen,
                                     check_process_finishes)
-from crumbs.utils.tags import (PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS,
-                               FIVE_PRIME, THREE_PRIME)
+from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME
 from crumbs.seqio import write_seqrecords, read_seqrecords
 from crumbs.blast import Blaster
-from crumbs.settings import POLYA_ANNOTATOR_MIN_LEN, POLYA_ANNOTATOR_MISMATCHES
+from crumbs.settings import get_setting
 
 # pylint: disable=R0903
 
@@ -191,8 +189,8 @@ def _annotate_polya(seqrecord, min_len, max_cont_mismatches):
 
 class PolyaAnnotator(object):
     'It annotates the given seqrecords with poly-A or poly-T regions'
-    def __init__(self, min_len=POLYA_ANNOTATOR_MIN_LEN,
-                 max_cont_mismatches=POLYA_ANNOTATOR_MISMATCHES):
+    def __init__(self, min_len=get_setting('POLYA_ANNOTATOR_MIN_LEN'),
+                max_cont_mismatches=get_setting('POLYA_ANNOTATOR_MISMATCHES')):
         '''It inits the class.
 
         min_len - minimum number of consecutive As (or Ts) to extend the tail

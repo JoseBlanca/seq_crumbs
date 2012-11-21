@@ -101,7 +101,8 @@ def copy_and_rename_ext_bin(app_dir, bin_dist_dir):
     external_bin_dir = get_platform_bin_dir(app_dir)
     for ext_bin in os.listdir(external_bin_dir):
         shutil.copy(join(external_bin_dir, ext_bin),
-                join(bin_dist_dir, settings.EXTERNAL_BIN_PREFIX + ext_bin))
+                join(bin_dist_dir,
+                     settings.get_setting('EXTERNAL_BIN_PREFIX') + ext_bin))
 
 
 def write_lines(lines, fpath):
@@ -117,10 +118,10 @@ def modify_settings_content(lines):
     'it modifies the settings content to use prefix and remove path'
     new_lines = []
     for line in lines:
-        if line.startswith('USE_EXTERNAL_BIN_PREFIX'):
-            line = 'USE_EXTERNAL_BIN_PREFIX = True\n'
-        if line.startswith('ADD_PATH_TO_EXT_BIN'):
-            line = 'ADD_PATH_TO_EXT_BIN = False\n'
+        if line.startswith('_USE_EXTERNAL_BIN_PREFIX'):
+            line = '_USE_EXTERNAL_BIN_PREFIX = True\n'
+        if line.startswith('_ADD_PATH_TO_EXT_BIN'):
+            line = '_ADD_PATH_TO_EXT_BIN = False\n'
         new_lines.append(line)
     return new_lines
 

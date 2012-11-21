@@ -21,7 +21,7 @@ from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
 from crumbs.utils.tags import FWD, REV
 from crumbs.seqio import write_seqrecords
-from crumbs.settings import DEFAULT_SEQS_IN_MEM_LIMIT
+from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
 from crumbs.utils.seq_utils import guess_format
 
@@ -127,7 +127,7 @@ def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
 
 
 def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
-                memory_limit=DEFAULT_SEQS_IN_MEM_LIMIT):
+                memory_limit=get_setting('DEFAULT_SEQS_IN_MEM_LIMIT')):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
     buf_fwd = {'index': {}, 'items': []}
     buf_rev = {'index': {}, 'items': []}

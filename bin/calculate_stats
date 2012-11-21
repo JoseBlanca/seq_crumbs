@@ -24,7 +24,7 @@ from crumbs.utils.file_utils import (wrap_in_buffered_reader,
 from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.seqio import read_seqrecords
 from crumbs.statistics import calculate_sequence_stats
-from crumbs.settings import DEFAULT_KMER_SIZE
+from crumbs.settings import get_setting
 
 
 def _setup_argparse():
@@ -41,7 +41,8 @@ def _setup_argparse():
                         type=argparse.FileType('wt'))
     help_kmer_size = 'kmer size to calculate (default: %(default)s)'
     parser.add_argument('-k', '--kmer_size', type=int, help=help_kmer_size,
-                        default=DEFAULT_KMER_SIZE, dest='kmer_size')
+                        default=get_setting('DEFAULT_KMER_SIZE'),
+                        dest='kmer_size')
     parser.add_argument('-c', '--complexity', action='store_true',
                         help='Do complexity (kmer) stats, (default False)',
                         dest='complex_stats')
