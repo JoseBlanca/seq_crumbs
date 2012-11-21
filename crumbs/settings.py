@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
+import tempfile
+
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -86,6 +88,8 @@ _DUST_WINDOWSIZE = 64
 _DUST_WINDOWSTEP = 32
 _DEFATULT_DUST_THRESHOLD = 7
 
+_TEMP_DIR = None
+
 
 class _Settings(dict):
     '''A class that stores the seq_crumbs settings.'''
@@ -93,6 +97,7 @@ class _Settings(dict):
         'It inits the class'
         super(_Settings, self).__init__()
         self.load_settings()
+        tempfile.tempdir = self.__getitem__('TEMP_DIR')
 
     def load_settings(self):
         'It loads the settings defined in this module'
@@ -101,7 +106,6 @@ class _Settings(dict):
                 continue
             key = key[1:]   # strip the underscore
             super(_Settings, self).__setitem__(key, val)
-
 
 _settings = _Settings()
 
