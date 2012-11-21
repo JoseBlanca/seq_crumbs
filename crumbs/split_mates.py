@@ -84,8 +84,8 @@ class MatePairSplitter(object):
                     new_seqrec1.id = id_ + '.part1'
                     new_seqrec2.id = id_ + '.part2'
                 else:
-                    new_seqrec1.id = id_ + '\1'
-                    new_seqrec2.id = id_ + '\2'
+                    new_seqrec1.id = id_ + r'\1'
+                    new_seqrec2.id = id_ + r'\2'
                 return [new_seqrec1, new_seqrec2]
         else:
             seqrecords = []

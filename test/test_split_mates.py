@@ -74,8 +74,8 @@ class MateSplitterTest(unittest.TestCase):
         assert seqs[1].id == 'seq_pl.part2'
 
         seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], False))
-        assert seqs[0].id == 'seq\1'
-        assert seqs[1].id == 'seq\2'
+        assert seqs[0].id == r'seq\1'
+        assert seqs[1].id == r'seq\2'
 
         seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)],
                                                           False))
@@ -123,9 +123,11 @@ class MateSplitterTest(unittest.TestCase):
         write_seq_packets(out_fhand, new_seqs, file_format='fasta')
 
         result = out_fhand.getvalue()
-        xpect = '>seq1\1\n'
+        xpect = r'>seq1\1'
+        xpect += '\n'
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
-        xpect += '>seq1\2\n'
+        xpect += r'>seq1\2'
+        xpect += '\n'
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq2\n'
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
@@ -161,13 +163,13 @@ class SplitMatesBinTest(unittest.TestCase):
                mate_fhand.name]
         check_output(cmd)
         result = open(out_fhand.name).read()
-        assert result.startswith('>seq1\1\n')
+        assert result.startswith(r'>seq1\1')
 
         cmd = [mate_bin, '-o', out_fhand.name, '-l', '454',
                mate_fhand.name]
         check_output(cmd)
         result = open(out_fhand.name).read()
-        assert result.startswith('>seq1\1\n')
+        assert result.startswith(r'>seq1\1')
 
     def test_parallel_bin(self):
         'The mate pairs binary runs in parallel'
@@ -181,7 +183,7 @@ class SplitMatesBinTest(unittest.TestCase):
                mate_fhand.name, '-p', '2']
         check_output(cmd)
         result = open(out_fhand.name).read()
-        assert result.startswith('>seq1\1\n')
+        assert result.startswith(r'>seq1\1')
 
 
 if __name__ == "__main__":
