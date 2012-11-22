@@ -83,8 +83,13 @@ def _get_paired_and_orphan(index_):
     fwd_reads = {}
     rev_reads = {}
 
+    orphan_titles = []
     for title in index_.iterkeys():
-        name, direction = _parse_pair_direction_and_name_from_title(title)
+        try:
+            name, direction = _parse_pair_direction_and_name_from_title(title)
+        except PairDirectionError:
+            orphan_titles.append(title)
+            continue
 
         if direction in (FWD, REV):
             reads_info = fwd_reads if direction == FWD else rev_reads
@@ -103,7 +108,7 @@ def _get_paired_and_orphan(index_):
         paired_titles.append(rev_reads[paired_name])
 
     fwd_orphans = fwd_names.difference(rev_names)
-    orphan_titles = [fwd_reads[orphan] for orphan in fwd_orphans]
+    orphan_titles.extend(fwd_reads[orphan] for orphan in fwd_orphans)
     del fwd_orphans
 
     rev_orphans = rev_names.difference(fwd_names)
@@ -117,11 +122,11 @@ def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
     index_ = _index_seq_file(seq_fpath)
     paired, orphans = _get_paired_and_orphan(index_)
 
-    #write paired
+    # write paired
     write_seqrecords((index_[title] for title in paired), out_fhand,
                      out_format)
 
-    #orphans
+    # orphans
     write_seqrecords((index_[title] for title in orphans), orphan_out_fhand,
                      out_format)
 
@@ -132,7 +137,12 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
     buf_fwd = {'index': {}, 'items': []}
     buf_rev = {'index': {}, 'items': []}
     for seq in seqs:
-        seq_name, direction = _parse_pair_direction_and_name(seq)
+        try:
+            seq_name, direction = _parse_pair_direction_and_name(seq)
+        except PairDirectionError:
+            write_seqrecords([seq], orphan_out_fhand, out_format)
+            continue
+
         if direction == FWD:
             buf1 = buf_rev
             buf2 = buf_fwd
@@ -146,10 +156,10 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
             matching_seq_index = None
 
         if matching_seq_index is None:
-            #add to buff
+            # add to buff
             buf2['items'].append(seq)
             buf2['index'][seq_name] = len(buf2['items']) - 1
-            #check mem limit
+            # check mem limit
             sum_items = len(buf1['items'] + buf2['items'])
             if memory_limit is not None and sum_items >= memory_limit:
                 error_msg = 'There are too many consecutive non matching seqs'
@@ -226,7 +236,7 @@ def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
         except StopIteration:
             seq2 = None
         if seq1 is None:
-            break   # we have consumed the input iterator completely
+            break  # we have consumed the input iterator completely
         if seq2 is None:
             msg = 'The file had an odd number of sequences'
             raise InterleaveError(msg)
