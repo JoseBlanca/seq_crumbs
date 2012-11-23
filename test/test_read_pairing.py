@@ -19,6 +19,8 @@ from subprocess import check_output, CalledProcessError, call
 from tempfile import NamedTemporaryFile
 
 from Bio.bgzf import BgzfReader
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
@@ -30,6 +32,7 @@ from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
 from crumbs.exceptions import InterleaveError, PairDirectionError
 from crumbs.utils.tags import FWD
+from crumbs.seqio import write_seqrecords
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -117,6 +120,25 @@ class PairMatcherTest(unittest.TestCase):
         assert '@seq6:136:FC706VJ:2:2104:15343:197393.mpl_1' in orp
         assert '@seq7:136:FC706VJ:2:2104:15343:197393.hhhh' in orp
         assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCAC' in orp
+
+    @staticmethod
+    def test_all_orphan():
+        'All reads end up in orphan'
+        seqs = [SeqRecord(Seq('ACT'), id='seq1'),
+                SeqRecord(Seq('ACT'), id='seq2')]
+        out_fhand = StringIO()
+        orphan_out_fhand = StringIO()
+        match_pairs(seqs, out_fhand, orphan_out_fhand, out_format='fasta')
+        assert orphan_out_fhand.getvalue() == '>seq1\nACT\n>seq2\nACT\n'
+
+        seq_fhand = write_seqrecords(seqs, file_format='fasta')
+        seq_fhand.flush()
+        out_fhand = StringIO()
+        orphan_out_fhand = StringIO()
+        match_pairs_unordered(seq_fhand.name, out_fhand, orphan_out_fhand,
+                              out_format='fasta')
+        assert '>seq1\nACT\n' in orphan_out_fhand.getvalue()
+        assert '>seq2\nACT\n' in orphan_out_fhand.getvalue()
 
     @staticmethod
     def test_mate_pair_unorderer_checker():

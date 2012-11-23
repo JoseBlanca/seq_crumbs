@@ -136,6 +136,7 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
     'It matches the seq pairs in an iterator and splits the orphan seqs'
     buf_fwd = {'index': {}, 'items': []}
     buf_rev = {'index': {}, 'items': []}
+    buf1, buf2 = buf_fwd, buf_rev   # for the all orphan case
     for seq in seqs:
         try:
             seq_name, direction = _parse_pair_direction_and_name(seq)
