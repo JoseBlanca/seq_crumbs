@@ -19,7 +19,6 @@ from subprocess import check_output, CalledProcessError, call
 from tempfile import NamedTemporaryFile
 
 from Bio.bgzf import BgzfReader
-# pylint: disable=W0212
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
@@ -118,7 +117,6 @@ class PairMatcherTest(unittest.TestCase):
         assert '@seq6:136:FC706VJ:2:2104:15343:197393.mpl_1' in orp
         assert '@seq7:136:FC706VJ:2:2104:15343:197393.hhhh' in orp
         assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCAC' in orp
-
 
     @staticmethod
     def test_mate_pair_unorderer_checker():
@@ -228,9 +226,6 @@ class PairMatcherTest(unittest.TestCase):
         assert '@seq7:136:FC706VJ:2:2104:15343:197393.hhhh' in orp
         assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCAC' in orp
 
-
-
-
     def test_pair_direction_and_name(self):
         'it test the pair_name parser'
         title = '@seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG'
@@ -254,6 +249,11 @@ class PairMatcherTest(unittest.TestCase):
             self.fail()
         except PairDirectionError:
             pass
+
+        title = r'@seq8:136:FC706VJ:2:2104:15343:197393\1'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
+        assert name == '@seq8:136:FC706VJ:2:2104:15343:197393'
+        assert dir_ == FWD
 
 
 class PairMatcherbinTest(unittest.TestCase):

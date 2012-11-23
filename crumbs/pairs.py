@@ -36,7 +36,7 @@ def _parse_pair_direction_and_name_from_title(title):
     '''It parses the description field to get the name and the pair direction,
     using the seq title'''
 
-    reg_exps = ['(.+)/(\d+)', '(.+)\s(\d+):.+', '(.+)\.(\w)\s?']
+    reg_exps = ['(.+)[/|\\\\](\d+)', '(.+)\s(\d+):.+', '(.+)\.(\w)\s?']
 
     for reg_exp in reg_exps:
         match = re.match(reg_exp, title)
