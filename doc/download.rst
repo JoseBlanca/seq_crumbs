@@ -4,6 +4,24 @@ Download
 
 The recommended method to get seq_crumbs is to download one of the releases, but if you want to access to the latest code you can do it at github_.
 
+seq_crumbs 0.1.5
+----------------
+
+Changelog:
+
+  * orientate_transcripts executable added
+  * dust complexity filtering implemented in filter_by_complexity
+  * dust complexity scores distribution in calculate_stats
+  * N50 is included in the calculate_stats report
+  * seq_crumbs settings can now be set using environment variables
+  * blast+ updated to 2.2.27
+  * Several bug fixes done.
+
+Released on 26-11-12
+
+  * :download:`Source distribution <downloads/seq_crumbs-0.1.5.tar.gz>`.
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.5-x64-linux.tar.gz>`
+
 seq_crumbs 0.1.4
 ----------------
 
