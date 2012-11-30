@@ -117,6 +117,9 @@ class MateSplitterTest(unittest.TestCase):
         mate_fhand.write('>seq4\n' + linker[10:] + seq3 + '\n')
         # two linkers
         mate_fhand.write('>seq5\n' + linker + seq3 + FLX_LINKER + seq5 + '\n')
+        # reverse linker
+        rev_linker = str(get_setting('LINKERS')[1].seq.reverse_complement())
+        mate_fhand.write('>seq6\n' + seq5 + rev_linker + seq3 + '\n')
         mate_fhand.flush()
 
         splitter = MatePairSplitter()
@@ -149,6 +152,12 @@ class MateSplitterTest(unittest.TestCase):
         xpect += '>seq5_mlc.part2\n'
         xpect += 'ACCTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
         xpect += '\n'
+        xpect += r'>seq6\1'
+        xpect += '\n'
+        xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
+        xpect += r'>seq6\2'
+        xpect += '\n'
+        xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         assert xpect == result
 
     @staticmethod

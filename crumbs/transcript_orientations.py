@@ -18,7 +18,6 @@ import os.path
 
 from crumbs.annotation import (PolyaAnnotator, EstscanOrfAnnotator,
                                BlastAnnotator)
-from crumbs.utils.tags import REVERSE
 from crumbs.utils.seq_utils import append_to_description
 
 
@@ -148,14 +147,14 @@ class TranscriptOrientator(object):
             for index, orientation in enumerate(orientations):
                 if orientation is None:
                     orientations[index] = annot_strands[analyzed_seqs_index]
-                    if annot_strands[analyzed_seqs_index] == REVERSE:
+                    if annot_strands[analyzed_seqs_index] == -1:  # reverse
                         orientation_log[index] = annotator_name
                     analyzed_seqs_index += 1
         # Now we reverse the seqs that we have guess that are reversed
         reorientated_seqrecords = []
         for orientation, seqrecord, reason in zip(orientations, seqrecords,
                                                       orientation_log):
-            if orientation == REVERSE:
+            if orientation == -1:
                 seqrecord = seqrecord.reverse_complement(id=True,
                                                          description=True,
                                                          annotations=True,
