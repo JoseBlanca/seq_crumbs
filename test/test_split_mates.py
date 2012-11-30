@@ -28,8 +28,10 @@ from Bio.Seq import Seq
 
 from crumbs.split_mates import MatePairSplitter
 from crumbs.settings import get_setting
-from crumbs.seqio import read_seq_packets, write_seq_packets
+from crumbs.seqio import read_seq_packets, write_seq_packets, read_seqrecords
 from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.seq_utils import process_seq_packets
 
 TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
 FLX_LINKER = get_setting('FLX_LINKER')
@@ -57,7 +59,7 @@ class MateSplitterTest(unittest.TestCase):
         # pylint: disable=W0212
         seq = 'aaatttccctt'
         seqrecord = SeqRecord(Seq(seq), id='seq')
-        #fake class to test
+        # fake class to test
         splitter = MatePairSplitter([seqrecord])
         # segment beginning
         seqs = splitter._split_by_mate_linker(seqrecord, ([(0, 3)], False))
@@ -149,6 +151,65 @@ class MateSplitterTest(unittest.TestCase):
         xpect += '\n'
         assert xpect == result
 
+    @staticmethod
+    def test_giusepes_reads():
+        seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads.fastq')
+        linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
+        linkers = list(read_seqrecords([open(linker_fpath)]))
+
+        splitter = MatePairSplitter(linkers=linkers)
+        new_seqs = []
+        for packet in read_seq_packets([open(seq_fpath)], 2):
+            new_seqs.extend(splitter(packet))
+        seq_names = [seq.name for seq in new_seqs]
+        assert 'G109AZL01BJHT8\\1' in seq_names
+        assert 'G109AZL01BJHT8\\2' in seq_names
+        assert len(new_seqs) == 20
+
+        # test with process_seq_packet
+        seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads.fastq')
+        linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
+        linkers = list(read_seqrecords([open(linker_fpath)]))
+
+        splitter = MatePairSplitter(linkers=linkers)
+        seq_packets = read_seq_packets([open(seq_fpath)], 2)
+        seq_packets, workers = process_seq_packets(seq_packets, [splitter])
+
+        new_seqs = [seq for l in list(seq_packets) for seq in l]
+        seq_names = [seq.name for seq in new_seqs]
+        assert 'G109AZL01BJHT8\\1' in seq_names
+        assert 'G109AZL01BJHT8\\2' in seq_names
+        assert len(new_seqs) == 20
+
+        # reads 2
+        seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads2.fastq')
+        linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
+        linkers = list(read_seqrecords([open(linker_fpath)]))
+
+        splitter = MatePairSplitter(linkers=linkers)
+        new_seqs = []
+        for packet in read_seq_packets([open(seq_fpath)], 2):
+            new_seqs.extend(splitter(packet))
+        seq_names = [seq.name for seq in new_seqs]
+        assert 'G109AZL01D8U3X\\1' in seq_names
+        assert 'G109AZL01D8U3X\\2' in seq_names
+        assert len(new_seqs) == 20
+
+        # test with process_seq_packet
+        seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads2.fastq')
+        linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
+        linkers = list(read_seqrecords([open(linker_fpath)]))
+
+        splitter = MatePairSplitter(linkers=linkers)
+        seq_packets = read_seq_packets([open(seq_fpath)], 2)
+        seq_packets, workers = process_seq_packets(seq_packets, [splitter])
+
+        new_seqs = [seq for l in list(seq_packets) for seq in l]
+        seq_names = [seq.name for seq in new_seqs]
+        assert 'G109AZL01D8U3X\\1' in seq_names
+        assert 'G109AZL01D8U3X\\2' in seq_names
+        assert len(new_seqs) == 20
+
 
 class SplitMatesBinTest(unittest.TestCase):
     'It tests the sff_extract binary'
@@ -158,6 +219,27 @@ class SplitMatesBinTest(unittest.TestCase):
         mate_bin = os.path.join(BIN_DIR, 'split_matepairs')
         stdout = check_output([mate_bin, '-h'])
         assert 'usage' in stdout
+
+        out_fhand = NamedTemporaryFile(suffix='.fasta')
+        seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads2.fastq')
+        linkers = '454'
+        cmd = [mate_bin, '-o', out_fhand.name, '-l', linkers,
+               seq_fpath]
+        check_output(cmd)
+        result = open(out_fhand.name).read()
+
+        assert r'G109AZL01D8U3X\1' in  result
+        assert r'G109AZL01D8U3X\2' in  result
+
+        out_fhand = NamedTemporaryFile(suffix='.fasta')
+        seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads.fastq')
+        linkers = '454'
+        cmd = [mate_bin, '-o', out_fhand.name, '-l', linkers,
+               seq_fpath]
+        check_output(cmd)
+        result = open(out_fhand.name).read()
+        assert r'@G109AZL01BJHT8\1' in  result
+        assert r'@G109AZL01BJHT8\2' in  result
 
         mate_fhand = create_a_matepair_file()
         out_fhand = NamedTemporaryFile(suffix='.fasta')

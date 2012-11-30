@@ -86,6 +86,8 @@ class MatePairSplitter(object):
                 else:
                     new_seqrec1.id = id_ + r'\1'
                     new_seqrec2.id = id_ + r'\2'
+                new_seqrec1.name = new_seqrec1.id
+                new_seqrec2.name = new_seqrec2.id
                 return [new_seqrec1, new_seqrec2]
         else:
             seqrecords = []
@@ -96,6 +98,8 @@ class MatePairSplitter(object):
                     continue
                 seqrecord = seqrec[seq_start:segment_start]
                 seqrecord.id = seqrec.id + '_mlc.part{0:d}'.format(counter)
+                seqrecord.name = seqrecord.id
+
                 seqrecords.append(seqrecord)
                 counter += 1
                 seq_start = segment_end + 1
@@ -103,5 +107,6 @@ class MatePairSplitter(object):
                 if segment_end != len(seqrec) + 1:
                     seqrecord = seqrec[segment_end + 1:]
                     seqrecord.id = seqrec.id + '_mlc.part{0:d}'.format(counter)
+                    seqrecord.name = seqrecord.id
                     seqrecords.append(seqrecord)
             return seqrecords
