@@ -330,8 +330,8 @@ class TrimBlastShortTest(unittest.TestCase):
         fhand = StringIO(FASTQ4)
         seq_packets = list(read_seq_packets([fhand]))
         # It should trim the first and the second reads.
-        res = [seq.annotations.get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
-                                         for seq in blast_trim(seq_packets[0])]
+        res = [s.annotations.get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
+                                           for s in blast_trim(seq_packets[0])]
         assert res == [[(0, 29)], [(0, 29)], []]
 
     def test_trim_oligos_bin(self):
