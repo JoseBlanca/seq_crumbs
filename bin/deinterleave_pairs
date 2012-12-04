@@ -27,11 +27,11 @@ from crumbs.pairs import deinterleave_pairs
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
-    description = ''
+    description = 'It splits a ordered file of paired reads into two files.'
     parent = create_basic_argparse(description=description)
     parser = argparse.ArgumentParser(parents=[parent],
                                      conflict_handler='resolve')
-    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+    parser.add_argument('-o', '--outfile', dest=OUTFILE, required=True,
                        help='Sequence output file to process (default STDOUT)',
                        nargs=2, type=argparse.FileType('wt'))
     return parser
