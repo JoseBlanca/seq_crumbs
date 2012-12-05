@@ -44,6 +44,8 @@ def clean_seq_stream(seqs):
 
 def write_seqrecords(seqs, fhand=None, file_format='fastq'):
     'It writes a stream of sequences to a file'
+    file_format = _remove_one_line(file_format)
+
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
     seqs = clean_seq_stream(seqs)
@@ -65,6 +67,8 @@ def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
 def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                          file_format='fastq', workers=None):
     'It writes the filter stream into passed and filtered out sequence files'
+    file_format = _remove_one_line(file_format)
+
     if filtered_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
         return write_seq_packets(fhand=passed_fhand, seq_packets=seq_packets,
@@ -99,7 +103,6 @@ def title2ids(title):
 def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'),
                      file_format=GUESS_FORMAT):
     '''It yields SeqRecords in packets of the given size.'''
-
     seqs = read_seqrecords(fhands, file_format=file_format)
     return group_in_packets(seqs, size)
 
@@ -112,6 +115,9 @@ def read_seqrecords(fhands, file_format=GUESS_FORMAT):
             fmt = guess_format(fhand)
         else:
             fmt = file_format
+
+        fmt = _remove_one_line(fmt)
+
         if fmt in ('fasta', 'qual') or 'fastq' in fmt:
             title = title2ids
         if fmt == 'fasta':
@@ -130,10 +136,17 @@ def read_seqrecords(fhands, file_format=GUESS_FORMAT):
     return chain.from_iterable(seq_iters)
 
 
+def _remove_one_line(file_format):
+    'It removes the one-line from the format'
+    if file_format.endswith('-one_line'):
+        file_format = file_format[:-9]
+    return file_format
+
+
 def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
     'It converts sequence files between formats'
 
-    in_formats = [guess_format(fhand) for fhand in in_fhands]
+    in_formats = [_remove_one_line(guess_format(fhand)) for fhand in in_fhands]
 
     if (len(in_formats) == 1 and in_formats[0] == out_format and
         hasattr(in_fhands[0], 'name')):
@@ -258,7 +271,7 @@ def _itemize_fasta(fhand):
             continue
         if line.startswith('>'):
             if chunk:
-                yield _get_name_from_chunk(chunk)
+                yield _get_name_from_chunk(chunk), chunk
                 chunk = []
         chunk.append(line)
         if len(chunk) == 1 and not chunk[0].startswith('>'):
@@ -298,10 +311,11 @@ def read_seqitems(fhands, file_format=GUESS_FORMAT):
             fmt = file_format
         if fmt == 'fasta':
             seq_iter = _itemize_fasta(fhand)
-        elif fmt == 'fastq':
+        elif fmt == 'fastq-one_line':
             seq_iter = _itemize_fastq(fhand)
         else:
-            raise NotImplementedError('Format not supported by the itemizers')
+            msg = 'Format not supported by the itemizers: ' + fmt
+            raise NotImplementedError(msg)
         seq_iters.append(seq_iter)
     return chain.from_iterable(seq_iters)
 

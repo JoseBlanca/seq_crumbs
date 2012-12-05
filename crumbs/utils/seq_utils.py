@@ -140,6 +140,8 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
     seqs_analyzed = 0
     if fhand_is_seekable(fhand) and not force_file_as_non_seek:
         fmt_fhand = fhand
+        chunk = fmt_fhand.read(chunk_size)
+        fhand.seek(0)
     else:
         chunk = peek_chunk_from_file(fhand, chunk_size)
         fmt_fhand = cStringIO.StringIO(chunk)
@@ -150,7 +152,7 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
             sanger_chars = [q for q in qual if q < 64]
             if sanger_chars:
                 fhand.seek(0)
-                return None, True  # no quals, no lengths, is_sanger
+                return None, True, chunk  # no quals, no lengths, is_sanger
             lengths.append(len(qual))
             seqs_analyzed += 1
             if seqs_analyzed > seqs_to_peek:
@@ -159,7 +161,7 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
         raise UnknownFormatError('Malformed fastq')
     finally:
         fhand.seek(0)
-    return lengths, None  # quals, lengths, don't know if it's sanger
+    return lengths, None, chunk  # don't know if it's sanger
 
 
 def _guess_fastq_version(fhand, force_file_as_non_seek):
@@ -167,12 +169,31 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
 
     It ignores the solexa fastq version.
     '''
-    lengths, is_sanger = _get_some_qual_and_lengths(fhand,
-                                                    force_file_as_non_seek)
+    lengths, is_sanger, chunk = _get_some_qual_and_lengths(fhand,
+                                                        force_file_as_non_seek)
     if is_sanger:
-        return 'fastq'
+        fmt = 'fastq'
     elif is_sanger is False:
-        return 'fastq-illumina'
+        fmt = 'fastq-illumina'
+    else:
+        fmt = None
+
+    # onle line fastq? All seq in just one line?
+    lines = [l for l in itertools.islice(chunk.splitlines(), 5)]
+    if len(lines) != 5:
+        one_line = ''
+    else:
+        if (not lines[0].startswith('@') or
+            not lines[2].startswith('+') or
+            not lines[4].startswith('@') or
+            len(lines[1]) != len(lines[3])):
+            one_line = ''
+        else:
+            one_line = '-one_line'
+
+    if fmt:
+        return fmt + one_line
+
     longest_expected_illumina = get_setting('LONGEST_EXPECTED_ILLUMINA_READ')
     n_long_seqs = [l for l in lengths if l > longest_expected_illumina]
     if n_long_seqs:
@@ -186,7 +207,7 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
         msg %= longest_expected_illumina
         raise UndecidedFastqVersionError(msg)
     else:
-        return 'fastq-illumina'
+        return 'fastq-illumina' + one_line
 
 
 def guess_format(fhand):

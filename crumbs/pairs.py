@@ -20,7 +20,7 @@ from Bio.SeqIO import _index
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
 from crumbs.utils.tags import FWD, REV
-from crumbs.seqio import write_seqrecords
+from crumbs.seqio import write_seqrecords, _remove_one_line
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
 from crumbs.utils.seq_utils import guess_format, get_title
@@ -54,6 +54,8 @@ def _index_seq_file(fpath, file_format=None):
     '''
     if file_format is None:
         file_format = guess_format(open(fpath))
+
+    file_format = _remove_one_line(file_format)
 
     # pylint: disable W0212
     # we monkey patch to be able to index using the whole tile line and not
