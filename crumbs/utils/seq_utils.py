@@ -27,8 +27,7 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
-from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE,
-                               PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS)
+from crumbs.utils.tags import UPPERCASE, LOWERCASE, SWAPCASE
 
 # pylint: disable=R0903
 
@@ -99,23 +98,12 @@ class ChangeCase(object):
             msg = 'Action should be: uppercase, lowercase or invertcase'
             raise ValueError(msg)
         self.action = action
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It changes the case of the seqrecords.'
-        stats = self._stats
         action = self.action
-        stats[PROCESSED_PACKETS] += 1
         processed_seqs = []
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             str_seq = str(seqrecord.seq)
             if action == UPPERCASE:
                 str_seq = str_seq.upper()
@@ -127,7 +115,6 @@ class ChangeCase(object):
                 raise NotImplementedError()
             seqrecord = replace_seq_same_length(seqrecord, str_seq)
             processed_seqs.append(seqrecord)
-            stats[YIELDED_SEQS] += 1
         return processed_seqs
 
 
