@@ -22,6 +22,7 @@ from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 from subprocess import check_output
 import os.path
+from random import choice
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -71,7 +72,7 @@ class MateSplitterTest(unittest.TestCase):
         assert  str(seqs[0].seq) == 'aaatttc'
         assert seqs[0].id == 'seq'
 
-        # segmnet in the middle
+        # segmnent in the middle
         seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], True))
         assert str(seqs[0].seq) == 'aaat'
         assert str(seqs[1].seq) == 'ctt'
@@ -97,6 +98,31 @@ class MateSplitterTest(unittest.TestCase):
         seqs = splitter._split_by_mate_linker(seqrecord, ([], False))
         assert seqrecord.id == seqs[0].id
         assert str(seqrecord.seq) == str(seqs[0].seq)
+
+    def test_many_reads(self):
+        'It splits lots of reads to check that blast finds everything'
+
+        linker = TITANIUM_LINKER
+
+        def create_seq(index):
+            'It creates a random seq with a linker'
+            seq1 = ''.join(choice('ACTG') for i in range(100))
+            seq2 = ''.join(choice('ACTG') for i in range(100))
+            seq = seq1 + linker + seq2
+            return SeqRecord(id='seq_' + str(index), seq=Seq(seq))
+
+        # We want to test that blast reports all reads
+        packet_size = get_setting('PACKET_SIZE')
+        default_blast_max_target_size = 500
+        assert packet_size > default_blast_max_target_size
+        seqs = [create_seq(i) for i in range(1000)]
+        splitter = MatePairSplitter()
+
+        for index, seq in enumerate(splitter(seqs)):
+            seq_index = index // 2
+            pair_index = (index % 2) + 1
+            expected_id = 'seq_' + str(seq_index) + '\\' + str(pair_index)
+            assert  seq.id == expected_id
 
     def test_split_mates(self):
         'It tests the detection of oligos in sequence files'
@@ -161,7 +187,8 @@ class MateSplitterTest(unittest.TestCase):
         assert xpect == result
 
     @staticmethod
-    def test_giusepes_reads():
+    def test_giuseppe_reads():
+        'It splits some real reads'
         seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads.fastq')
         linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
         linkers = list(read_seqrecords([open(linker_fpath)]))
@@ -182,7 +209,7 @@ class MateSplitterTest(unittest.TestCase):
 
         splitter = MatePairSplitter(linkers=linkers)
         seq_packets = read_seq_packets([open(seq_fpath)], 2)
-        seq_packets, workers = process_seq_packets(seq_packets, [splitter])
+        seq_packets = process_seq_packets(seq_packets, [splitter])[0]
 
         new_seqs = [seq for l in list(seq_packets) for seq in l]
         seq_names = [seq.name for seq in new_seqs]
@@ -211,7 +238,7 @@ class MateSplitterTest(unittest.TestCase):
 
         splitter = MatePairSplitter(linkers=linkers)
         seq_packets = read_seq_packets([open(seq_fpath)], 2)
-        seq_packets, workers = process_seq_packets(seq_packets, [splitter])
+        seq_packets = process_seq_packets(seq_packets, [splitter])[0]
 
         new_seqs = [seq for l in list(seq_packets) for seq in l]
         seq_names = [seq.name for seq in new_seqs]

@@ -112,22 +112,46 @@ def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
     'It does a blast'
     if not params:
         params = {}
-    evalue = params.get('evalue', 0.001)
+    if 'expect' in params:
+        if 'evalue' in params:
+            msg = 'expect and evalue cannot be given as params at the same '
+            msg += 'time'
+            raise ValueError(msg)
+        else:
+            params['evalue'] = params['expect']
+            del params['expect']
+    if 'evalue' in params:
+        evalue = params['evalue']
+        del params['evalue']
+    else:
+        evalue = 0.001
+
     available_tasks = TASKS.get(program, None)
     if available_tasks:
-        task = params.get('task', available_tasks[0])
+        if 'task' in params:
+            task = params['task']
+            del params['task']
+        else:
+            task = available_tasks[0]
         assert task in available_tasks
     else:
         task = None
-    outfmt = str(params.get('outfmt', 5))
+    if 'outfmt' in params:
+        outfmt = params['outfmt']
+        del params['outfmt']
+    else:
+        outfmt = 5
 
     if program not in ('blastn', 'blastp', 'blastx', 'tblastx', 'tblastn'):
         raise ValueError('The given program is invalid: ' + str(program))
     binary = get_binary_path(program)
     cmd = [binary, '-query', query_fpath, '-db', db_fpath, '-out', out_fpath]
-    cmd.extend(['-evalue', str(evalue), '-outfmt', outfmt])
+    cmd.extend(['-evalue', str(evalue), '-outfmt', str(outfmt)])
     if task:
         cmd.extend(['-task', task])
+    if params:
+        for key, value in params.viewitems():
+            cmd.extend(('-' + key, str(value)))
     process = popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     check_process_finishes(process, binary=cmd[0])
 
@@ -186,6 +210,7 @@ class BlasterForFewSubjects(object):
         self.program = program
         if params is None:
             params = {}
+        params['max_target_seqs'] = str(get_setting('PACKET_SIZE'))
         self.params = params
         if filters is None:
             filters = []
