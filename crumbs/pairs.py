@@ -23,21 +23,16 @@ from crumbs.utils.tags import FWD, REV
 from crumbs.seqio import write_seqrecords
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.utils.seq_utils import guess_format
+from crumbs.utils.seq_utils import guess_format, get_title
 
 
 def _parse_pair_direction_and_name(seq):
     'It parses the description field to get the name and the pair direction'
-    title = seq.id + ' ' + seq.description
-    return _parse_pair_direction_and_name_from_title(title)
+    return _parse_pair_direction_and_name_from_title(get_title(seq))
 
 
 def _parse_pair_direction_and_name_from_title(title):
-    '''It parses the description field to get the name and the pair direction,
-    using the seq title'''
-
     reg_exps = ['(.+)[/|\\\\](\d+)', '(.+)\s(\d+):.+', '(.+)\.(\w)\s?']
-
     for reg_exp in reg_exps:
         match = re.match(reg_exp, title)
         if match:
@@ -226,7 +221,6 @@ def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
 
     It will fail if forward and reverse reads are not alternating.
     '''
-
     while True:
         try:
             seq1 = seqs.next()

@@ -241,3 +241,72 @@ def guess_seq_type(fhand):
         return 'nucl'
 
     raise RuntimeError('unable to guess the seq type')
+
+
+def _get_name_from_chunk(lines):
+    'It returns the name and the chunk from a list of names'
+    name = lines[0].split()[0][1:]
+    return name
+
+
+def _itemize_fasta(fhand):
+    'It returns the fhand divided in chunks, one per seq'
+
+    chunk = []
+    for line in fhand:
+        if not line or line.isspace():
+            continue
+        if line.startswith('>'):
+            if chunk:
+                yield _get_name_from_chunk(chunk)
+                chunk = []
+        chunk.append(line)
+        if len(chunk) == 1 and not chunk[0].startswith('>'):
+            raise RuntimeError('Not a valid fasta file')
+    else:
+        if chunk:
+            yield _get_name_from_chunk(chunk), chunk
+
+
+def _get_name_from_chunk_fastq(lines):
+    'It returns the name and the chunk from a list of names'
+    if len(lines) != 4:
+        raise RuntimeError('Malformed fastq')
+    if not lines[0].startswith('@'):
+        raise RuntimeError('Not a valid fastq file: not start with @')
+    if not lines[1].startswith('+'):
+        raise RuntimeError('Too complex fastq for this function')
+    if len(lines[1]) != len(lines[3]):
+        raise RuntimeError('Qual has different length than seq')
+    name = lines[0].split()[0][1:]
+    return name
+
+
+def _itemize_fastq(fhand):
+    'It returns the fhand divided in chunks, one per seq'
+    chunks = group_in_packets(fhand, 4)
+    return ((_get_name_from_chunk(chunk), chunk) for chunk in chunks)
+
+
+def read_seqitems(fhands, file_format=GUESS_FORMAT):
+    'it returns an iterator of seq items (tuples of name and chunk)'
+    seq_iters = []
+    for fhand in fhands:
+        if file_format == GUESS_FORMAT or file_format is None:
+            fmt = guess_format(fhand)
+        else:
+            fmt = file_format
+        if fmt == 'fasta':
+            seq_iter = _itemize_fasta(fhand)
+        elif fmt == 'fastq':
+            seq_iter = _itemize_fastq(fhand)
+        else:
+            raise NotImplementedError('Format not supported by the itemizers')
+        seq_iters.append(seq_iter)
+    return chain.from_iterable(seq_iters)
+
+
+def write_seqitems(items, fhand):
+    'It writes one seq item (tuple of name and string)'
+    for item in items:
+        fhand.write(''.join(item[1]))

@@ -263,3 +263,27 @@ def process_seq_packets(seq_packets, map_functions, processes=1,
     seq_packets = mapper(run_functions, seq_packets)
 
     return seq_packets, workers
+
+
+def get_title(seq):
+    'Given a seq it returns the title'
+    SEQITEM = 'seqitem'
+    SEQRECORD = 'seqrecord'
+    if isinstance(seq, tuple):
+        if len(seq) == 2:   # seq item
+            seq_class = SEQITEM
+        else:
+            raise ValueError('Unknown seq tuple class')
+    elif seq.__class__.__name__ == 'SeqRecord':
+        seq_class = SEQRECORD
+    else:
+        raise ValueError('Unknown seq class')
+
+    if seq_class == SEQITEM:
+        title = seq[1][0][1:]
+    elif seq_class == SEQRECORD:
+        title = seq.id + ' ' + seq.description
+    else:
+        msg = 'Do not know how to guess title form this seq class'
+        raise NotImplementedError(msg)
+    return title
