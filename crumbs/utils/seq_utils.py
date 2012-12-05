@@ -27,7 +27,8 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
-from crumbs.utils.tags import UPPERCASE, LOWERCASE, SWAPCASE
+from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE, SEQITEM,
+                               SEQRECORD)
 
 # pylint: disable=R0903
 
@@ -273,10 +274,8 @@ def process_seq_packets(seq_packets, map_functions, processes=1,
     return seq_packets, workers
 
 
-def get_title(seq):
-    'Given a seq it returns the title'
-    SEQITEM = 'seqitem'
-    SEQRECORD = 'seqrecord'
+def get_seq_class(seq):
+    'It returns if the seq is a seqrecord or a seqitem'
     if isinstance(seq, tuple):
         if len(seq) == 2:   # seq item
             seq_class = SEQITEM
@@ -286,6 +285,12 @@ def get_title(seq):
         seq_class = SEQRECORD
     else:
         raise ValueError('Unknown seq class')
+    return seq_class
+
+
+def get_title(seq):
+    'Given a seq it returns the title'
+    seq_class = get_seq_class(seq)
 
     if seq_class == SEQITEM:
         title = seq[1][0][1:]

@@ -347,8 +347,13 @@ def parse_basic_args(parser):
         except RuntimeError, error:
             parser.error(error)
 
-    out_format = parsed_args.out_format
-    # The default format is the same as the first file
+    try:
+        out_format = parsed_args.out_format
+    except AttributeError:
+        # Some excutables do not have out format as an option
+        out_format = None
+
+    # The default output format is the same as the first file
     if not out_format:
         if in_format == GUESS_FORMAT:
             if not guessed_in_format:

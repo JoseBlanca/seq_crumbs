@@ -14,7 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 
-from itertools import chain
+from itertools import chain, tee
 from shutil import copyfileobj
 from tempfile import NamedTemporaryFile
 import cStringIO
@@ -28,8 +28,10 @@ from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError)
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
-from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
-from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT)
+from crumbs.utils.seq_utils import (guess_format, peek_chunk_from_file,
+                                    get_seq_class)
+from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
+                               SEQITEM, SEQRECORD)
 from crumbs.settings import get_setting
 
 
@@ -301,26 +303,82 @@ def _itemize_fastq(fhand):
     return ((_get_name_from_chunk(chunk), chunk) for chunk in chunks)
 
 
-def read_seqitems(fhands, file_format=GUESS_FORMAT):
+def _read_seqitems(fhands, file_format):
     'it returns an iterator of seq items (tuples of name and chunk)'
     seq_iters = []
     for fhand in fhands:
         if file_format == GUESS_FORMAT or file_format is None:
-            fmt = guess_format(fhand)
+            file_format = guess_format(fhand)
         else:
-            fmt = file_format
-        if fmt == 'fasta':
+            file_format = file_format
+
+        if file_format == 'fasta':
             seq_iter = _itemize_fasta(fhand)
-        elif fmt == 'fastq-one_line':
+        elif file_format == 'fastq-one_line':
             seq_iter = _itemize_fastq(fhand)
         else:
-            msg = 'Format not supported by the itemizers: ' + fmt
+            msg = 'Format not supported by the itemizers: ' + file_format
             raise NotImplementedError(msg)
         seq_iters.append(seq_iter)
     return chain.from_iterable(seq_iters)
 
 
-def write_seqitems(items, fhand):
+def _write_seqitems(items, fhand):
     'It writes one seq item (tuple of name and string)'
     for item in items:
         fhand.write(''.join(item[1]))
+
+
+def write_seqs(seqs, fhand, file_format=None):
+    'It writes the given sequences'
+    seqs, seqs2 = tee(seqs)
+    try:
+        seq = seqs2.next()
+    except StopIteration:
+        # No sequences to write, so we're done
+        return
+    seq_class = get_seq_class(seq)
+    if seq_class == SEQITEM:
+        _write_seqitems(seqs, fhand)
+    elif seq_class == SEQRECORD:
+        write_seqrecords(seqs, fhand, file_format)
+    else:
+        raise ValueError('Unknown class for seq: ' + seq_class)
+
+
+def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
+    'It returns a stream of seqs in different codings: seqrecords, seqitems...'
+
+    if not prefered_seq_classes:
+        prefered_seq_classes = [SEQITEM, SEQRECORD]
+
+    if out_format not in (None, GUESS_FORMAT):
+        if file_format == GUESS_FORMAT:
+            in_format = guess_format(fhands[0])
+        else:
+            in_format = file_format
+
+        if in_format != out_format:
+            if SEQITEM in prefered_seq_classes:
+                # seqitems is incompatible with different input and output
+                # formats
+                prefered_seq_classes.pop(prefered_seq_classes.index(SEQITEM))
+
+    if not prefered_seq_classes:
+        msg = 'No valid seq class left or prefered'
+        raise ValueError(msg)
+
+    for seq_class in prefered_seq_classes:
+        if seq_class == SEQITEM:
+            try:
+                return _read_seqitems(fhands, file_format)
+            except NotImplementedError:
+                continue
+        elif seq_class == SEQRECORD:
+            try:
+                return read_seqrecords(fhands, file_format)
+            except NotImplementedError:
+                continue
+        else:
+            raise ValueError('Unknown class for seq: ' + seq_class)
+    raise RuntimeError('We should not be here, fixme')

@@ -21,8 +21,10 @@ import unittest
 from cStringIO import StringIO
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.tags import SEQITEM, SEQRECORD
+from crumbs.utils.seq_utils import get_seq_class
 from crumbs.seqio import (guess_seq_type, _itemize_fasta, _itemize_fastq,
-                          write_seqitems)
+                          read_seqs, write_seqs)
 
 
 class SeqioTest(unittest.TestCase):
@@ -53,11 +55,39 @@ class SimpleIOTest(unittest.TestCase):
         assert seqs == [('s1', ['@s1\n', 'ACTG\n', '+\n', '1234\n']),
                         ('s2', ['@s2 desc\n', 'ACTG\n', '+\n', '4321\n'])]
 
-    def test_writeitems(self):
-        'It writes sequence items'
-        items = [('s1', '>s1\nACTG\n'), ('s2', '>s2 desc\nACTG\n')]
+    def test_seqitems_io(self):
+        'It checks the different seq class streams IO'
+        fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
+        seqs = list(read_seqs([fhand], 'fasta',
+                              prefered_seq_classes=[SEQITEM]))
+        assert get_seq_class(seqs[0]) == SEQITEM
         fhand = StringIO()
-        write_seqitems(items, fhand)
+        write_seqs(seqs, fhand)
+        assert fhand.getvalue() == '>s1\nACTG\n>s2 desc\nACTG\n'
+
+        # SeqRecord
+        fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
+        seqs = list(read_seqs([fhand], 'fasta',
+                              prefered_seq_classes=[SEQRECORD]))
+        assert get_seq_class(seqs[0]) == SEQRECORD
+        fhand = StringIO()
+        write_seqs(seqs, fhand, 'fasta')
+        assert fhand.getvalue() == '>s1\nACTG\n>s2 desc\nACTG\n'
+
+        # seqitem not possible with different input and output formats
+        fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
+        try:
+            seqs = list(read_seqs([fhand], 'fasta', out_format='fastq',
+                        prefered_seq_classes=[SEQITEM]))
+            self.fail('ValueError expected')
+        except ValueError:
+            pass
+
+        fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
+        seqs = list(read_seqs([fhand], 'fasta', out_format='fasta',
+                        prefered_seq_classes=[SEQITEM]))
+        fhand = StringIO()
+        write_seqs(seqs, fhand)
         assert fhand.getvalue() == '>s1\nACTG\n>s2 desc\nACTG\n'
 
 if __name__ == '__main__':
