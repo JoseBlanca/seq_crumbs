@@ -22,7 +22,6 @@ from cStringIO import StringIO
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import SEQITEM, SEQRECORD
-from crumbs.utils.seq_utils import get_seq_class
 from crumbs.seqio import (guess_seq_type, _itemize_fasta, _itemize_fastq,
                           read_seqs, write_seqs)
 
@@ -60,7 +59,7 @@ class SimpleIOTest(unittest.TestCase):
         fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
         seqs = list(read_seqs([fhand], 'fasta',
                               prefered_seq_classes=[SEQITEM]))
-        assert get_seq_class(seqs[0]) == SEQITEM
+        assert seqs[0].kind == SEQITEM
         fhand = StringIO()
         write_seqs(seqs, fhand)
         assert fhand.getvalue() == '>s1\nACTG\n>s2 desc\nACTG\n'
@@ -69,7 +68,7 @@ class SimpleIOTest(unittest.TestCase):
         fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
         seqs = list(read_seqs([fhand], 'fasta',
                               prefered_seq_classes=[SEQRECORD]))
-        assert get_seq_class(seqs[0]) == SEQRECORD
+        assert seqs[0].kind == SEQRECORD
         fhand = StringIO()
         write_seqs(seqs, fhand, 'fasta')
         assert fhand.getvalue() == '>s1\nACTG\n>s2 desc\nACTG\n'

@@ -24,14 +24,15 @@ from Bio.Seq import Seq
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
-                          _index_seq_file, _parse_pair_direction_and_name,
-                          match_pairs_unordered)
+                          _index_seq_file, match_pairs_unordered,
+                          _parse_pair_direction_and_name_from_title,
+                          _parse_pair_direction_and_name)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
 from crumbs.exceptions import InterleaveError, PairDirectionError
-from crumbs.utils.tags import FWD
-from crumbs.seqio import write_seqrecords
+from crumbs.utils.tags import FWD, SEQRECORD
+from crumbs.seqio import write_seqrecords, SeqWrapper
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -249,37 +250,37 @@ class PairMatcherTest(unittest.TestCase):
 
     def test_pair_direction_and_name(self):
         'it test the pair_name parser'
-        title = '@seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG'
-        name, dir_ = _parse_pair_direction_and_name(('', (title,)))
+        title = 'seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
         assert name == 'seq8:136:FC706VJ:2:2104:15343:197393'
         assert dir_ == FWD
 
-        title = '@seq8:136:FC706VJ:2:2104:15343:197393/1'
-        name, dir_ = _parse_pair_direction_and_name(('', (title,)))
+        title = 'seq8:136:FC706VJ:2:2104:15343:197393/1'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
         assert name == 'seq8:136:FC706VJ:2:2104:15343:197393'
         assert dir_ == FWD
 
-        title = '@seq8:136:FC706VJ:2:2104:15343:197393.f'
-        name, dir_ = _parse_pair_direction_and_name(('', (title,)))
+        title = 'seq8:136:FC706VJ:2:2104:15343:197393.f'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
         assert name == 'seq8:136:FC706VJ:2:2104:15343:197393'
         assert dir_ == FWD
 
-        title = '@seq8:136:FC706VJ:2:2104:15343:197393.mp12'
+        title = 'seq8:136:FC706VJ:2:2104:15343:197393.mp12'
         try:
-            name, dir_ = _parse_pair_direction_and_name(('', (title,)))
+            name, dir_ = _parse_pair_direction_and_name_from_title(title)
             self.fail()
         except PairDirectionError:
             pass
 
-        title = r'@seq8:136:FC706VJ:2:2104:15343:197393\1'
-        name, dir_ = _parse_pair_direction_and_name(('', (title,)))
+        title = r'seq8:136:FC706VJ:2:2104:15343:197393\1'
+        name, dir_ = _parse_pair_direction_and_name_from_title(title)
         assert name == 'seq8:136:FC706VJ:2:2104:15343:197393'
         assert dir_ == FWD
 
         # With SeqRecord
-        seq = SeqRecord(id='seq8:136:FC706VJ:2:2104:15343:197393\1',
+        seq = SeqRecord(id=r'seq8:136:FC706VJ:2:2104:15343:197393\1',
                         seq=Seq('ACT'))
-        name, dir_ = _parse_pair_direction_and_name(('', (title,)))
+        name, dir_ = _parse_pair_direction_and_name(SeqWrapper(SEQRECORD, seq))
         assert name == 'seq8:136:FC706VJ:2:2104:15343:197393'
         assert dir_ == FWD
 
@@ -470,5 +471,5 @@ class IndexedPairMatcher(unittest.TestCase):
         assert 'seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in keys
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'InterleaveBinTest.test_binaries']
+    #import sys;sys.argv = ['', 'PairMatcherTest.test_all_orphan']
     unittest.main()

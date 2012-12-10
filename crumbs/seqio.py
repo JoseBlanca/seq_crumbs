@@ -18,6 +18,7 @@ from itertools import chain, tee
 from shutil import copyfileobj
 from tempfile import NamedTemporaryFile
 import cStringIO
+from collections import namedtuple
 
 from Bio import SeqIO
 from Bio.SeqIO import FastaIO
@@ -28,8 +29,7 @@ from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError)
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
-from crumbs.utils.seq_utils import (guess_format, peek_chunk_from_file,
-                                    get_seq_class)
+from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD)
 from crumbs.settings import get_setting
@@ -303,6 +303,14 @@ def _itemize_fastq(fhand):
     return ((_get_name_from_chunk(chunk), chunk) for chunk in chunks)
 
 
+SeqWrapper = namedtuple('Seq', ['kind', 'object'])
+
+
+def assing_kind_to_seqs(kind, seqs):
+    'It puts each seq into a NamedTuple named Seq'
+    return (SeqWrapper(kind, seq) for seq in seqs)
+
+
 def _read_seqitems(fhands, file_format):
     'it returns an iterator of seq items (tuples of name and chunk)'
     seq_iters = []
@@ -319,14 +327,15 @@ def _read_seqitems(fhands, file_format):
         else:
             msg = 'Format not supported by the itemizers: ' + file_format
             raise NotImplementedError(msg)
+        seq_iter = assing_kind_to_seqs(SEQITEM, seq_iter)
         seq_iters.append(seq_iter)
     return chain.from_iterable(seq_iters)
 
 
 def _write_seqitems(items, fhand):
     'It writes one seq item (tuple of name and string)'
-    for item in items:
-        fhand.write(''.join(item[1]))
+    for seq in items:
+        fhand.write(''.join(seq.object[1]))
 
 
 def write_seqs(seqs, fhand, file_format=None):
@@ -337,10 +346,11 @@ def write_seqs(seqs, fhand, file_format=None):
     except StopIteration:
         # No sequences to write, so we're done
         return
-    seq_class = get_seq_class(seq)
+    seq_class = seq.kind
     if seq_class == SEQITEM:
         _write_seqitems(seqs, fhand)
     elif seq_class == SEQRECORD:
+        seqs = (seq.object for seq in seqs)
         write_seqrecords(seqs, fhand, file_format)
     else:
         raise ValueError('Unknown class for seq: ' + seq_class)
@@ -376,7 +386,8 @@ def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
                 continue
         elif seq_class == SEQRECORD:
             try:
-                return read_seqrecords(fhands, file_format)
+                seqs = read_seqrecords(fhands, file_format)
+                return assing_kind_to_seqs(SEQRECORD, seqs)
             except NotImplementedError:
                 continue
         else:

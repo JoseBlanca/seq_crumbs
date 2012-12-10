@@ -274,23 +274,14 @@ def process_seq_packets(seq_packets, map_functions, processes=1,
     return seq_packets, workers
 
 
-def get_seq_class(seq):
-    'It returns if the seq is a seqrecord or a seqitem'
-    if isinstance(seq, tuple):
-        if len(seq) == 2:   # seq item
-            seq_class = SEQITEM
-        else:
-            raise ValueError('Unknown seq tuple class')
-    elif seq.__class__.__name__ == 'SeqRecord':
-        seq_class = SEQRECORD
-    else:
-        raise ValueError('Unknown seq class')
-    return seq_class
-
-
 def get_title(seq):
     'Given a seq it returns the title'
-    seq_class = get_seq_class(seq)
+    # TODO remove this check when everything is adapted to the new system
+    if 'SeqRecord' in seq.__class__.__name__:
+        seq_class = SEQRECORD
+    else:
+        seq_class = seq.kind
+        seq = seq.object
 
     if seq_class == SEQITEM:
         title = seq[1][0][1:]

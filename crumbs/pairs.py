@@ -32,6 +32,7 @@ def _parse_pair_direction_and_name(seq):
 
 
 def _parse_pair_direction_and_name_from_title(title):
+    'It gueses the direction from the title line'
     reg_exps = ['(.+)[/|\\\\](\d+)', '(.+)\s(\d+):.+', '(.+)\.(\w)\s?']
     for reg_exp in reg_exps:
         match = re.match(reg_exp, title)
