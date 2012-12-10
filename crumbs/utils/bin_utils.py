@@ -216,7 +216,7 @@ def get_binary_path(binary_name):
     raise MissingBinaryError(msg)
 
 
-def create_io_argparse(**kwargs):
+def create_basic_argparse(**kwargs):
     'It returns a parser with several inputs and one output'
     parser = argparse.ArgumentParser(**kwargs)
 
@@ -247,16 +247,6 @@ def build_version_msg():
     bin_name = os.path.split(sys.argv[0])[-1]
     version_msg = bin_name + ' from seq_crumbs version: ' + version
     return version_msg
-
-
-def create_basic_argparse(**kwargs):
-    'It returns a cmd parser with inputs, output and format'
-    parser = create_io_argparse(**kwargs)
-    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
-    parser.add_argument('-f', '--out_format', dest='out_format',
-                        help='output file format (default: same as input)',
-                        choices=get_setting('SUPPORTED_OUTPUT_FORMATS'))
-    return parser
 
 
 def create_basic_parallel_argparse(**kwargs):
@@ -347,20 +337,14 @@ def parse_basic_args(parser):
         except RuntimeError, error:
             parser.error(error)
 
-    try:
-        out_format = parsed_args.out_format
-    except AttributeError:
-        # Some excutables do not have out format as an option
-        out_format = None
-
     # The default output format is the same as the first file
-    if not out_format:
-        if in_format == GUESS_FORMAT:
-            if not guessed_in_format:
-                guessed_in_format = guess_format(wrapped_fhands[0])
-            out_format = guessed_in_format
-        else:
-            out_format = in_format
+    if in_format == GUESS_FORMAT:
+        if not guessed_in_format:
+            guessed_in_format = guess_format(wrapped_fhands[0])
+        out_format = guessed_in_format
+    else:
+        out_format = in_format
+
     # The original fhands should be stored, because otherwise they would be
     # closed
     args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,

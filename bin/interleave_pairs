@@ -17,7 +17,7 @@
 
 import sys
 import argparse
-from crumbs.utils.bin_utils import (main, create_io_argparse,
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
 from crumbs.seqio import read_seqs, write_seqs
 from crumbs.pairs import interleave_pairs
@@ -26,7 +26,7 @@ from crumbs.pairs import interleave_pairs
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = ''
-    parent = create_io_argparse(description=description)
+    parent = create_basic_argparse(description=description)
     parser = argparse.ArgumentParser(parents=[parent],
                                      conflict_handler='resolve')
     parser.add_argument('input', help='Sequence input files to process.',
