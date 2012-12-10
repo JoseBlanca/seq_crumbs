@@ -26,7 +26,7 @@ from Bio.SeqIO import QualityIO
 from Bio.Alphabet import IUPAC
 
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
-                               UnknownFormatError)
+                               UnknownFormatError, IncompatibleFormatError)
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
 from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
@@ -164,6 +164,9 @@ def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
         except ValueError as error:
             if error_quality_disagree(error):
                 raise MalformedFile(str(error))
+            elif 'No suitable quality scores' in str(error):
+                msg = 'No qualities available to write output file'
+                raise IncompatibleFormatError(msg)
             raise
     elif (len(in_fhands) == 1 and len(out_fhands) == 2 and
           out_format == 'fasta'):
