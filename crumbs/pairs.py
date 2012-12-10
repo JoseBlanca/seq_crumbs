@@ -20,7 +20,7 @@ from Bio.SeqIO import _index
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
 from crumbs.utils.tags import FWD, REV
-from crumbs.seqio import write_seqrecords, _remove_one_line
+from crumbs.seqio import write_seqrecords, _remove_one_line, write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
 from crumbs.utils.seq_utils import guess_format, get_title
@@ -239,7 +239,7 @@ def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
             msg = 'The file had an odd number of sequences'
             raise InterleaveError(msg)
         _check_name_and_direction_match(seq1, seq2)
-        write_seqrecords([seq1], out_fhand1, out_format)
-        write_seqrecords([seq2], out_fhand2, out_format)
+        write_seqs([seq1], out_fhand1, out_format)
+        write_seqs([seq2], out_fhand2, out_format)
     out_fhand1.flush()
     out_fhand2.flush()

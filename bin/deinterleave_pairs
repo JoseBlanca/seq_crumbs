@@ -19,7 +19,7 @@ import sys
 import argparse
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
-from crumbs.seqio import read_seqrecords
+from crumbs.seqio import read_seqs
 from crumbs.utils.tags import OUTFILE
 
 from crumbs.pairs import deinterleave_pairs
@@ -42,7 +42,7 @@ def run():
     parser = _setup_argparse()
     args = parse_basic_args(parser)[0]
 
-    seqs = read_seqrecords(args['in_fhands'], args['in_format'])
+    seqs = read_seqs(args['in_fhands'], args['in_format'])
 
     deinterleave_pairs(seqs, args['out_fhand'][0], args['out_fhand'][1],
                        out_format=args['out_format'])

@@ -29,7 +29,7 @@ from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
                           _parse_pair_direction_and_name)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import read_seqrecords
+from crumbs.seqio import read_seqrecords, read_seqs
 from crumbs.exceptions import InterleaveError, PairDirectionError
 from crumbs.utils.tags import FWD, SEQRECORD
 from crumbs.seqio import write_seqrecords, SeqWrapper
@@ -377,8 +377,8 @@ class InterleavePairsTest(unittest.TestCase):
 
         fhand1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         fhand2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
-        fwd_seqs = read_seqrecords([open(fhand1)], 'fastq')
-        rev_seqs = read_seqrecords([open(fhand2)], 'fastq')
+        fwd_seqs = read_seqs([open(fhand1)], 'fastq')
+        rev_seqs = read_seqs([open(fhand2)], 'fastq')
 
         seqs = interleave_pairs(fwd_seqs, rev_seqs)
         out_fhand1 = StringIO()
