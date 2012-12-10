@@ -31,7 +31,6 @@ from crumbs.utils.seq_utils import (uppercase_length, guess_format, ChangeCase,
 from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import guess_seq_type
 
 
 class GuessFormatTest(unittest.TestCase):
@@ -80,6 +79,9 @@ class GuessFormatTest(unittest.TestCase):
         txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
         fhand = StringIO(txt)
         assert guess_format(fhand) == 'fastq-illumina'
+
+        fhand = StringIO(txt + txt)
+        assert guess_format(fhand) == 'fastq-illumina-one_line'
 
         fhand = StringIO('@HWI-EAS209\n@')
         try:
@@ -236,5 +238,5 @@ class ChangeCaseTest(unittest.TestCase):
         assert '@seq1\nATCGT\n+' in result
 
 if __name__ == "__main__":
-#    import sys;sys.argv = ['', 'TestPool']
+    #import sys;sys.argv = ['', 'ChangeCaseTest.test_bin']
     unittest.main()
