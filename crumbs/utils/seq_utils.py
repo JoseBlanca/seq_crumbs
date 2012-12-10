@@ -284,7 +284,7 @@ def get_title(seq):
         seq = seq.object
 
     if seq_class == SEQITEM:
-        title = seq[1][0][1:]
+        title = seq.lines[0][1:]
     elif seq_class == SEQRECORD:
         title = seq.id + ' ' + seq.description
     else:

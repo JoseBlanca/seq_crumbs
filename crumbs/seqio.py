@@ -258,29 +258,33 @@ def guess_seq_type(fhand):
     raise RuntimeError('unable to guess the seq type')
 
 
-def _get_name_from_chunk(lines):
+def _get_name_from_lines(lines):
     'It returns the name and the chunk from a list of names'
     name = lines[0].split()[0][1:]
     return name
 
 
+SeqWrapper = namedtuple('Seq', ['kind', 'object'])
+SeqItem = namedtuple('SeqItem', ['name', 'lines'])
+
+
 def _itemize_fasta(fhand):
     'It returns the fhand divided in chunks, one per seq'
 
-    chunk = []
+    lines = []
     for line in fhand:
         if not line or line.isspace():
             continue
         if line.startswith('>'):
-            if chunk:
-                yield _get_name_from_chunk(chunk), chunk
-                chunk = []
-        chunk.append(line)
-        if len(chunk) == 1 and not chunk[0].startswith('>'):
+            if lines:
+                yield SeqItem(_get_name_from_lines(lines), lines)
+                lines = []
+        lines.append(line)
+        if len(lines) == 1 and not lines[0].startswith('>'):
             raise RuntimeError('Not a valid fasta file')
     else:
-        if chunk:
-            yield _get_name_from_chunk(chunk), chunk
+        if lines:
+            yield SeqItem(_get_name_from_lines(lines), lines)
 
 
 def _get_name_from_chunk_fastq(lines):
@@ -299,11 +303,8 @@ def _get_name_from_chunk_fastq(lines):
 
 def _itemize_fastq(fhand):
     'It returns the fhand divided in chunks, one per seq'
-    chunks = group_in_packets(fhand, 4)
-    return ((_get_name_from_chunk(chunk), chunk) for chunk in chunks)
-
-
-SeqWrapper = namedtuple('Seq', ['kind', 'object'])
+    blobs = group_in_packets(fhand, 4)
+    return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
 
 
 def assing_kind_to_seqs(kind, seqs):
