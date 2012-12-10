@@ -32,7 +32,7 @@ def get_all_segments(segments, seq_len):
         return [((0, seq_len - 1), False)]
 
     all_segments = []
-    #If the first segment doesn't start at zero we create a new one
+    # If the first segment doesn't start at zero we create a new one
     if segments_[0][0] == 0:
         start = segments_[0][1] + 1
         all_segments.append((segments_.pop(0), True))
@@ -44,8 +44,8 @@ def get_all_segments(segments, seq_len):
         all_segments.append((loc, True))
         start = loc[1] + 1
     else:
-        #if the last segment does not ends at the end of the sequence we add
-        #an extra one
+        # if the last segment does not ends at the end of the sequence we add
+        # an extra one
         end = seq_len - 1
         if start <= end:
             all_segments.append(((start, end), False))
@@ -89,10 +89,10 @@ def get_longest_complementary_segment(segments, seq_len):
 
     segments = merge_overlaping_segments(segments)
 
-    #we want the non-matched locations
+    # we want the non-matched locations
     segments = get_complementary_segments(segments, seq_len)
 
-    #now we return the longest one
+    # now we return the longest one
     return get_longest_segment(segments)
 
 
@@ -111,7 +111,7 @@ def merge_overlaping_segments(segments, merge_segments_closer=1):
     for segment in segments:
         start = segment[0]
         end = segment[1]
-        if start > end:     # a reversed item
+        if start > end:  # a reversed item
             start, end = end, start
         limit_1 = (START, start)
         limit_2 = (END, end)
@@ -120,7 +120,7 @@ def merge_overlaping_segments(segments, merge_segments_closer=1):
 
     # sort by secondary key: start before end
     limits.sort(key=itemgetter(0))
-    #sort by location (primary key)
+    # sort by location (primary key)
     limits.sort(key=itemgetter(1))
 
     # merge the ends and start that differ in only one base
@@ -132,7 +132,7 @@ def merge_overlaping_segments(segments, merge_segments_closer=1):
             continue
         if (previous_limit[0] == END and limit[0] == START and
             previous_limit[1] >= limit[1] - merge_segments_closer):
-            #These limits cancelled each other
+            # These limits cancelled each other
             previous_limit = None
             continue
         filtered_limits.append(previous_limit)

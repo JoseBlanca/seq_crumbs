@@ -4,6 +4,19 @@ Download
 
 The recommended method to get seq_crumbs is to download one of the releases, but if you want to access to the latest code you can do it at github_.
 
+seq_crumbs 0.1.6
+----------------
+
+Changelog:
+
+  * Bugfix: Not all mate pairs were splitted. (thanks to Giuseppe)
+
+
+Released on 10-12-12
+
+  * :download:`Source distribution <downloads/seq_crumbs-0.1.6.tar.gz>`.
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.6-x64-linux.tar.gz>`
+
 seq_crumbs 0.1.5
 ----------------
 
