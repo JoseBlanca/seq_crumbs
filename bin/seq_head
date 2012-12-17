@@ -19,7 +19,7 @@ import sys
 
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
-from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
+from crumbs.seqio import write_seqs, guess_format, read_seqs
 
 
 def _setup_argparse():
@@ -42,7 +42,7 @@ def _parse_args(parser):
 def _get_first_seqs(fhands, num_seqs, file_format):
     'It gets the first num_seqs sequences from the file'
     counter = 0
-    for seq in read_seqrecords(fhands, file_format):
+    for seq in read_seqs(fhands, file_format):
         yield seq
         counter += 1
         if counter >= num_seqs:
@@ -60,7 +60,7 @@ def get_seqs():
 
     seqs = _get_first_seqs(in_fhands, num_seqs, file_format=args['in_format'])
 
-    write_seqrecords(seqs, out_fhand, guess_format(in_fhands[0]))
+    write_seqs(seqs, out_fhand, guess_format(in_fhands[0]))
     out_fhand.flush()
 
 if __name__ == '__main__':
