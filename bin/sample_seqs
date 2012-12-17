@@ -20,7 +20,7 @@ import sys
 from crumbs.iterutils import sample
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
-from crumbs.seqio import write_seqrecords, read_seqrecords
+from crumbs.seqio import write_seqs, read_seqs
 from crumbs.exceptions import SampleSizeError
 
 
@@ -51,12 +51,12 @@ def sample_seqs():
     out_fhand = args['out_fhand']
     num_seqs = args['num_seqs']
     try:
-        seqs = read_seqrecords(in_fhands, file_format=args['in_format'])
+        seqs = read_seqs(in_fhands, file_format=args['in_format'])
         seqs = sample(seqs, num_seqs)
     except ValueError as error:
         if str(error) == "sample larger than population":
             raise SampleSizeError("sample larger than population")
-    write_seqrecords(seqs, out_fhand, args['out_format'])
+    write_seqs(seqs, out_fhand, args['out_format'])
     out_fhand.flush()
 
 if __name__ == '__main__':
