@@ -29,10 +29,10 @@ from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
                           _parse_pair_direction_and_name)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import read_seqrecords, read_seqs
+from crumbs.seqio import read_seqrecords, read_seqs, assing_kind_to_seqs
 from crumbs.exceptions import InterleaveError, PairDirectionError
 from crumbs.utils.tags import FWD, SEQRECORD
-from crumbs.seqio import write_seqrecords, SeqWrapper
+from crumbs.seqio import write_seqs, SeqWrapper
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -43,12 +43,12 @@ class PairMatcherTest(unittest.TestCase):
 
     @staticmethod
     def test_mate_pair_checker():
-        'It test the mate pair function'
+        'It test the pair matcher function'
         # with equal seqs but the last ones
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
-        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)], file_format='fastq')
+        rev_seqs = read_seqs([open(file2)], file_format='fastq')
 
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
@@ -71,6 +71,7 @@ class PairMatcherTest(unittest.TestCase):
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
         seqs = flat_zip_longest(fwd_seqs, rev_seqs)
+        seqs = assing_kind_to_seqs(SEQRECORD, seqs)
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format)
 
         output = out_fhand.getvalue()
@@ -83,8 +84,8 @@ class PairMatcherTest(unittest.TestCase):
 
         file1 = os.path.join(TEST_DATA_DIR, 'pairend4.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
-        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)], 'fastq')
+        rev_seqs = read_seqs([open(file2)], 'fastq')
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
@@ -109,6 +110,7 @@ class PairMatcherTest(unittest.TestCase):
         out_format = 'fastq'
 
         seqs = flat_zip_longest(fwd_seqs, rev_seqs)
+        seqs = assing_kind_to_seqs(SEQRECORD, seqs)
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format)
         output = out_fhand.getvalue()
         assert '@seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in output
@@ -126,12 +128,14 @@ class PairMatcherTest(unittest.TestCase):
         'All reads end up in orphan'
         seqs = [SeqRecord(Seq('ACT'), id='seq1'),
                 SeqRecord(Seq('ACT'), id='seq2')]
+        seqs = list(assing_kind_to_seqs(SEQRECORD, seqs))
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format='fasta')
         assert orphan_out_fhand.getvalue() == '>seq1\nACT\n>seq2\nACT\n'
 
-        seq_fhand = write_seqrecords(seqs, file_format='fasta')
+        seq_fhand = NamedTemporaryFile(suffix='.fasta')
+        write_seqs(seqs, seq_fhand, file_format='fasta')
         seq_fhand.flush()
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()

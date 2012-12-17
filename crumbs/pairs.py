@@ -139,7 +139,7 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
         try:
             seq_name, direction = _parse_pair_direction_and_name(seq)
         except PairDirectionError:
-            write_seqrecords([seq], orphan_out_fhand, out_format)
+            write_seqs([seq], orphan_out_fhand, out_format)
             continue
 
         if direction == FWD:
@@ -168,19 +168,19 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
             # write seqs from buffer1
             orphan_seqs = buf1['items'][:matching_seq_index]
             matching_seq = buf1['items'][matching_seq_index]
-            write_seqrecords(orphan_seqs, orphan_out_fhand, out_format)
-            write_seqrecords([matching_seq, seq], out_fhand, out_format)
+            write_seqs(orphan_seqs, orphan_out_fhand, out_format)
+            write_seqs([matching_seq, seq], out_fhand, out_format)
             # fix buffers 1
             buf1['items'] = buf1['items'][matching_seq_index + 1:]
             buf1['index'] = {s: i for i, s in enumerate(buf1['items'])}
 
             # writes seqs from buffer 2 and fix buffer2
-            write_seqrecords(buf2['items'], orphan_out_fhand, out_format)
+            write_seqs(buf2['items'], orphan_out_fhand, out_format)
             buf2['items'] = []
             buf2['index'] = {}
     else:
         orphan_seqs = buf1['items'] + buf2['items']
-        write_seqrecords(orphan_seqs, orphan_out_fhand, out_format)
+        write_seqs(orphan_seqs, orphan_out_fhand, out_format)
 
     orphan_out_fhand.flush()
     out_fhand.flush()

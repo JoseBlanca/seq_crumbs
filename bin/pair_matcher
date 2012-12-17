@@ -23,7 +23,7 @@ from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     get_requested_compression)
 from crumbs.utils.file_utils import compress_fhand
 from crumbs.pairs import match_pairs, match_pairs_unordered
-from crumbs.seqio import read_seqrecords
+from crumbs.seqio import read_seqs
 from crumbs.settings import get_setting
 
 
@@ -79,8 +79,7 @@ def run():
                               orphan_out_fhand=args['orphan'],
                               out_format=args['out_format'])
     else:
-        seqs = read_seqrecords(args['in_fhands'],
-                               file_format=args['in_format'])
+        seqs = read_seqs(args['in_fhands'], file_format=args['in_format'])
         match_pairs(seqs, out_fhand=args['out_fhand'],
                     orphan_out_fhand=args['orphan'],
                     out_format=args['out_format'],

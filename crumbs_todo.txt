@@ -2,6 +2,8 @@
 TODO
 -----
 
+Take a look at python bedtools for the segments
+
 
 trim_blast_contanimant
 ----------------------
