@@ -19,7 +19,7 @@ import sys
 
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
-from crumbs.seqio import write_seqrecords, guess_format, read_seqrecords
+from crumbs.seqio import write_seqs, guess_format, read_seqs
 from crumbs.exceptions import IncompatibleFormatError
 
 
@@ -47,8 +47,8 @@ def cat_seqs():
 
     check_format_incompatibilities(in_fhands, out_format)
 
-    seqs = read_seqrecords(in_fhands, file_format=args['in_format'])
-    write_seqrecords(seqs, out_fhand, out_format)
+    seqs = read_seqs(in_fhands, file_format=args['in_format'])
+    write_seqs(seqs, out_fhand, out_format)
     out_fhand.flush()
 
 if __name__ == '__main__':

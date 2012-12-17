@@ -2,7 +2,7 @@
 TODO
 -----
 
-Add a test for cat with different input formats, it should fail
+Add a test for sample, head or cat with different input formats, it should fail.
 Take a look at python bedtools for the segments
 
 
