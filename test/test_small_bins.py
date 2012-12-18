@@ -49,25 +49,15 @@ class CatTest(unittest.TestCase):
         # fasta to fasta
         in_fhand1 = self.make_fasta()
         in_fhand2 = self.make_fasta()
-        result = check_output([cat_bin, '-f', 'fasta', in_fhand1.name,
-                               in_fhand2.name])
+        result = check_output([cat_bin, in_fhand1.name, in_fhand2.name])
         assert '>seq1\nACTATCATGGCAGATA\n>seq2\nACTATCATGGCAGATA' in result
 
-        #from fasta to fastq
-        try:
-            stderr = NamedTemporaryFile()
-            result = check_output([cat_bin, '-f', 'fastq', in_fhand1.name,
-                               in_fhand2.name], stderr=stderr)
-            self.fail()
-        except CalledProcessError:
-            assert 'output format is incompatible'  in open(stderr.name).read()
-
-        # from fastq to fasta
+        # from fastq to fastq
         fhand = NamedTemporaryFile()
         fhand.write('@seq1\nACTA\n+\nqqqq\n')
         fhand.flush()
-        result = check_output([cat_bin, '-f', 'fasta', fhand.name])
-        assert result == '>seq1\nACTA\n'
+        result = check_output([cat_bin, fhand.name])
+        assert result == '@seq1\nACTA\n+\nqqqq\n'
 
         # No input
         fhand = NamedTemporaryFile()
@@ -75,8 +65,7 @@ class CatTest(unittest.TestCase):
         fhand.flush()
         try:
             stderr = NamedTemporaryFile()
-            result = check_output([cat_bin, '-f', 'fasta', fhand.name],
-                                  stderr=stderr)
+            result = check_output([cat_bin, fhand.name], stderr=stderr)
             self.fail()
         except CalledProcessError:
             assert 'The file is empty'  in open(stderr.name).read()
@@ -86,11 +75,6 @@ class CatTest(unittest.TestCase):
         in_fhand2 = self.make_fasta()
         result = check_output([cat_bin, in_fhand1.name, in_fhand2.name])
         assert '>seq3\nACTATCATGGCAGATA\n>seq4\nACTATCATGGCAGATA' in result
-
-        # test input format
-        in_fhand1 = self.make_fasta()
-        result = check_output([cat_bin, '-t', 'fasta', in_fhand1.name])
-        assert '>seq5\nACTATCATGGCAGATA' in result
 
         # bad input format
         in_fhand1 = self.make_fasta()

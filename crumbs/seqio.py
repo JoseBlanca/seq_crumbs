@@ -14,10 +14,11 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 
-from itertools import chain
+from itertools import chain, tee
 from shutil import copyfileobj
 from tempfile import NamedTemporaryFile
 import cStringIO
+from collections import namedtuple
 
 from Bio import SeqIO
 from Bio.SeqIO import FastaIO
@@ -25,11 +26,12 @@ from Bio.SeqIO import QualityIO
 from Bio.Alphabet import IUPAC
 
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
-                               UnknownFormatError)
+                               UnknownFormatError, IncompatibleFormatError)
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
 from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
-from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT)
+from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
+                               SEQITEM, SEQRECORD)
 from crumbs.settings import get_setting
 
 
@@ -44,6 +46,8 @@ def clean_seq_stream(seqs):
 
 def write_seqrecords(seqs, fhand=None, file_format='fastq'):
     'It writes a stream of sequences to a file'
+    file_format = _remove_one_line(file_format)
+
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
     seqs = clean_seq_stream(seqs)
@@ -65,6 +69,8 @@ def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
 def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                          file_format='fastq', workers=None):
     'It writes the filter stream into passed and filtered out sequence files'
+    file_format = _remove_one_line(file_format)
+
     if filtered_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
         return write_seq_packets(fhand=passed_fhand, seq_packets=seq_packets,
@@ -99,7 +105,6 @@ def title2ids(title):
 def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'),
                      file_format=GUESS_FORMAT):
     '''It yields SeqRecords in packets of the given size.'''
-
     seqs = read_seqrecords(fhands, file_format=file_format)
     return group_in_packets(seqs, size)
 
@@ -112,6 +117,9 @@ def read_seqrecords(fhands, file_format=GUESS_FORMAT):
             fmt = guess_format(fhand)
         else:
             fmt = file_format
+
+        fmt = _remove_one_line(fmt)
+
         if fmt in ('fasta', 'qual') or 'fastq' in fmt:
             title = title2ids
         if fmt == 'fasta':
@@ -130,10 +138,17 @@ def read_seqrecords(fhands, file_format=GUESS_FORMAT):
     return chain.from_iterable(seq_iters)
 
 
+def _remove_one_line(file_format):
+    'It removes the one-line from the format'
+    if file_format.endswith('-one_line'):
+        file_format = file_format[:-9]
+    return file_format
+
+
 def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
     'It converts sequence files between formats'
 
-    in_formats = [guess_format(fhand) for fhand in in_fhands]
+    in_formats = [_remove_one_line(guess_format(fhand)) for fhand in in_fhands]
 
     if (len(in_formats) == 1 and in_formats[0] == out_format and
         hasattr(in_fhands[0], 'name')):
@@ -149,6 +164,9 @@ def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
         except ValueError as error:
             if error_quality_disagree(error):
                 raise MalformedFile(str(error))
+            elif 'No suitable quality scores' in str(error):
+                msg = 'No qualities available to write output file'
+                raise IncompatibleFormatError(msg)
             raise
     elif (len(in_fhands) == 1 and len(out_fhands) == 2 and
           out_format == 'fasta'):
@@ -254,3 +272,141 @@ def guess_seq_type(fhand):
         return 'nucl'
 
     raise RuntimeError('unable to guess the seq type')
+
+
+def _get_name_from_lines(lines):
+    'It returns the name and the chunk from a list of names'
+    name = lines[0].split()[0][1:]
+    return name
+
+
+SeqWrapper = namedtuple('Seq', ['kind', 'object'])
+SeqItem = namedtuple('SeqItem', ['name', 'lines'])
+
+
+def _itemize_fasta(fhand):
+    'It returns the fhand divided in chunks, one per seq'
+
+    lines = []
+    for line in fhand:
+        if not line or line.isspace():
+            continue
+        if line.startswith('>'):
+            if lines:
+                yield SeqItem(_get_name_from_lines(lines), lines)
+                lines = []
+        lines.append(line)
+        if len(lines) == 1 and not lines[0].startswith('>'):
+            raise RuntimeError('Not a valid fasta file')
+    else:
+        if lines:
+            yield SeqItem(_get_name_from_lines(lines), lines)
+
+
+def _get_name_from_chunk_fastq(lines):
+    'It returns the name and the chunk from a list of names'
+    if len(lines) != 4:
+        raise RuntimeError('Malformed fastq')
+    if not lines[0].startswith('@'):
+        raise RuntimeError('Not a valid fastq file: not start with @')
+    if not lines[1].startswith('+'):
+        raise RuntimeError('Too complex fastq for this function')
+    if len(lines[1]) != len(lines[3]):
+        raise RuntimeError('Qual has different length than seq')
+    name = lines[0].split()[0][1:]
+    return name
+
+
+def _itemize_fastq(fhand):
+    'It returns the fhand divided in chunks, one per seq'
+    blobs = group_in_packets(fhand, 4)
+    return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
+
+
+def assing_kind_to_seqs(kind, seqs):
+    'It puts each seq into a NamedTuple named Seq'
+    return (SeqWrapper(kind, seq) for seq in seqs)
+
+
+def _read_seqitems(fhands, file_format):
+    'it returns an iterator of seq items (tuples of name and chunk)'
+    seq_iters = []
+    for fhand in fhands:
+        if file_format == GUESS_FORMAT or file_format is None:
+            file_format = guess_format(fhand)
+        else:
+            file_format = file_format
+
+        if file_format == 'fasta':
+            seq_iter = _itemize_fasta(fhand)
+        elif file_format == 'fastq-one_line':
+            seq_iter = _itemize_fastq(fhand)
+        else:
+            msg = 'Format not supported by the itemizers: ' + file_format
+            raise NotImplementedError(msg)
+        seq_iter = assing_kind_to_seqs(SEQITEM, seq_iter)
+        seq_iters.append(seq_iter)
+    return chain.from_iterable(seq_iters)
+
+
+def _write_seqitems(items, fhand):
+    'It writes one seq item (tuple of name and string)'
+    for seq in items:
+        fhand.write(''.join(seq.object[1]))
+
+
+def write_seqs(seqs, fhand, file_format=None):
+    'It writes the given sequences'
+    seqs, seqs2 = tee(seqs)
+    try:
+        seq = seqs2.next()
+    except StopIteration:
+        # No sequences to write, so we're done
+        return
+    seq_class = seq.kind
+    if seq_class == SEQITEM:
+        _write_seqitems(seqs, fhand)
+    elif seq_class == SEQRECORD:
+        seqs = (seq.object for seq in seqs)
+        write_seqrecords(seqs, fhand, file_format)
+    else:
+        raise ValueError('Unknown class for seq: ' + seq_class)
+
+
+def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
+    'It returns a stream of seqs in different codings: seqrecords, seqitems...'
+
+    if not prefered_seq_classes:
+        prefered_seq_classes = [SEQITEM, SEQRECORD]
+
+    if out_format not in (None, GUESS_FORMAT):
+        if file_format == GUESS_FORMAT:
+            in_format = guess_format(fhands[0])
+        else:
+            in_format = file_format
+
+        if in_format != out_format:
+            if SEQITEM in prefered_seq_classes:
+                # seqitems is incompatible with different input and output
+                # formats
+                prefered_seq_classes.pop(prefered_seq_classes.index(SEQITEM))
+
+    if not prefered_seq_classes:
+        msg = 'No valid seq class left or prefered'
+        raise ValueError(msg)
+
+    for seq_class in prefered_seq_classes:
+        if seq_class == SEQITEM:
+            try:
+                return _read_seqitems(fhands, file_format)
+            except NotImplementedError:
+                continue
+        elif seq_class == SEQRECORD:
+            try:
+                seqs = read_seqrecords(fhands, file_format)
+                return assing_kind_to_seqs(SEQRECORD, seqs)
+            except NotImplementedError:
+                continue
+        else:
+            raise ValueError('Unknown class for seq: ' + seq_class)
+    raise RuntimeError('We should not be here, fixme')

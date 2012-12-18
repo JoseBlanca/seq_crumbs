@@ -76,6 +76,16 @@ class SeqioBinTest(unittest.TestCase):
                       fasta_fhand.name, qual_fhand.name])
         assert "@seq1\natctagtc\n+" in  open(out_fhand.name).read()
 
+        # fasta to fastq should fail
+        out_fhand = NamedTemporaryFile()
+        stderr = NamedTemporaryFile()
+        try:
+            check_output([seqio_bin, '-o', out_fhand.name, '-f', 'fastq',
+                          fasta_fhand.name], stderr=stderr)
+            self.fail('Error expected')
+        except CalledProcessError:
+            assert 'No qualities available' in open(stderr.name).read()
+
         # fastq to fast-qual
         fasta_out_fhand = NamedTemporaryFile()
         qual_out_fhand = NamedTemporaryFile()

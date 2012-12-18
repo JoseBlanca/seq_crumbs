@@ -50,3 +50,6 @@ THREE_PRIME = "3'"
 
 SEQS_PASSED = 'seqs_passed'
 SEQS_FILTERED_OUT = 'seqs_filtered_out'
+
+SEQITEM = 'seqitem'
+SEQRECORD = 'seqrecord'

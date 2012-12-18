@@ -27,8 +27,8 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
-from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE,
-                               PROCESSED_PACKETS, PROCESSED_SEQS, YIELDED_SEQS)
+from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE, SEQITEM,
+                               SEQRECORD)
 
 # pylint: disable=R0903
 
@@ -99,23 +99,12 @@ class ChangeCase(object):
             msg = 'Action should be: uppercase, lowercase or invertcase'
             raise ValueError(msg)
         self.action = action
-        self._stats = {PROCESSED_SEQS: 0,
-                       PROCESSED_PACKETS: 0,
-                       YIELDED_SEQS: 0}
-
-    @property
-    def stats(self):
-        'The process stats'
-        return self._stats
 
     def __call__(self, seqrecords):
         'It changes the case of the seqrecords.'
-        stats = self._stats
         action = self.action
-        stats[PROCESSED_PACKETS] += 1
         processed_seqs = []
         for seqrecord in seqrecords:
-            stats[PROCESSED_SEQS] += 1
             str_seq = str(seqrecord.seq)
             if action == UPPERCASE:
                 str_seq = str_seq.upper()
@@ -127,7 +116,6 @@ class ChangeCase(object):
                 raise NotImplementedError()
             seqrecord = replace_seq_same_length(seqrecord, str_seq)
             processed_seqs.append(seqrecord)
-            stats[YIELDED_SEQS] += 1
         return processed_seqs
 
 
@@ -140,6 +128,8 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
     seqs_analyzed = 0
     if fhand_is_seekable(fhand) and not force_file_as_non_seek:
         fmt_fhand = fhand
+        chunk = fmt_fhand.read(chunk_size)
+        fhand.seek(0)
     else:
         chunk = peek_chunk_from_file(fhand, chunk_size)
         fmt_fhand = cStringIO.StringIO(chunk)
@@ -150,7 +140,7 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
             sanger_chars = [q for q in qual if q < 64]
             if sanger_chars:
                 fhand.seek(0)
-                return None, True  # no quals, no lengths, is_sanger
+                return None, True, chunk  # no quals, no lengths, is_sanger
             lengths.append(len(qual))
             seqs_analyzed += 1
             if seqs_analyzed > seqs_to_peek:
@@ -159,7 +149,7 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
         raise UnknownFormatError('Malformed fastq')
     finally:
         fhand.seek(0)
-    return lengths, None  # quals, lengths, don't know if it's sanger
+    return lengths, None, chunk  # don't know if it's sanger
 
 
 def _guess_fastq_version(fhand, force_file_as_non_seek):
@@ -167,12 +157,31 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
 
     It ignores the solexa fastq version.
     '''
-    lengths, is_sanger = _get_some_qual_and_lengths(fhand,
-                                                    force_file_as_non_seek)
+    lengths, is_sanger, chunk = _get_some_qual_and_lengths(fhand,
+                                                        force_file_as_non_seek)
     if is_sanger:
-        return 'fastq'
+        fmt = 'fastq'
     elif is_sanger is False:
-        return 'fastq-illumina'
+        fmt = 'fastq-illumina'
+    else:
+        fmt = None
+
+    # onle line fastq? All seq in just one line?
+    lines = [l for l in itertools.islice(chunk.splitlines(), 5)]
+    if len(lines) != 5:
+        one_line = ''
+    else:
+        if (not lines[0].startswith('@') or
+            not lines[2].startswith('+') or
+            not lines[4].startswith('@') or
+            len(lines[1]) != len(lines[3])):
+            one_line = ''
+        else:
+            one_line = '-one_line'
+
+    if fmt:
+        return fmt + one_line
+
     longest_expected_illumina = get_setting('LONGEST_EXPECTED_ILLUMINA_READ')
     n_long_seqs = [l for l in lengths if l > longest_expected_illumina]
     if n_long_seqs:
@@ -186,7 +195,7 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
         msg %= longest_expected_illumina
         raise UndecidedFastqVersionError(msg)
     else:
-        return 'fastq-illumina'
+        return 'fastq-illumina' + one_line
 
 
 def guess_format(fhand):
@@ -263,3 +272,22 @@ def process_seq_packets(seq_packets, map_functions, processes=1,
     seq_packets = mapper(run_functions, seq_packets)
 
     return seq_packets, workers
+
+
+def get_title(seq):
+    'Given a seq it returns the title'
+    # TODO remove this check when everything is adapted to the new system
+    if 'SeqRecord' in seq.__class__.__name__:
+        seq_class = SEQRECORD
+    else:
+        seq_class = seq.kind
+        seq = seq.object
+
+    if seq_class == SEQITEM:
+        title = seq.lines[0][1:]
+    elif seq_class == SEQRECORD:
+        title = seq.id + ' ' + seq.description
+    else:
+        msg = 'Do not know how to guess title form this seq class'
+        raise NotImplementedError(msg)
+    return title

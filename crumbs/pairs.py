@@ -20,24 +20,20 @@ from Bio.SeqIO import _index
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
 from crumbs.utils.tags import FWD, REV
-from crumbs.seqio import write_seqrecords
+from crumbs.seqio import write_seqrecords, _remove_one_line, write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.utils.seq_utils import guess_format
+from crumbs.utils.seq_utils import guess_format, get_title
 
 
 def _parse_pair_direction_and_name(seq):
     'It parses the description field to get the name and the pair direction'
-    title = seq.id + ' ' + seq.description
-    return _parse_pair_direction_and_name_from_title(title)
+    return _parse_pair_direction_and_name_from_title(get_title(seq))
 
 
 def _parse_pair_direction_and_name_from_title(title):
-    '''It parses the description field to get the name and the pair direction,
-    using the seq title'''
-
+    'It gueses the direction from the title line'
     reg_exps = ['(.+)[/|\\\\](\d+)', '(.+)\s(\d+):.+', '(.+)\.(\w)\s?']
-
     for reg_exp in reg_exps:
         match = re.match(reg_exp, title)
         if match:
@@ -59,6 +55,8 @@ def _index_seq_file(fpath, file_format=None):
     '''
     if file_format is None:
         file_format = guess_format(open(fpath))
+
+    file_format = _remove_one_line(file_format)
 
     # pylint: disable W0212
     # we monkey patch to be able to index using the whole tile line and not
@@ -141,7 +139,7 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
         try:
             seq_name, direction = _parse_pair_direction_and_name(seq)
         except PairDirectionError:
-            write_seqrecords([seq], orphan_out_fhand, out_format)
+            write_seqs([seq], orphan_out_fhand, out_format)
             continue
 
         if direction == FWD:
@@ -170,19 +168,19 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
             # write seqs from buffer1
             orphan_seqs = buf1['items'][:matching_seq_index]
             matching_seq = buf1['items'][matching_seq_index]
-            write_seqrecords(orphan_seqs, orphan_out_fhand, out_format)
-            write_seqrecords([matching_seq, seq], out_fhand, out_format)
+            write_seqs(orphan_seqs, orphan_out_fhand, out_format)
+            write_seqs([matching_seq, seq], out_fhand, out_format)
             # fix buffers 1
             buf1['items'] = buf1['items'][matching_seq_index + 1:]
             buf1['index'] = {s: i for i, s in enumerate(buf1['items'])}
 
             # writes seqs from buffer 2 and fix buffer2
-            write_seqrecords(buf2['items'], orphan_out_fhand, out_format)
+            write_seqs(buf2['items'], orphan_out_fhand, out_format)
             buf2['items'] = []
             buf2['index'] = {}
     else:
         orphan_seqs = buf1['items'] + buf2['items']
-        write_seqrecords(orphan_seqs, orphan_out_fhand, out_format)
+        write_seqs(orphan_seqs, orphan_out_fhand, out_format)
 
     orphan_out_fhand.flush()
     out_fhand.flush()
@@ -226,7 +224,6 @@ def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
 
     It will fail if forward and reverse reads are not alternating.
     '''
-
     while True:
         try:
             seq1 = seqs.next()
@@ -242,7 +239,7 @@ def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
             msg = 'The file had an odd number of sequences'
             raise InterleaveError(msg)
         _check_name_and_direction_match(seq1, seq2)
-        write_seqrecords([seq1], out_fhand1, out_format)
-        write_seqrecords([seq2], out_fhand2, out_format)
+        write_seqs([seq1], out_fhand1, out_format)
+        write_seqs([seq2], out_fhand2, out_format)
     out_fhand1.flush()
     out_fhand2.flush()
