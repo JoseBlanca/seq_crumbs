@@ -17,13 +17,8 @@
 import unittest
 import os.path
 from tempfile import NamedTemporaryFile
-from StringIO import StringIO
 from subprocess import check_output, CalledProcessError
 
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
-
-from crumbs.seqio import seqio, write_seqrecords, read_seqrecords
 from crumbs.utils.bin_utils import BIN_DIR
 
 # pylint: disable=R0201
@@ -35,93 +30,45 @@ QUAL += ">seq3\n30 30 30 30 30 30 30 30\n"
 FASTQ = '@seq1\natcgt\n+\n?????\n@seq2\natcgt\n+\n?????\n@seq3\natcgt\n+\n?????\n'
 
 
-class SeqIOTest(unittest.TestCase):
-    'It tests the seqio functions'
-
-    @staticmethod
-    def _make_fhand(content=None):
-        'It makes temporary fhands'
-        if content is None:
-            content = ''
-        fhand = NamedTemporaryFile()
-        fhand.write(content)
-        fhand.flush()
-        return fhand
-
-    def test_seqio(self):
-        'It tets the seqio function'
-
-        #fasta-qual to fastq
-        in_fhands = (self._make_fhand(FASTA), self._make_fhand(QUAL))
-        out_fhands = (self._make_fhand(),)
-        out_format = 'fastq'
-        seqio(in_fhands, out_fhands, out_format)
-        assert "@seq1\natctagtc\n+\n???????" in open(out_fhands[0].name).read()
-
-        #fastq to fasta-qual
-        out_fhands = [self._make_fhand(), self._make_fhand()]
-        seqio([self._make_fhand(FASTQ)], out_fhands, 'fasta')
-        assert ">seq1\natcgt" in open(out_fhands[0].name).read()
-        assert ">seq1\n30 30 30" in open(out_fhands[1].name).read()
-
-        #fastq to fasta
-        out_fhands = [self._make_fhand()]
-        seqio([self._make_fhand(FASTQ)], out_fhands, 'fasta')
-        assert ">seq1\natcgt" in open(out_fhands[0].name).read()
-
-        #fastq to fastq-illumina
-        out_fhands = [self._make_fhand()]
-        seqio([self._make_fhand(FASTQ)], out_fhands, 'fastq-illumina')
-        assert "@seq1\natcgt\n+\n^^^^" in open(out_fhands[0].name).read()
-
-        #fasta-qual to fasta-qual
-        in_fhands = (self._make_fhand(FASTA), self._make_fhand(QUAL))
-        out_fhands = (self._make_fhand(), self._make_fhand())
-        out_format = 'fasta'
-        seqio(in_fhands, out_fhands, out_format)
-        assert FASTA == open(out_fhands[0].name).read()
-        assert QUAL == open(out_fhands[1].name).read()
+def _make_fhand(content=None):
+    'It makes temporary fhands'
+    if content is None:
+        content = ''
+    fhand = NamedTemporaryFile()
+    fhand.write(content)
+    fhand.flush()
+    return fhand
 
 
-class ReadWriteSeqsTest(unittest.TestCase):
-    'It writes seqrecords in a file'
-    def test_write_empy_seq(self):
-        'It does not write an empty sequence'
-        seq1 = SeqRecord(Seq('ACTG'), id='seq1')
-        fhand = StringIO()
-        write_seqrecords([seq1, None, SeqRecord(Seq(''), id='seq2')], fhand,
-                         file_format='fasta')
-        fhand.flush()
-        assert fhand.getvalue() == '>seq1\nACTG\n'
+class FastaQualToFastqTest(unittest.TestCase):
+    'It test the convert_format binary'
 
-    def test_read_fasta(self):
-        'It tests the reading of a fasta file'
-        fhand = StringIO('>seq1\nACTG\n')
-        assert not list(read_seqrecords([fhand]))[0].description
+    def test_fastaqual_to_fasta(self):
+        'It test fastaqual to fastq binary'
+        fasta_fhand = _make_fhand(FASTA)
+        qual_fhand = _make_fhand(QUAL)
+
+        seqio_bin = os.path.join(BIN_DIR, 'fastaqual_to_fastq')
+        assert 'usage' in check_output([seqio_bin, '-h'])
+
+        out_fhand = NamedTemporaryFile()
+        check_output([seqio_bin, '-o', out_fhand.name,
+                      fasta_fhand.name, qual_fhand.name])
+        assert "@seq1\natctagtc\n+" in  open(out_fhand.name).read()
 
 
 class SeqioBinTest(unittest.TestCase):
     'It test the convert_format binary'
-
-    @staticmethod
-    def _make_fhand(content=None):
-        'It makes temporary fhands'
-        if content is None:
-            content = ''
-        fhand = NamedTemporaryFile()
-        fhand.write(content)
-        fhand.flush()
-        return fhand
 
     def test_seqio_bin(self):
         'It test the seqio binary'
         seqio_bin = os.path.join(BIN_DIR, 'convert_format')
         assert 'usage' in check_output([seqio_bin, '-h'])
 
-        #get one se
-        fasta_fhand = self._make_fhand(FASTA)
-        qual_fhand = self._make_fhand(QUAL)
-        fastq_fhand = self._make_fhand(FASTQ)
+        # get one se
+        fasta_fhand = _make_fhand(FASTA)
+        qual_fhand = _make_fhand(QUAL)
+        fastq_fhand = _make_fhand(FASTQ)
 
         # fasta-qual to fastq
         out_fhand = NamedTemporaryFile()
@@ -137,8 +84,8 @@ class SeqioBinTest(unittest.TestCase):
         assert ">seq1\natcgt" in  open(fasta_out_fhand.name).read()
         assert ">seq1\n30 30 30 30 30" in  open(qual_out_fhand.name).read()
 
-        #bad_format_fasta
-        bad_fasta_fhand = self._make_fhand(FASTA + 'asdsa')
+        # bad_format_fasta
+        bad_fasta_fhand = _make_fhand(FASTA + 'asdsa')
         out_fhand = NamedTemporaryFile()
         stderr = NamedTemporaryFile()
         try:
@@ -148,8 +95,8 @@ class SeqioBinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'Sequence length and number' in open(stderr.name).read()
 
-        #bad_format_fastq
-        bad_fastq_fhand = self._make_fhand(FASTQ + 'aklsjhdas')
+        # bad_format_fastq
+        bad_fastq_fhand = _make_fhand(FASTQ + 'aklsjhdas')
         fasta_out_fhand = NamedTemporaryFile()
         qual_out_fhand = NamedTemporaryFile()
         stderr = NamedTemporaryFile()
@@ -161,8 +108,8 @@ class SeqioBinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'Lengths of sequence and qualit' in open(stderr.name).read()
 
-        #malformed fastq to fastq
-        bad_fastq_fhand = self._make_fhand(FASTQ + 'aklsjhdas')
+        # malformed fastq to fastq
+        bad_fastq_fhand = _make_fhand(FASTQ + 'aklsjhdas')
         fastq_out_fhand = NamedTemporaryFile()
         stderr = NamedTemporaryFile()
         try:
@@ -173,7 +120,7 @@ class SeqioBinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'Lengths of sequence and qualit' in open(stderr.name).read()
 
-        #test stdin
+        # test stdin
         fasta_out_fhand = NamedTemporaryFile()
         check_output([seqio_bin, '-o', fasta_out_fhand.name, '-f', 'fasta'],
                       stdin=open(fastq_fhand.name))
@@ -189,5 +136,5 @@ class SeqioBinTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SeqioBinTest.test_seqio_bin']
+    # import sys;sys.argv = ['', 'SeqioBinTest.test_seqio_bin']
     unittest.main()

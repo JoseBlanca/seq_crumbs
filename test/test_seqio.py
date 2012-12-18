@@ -15,12 +15,35 @@
 
 import os
 import unittest
+from  cStringIO import StringIO
+from tempfile import NamedTemporaryFile
+
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.seqio import guess_seq_type
+from crumbs.seqio import (guess_seq_type, fastaqual_to_fasta, seqio,
+                          write_seqrecords, read_seqrecords)
 
 
-class SeqioTest(unittest.TestCase):
-    'It test seqIO functions'
+FASTA = ">seq1\natctagtc\n>seq2\natctagtc\n>seq3\natctagtc\n"
+QUAL = ">seq1\n30 30 30 30 30 30 30 30\n>seq2\n30 30 30 30 30 30 30 30\n"
+QUAL += ">seq3\n30 30 30 30 30 30 30 30\n"
+FASTQ = '@seq1\natcgt\n+\n?????\n@seq2\natcgt\n+\n?????\n@seq3\natcgt\n+\n?????\n'
+
+
+class SeqIOTest(unittest.TestCase):
+    'It tests the seqio functions'
+
+    @staticmethod
+    def _make_fhand(content=None):
+        'It makes temporary fhands'
+        if content is None:
+            content = ''
+        fhand = NamedTemporaryFile()
+        fhand.write(content)
+        fhand.flush()
+        return fhand
 
     @staticmethod
     def test_guess_seq_type():
@@ -30,6 +53,67 @@ class SeqioTest(unittest.TestCase):
         fpath = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
         assert guess_seq_type(open(fpath)) == 'nucl'
 
+    @staticmethod
+    def test_fastaqual_to_fasta():
+        seq_fhand = StringIO('>seq1\nattct\n>seq2\natc\n')
+        qual_fhand = StringIO('>seq1\n2 2 2 2 2\n>seq2\n2 2 2\n')
+        out_fhand = NamedTemporaryFile()
+        fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand)
+        fastq = open(out_fhand.name).read()
+        assert fastq == "@seq1\nattct\n+\n#####\n@seq2\natc\n+\n###\n"
+
+    def test_seqio(self):
+        'It tets the seqio function'
+
+        # fasta-qual to fastq
+        in_fhands = (self._make_fhand(FASTA), self._make_fhand(QUAL))
+        out_fhands = (self._make_fhand(),)
+        out_format = 'fastq'
+        seqio(in_fhands, out_fhands, out_format)
+        assert "@seq1\natctagtc\n+\n???????" in open(out_fhands[0].name).read()
+
+        # fastq to fasta-qual
+        out_fhands = [self._make_fhand(), self._make_fhand()]
+        seqio([self._make_fhand(FASTQ)], out_fhands, 'fasta')
+        assert ">seq1\natcgt" in open(out_fhands[0].name).read()
+        assert ">seq1\n30 30 30" in open(out_fhands[1].name).read()
+
+        # fastq to fasta
+        out_fhands = [self._make_fhand()]
+        seqio([self._make_fhand(FASTQ)], out_fhands, 'fasta')
+        assert ">seq1\natcgt" in open(out_fhands[0].name).read()
+
+        # fastq to fastq-illumina
+        out_fhands = [self._make_fhand()]
+        seqio([self._make_fhand(FASTQ)], out_fhands, 'fastq-illumina')
+        assert "@seq1\natcgt\n+\n^^^^" in open(out_fhands[0].name).read()
+
+        # fasta-qual to fasta-qual
+        in_fhands = (self._make_fhand(FASTA), self._make_fhand(QUAL))
+        out_fhands = (self._make_fhand(), self._make_fhand())
+        out_format = 'fasta'
+        seqio(in_fhands, out_fhands, out_format)
+        assert FASTA == open(out_fhands[0].name).read()
+        assert QUAL == open(out_fhands[1].name).read()
+
+
+class ReadWriteSeqsTest(unittest.TestCase):
+    'It writes seqrecords in a file'
+    def test_write_empy_seq(self):
+        'It does not write an empty sequence'
+        seq1 = SeqRecord(Seq('ACTG'), id='seq1')
+        fhand = StringIO()
+        write_seqrecords([seq1, None, SeqRecord(Seq(''), id='seq2')], fhand,
+                         file_format='fasta')
+        fhand.flush()
+        assert fhand.getvalue() == '>seq1\nACTG\n'
+
+    def test_read_fasta(self):
+        'It tests the reading of a fasta file'
+        fhand = StringIO('>seq1\nACTG\n')
+        assert not list(read_seqrecords([fhand]))[0].description
+
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    # import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
     unittest.main()

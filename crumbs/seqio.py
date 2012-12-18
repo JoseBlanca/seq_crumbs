@@ -185,6 +185,19 @@ def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
         out_fhand.flush()
 
 
+def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
+    'It converts a fasta and a qual file into a fastq format file'
+    seqrecords = SeqIO.QualityIO.PairedFastaQualIterator(seq_fhand, qual_fhand)
+    try:
+        SeqIO.write(seqrecords, out_fhand.name, 'fastq')
+    except ValueError, error:
+        if error_quality_disagree(error):
+            raise MalformedFile(str(error))
+        raise
+    out_fhand.flush()
+
+
+
 def _count_seqs_in_fasta(fhand):
     'It counts the seqs in a fasta file'
     count = 0
