@@ -27,7 +27,8 @@ from crumbs.utils.bin_utils import BIN_DIR
 FASTA = ">seq1\natctagtc\n>seq2\natctagtc\n>seq3\natctagtc\n"
 QUAL = ">seq1\n30 30 30 30 30 30 30 30\n>seq2\n30 30 30 30 30 30 30 30\n"
 QUAL += ">seq3\n30 30 30 30 30 30 30 30\n"
-FASTQ = '@seq1\natcgt\n+\n?????\n@seq2\natcgt\n+\n?????\n@seq3\natcgt\n+\n?????\n'
+FASTQ = '@seq1\natcgt\n+\n?????\n@seq2\natcgt\n+\n?????\n@seq3\natcgt\n+\n'
+FASTQ += '?????\n'
 
 
 def _make_fhand(content=None):
