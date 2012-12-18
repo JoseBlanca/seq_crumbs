@@ -31,6 +31,7 @@ from crumbs.seqio import (guess_seq_type, fastaqual_to_fasta, seqio,
                           _itemize_fastq, read_seqs, write_seqs)
 
 from crumbs.utils.tags import SEQITEM, SEQRECORD
+from crumbs.exceptions import IncompatibleFormatError, MalformedFile
 
 
 FASTA = ">seq1\natctagtc\n>seq2\natctagtc\n>seq3\natctagtc\n"
@@ -73,36 +74,44 @@ class SeqIOTest(unittest.TestCase):
     def test_seqio(self):
         'It tets the seqio function'
 
-        # fasta-qual to fastq
-        in_fhands = (self._make_fhand(FASTA), self._make_fhand(QUAL))
-        out_fhands = (self._make_fhand(),)
-        out_format = 'fastq'
-        seqio(in_fhands, out_fhands, out_format)
-        assert "@seq1\natctagtc\n+\n???????" in open(out_fhands[0].name).read()
-
-        # fastq to fasta-qual
-        out_fhands = [self._make_fhand(), self._make_fhand()]
-        seqio([self._make_fhand(FASTQ)], out_fhands, 'fasta')
-        assert ">seq1\natcgt" in open(out_fhands[0].name).read()
-        assert ">seq1\n30 30 30" in open(out_fhands[1].name).read()
-
         # fastq to fasta
-        out_fhands = [self._make_fhand()]
-        seqio([self._make_fhand(FASTQ)], out_fhands, 'fasta')
-        assert ">seq1\natcgt" in open(out_fhands[0].name).read()
+        out_fhand = NamedTemporaryFile()
+        seqio([self._make_fhand(FASTQ)], out_fhand, 'fasta')
+        assert ">seq1\natcgt" in open(out_fhand.name).read()
 
         # fastq to fastq-illumina
-        out_fhands = [self._make_fhand()]
-        seqio([self._make_fhand(FASTQ)], out_fhands, 'fastq-illumina')
-        assert "@seq1\natcgt\n+\n^^^^" in open(out_fhands[0].name).read()
+        out_fhand = NamedTemporaryFile()
+        seqio([self._make_fhand(FASTQ)], out_fhand, 'fastq-illumina')
+        assert "@seq1\natcgt\n+\n^^^^" in open(out_fhand.name).read()
 
-        # fasta-qual to fasta-qual
-        in_fhands = (self._make_fhand(FASTA), self._make_fhand(QUAL))
-        out_fhands = (self._make_fhand(), self._make_fhand())
-        out_format = 'fasta'
-        seqio(in_fhands, out_fhands, out_format)
-        assert FASTA == open(out_fhands[0].name).read()
-        assert QUAL == open(out_fhands[1].name).read()
+        out_fhand = NamedTemporaryFile()
+        seqio([self._make_fhand(FASTQ), self._make_fhand(FASTQ)],
+              out_fhand, 'fastq-illumina')
+
+        assert "@seq3\natcgt\n+\n^^^^^\n@seq1" in open(out_fhand.name).read()
+
+        # fasta to fastq
+        out_fhand = NamedTemporaryFile()
+        try:
+            seqio([self._make_fhand(FASTA)], out_fhand, 'fastq')
+            self.fail("error previously expected")
+        except IncompatibleFormatError as error:
+            assert 'No qualities available' in str(error)
+
+        # bad_format fastq
+        bad_fastq_fhand = self._make_fhand(FASTQ + 'aklsjhdas')
+        try:
+            seqio([bad_fastq_fhand], out_fhand, 'fasta')
+            self.fail("error previously expected")
+        except MalformedFile as error:
+            assert 'Lengths of sequence and quality'  in str(error)
+
+        # genbank to fasta
+        out_fhand = NamedTemporaryFile()
+        genbank_fhand = open(os.path.join(TEST_DATA_DIR, 'sequence.gb'))
+        seqio([genbank_fhand], out_fhand, 'fasta')
+        result = open(out_fhand.name).read()
+        assert '>NM_1340' in result
 
 
 class ReadWriteSeqsTest(unittest.TestCase):

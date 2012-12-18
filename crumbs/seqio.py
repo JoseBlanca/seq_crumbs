@@ -145,62 +145,30 @@ def _remove_one_line(file_format):
     return file_format
 
 
-def seqio(in_fhands, out_fhands, out_format, copy_if_same_format=True):
+def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
     'It converts sequence files between formats'
+    if out_format not in get_setting('SUPPORTED_OUTPUT_FORMATS'):
+        raise IncompatibleFormatError("This output format is not supported")
 
     in_formats = [_remove_one_line(guess_format(fhand)) for fhand in in_fhands]
 
-    if (len(in_formats) == 1 and in_formats[0] == out_format and
-        hasattr(in_fhands[0], 'name')):
+    if len(in_fhands) == 1 and in_formats[0] == out_format:
         if copy_if_same_format:
-            copyfileobj(in_fhands[0], out_fhands[0])
+            copyfileobj(in_fhands[0], out_fhand)
         else:
-            rel_symlink(in_fhands[0].name, out_fhands[0].name)
-
-    elif len(in_fhands) == 1 and len(out_fhands) == 1:
+            rel_symlink(in_fhands[0].name, out_fhand.name)
+    else:
+        seqs = read_seqrecords(in_fhands)
         try:
-            SeqIO.convert(in_fhands[0], in_formats[0], out_fhands[0],
-                          out_format)
-        except ValueError as error:
+            SeqIO.write(seqs, out_fhand, out_format)
+        except ValueError, error:
             if error_quality_disagree(error):
                 raise MalformedFile(str(error))
-            elif 'No suitable quality scores' in str(error):
+            if 'No suitable quality scores' in str(error):
                 msg = 'No qualities available to write output file'
                 raise IncompatibleFormatError(msg)
             raise
-    elif (len(in_fhands) == 1 and len(out_fhands) == 2 and
-          out_format == 'fasta'):
-        try:
-            for seq in read_seqrecords([in_fhands[0]]):
-                SeqIO.write([seq], out_fhands[0], out_format)
-                SeqIO.write([seq], out_fhands[1], 'qual')
-        except ValueError, error:
-            if error_quality_disagree(error):
-                raise MalformedFile(str(error))
-            raise
-    elif (len(in_fhands) == 2 and len(out_fhands) == 1 and
-          in_formats == ['fasta', 'qual']):
-        seq_records = SeqIO.QualityIO.PairedFastaQualIterator(in_fhands[0],
-                                                              in_fhands[1])
-        try:
-            SeqIO.write(seq_records, out_fhands[0].name, out_format)
-        except ValueError, error:
-            if error_quality_disagree(error):
-                raise MalformedFile(str(error))
-            raise
-    elif (len(in_fhands) == 2 and len(out_fhands) == 2 and
-          in_formats == ['fasta', 'qual'] and out_format == 'fasta'):
-        if copy_if_same_format:
-            copyfileobj(in_fhands[0], out_fhands[0])
-            copyfileobj(in_fhands[1], out_fhands[1])
-        else:
-            rel_symlink(in_fhands[0].name, out_fhands[0].name)
-            rel_symlink(in_fhands[1].name, out_fhands[1].name)
-    else:
-        raise RuntimeError('Please fixme, we should not be here')
-
-    for out_fhand in out_fhands:
-        out_fhand.flush()
+    out_fhand.flush()
 
 
 def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
@@ -213,7 +181,6 @@ def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
             raise MalformedFile(str(error))
         raise
     out_fhand.flush()
-
 
 
 def _count_seqs_in_fasta(fhand):

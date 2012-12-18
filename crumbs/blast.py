@@ -100,7 +100,7 @@ def get_or_create_blastdb(blastdb_or_path, dbtype=None, directory=None):
             msg = 'An input sequence is required to create a blastdb'
             raise RuntimeError(msg)
         if seq_fpath != dbpath:
-            seqio([open(seq_fpath)], [open(dbpath, 'w')], out_format='fasta',
+            seqio([open(seq_fpath)], open(dbpath, 'w'), out_format='fasta',
                   copy_if_same_format=False)
         if dbtype is None:
             dbtype = guess_seq_type(open(dbpath))
@@ -226,7 +226,7 @@ class BlasterForFewSubjects(object):
         # otherwise they might be removed
         temp_dir = TemporaryDir()
         dbpath = os.path.join(temp_dir.name, os.path.basename(seq_fpath))
-        seqio([open(seq_fpath)], [open(dbpath, 'w')], out_format='fasta',
+        seqio([open(seq_fpath)], open(dbpath, 'w'), out_format='fasta',
               copy_if_same_format=False)
 
         blasts, blast_fhand = _do_blast_2(dbpath, oligos, params=self.params,
