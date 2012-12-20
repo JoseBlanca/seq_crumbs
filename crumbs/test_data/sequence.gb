@@ -1,0 +1,217 @@
+LOCUS       NM_019354                930 bp    mRNA    linear   ROD 16-DEC-2012
+DEFINITION  Rattus norvegicus uncoupling protein 2 (mitochondrial, proton
+            carrier) (Ucp2), nuclear gene encoding mitochondrial protein, mRNA.
+ACCESSION   NM_019354
+VERSION     NM_019354.2  GI:148747398
+KEYWORDS    .
+SOURCE      Rattus norvegicus (Norway rat)
+  ORGANISM  Rattus norvegicus
+            Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi;
+            Mammalia; Eutheria; Euarchontoglires; Glires; Rodentia;
+            Sciurognathi; Muroidea; Muridae; Murinae; Rattus.
+REFERENCE   1  (bases 1 to 930)
+  AUTHORS   Qiu,W., Zhou,Y., Jiang,L., Fang,L., Chen,L., Su,W., Tan,R.,
+            Zhang,C.Y., Han,X. and Yang,J.
+  TITLE     Genipin inhibits mitochondrial uncoupling protein 2 expression and
+            ameliorates podocyte injury in diabetic mice
+  JOURNAL   PLoS ONE 7 (7), E41391 (2012)
+   PUBMED   22848482
+REFERENCE   2  (bases 1 to 930)
+  AUTHORS   Friederich-Persson,M., Aslam,S., Nordquist,L., Welch,W.J.,
+            Wilcox,C.S. and Palm,F.
+  TITLE     Acute knockdown of uncoupling protein-2 increases uncoupling via
+            the adenine nucleotide transporter and decreases oxidative stress
+            in diabetic kidneys
+  JOURNAL   PLoS ONE 7 (7), E39635 (2012)
+   PUBMED   22768304
+  REMARK    GeneRIF: blockade of the diabetes-induced upregulation of UCP- 2
+            results in excessive uncoupling and reduced oxidative stress in the
+            kidney via activation of ANT.
+REFERENCE   3  (bases 1 to 930)
+  AUTHORS   Ninomiya,M., Shirabe,K., Shimada,M., Terashi,T. and Maehara,Y.
+  TITLE     Role of UCP2 expression after hepatic warm ischemia-reperfusion in
+            the rat
+  JOURNAL   Gut Liver 5 (4), 486-492 (2011)
+   PUBMED   22195248
+REFERENCE   4  (bases 1 to 930)
+  AUTHORS   Castro,M.C., Massa,M.L., Del Zotto,H., Gagliardino,J.J. and
+            Francini,F.
+  TITLE     Rat liver uncoupling protein 2: changes induced by a fructose-rich
+            diet
+  JOURNAL   Life Sci. 89 (17-18), 609-614 (2011)
+   PUBMED   21855553
+  REMARK    GeneRIF: Ucp2 and PPARdelta gene and protein expression increased
+            in rats fed a fructose-rich diet.
+REFERENCE   5  (bases 1 to 930)
+  AUTHORS   Yang,Q.H., Hu,S.P., Zhang,Y.P., Xie,W.N., Li,N., Ji,G.Y.,
+            Qiao,N.L., Lin,X.F., Chen,T.Y. and Liu,H.T.
+  TITLE     Effect of berberine on expressions of uncoupling protein-2 mRNA and
+            protein in hepatic tissue of non-alcoholic fatty liver disease in
+            rats
+  JOURNAL   Chin J Integr Med 17 (3), 205-211 (2011)
+   PUBMED   21359922
+  REMARK    GeneRIF: Berberine can down-regulate the expression levels of UCP2
+            mRNA and UCP2 proteins of hepatic tissue in non-alcoholic fatty
+            liver disease rats.
+REFERENCE   6  (bases 1 to 930)
+  AUTHORS   Cassell,P.G., Neverova,M., Janmohamed,S., Uwakwe,N., Qureshi,A.,
+            McCarthy,M.I., Saker,P.J., Albon,L., Kopelman,P., Noonan,K.,
+            Easlick,J., Ramachandran,A., Snehalatha,C., Pecqueur,C.,
+            Ricquier,D., Warden,C. and Hitman,G.A.
+  TITLE     An uncoupling protein 2 gene variant is associated with a raised
+            body mass index but not Type II diabetes
+  JOURNAL   Diabetologia 42 (6), 688-692 (1999)
+   PUBMED   10382588
+REFERENCE   7  (bases 1 to 930)
+  AUTHORS   Strobel,A., Combettes-Souverain,M., Doare,L., Strosberg,A.D. and
+            Issad,T.
+  TITLE     Rat uncoupling protein 2 (UCP2): expression in obese ventromedial
+            hypothalamus (VMH)-lesioned animals
+  JOURNAL   Int. J. Obes. Relat. Metab. Disord. 22 (11), 1121-1126 (1998)
+   PUBMED   9822952
+REFERENCE   8  (bases 1 to 930)
+  AUTHORS   Yoshitomi,H., Yamazaki,K. and Tanaka,I.
+  TITLE     Cloning of mouse uncoupling protein 3 cDNA and 5'-flanking region,
+            and its genetic map
+  JOURNAL   Gene 215 (1), 77-84 (1998)
+   PUBMED   9666083
+REFERENCE   9  (bases 1 to 930)
+  AUTHORS   Hidaka,S., Kakuma,T., Yoshimatsu,H., Yasunaga,S., Kurokawa,M. and
+            Sakata,T.
+  TITLE     Molecular cloning of rat uncoupling protein 2 cDNA and its
+            expression in genetically obese Zucker fatty (fa/fa) rats
+  JOURNAL   Biochim. Biophys. Acta 1389 (3), 178-186 (1998)
+   PUBMED   9512646
+REFERENCE   10 (bases 1 to 930)
+  AUTHORS   Matsuda,J., Hosoda,K., Itoh,H., Son,C., Doi,K., Tanaka,T.,
+            Fukunaga,Y., Inoue,G., Nishimura,H., Yoshimasa,Y., Yamori,Y. and
+            Nakao,K.
+  TITLE     Cloning of rat uncoupling protein-3 and uncoupling protein-2 cDNAs:
+            their gene expression in rats fed high-fat diet
+  JOURNAL   FEBS Lett. 418 (1-2), 200-204 (1997)
+   PUBMED   9414126
+COMMENT     PROVISIONAL REFSEQ: This record has not yet been subject to final
+            NCBI review. The reference sequence was derived from AB006613.1.
+            On Jun 10, 2007 this sequence version replaced gi:9507230.
+            
+            Summary: catalyzes a proton leak across the inner mitochondrial
+            membrane to uncouple oxidative phosphorylation; may reduce the
+            concentration of reactive ozygen species in mitochondria [RGD, Feb
+            2006].
+            
+            Publication Note:  This RefSeq record includes a subset of the
+            publications that are available for this gene. Please see the Gene
+            record to access additional publications.
+FEATURES             Location/Qualifiers
+     source          1..930
+                     /organism="Rattus norvegicus"
+                     /mol_type="mRNA"
+                     /strain="Sprague-Dawley"
+                     /db_xref="taxon:10116"
+                     /chromosome="1"
+                     /map="1q32"
+     gene            1..930
+                     /gene="Ucp2"
+                     /note="uncoupling protein 2 (mitochondrial, proton
+                     carrier)"
+                     /db_xref="GeneID:54315"
+                     /db_xref="RGD:3932"
+     CDS             1..930
+                     /gene="Ucp2"
+                     /note="UCP 2; solute carrier family 25 member 8;
+                     Uncoupling protein 2, mitochondrial"
+                     /codon_start=1
+                     /product="mitochondrial uncoupling protein 2"
+                     /protein_id="NP_062227.2"
+                     /db_xref="GI:148747399"
+                     /db_xref="GeneID:54315"
+                     /db_xref="RGD:3932"
+                     /translation="MVGFKATDVPPTATVKFLGAGTAACIADLITFPLDTAKVRLQIQ
+                     GESQGLARTAASAQYRGVLGTILTMVRTEGPRSLYNGLVAGLQRQMSFASVRIGLYDS
+                     VKQFYTKGSEHAGIGSRLLAGSTTGALAVAVAQPTDVVKVRFQAQARAGGGRRYQSTV
+                     EAYKTIAREEGIRGLWKGTSPNVARNAIVNCTELVTYDLIKDTLLKANLMTDDLPCHF
+                     TSAFGAGFCTTVIASPVDVVKTRYMNSALGQYHSAGHCALTMLRKEGPRAFYKGFMPS
+                     FLRLGSWNVVMFVTYEQLKRALMAAYESREAPF"
+     misc_feature    31..318
+                     /gene="Ucp2"
+                     /experiment="experimental evidence, no additional details
+                     recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     Region: Solcar 1"
+     misc_feature    31..96
+                     /gene="Ucp2"
+                     /inference="non-experimental evidence, no additional
+                     details recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     transmembrane region"
+     misc_feature    232..300
+                     /gene="Ucp2"
+                     /inference="non-experimental evidence, no additional
+                     details recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     transmembrane region"
+     misc_feature    340..609
+                     /gene="Ucp2"
+                     /experiment="experimental evidence, no additional details
+                     recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     Region: Solcar 2"
+     misc_feature    358..408
+                     /gene="Ucp2"
+                     /inference="non-experimental evidence, no additional
+                     details recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     transmembrane region"
+     misc_feature    541..591
+                     /gene="Ucp2"
+                     /inference="non-experimental evidence, no additional
+                     details recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     transmembrane region"
+     misc_feature    634..891
+                     /gene="Ucp2"
+                     /experiment="experimental evidence, no additional details
+                     recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     Region: Solcar 3"
+     misc_feature    643..702
+                     /gene="Ucp2"
+                     /inference="non-experimental evidence, no additional
+                     details recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     transmembrane region"
+     misc_feature    805..873
+                     /gene="Ucp2"
+                     /inference="non-experimental evidence, no additional
+                     details recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     transmembrane region"
+     misc_feature    826..894
+                     /gene="Ucp2"
+                     /inference="non-experimental evidence, no additional
+                     details recorded"
+                     /note="propagated from UniProtKB/Swiss-Prot (P56500.1);
+                     Region: Purine nucleotide binding (By similarity)"
+     STS             74..149
+                     /gene="Ucp2"
+                     /standard_name="PMC297000P1"
+                     /db_xref="UniSTS:272452"
+ORIGIN      
+        1 atggttggtt tcaaggccac cgatgtgccc cccacagcca ccgtgaagtt cctgggggct
+       61 gggacagcag cctgtattgc agatctcatc actttccctc tagacaccgc caaagtccgg
+      121 ctgcagatcc aaggagagag tcaagggcta gcgcgcaccg ccgccagcgc ccagtaccgc
+      181 ggcgtgctgg gcaccatcct aaccatggtg cgcactgagg gtccgcgcag cctctacaat
+      241 gggctggtcg ccggcctaca gcgccagatg agctttgcct ccgtccgcat tggcctctac
+      301 gactctgtaa agcagttcta caccaagggc tcagagcatg caggcatcgg gagccgcctc
+      361 ctggcaggta gcaccacagg tgccctggct gtggctgtgg cccaacctac agatgtggta
+      421 aaggtccgct tccaggccca ggcccgggct ggcggtggtc ggagatacca gagcactgtc
+      481 gaagcctaca agaccattgc acgagaggaa gggatccggg gcctctggaa agggacctct
+      541 cccaatgttg cccgaaatgc cattgtcaac tgtactgagc tggtgaccta tgacctcatc
+      601 aaagatactc tcctgaaagc caacctcatg acagacgacc tcccttgcca cttcacttct
+      661 gccttcgggg cgggcttctg caccaccgtc attgcctccc ccgttgatgt ggtcaagacg
+      721 agatatatga actctgcctt gggccagtac cacagcgccg gccactgtgc cctgaccatg
+      781 ctccggaagg aggggccccg agccttctac aaggggttca tgccttcctt cctccgcttg
+      841 ggatcctgga acgtagtaat gtttgtcacc tatgagcagc tcaaaagggc cctgatggct
+      901 gcctatgaat cccgggaggc acccttttga
+//
+

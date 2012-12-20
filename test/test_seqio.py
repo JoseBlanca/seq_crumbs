@@ -111,7 +111,7 @@ class SeqIOTest(unittest.TestCase):
         genbank_fhand = open(os.path.join(TEST_DATA_DIR, 'sequence.gb'))
         seqio([genbank_fhand], out_fhand, 'fasta')
         result = open(out_fhand.name).read()
-        assert '>NM_1340' in result
+        assert '>NM_019354.2' in result
 
 
 class ReadWriteSeqsTest(unittest.TestCase):
