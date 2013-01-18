@@ -80,7 +80,7 @@ def _parse_args(parser):
     parsed_args = parser.parse_args()
     args = {}
     args['bam_fhand'] = parsed_args.input
-    args['gff_fhand'] = parsed_args.gff_output
+    args['out_fhand'] = parsed_args.bam_output
     args['required_flags'] = parsed_args.req_flag
     args['filtering_flags'] = parsed_args.filter_flag
     args['min_mapq'] = parsed_args.min_mapq
