@@ -58,7 +58,7 @@ def filter_bam(in_fpath, out_fpath, min_mapq=0, required_flag_tags=None,
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
-    description = 'Rename the trinity output file seqs'
+    description = 'Filter bam reads by flag or mapping quality'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('input', help="bam file with mapping result",
                        type=argparse.FileType('rt'))
