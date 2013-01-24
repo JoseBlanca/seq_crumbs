@@ -112,7 +112,7 @@ seq_crumbs tries to be more limited in its scope limiting itself only to sequenc
 
 Another software very similar in the approach to seq_crumbs is the nice fastx_ collection.
 
-Other related software: Pyrocleaner_, `Sequence Cleaner <http://seqclean.sourceforge.net/>`_, PRINSEQ_, lucy_, `NGS QC Toolkit <http://www.nipgr.res.in/ngsqctoolkit.html>`_, scythe_, sickle_, cutadapt_ and FastQC_.
+Other related software: Pyrocleaner_, `Sequence Cleaner <http://seqclean.sourceforge.net/>`_, PRINSEQ_, lucy_, `NGS QC Toolkit <http://www.nipgr.res.in/ngsqctoolkit.html>`_, scythe_, sickle_, cutadapt_, trimomatic_ and FastQC_.
 
 License
 -------
@@ -137,3 +137,5 @@ For more details on the licensing take a look at the LICENSE.txt file.
 .. _sickle: https://github.com/najoshi/sickle
 .. _cutadapt: http://code.google.com/p/cutadapt/
 .. _PRINSEQ: http://prinseq.sourceforge.net/manual.html
+.. _trimomatic: http://www.usadellab.org/cms/index.php?page=trimmomatic
+
