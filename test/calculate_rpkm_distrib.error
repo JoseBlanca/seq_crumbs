@@ -1,0 +1,78 @@
+<type 'exceptions.TypeError'>
+Python 2.7.3: /usr/bin/python
+Wed Jan 30 12:16:18 2013
+
+A problem occurred in a Python script.  Here is the sequence of
+function calls leading up to the error, in the order they occurred.
+
+ /home/jose/devel/seq_crumbs/crumbs/utils/bin_utils.py in main(funct=<function run>)
+   58         if fail:
+   59             raise RuntimeError('Generating a test error')
+   60         return(funct())
+   61     except FileNotFoundError, error:
+   62         stderr.write(str(error) + '\n')
+funct = <function run>
+
+ /home/jose/devel/bam_crumbs/bam_crumbs/bin/calculate_rpkm_distrib in run()
+   58     out_fhand = args['out_fhand']
+   59 
+   60     bam = pysam.Samfile(in_fhand)
+   61     rpkms = RpkmCounter(bam)
+   62     out_fhand.write(rpkms.ascii_histogram())
+bam undefined
+global pysam = <module 'pysam' from '/home/jose/devel/local/lib...m-0.7-py2.7-linux-x86_64.egg/pysam/__init__.pyc'>
+pysam.Samfile = <type 'csamtools.Samfile'>
+in_fhand = <open file '/home/jose/devel/bam_crumbs/bam_crumbs/test_data/seqs.bam', mode 'rt'>
+
+ /home/jose/devel/bam_crumbs/test/csamtools.pyx in csamtools.Samfile.__cinit__ (pysam/csamtools.c:6475)()
+
+
+ /home/jose/devel/bam_crumbs/test/csamtools.pyx in csamtools.Samfile._open (pysam/csamtools.c:6976)()
+
+
+ /home/jose/devel/bam_crumbs/test/csamtools.pyx in csamtools.Samfile._open (pysam/csamtools.c:7248)()
+
+
+ /home/jose/devel/bam_crumbs/test/csamtools.pyx in csamtools._my_encodeFilename (pysam/csamtools.c:3124)()
+
+<type 'exceptions.TypeError'>: Argument must be string or unicode.
+    __class__ = <type 'exceptions.TypeError'>
+    __delattr__ = <method-wrapper '__delattr__' of exceptions.TypeError object>
+    __dict__ = {}
+    __doc__ = 'Inappropriate argument type.'
+    __format__ = <built-in method __format__ of exceptions.TypeError object>
+    __getattribute__ = <method-wrapper '__getattribute__' of exceptions.TypeError object>
+    __getitem__ = <method-wrapper '__getitem__' of exceptions.TypeError object>
+    __getslice__ = <method-wrapper '__getslice__' of exceptions.TypeError object>
+    __hash__ = <method-wrapper '__hash__' of exceptions.TypeError object>
+    __init__ = <method-wrapper '__init__' of exceptions.TypeError object>
+    __new__ = <built-in method __new__ of type object>
+    __reduce__ = <built-in method __reduce__ of exceptions.TypeError object>
+    __reduce_ex__ = <built-in method __reduce_ex__ of exceptions.TypeError object>
+    __repr__ = <method-wrapper '__repr__' of exceptions.TypeError object>
+    __setattr__ = <method-wrapper '__setattr__' of exceptions.TypeError object>
+    __setstate__ = <built-in method __setstate__ of exceptions.TypeError object>
+    __sizeof__ = <built-in method __sizeof__ of exceptions.TypeError object>
+    __str__ = <method-wrapper '__str__' of exceptions.TypeError object>
+    __subclasshook__ = <built-in method __subclasshook__ of type object>
+    __unicode__ = <built-in method __unicode__ of exceptions.TypeError object>
+    args = (u'Argument must be string or unicode.',)
+    message = u'Argument must be string or unicode.'
+
+The above is a description of an error in a Python program.  Here is
+the original traceback:
+
+Traceback (most recent call last):
+  File "/home/jose/devel/seq_crumbs/crumbs/utils/bin_utils.py", line 60, in main
+    return(funct())
+  File "/home/jose/devel/bam_crumbs/bam_crumbs/bin/calculate_rpkm_distrib", line 60, in run
+    bam = pysam.Samfile(in_fhand)
+  File "csamtools.pyx", line 597, in csamtools.Samfile.__cinit__ (pysam/csamtools.c:6475)
+  File "csamtools.pyx", line 632, in csamtools.Samfile._open (pysam/csamtools.c:6976)
+  File "csamtools.pyx", line 662, in csamtools.Samfile._open (pysam/csamtools.c:7248)
+  File "csamtools.pyx", line 51, in csamtools._my_encodeFilename (pysam/csamtools.c:3124)
+TypeError: Argument must be string or unicode.
+
+
+The command was:
+/home/jose/devel/bam_crumbs/bam_crumbs/bin/calculate_rpkm_distrib /home/jose/devel/bam_crumbs/bam_crumbs/test_data/seqs.bam
