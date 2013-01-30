@@ -270,7 +270,7 @@ def draw_histogram(bin_limits, counts):
     assert len(bin_limits) == len(counts) + 1
 
     # pylint: disable=W0108
-    number_to_str = lambda n: '{:d}'.format(n)
+    number_to_str = lambda n: '{:d}'.format(n) if isinstance(n, int) else '{:.2f}'.format(n)
 
     # we gather all bin limits and we calculate the longest number
     bin_start = None
@@ -288,8 +288,9 @@ def draw_histogram(bin_limits, counts):
             max_count_ndigits = n_digits
         bins.append((bin_start, bin_end))
 
-    limit_fmt = '{:>' + str(max_ndigits) + 'd}'
-    limit_to_padded_str = lambda n: limit_fmt.format(n)
+    limit_fmt_int = '{:>' + str(max_ndigits) + 'd}'
+    limit_fmt_float = '{:>' + str(max_ndigits) + '.2f}'
+    limit_to_padded_str = lambda n: limit_fmt_int.format(n) if isinstance(n, int) else limit_fmt_float.format(n)
 
     count_fmt = '{:>' + str(max_count_ndigits) + 'd}'
     count_to_padded_str = lambda n: count_fmt.format(n)
