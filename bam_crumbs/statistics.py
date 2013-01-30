@@ -1,8 +1,7 @@
 from __future__ import division
 
-from array import array
 
-from numpy import array as np_array, histogram
+from numpy import histogram, zeros
 
 from crumbs.statistics import draw_histogram, IntCounter
 
@@ -22,20 +21,18 @@ class RpkmCounter(object):
 
     def _count_reads(self):
         tot_reads = 0
-        rpks = array('f')
-        for ref in self._bam.header['SQ']:
+        rpks = zeros(self._bam.nreferences)
+        for index, ref in enumerate(self._bam.header['SQ']):
             length = ref['LN']
             count = count_reads(ref['SN'], self._bam)
             rpk = count / length
             tot_reads += count
-            rpks.append(rpk)
+            rpks[index] = rpk
 
         # from rpk to rpkms
         million_reads = tot_reads / 1e6
-        for index in range(len(rpks)):
-            rpks[index] /= million_reads
-        rpkms = np_array(rpks)
-        self._rpkms = rpkms
+        rpks /= million_reads
+        self._rpkms = rpks
 
     def ascii_histogram(self):
         counts, bins = histogram(self._rpkms)

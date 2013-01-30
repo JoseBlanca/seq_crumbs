@@ -36,7 +36,6 @@ class CountTest(unittest.TestCase):
         bin_ = os.path.join(BIN_DIR, 'calculate_rpkm_distrib')
         # help
         assert 'usage' in check_output([bin_, '-h'])
-
         assert '(1)' in check_output([bin_, bam_fpath])
 
     def test_mapq_distrib(self):
