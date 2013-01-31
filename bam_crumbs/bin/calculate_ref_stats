@@ -21,7 +21,7 @@ import sys
 import pysam
 
 from crumbs.utils.bin_utils import main, build_version_msg
-from bam_crumbs.statistics import RpkmCounter
+from bam_crumbs.statistics import ReferenceStats
 
 
 def _setup_argparse():
@@ -58,8 +58,14 @@ def run():
     out_fhand = args['out_fhand']
 
     bam = pysam.Samfile(in_fhand.name)
-    rpkms = RpkmCounter(bam)
-    out_fhand.write(rpkms.ascii_histogram())
+    stats = ReferenceStats(bam)
+    out_fhand.write('RPKMs\n')
+    out_fhand.write('-----\n')
+    out_fhand.write(str(stats.rpkms))
+    out_fhand.write('\n')
+    out_fhand.write('Lengths\n')
+    out_fhand.write('-----\n')
+    out_fhand.write(str(stats.lengths))
     out_fhand.close()
 
 if __name__ == '__main__':
