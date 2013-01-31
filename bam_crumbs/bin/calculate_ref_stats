@@ -59,13 +59,7 @@ def run():
 
     bams = [pysam.Samfile(f.name) for f in in_fhands]
     stats = ReferenceStats(bams)
-    out_fhand.write('RPKMs\n')
-    out_fhand.write('-----\n')
-    out_fhand.write(str(stats.rpkms))
-    out_fhand.write('\n')
-    out_fhand.write('Lengths\n')
-    out_fhand.write('-----\n')
-    out_fhand.write(str(stats.lengths))
+    out_fhand.write(str(stats))
     out_fhand.close()
 
 if __name__ == '__main__':

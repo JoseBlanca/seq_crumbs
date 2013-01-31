@@ -132,6 +132,16 @@ class ReferenceStats(object):
     def rpkms(self):
         return self._rpkms
 
+    def __str__(self):
+        result = 'RPKMs\n'
+        result += '-----\n'
+        result += str(self.rpkms)
+        result += '\n'
+        result += 'Lengths\n'
+        result += '-----\n'
+        result += str(self.lengths)
+        return result
+
 
 class MapqCounter(IntCounter):
     def __init__(self, bams):
