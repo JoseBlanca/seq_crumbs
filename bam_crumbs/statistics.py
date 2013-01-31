@@ -8,6 +8,9 @@ from crumbs.statistics import draw_histogram, IntCounter, LABELS
 # pylint: disable=C0111
 
 
+DEFAULT_N_BINS = 20
+
+
 def count_reads(ref_name, bam, start=None, end=None):
     'It returns the count of aligned reads in the region'
     return bam.count(reference=ref_name, start=start, end=end)
@@ -47,8 +50,14 @@ class ArrayWrapper(object):
     def sum(self):
         return sum(self.array)
 
-    def calculate_distribution(self):
-        counts, bins = histogram(self.array)
+    def calculate_distribution(self, bins=DEFAULT_N_BINS, min_=None,
+                               max_=None):
+        if min_ is None:
+            min_ = self.min
+        if max_ is None:
+            max_ = self.max
+
+        counts, bins = histogram(self.array, bins=bins, range=(min_, max_))
         return {'bin_limits': bins, 'counts': counts}
 
     def update_labels(self, labels):
