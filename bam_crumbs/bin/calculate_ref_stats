@@ -33,6 +33,7 @@ def _setup_argparse():
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest='outfile',
                         help='Sequence output file (default STDOUT)',
                         type=argparse.FileType('wt'))
+    parser.add_argument('--max_rpkm', type=float, help='max RPKM')
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
     return parser
@@ -45,7 +46,8 @@ def _parse_args(parser):
     in_fhands = parsed_args.input
     out_fhand = getattr(parsed_args, 'outfile')
 
-    args = {'out_fhand': out_fhand, 'in_fhands': in_fhands}
+    args = {'out_fhand': out_fhand, 'in_fhands': in_fhands,
+            'max_rpkm': parsed_args.max_rpkm}
     return args, parsed_args
 
 
@@ -58,7 +60,7 @@ def run():
     out_fhand = args['out_fhand']
 
     bams = [pysam.Samfile(f.name) for f in in_fhands]
-    stats = ReferenceStats(bams)
+    stats = ReferenceStats(bams, max_rpkm=args['max_rpkm'])
     out_fhand.write(str(stats))
     out_fhand.close()
 

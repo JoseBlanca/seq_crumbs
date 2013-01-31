@@ -21,9 +21,10 @@ def count_reads(ref_name, bams, start=None, end=None):
 
 class ArrayWrapper(object):
     'A thin wrapper aroung numpy array to have the same interface as IntCounter'
-    def __init__(self, array):
+    def __init__(self, array, max_in_distrib=None):
         self.array = array
         self.labels = LABELS.copy()
+        self._max_in_distrib = max_in_distrib
 
     @property
     def min(self):
@@ -88,15 +89,16 @@ class ArrayWrapper(object):
                 text += '{}: {}\n'.format(labels['items'], self.count)
             text += '\n'
 
-            distrib = self.calculate_distribution()
+            distrib = self.calculate_distribution(max_=self._max_in_distrib)
             text += draw_histogram(distrib['bin_limits'], distrib['counts'])
             return text
         return ''
 
 
 class ReferenceStats(object):
-    def __init__(self, bams):
+    def __init__(self, bams, max_rpkm=None):
         self._bams = bams
+        self._max_rpkm = max_rpkm
         self._rpkms = None
         self._tot_reads = 0
         self._lengths = None
@@ -126,7 +128,7 @@ class ReferenceStats(object):
         # from rpk to rpkms
         million_reads = tot_reads / 1e6
         rpks /= million_reads
-        self._rpkms = ArrayWrapper(rpks)
+        self._rpkms = ArrayWrapper(rpks, max_in_distrib=self._max_rpkm)
 
     @property
     def lengths(self):
