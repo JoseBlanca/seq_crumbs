@@ -1,11 +1,14 @@
 from __future__ import division
 
+from collections import Counter
 
 from numpy import histogram, zeros, median, sum
 
 from crumbs.statistics import draw_histogram, IntCounter, LABELS
 
 from bam_crumbs.settings import get_setting
+from bam_crumbs.utils.flag import SAM_FLAG_BINARIES, SAM_FLAGS
+
 # pylint: disable=C0111
 
 
@@ -157,15 +160,38 @@ class ReferenceStats(object):
         return result
 
 
-class MapqCounter(IntCounter):
+def _flag_to_binary(flag):
+    'It returns the indexes of the bits sets to 1 in the given flag'
+    return [index for index, num in enumerate(SAM_FLAG_BINARIES) if num & flag]
+
+
+class ReadStats(object):
     def __init__(self, bams):
+        # TODO flag, read_group
         self._bams = bams
+        self._mapqs = IntCounter()
+        self._flag_counts = {}
         self._count_mapqs()
 
     def _count_mapqs(self):
+        mapqs = self._mapqs
+        flag_counts = [0] * len(SAM_FLAG_BINARIES)
         for bam in self._bams:
             for read in bam.fetch():
-                self[read.mapq] += 1
+                mapqs[read.mapq] += 1
+                for flag_index in _flag_to_binary(read.flag):
+                    flag_counts[flag_index] += 1
+
+        for count, flag_bin in zip(flag_counts, SAM_FLAG_BINARIES):
+            self._flag_counts[SAM_FLAGS[flag_bin]] = count
+
+    @property
+    def mapqs(self):
+        return self._mapqs
+
+    @property
+    def flag_counts(self):
+        return self._flag_counts
 
 
 class CoverageCounter(IntCounter):
