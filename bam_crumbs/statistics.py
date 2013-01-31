@@ -8,7 +8,7 @@ from crumbs.statistics import draw_histogram, IntCounter, LABELS
 # pylint: disable=C0111
 
 
-DEFAULT_N_BINS = 20
+DEFAULT_N_BINS = 40
 
 
 def count_reads(ref_name, bams, start=None, end=None):
