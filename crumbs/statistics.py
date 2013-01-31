@@ -22,6 +22,12 @@ from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
 
+LABELS = {'title': 'histogram', 'xlabel': 'values',
+          'ylabel': 'count', 'minimum': 'minimum',
+          'maximum': 'maximum', 'average': 'average',
+          'variance': 'variance', 'sum': 'sum',
+          'items': 'items', 'quartiles': 'quartiles'}
+
 
 class IntCounter(Counter):
     '''This is a subclass  of the Counter on python collections.
@@ -31,11 +37,7 @@ class IntCounter(Counter):
     def __init__(self, *args, **kwargs):
         'It inialices a '
         super(IntCounter, self).__init__(*args, **kwargs)
-        self.labels = {'title': 'histogram', 'xlabel': 'values',
-                       'ylabel': 'count', 'minimum': 'minimum',
-                       'maximum': 'maximum', 'average': 'average',
-                       'variance': 'variance', 'sum': 'sum',
-                       'items': 'items', 'quartiles': 'quartiles'}
+        self.labels = LABELS.copy()
 
     @property
     def min(self):
