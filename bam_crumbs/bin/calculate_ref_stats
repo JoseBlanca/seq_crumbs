@@ -29,7 +29,7 @@ def _setup_argparse():
     description = 'Calculate statistics of the given files'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('input', help='BAM or SAM file to process',
-                        type=argparse.FileType('rt'))
+                        nargs='*', type=argparse.FileType('rt'))
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest='outfile',
                         help='Sequence output file (default STDOUT)',
                         type=argparse.FileType('wt'))
@@ -42,10 +42,10 @@ def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
 
     parsed_args = parser.parse_args()
-    in_fhand = parsed_args.input
+    in_fhands = parsed_args.input
     out_fhand = getattr(parsed_args, 'outfile')
 
-    args = {'out_fhand': out_fhand, 'in_fhand': in_fhand}
+    args = {'out_fhand': out_fhand, 'in_fhands': in_fhands}
     return args, parsed_args
 
 
@@ -54,11 +54,11 @@ def run():
     parser = _setup_argparse()
     args = _parse_args(parser)[0]
 
-    in_fhand = args['in_fhand']
+    in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    bam = pysam.Samfile(in_fhand.name)
-    stats = ReferenceStats(bam)
+    bams = [pysam.Samfile(f.name) for f in in_fhands]
+    stats = ReferenceStats(bams)
     out_fhand.write('RPKMs\n')
     out_fhand.write('-----\n')
     out_fhand.write(str(stats.rpkms))

@@ -83,29 +83,37 @@ class ArrayWrapper(object):
 
 
 class ReferenceStats(object):
-    def __init__(self, bam):
-        self._bam = bam
+    def __init__(self, bams):
+        self._bams = bams
         self._rpkms = None
+        self._tot_reads = 0
         self._lengths = None
         self._count_reads()
 
     def _count_reads(self):
-        tot_reads = 0
-        rpks = zeros(self._bam.nreferences)
+        tot_reads = self._tot_reads
+        nreferences = self._bams[0].nreferences
+        rpks = zeros(nreferences)
         lengths = IntCounter()
-        for index, ref in enumerate(self._bam.header['SQ']):
-            length = ref['LN']
-            count = count_reads(ref['SN'], self._bam)
-            rpk = count / length
-            tot_reads += count
-            rpks[index] = rpk
-            lengths[length] += 1
-        self._lengths = lengths
+        for bam in self._bams:
+            if bam.nreferences != nreferences:
+                msg = 'BAM files should have the same references'
+                raise ValueError(msg)
+            # For the references we use the first BAM to make sure that the
+            # references are the same in all bams
+            for index, ref in enumerate(self._bams[0].header['SQ']):
+                length = ref['LN']
+                count = count_reads(ref['SN'], bam)
+                rpk = count / length
+                tot_reads += count
+                rpks[index] = rpk
+                lengths[length] += 1
+            self._lengths = lengths
 
-        # from rpk to rpkms
-        million_reads = tot_reads / 1e6
-        rpks /= million_reads
-        self._rpkms = ArrayWrapper(rpks)
+            # from rpk to rpkms
+            million_reads = tot_reads / 1e6
+            rpks /= million_reads
+            self._rpkms = ArrayWrapper(rpks)
 
     @property
     def lengths(self):
@@ -117,20 +125,22 @@ class ReferenceStats(object):
 
 
 class MapqCounter(IntCounter):
-    def __init__(self, bam):
-        self._bam = bam
+    def __init__(self, bams):
+        self._bams = bams
         self._count_mapqs()
 
     def _count_mapqs(self):
-        for read in self._bam.fetch():
-            self[read.mapq] += 1
+        for bam in self._bams:
+            for read in bam.fetch():
+                self[read.mapq] += 1
 
 
 class CoverageCounter(IntCounter):
-    def __init__(self, bam):
-        self._bam = bam
+    def __init__(self, bams):
+        self._bams = bams
         self._count_cov()
 
     def _count_cov(self):
-        for column in self._bam.pileup():
-            self[len(column.pileups)] += 1
+        for bam in self._bams:
+            for column in bam.pileup():
+                self[len(column.pileups)] += 1

@@ -27,7 +27,7 @@ class StatsTest(unittest.TestCase):
     def test_reference_stats(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         bam = pysam.Samfile(bam_fpath)
-        refstats = ReferenceStats(bam)
+        refstats = ReferenceStats([bam])
         rpkms = refstats.rpkms
         assert rpkms.min - 291.71 < 0.1
         assert rpkms.max - 600.24 < 0.1
@@ -40,6 +40,9 @@ class StatsTest(unittest.TestCase):
                                                               0, 0, 0, 0, 0, 1]
         assert 'minimum:' in str(rpkms)
 
+        refstats = ReferenceStats([bam, bam])
+        assert refstats.rpkms.max - 600.24 < 0.1
+
     def test_ref_stats_bin(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
 
@@ -47,13 +50,12 @@ class StatsTest(unittest.TestCase):
         # help
         assert 'usage' in check_output([bin_, '-h'])
 
-        print check_output([bin_, bam_fpath])
         assert 'RPKMs' in check_output([bin_, bam_fpath])
 
     def test_mapq_distrib(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         bam = pysam.Samfile(bam_fpath)
-        mapqs = MapqCounter(bam)
+        mapqs = MapqCounter([bam])
         assert mapqs.count == 18
         assert mapqs.min == 28
         assert mapqs.max == 149
@@ -61,7 +63,7 @@ class StatsTest(unittest.TestCase):
     def test_coverage_distrib(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         bam = pysam.Samfile(bam_fpath)
-        cov = CoverageCounter(bam)
+        cov = CoverageCounter([bam])
         assert cov.count == 147
         assert cov.min == 6
         assert cov.max == 9
