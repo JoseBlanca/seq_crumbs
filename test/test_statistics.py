@@ -69,5 +69,5 @@ class StatsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'PlotTest.test_geographic_map']
+    # import sys;sys.argv = ['', 'StatsTest.test_reference_stats']
     unittest.main()

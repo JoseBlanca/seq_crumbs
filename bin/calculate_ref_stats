@@ -21,7 +21,9 @@ import sys
 import pysam
 
 from crumbs.utils.bin_utils import main, build_version_msg
+
 from bam_crumbs.statistics import ReferenceStats
+from bam_crumbs.settings import get_setting
 
 
 def _setup_argparse():
@@ -33,6 +35,9 @@ def _setup_argparse():
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest='outfile',
                         help='Sequence output file (default STDOUT)',
                         type=argparse.FileType('wt'))
+    parser.add_argument('--nbins', type=int,
+                        default=get_setting('DEFAULT_N_BINS'),
+                        help='number of bins for the distributions')
     parser.add_argument('--max_rpkm', type=float, help='max RPKM')
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
@@ -47,7 +52,7 @@ def _parse_args(parser):
     out_fhand = getattr(parsed_args, 'outfile')
 
     args = {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'max_rpkm': parsed_args.max_rpkm}
+            'max_rpkm': parsed_args.max_rpkm, 'bins': parsed_args.nbins}
     return args, parsed_args
 
 
@@ -60,7 +65,7 @@ def run():
     out_fhand = args['out_fhand']
 
     bams = [pysam.Samfile(f.name) for f in in_fhands]
-    stats = ReferenceStats(bams, max_rpkm=args['max_rpkm'])
+    stats = ReferenceStats(bams, max_rpkm=args['max_rpkm'], bins=args['bins'])
     out_fhand.write(str(stats))
     out_fhand.close()
 
