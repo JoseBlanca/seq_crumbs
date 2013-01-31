@@ -11,9 +11,12 @@ from crumbs.statistics import draw_histogram, IntCounter, LABELS
 DEFAULT_N_BINS = 20
 
 
-def count_reads(ref_name, bam, start=None, end=None):
+def count_reads(ref_name, bams, start=None, end=None):
     'It returns the count of aligned reads in the region'
-    return bam.count(reference=ref_name, start=start, end=end)
+    count = 0
+    for bam in bams:
+        count += bam.count(reference=ref_name, start=start, end=end)
+    return count
 
 
 class ArrayWrapper(object):
@@ -104,25 +107,26 @@ class ReferenceStats(object):
         nreferences = self._bams[0].nreferences
         rpks = zeros(nreferences)
         lengths = IntCounter()
-        for bam in self._bams:
+        bams = self._bams
+        for bam in bams:
             if bam.nreferences != nreferences:
                 msg = 'BAM files should have the same references'
                 raise ValueError(msg)
             # For the references we use the first BAM to make sure that the
             # references are the same in all bams
-            for index, ref in enumerate(self._bams[0].header['SQ']):
-                length = ref['LN']
-                count = count_reads(ref['SN'], bam)
-                rpk = count / length
-                tot_reads += count
-                rpks[index] = rpk
-                lengths[length] += 1
-            self._lengths = lengths
+        for index, ref in enumerate(bams[0].header['SQ']):
+            length = ref['LN']
+            count = count_reads(ref['SN'], bams)
+            rpk = count / length
+            tot_reads += count
+            rpks[index] = rpk
+            lengths[length] += 1
+        self._lengths = lengths
 
-            # from rpk to rpkms
-            million_reads = tot_reads / 1e6
-            rpks /= million_reads
-            self._rpkms = ArrayWrapper(rpks)
+        # from rpk to rpkms
+        million_reads = tot_reads / 1e6
+        rpks /= million_reads
+        self._rpkms = ArrayWrapper(rpks)
 
     @property
     def lengths(self):

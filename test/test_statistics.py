@@ -19,10 +19,10 @@ class StatsTest(unittest.TestCase):
     def test_count(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         bam = pysam.Samfile(bam_fpath)
-        assert count_reads('reference1', bam) == 9
-        assert count_reads('reference2', bam) == 9
-        assert count_reads('reference1', bam, start=1, end=10) == 0
-        assert count_reads('reference1', bam, start=0, end=500) == 9
+        assert count_reads('reference1', [bam]) == 9
+        assert count_reads('reference2', [bam]) == 9
+        assert count_reads('reference1', [bam], start=1, end=10) == 0
+        assert count_reads('reference1', [bam], start=0, end=500) == 9
 
     def test_reference_stats(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
