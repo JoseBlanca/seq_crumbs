@@ -21,8 +21,6 @@ from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
-from crumbs.annotation import ORF_TYPE_NAME
-from bam_crumbs.statistics import ReferenceStats
 
 
 def seq_to_filterpackets(seq_packets):
