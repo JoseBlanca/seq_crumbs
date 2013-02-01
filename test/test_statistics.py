@@ -7,8 +7,8 @@ import pysam
 
 from bam_crumbs.utils.test import TEST_DATA_DIR
 from bam_crumbs.utils.bin import BIN_DIR
-from bam_crumbs.statistics import (count_reads, ReferenceStats, MapqCounter,
-                                   CoverageCounter)
+from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
+                                   CoverageCounter, _flag_to_binary)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -51,13 +51,14 @@ class StatsTest(unittest.TestCase):
 
         assert 'RPKMs' in check_output([bin_, bam_fpath])
 
-    def test_mapq_distrib(self):
+    def test_read_stats(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         bam = pysam.Samfile(bam_fpath)
-        mapqs = MapqCounter([bam])
-        assert mapqs.count == 18
-        assert mapqs.min == 28
-        assert mapqs.max == 149
+        stats = ReadStats([bam])
+        assert stats.mapqs.count == 18
+        assert stats.mapqs.min == 28
+        assert stats.mapqs.max == 149
+        assert stats.flag_counts['is_unmapped'] == 0
 
     def test_coverage_distrib(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
@@ -67,7 +68,13 @@ class StatsTest(unittest.TestCase):
         assert cov.min == 6
         assert cov.max == 9
 
+    def test_flag_to_binary(self):
+        assert not _flag_to_binary(0)
+        assert _flag_to_binary(1) == [0]
+        assert _flag_to_binary(2) == [1]
+        assert _flag_to_binary(1 | 2) == [0, 1]
+
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'PlotTest.test_geographic_map']
+    # import sys;sys.argv = ['', 'StatsTest.test_reference_stats']
     unittest.main()
