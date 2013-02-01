@@ -114,31 +114,38 @@ class ReferenceStats(object):
         self._count_reads()
 
     def _count_reads(self):
-        tot_reads = self._tot_reads
         nreferences = self._bams[0].nreferences
-        rpks = zeros(nreferences)
-        lengths = IntCounter()
-        bams = self._bams
-        for bam in bams:
+        nreads = zeros(nreferences)
+        kb_lengths = zeros(nreferences)
+        length_counts = IntCounter()
+        first_bam = True
+        for bam in self._bams:
             if bam.nreferences != nreferences:
                 msg = 'BAM files should have the same references'
                 raise ValueError(msg)
-            # For the references we use the first BAM to make sure that the
-            # references are the same in all bams
-        for index, ref in enumerate(bams[0].header['SQ']):
-            length = ref['LN']
-            count = count_reads(ref['SN'], bams)
-            rpk = count / length
-            tot_reads += count
-            rpks[index] = rpk
-            lengths[length] += 1
-        self._lengths = lengths
-
-        # from rpk to rpkms
-        million_reads = tot_reads / 1e6
-        rpks /= million_reads
-        self._rpkms = ArrayWrapper(rpks, max_in_distrib=self._max_rpkm,
+            for index, count in enumerate(get_reference_counts(bam.filename)):
+                if count['reference'] is None:
+                    # some non-mapped reads have reference = None
+                    continue
+                nreads[index] = count['mapped_reads'] + count['unmapped_reads']
+                kb_len = count['length'] / 1000
+                if first_bam:
+                    # For the reference lengths we use the first BAM to make
+                    kb_lengths[index] = kb_len
+                    length_counts[count['length']] += 1
+                else:
+                    # the bams should be sorted with the references in the same
+                    # order
+                    if kb_lengths[index] != kb_len:
+                        msg = 'The reference lengths do not match in the bams'
+                        raise RuntimeError(msg)
+            first_bam = False
+        million_reads = sum(nreads) / 1e6
+        nreads /= kb_lengths  # rpks
+        nreads /= million_reads  # rpkms
+        self._rpkms = ArrayWrapper(nreads, max_in_distrib=self._max_rpkm,
                                    bins=self._bins)
+        self._lengths = length_counts
 
     @property
     def lengths(self):
@@ -205,14 +212,14 @@ class CoverageCounter(IntCounter):
 
 
 def get_reference_counts(bam_fpath):
-    'using samtools idxstats it returns a dictionary with read counts'
-    counts = {}
+    'Using samtools idxstats it generates dictionaries with read counts'
     for line in pysam.idxstats(bam_fpath):
-        ref_name, ref_lenght, mapped_reads, unmapped_reads = line.split()
+        ref_name, ref_length, mapped_reads, unmapped_reads = line.split()
         if ref_name == '*':
             ref_name = None
-        counts[ref_name] = {'length': ref_lenght, 'mapped_reads': mapped_reads,
-                            'unmapped_reads': unmapped_reads}
-    return counts
-
-
+            ref_length = None
+        else:
+            ref_length = int(ref_length)
+        yield {'reference': ref_name, 'length': ref_length,
+               'mapped_reads': int(mapped_reads),
+               'unmapped_reads': int(unmapped_reads)}

@@ -30,18 +30,18 @@ class StatsTest(unittest.TestCase):
         bam = pysam.Samfile(bam_fpath)
         refstats = ReferenceStats([bam])
         rpkms = refstats.rpkms
-        assert rpkms.min - 291.71 < 0.1
-        assert rpkms.max - 600.24 < 0.1
-        assert rpkms.average - 445.98 < 0.1
-        assert rpkms.median - 445.98 < 0.1
-        assert rpkms.variance - 23796.89 < 0.1
+        assert rpkms.min - 291715.28 < 0.1
+        assert rpkms.max - 600240.1 < 0.1
+        assert rpkms.average - 445977.7 < 0.1
+        assert rpkms.median - 445977.7 < 0.1
+        assert rpkms.variance - 23796889620.7 < 0.1
         assert rpkms.count == 2
-        assert rpkms.sum - 891.95 < 0.1
+        assert rpkms.sum - 891955.38 < 0.1
         assert list(rpkms.calculate_distribution()['counts'])[0] == 1
         assert 'minimum:' in str(rpkms)
 
         refstats = ReferenceStats([bam, bam])
-        assert refstats.rpkms.max - 600.24 < 0.1
+        assert refstats.rpkms.max - 600240.1 < 0.1
 
     def test_ref_stats_bin(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
@@ -77,11 +77,11 @@ class StatsTest(unittest.TestCase):
 
     def test_ref_counts(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
-        counts = get_reference_counts(bam_fpath)
-        assert counts[None] == {'unmapped_reads': '0',
-                                'length': '0', 'mapped_reads': '0'}
-        assert counts['reference2'] == {'unmapped_reads': '0',
-                                        'length': '1714', 'mapped_reads': '9'}
+        counts = list(get_reference_counts(bam_fpath))
+        assert counts[2] == {'unmapped_reads': 0, 'reference': None,
+                             'length': None, 'mapped_reads': 0}
+        assert counts[1] == {'unmapped_reads': 0, 'reference': 'reference2',
+                             'length': 1714, 'mapped_reads': 9}
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'StatsTest.test_reference_stats']
