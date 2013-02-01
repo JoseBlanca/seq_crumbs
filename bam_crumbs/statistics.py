@@ -1,10 +1,9 @@
 from __future__ import division
 
-from collections import Counter
-
 from numpy import histogram, zeros, median, sum
+import pysam
 
-from crumbs.statistics import draw_histogram, IntCounter  # , LABELS
+from crumbs.statistics import draw_histogram, IntCounter, LABELS
 
 from bam_crumbs.settings import get_setting
 from bam_crumbs.utils.flag import SAM_FLAG_BINARIES, SAM_FLAGS
@@ -203,3 +202,17 @@ class CoverageCounter(IntCounter):
         for bam in self._bams:
             for column in bam.pileup():
                 self[len(column.pileups)] += 1
+
+
+def get_reference_counts(bam_fpath):
+    'using samtools idxstats it returns a dictionary with read counts'
+    counts = {}
+    for line in pysam.idxstats(bam_fpath):
+        ref_name, ref_lenght, mapped_reads, unmapped_reads = line.split()
+        if ref_name == '*':
+            ref_name = None
+        counts[ref_name] = {'length': ref_lenght, 'mapped_reads': mapped_reads,
+                            'unmapped_reads': unmapped_reads}
+    return counts
+
+

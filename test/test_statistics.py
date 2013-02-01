@@ -8,7 +8,8 @@ import pysam
 from bam_crumbs.utils.test import TEST_DATA_DIR
 from bam_crumbs.utils.bin import BIN_DIR
 from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
-                                   CoverageCounter, _flag_to_binary)
+                                   CoverageCounter, _flag_to_binary,
+    get_reference_counts)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -74,6 +75,13 @@ class StatsTest(unittest.TestCase):
         assert _flag_to_binary(2) == [1]
         assert _flag_to_binary(1 | 2) == [0, 1]
 
+    def test_ref_counts(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        counts = get_reference_counts(bam_fpath)
+        assert counts[None] == {'unmapped_reads': '0',
+                                'length': '0', 'mapped_reads': '0'}
+        assert counts['reference2'] == {'unmapped_reads': '0',
+                                        'length': '1714', 'mapped_reads': '9'}
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'StatsTest.test_reference_stats']
