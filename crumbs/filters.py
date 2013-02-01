@@ -21,12 +21,44 @@ from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
+from crumbs.annotation import ORF_TYPE_NAME
+from bam_crumbs.statistics import ReferenceStats
 
 
 def seq_to_filterpackets(seq_packets):
     'It yields packets suitable for the filters'
     for packet in seq_packets:
         yield {SEQS_PASSED: packet, SEQS_FILTERED_OUT: []}
+
+
+class FilterByFeatureTypes():
+    'It filters out sequences not annotated witith the given feature types'
+    def __init__(self, feature_types, reverse=False):
+        '''The initiator
+
+        feat_types is a list of types of features to use to filter'''
+
+        self._feat_types = feature_types
+        self._reverse = reverse
+
+    def __call__(self, filterpacket):
+        'It filters out sequences not annotated with the given feature types'
+        reverse = self._reverse
+        feat_types = self._feat_types
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+
+        for seqrec in filterpacket[SEQS_PASSED]:
+            feats_in_seq = [f.type for f in seqrec.features if f in feat_types]
+            passed = True if feats_in_seq else False
+            if reverse:
+                passed = not(passed)
+            if passed:
+                seqs_passed.append(seqrec)
+            else:
+                filtered_out.append(seqrec)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
 class FilterByLength(object):
