@@ -3,7 +3,7 @@ from __future__ import division
 
 from numpy import histogram, zeros, median, sum
 
-from crumbs.statistics import draw_histogram, IntCounter, LABELS
+from crumbs.statistics import draw_histogram, IntCounter  # , LABELS
 
 # pylint: disable=C0111
 

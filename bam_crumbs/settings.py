@@ -20,7 +20,7 @@ import tempfile
 # if need to modify the binary's name
 _USE_EXTERNAL_BIN_PREFIX = False
 # prefix to add to the binary name
-_EXTERNAL_BIN_PREFIX = 'crumbs_'
+_EXTERNAL_BIN_PREFIX = 'bams_crumbs'
 # mark True if need the path or assumes that is on the path
 _ADD_PATH_TO_EXT_BIN = True
 
