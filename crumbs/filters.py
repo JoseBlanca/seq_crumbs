@@ -59,6 +59,42 @@ class FilterByFeatureTypes():
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
+class FilterByReadCount(object):
+    def __init__(self, read_counts, min_rpkms, reverse):
+        self._read_counts = read_counts
+        self._min_rpkms = min_rpkms
+        self._total_reads = sum([v['mapped_reads'] + v['unmapped_reads'] for v in read_counts.values()])
+        self._reverse = reverse
+
+    def __call__(self, filterpacket):
+        read_counts = self._read_counts
+        min_rpkms = self._min_rpkms
+        total_reads = self._total_reads
+        reverse = self._reverse
+
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+        for seqrecord in filterpacket[SEQS_PASSED]:
+            count = read_counts[seqrecord.id]
+            kb_len = count['length'] / 1000
+            num_reads = count['mapped_reads'] + count['unmapped_reads']
+
+            million_reads = total_reads / 1e6
+            rpks = num_reads / kb_len  # rpks
+            rpkms = rpks / million_reads  # rpkms
+
+            passed = True if rpkms > min_rpkms else False
+            if reverse:
+                passed = not(passed)
+
+            if passed:
+                seqs_passed.append(seqrecord)
+            else:
+                filtered_out.append(seqrecord)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+
+
 class FilterByLength(object):
     'It removes the sequences according to their length.'
     def __init__(self, minimum=None, maximum=None, ignore_masked=False):
