@@ -9,7 +9,7 @@ from bam_crumbs.utils.test import TEST_DATA_DIR
 from bam_crumbs.utils.bin import BIN_DIR
 from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
                                    CoverageCounter, _flag_to_binary,
-    get_reference_counts)
+    get_reference_counts, get_reference_counts_dict)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -82,6 +82,10 @@ class StatsTest(unittest.TestCase):
                              'length': None, 'mapped_reads': 0}
         assert counts[1] == {'unmapped_reads': 0, 'reference': 'reference2',
                              'length': 1714, 'mapped_reads': 9}
+        counts = get_reference_counts_dict([bam_fpath])
+        assert  None in counts.keys()
+        assert  'reference2' in counts.keys()
+        assert  'reference2' in counts.keys()
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'StatsTest.test_reference_stats']
