@@ -391,7 +391,7 @@ class ReadCountFIlterTest(unittest.TestCase):
         read_counts = {'seq1': {'mapped_reads': 1000000000,
                                 'unmapped_reads': 1000000000,
                                 'length': len(seq1)},
-                       'seq2': {'mapped_reads': 100, 'unmapped_reads':100,
+                       'seq2': {'mapped_reads': 100, 'unmapped_reads': 100,
                                 'length': len(seq1)}}
         filter_ = FilterByReadCount(read_counts, 1000)
         seqs2 = filter_(seqs)
@@ -402,7 +402,6 @@ class ReadCountFIlterTest(unittest.TestCase):
         seqs2 = filter_(seqs)
         assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq1'
         assert seqs2[SEQS_PASSED][0].id == 'seq2'
-
 
 
 if __name__ == "__main__":
