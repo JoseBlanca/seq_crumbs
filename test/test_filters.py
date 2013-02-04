@@ -29,7 +29,7 @@ from Bio.Seq import Seq
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
-                            seq_to_filterpackets)
+                            seq_to_filterpackets, FilterByReadCount)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL, SEQS_FILTERED_OUT, SEQS_PASSED
@@ -379,6 +379,30 @@ class ComplexityFilterTest(unittest.TestCase):
                                '-e', filtered_fhand.name])
         assert '>s1\n' in open(filtered_fhand.name).read()
         assert '>s2\n' in result
+
+
+class ReadCountFIlterTest(unittest.TestCase):
+    def test_filter_by_read_count(self):
+        seq1 = 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAAAAAAAAAAAAAAAAAAAAAAAAA'
+        seq2 = 'CATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGCTAGCTAGTT'
+        seqs = {SEQS_PASSED: [SeqRecord(Seq(seq1), id='seq1'),
+                              SeqRecord(Seq(seq2), id='seq2')],
+                SEQS_FILTERED_OUT: []}
+        read_counts = {'seq1': {'mapped_reads': 1000000000,
+                                'unmapped_reads': 1000000000,
+                                'length': len(seq1)},
+                       'seq2': {'mapped_reads': 100, 'unmapped_reads':100,
+                                'length': len(seq1)}}
+        filter_ = FilterByReadCount(read_counts, 1000)
+        seqs2 = filter_(seqs)
+        assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq2'
+        assert seqs2[SEQS_PASSED][0].id == 'seq1'
+
+        filter_ = FilterByReadCount(read_counts, 1000, reverse=True)
+        seqs2 = filter_(seqs)
+        assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq1'
+        assert seqs2[SEQS_PASSED][0].id == 'seq2'
+
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ class FilterByFeatureTypes():
 
 
 class FilterByReadCount(object):
-    def __init__(self, read_counts, min_rpkms, reverse):
+    def __init__(self, read_counts, min_rpkms, reverse=False):
         self._read_counts = read_counts
         self._min_rpkms = min_rpkms
         self._total_reads = sum([v['mapped_reads'] + v['unmapped_reads'] for v in read_counts.values()])
