@@ -121,6 +121,7 @@ class ReferenceStats(object):
         kb_lengths = zeros(nreferences)
         length_counts = IntCounter()
         first_bam = True
+        n_unmapped_reads = 0
         for bam in self._bams:
             if bam.nreferences != nreferences:
                 msg = 'BAM files should have the same references'
@@ -129,7 +130,8 @@ class ReferenceStats(object):
                 if count['reference'] is None:
                     # some non-mapped reads have reference = None
                     continue
-                nreads[index] = count['mapped_reads'] + count['unmapped_reads']
+                nreads[index] = count['mapped_reads']
+                n_unmapped_reads += count['unmapped_reads']
                 kb_len = count['length'] / 1000
                 if first_bam:
                     # For the reference lengths we use the first BAM to make
@@ -142,7 +144,7 @@ class ReferenceStats(object):
                         msg = 'The reference lengths do not match in the bams'
                         raise RuntimeError(msg)
             first_bam = False
-        million_reads = np_sum(nreads) / 1e6
+        million_reads = (np_sum(nreads) + n_unmapped_reads) / 1e6
         nreads /= kb_lengths  # rpks
         nreads /= million_reads  # rpkms
         self._rpkms = ArrayWrapper(nreads, max_in_distrib=self._max_rpkm,
