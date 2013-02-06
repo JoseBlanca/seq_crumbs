@@ -2,19 +2,22 @@
 import os.path
 import unittest
 from subprocess import check_output, check_call
+from tempfile import NamedTemporaryFile
 
 from bam_crumbs.utils.test import TEST_DATA_DIR
 from bam_crumbs.utils.bin import BIN_DIR
-from tempfile import NamedTemporaryFile
+from bam_crumbs.bam_tools import filter_bam
+
+# pylint: disable=C0111
 
 
 class SortTest(unittest.TestCase):
     def test_sort_bam_bin(self):
-        bin_ = bin_ = os.path.join(BIN_DIR, 'sort_bam')
+        bin_ = os.path.join(BIN_DIR, 'sort_bam')
         assert 'usage' in check_output([bin_, '-h'])
 
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
-        sorted_fhand = NamedTemporaryFile()
+        sorted_fhand = NamedTemporaryFile(suffix='.sorted.bam')
         check_call([bin_, bam_fpath, '-o', sorted_fhand.name])
         assert "@HD\tVN:1.4" in check_output(['samtools', 'view', '-h',
                                               sorted_fhand.name])
@@ -37,6 +40,15 @@ class SortTest(unittest.TestCase):
         assert os.path.exists(fhand.name + '.bai')
         os.remove(fhand.name + '.bai')
 
+
+class FilterTest(unittest.TestCase):
+    def test_filter_mapq(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        out_fhand = NamedTemporaryFile()
+        filter_bam(bam_fpath, out_fhand.name, min_mapq=100)
+        assert len(open(out_fhand.name).read(20)) == 20
+
+
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'PlotTest.test_geographic_map']
+    # import sys;sys.argv = ['', 'FilterTest.test_filter_mapq']
     unittest.main()

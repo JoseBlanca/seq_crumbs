@@ -19,30 +19,9 @@
 
 import argparse
 import sys
-import os
-import subprocess
-import shutil
-from tempfile import NamedTemporaryFile
 
-from bam_crumbs.settings import get_setting
-from bam_crumbs.utils.bin import get_binary_path
 from crumbs.utils.bin_utils import main, build_version_msg
-
-
-def sort_bam(in_bam_fpath, out_bam_fpath):
-    'it sorts a bam file'
-    picard_tools = get_setting("PICARD_TOOLS_DIR")
-    cmd = ['java', '-jar', os.path.join(picard_tools, 'SortSam.jar'),
-           'INPUT={0}'.format(in_bam_fpath),
-           'OUTPUT={0}'.format(out_bam_fpath),
-           'SORT_ORDER=coordinate', 'VALIDATION_STRINGENCY=LENIENT']
-    subprocess.check_call(cmd)
-
-
-def index_bam(bam_fpath):
-    'It indexes a bam file'
-    samtools_binary = get_binary_path('samtools')
-    subprocess.check_call([samtools_binary, 'index', bam_fpath])
+from bam_crumbs.bam_tools import sort_bam, index_bam
 
 
 def _setup_argparse():
@@ -85,18 +64,12 @@ def run():
     out_fhand = args['out_fhand']
     skip_index = args['skip_index']
 
-    keep_same_path = False
     if out_fhand is None:
-        out_fhand = NamedTemporaryFile(suffix='.bam')
-        keep_same_path = True
-
-    sort_bam(in_fhand.name, out_fhand.name)
-
-    if keep_same_path:
-        shutil.move(out_fhand.name, in_fhand.name)
         out_fpath = in_fhand.name
     else:
         out_fpath = out_fhand.name
+
+    sort_bam(in_fhand.name, out_fpath)
 
     if not skip_index:
         index_bam(out_fpath)

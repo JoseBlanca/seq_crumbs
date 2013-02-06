@@ -1,39 +1,10 @@
 #!/usr/bin/env python
-'''
-Created on 2013 urt 18
 
-@author: peio
-'''
 import argparse
 import sys
-import subprocess
 
-from bam_crumbs.utils.flag import create_flag, SAM_FLAG_TAGS
-
-
-def filter_bam(in_fpath, out_fpath, min_mapq=0, required_flag_tags=None,
-               filtering_flag_tags=None, regions=None):
-    'It filters a BAM file'
-    cmd = ['samtools', 'view', '-bh']
-
-    if min_mapq:
-        cmd.extend(['-q', str(min_mapq)])
-
-    if required_flag_tags:
-        flag = create_flag(required_flag_tags)
-        cmd.extend(['-f', str(flag)])
-
-    if filtering_flag_tags:
-        flag = create_flag(filtering_flag_tags)
-        cmd.extend(['-F', str(flag)])
-
-    cmd.extend(['-o', out_fpath, in_fpath])
-
-    if regions:
-        regions = ['{0}:{1}-{2}'.format(*s) for s in regions.segments]
-        cmd.extend(regions)
-
-    subprocess.check_call(cmd)
+from bam_crumbs.utils.flag import SAM_FLAG_TAGS
+from bam_crumbs.bam_tools import filter_bam
 
 
 def _setup_argparse():
