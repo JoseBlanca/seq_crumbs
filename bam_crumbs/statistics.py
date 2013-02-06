@@ -211,6 +211,24 @@ class CoverageCounter(IntCounter):
                 self[len(column.pileups)] += 1
 
 
+def get_reference_counts_dict(bam_fpaths):
+    'It gets a list of bams and returns a dict indexed by reference'
+    counts = {}
+    for bam_fpath in bam_fpaths:
+        for line in get_reference_counts(bam_fpath):
+            ref_name = line['reference']
+            length = line['length']
+            mapped_reads = line['mapped_reads']
+            unmapped_reads = line['unmapped_reads']
+            if ref_name not in counts:
+                counts[ref_name] = {'mapped_reads': 0, 'unmapped_reads': 0,
+                                    'length': length}
+            assert length == counts[ref_name]['length']
+            counts[ref_name]['mapped_reads'] += mapped_reads
+            counts[ref_name]['unmapped_reads'] += unmapped_reads
+    return counts
+
+
 def get_reference_counts(bam_fpath):
     'Using samtools idxstats it generates dictionaries with read counts'
     for line in pysam.idxstats(bam_fpath):
