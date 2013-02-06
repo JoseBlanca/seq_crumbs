@@ -88,5 +88,5 @@ class StatsTest(unittest.TestCase):
         assert  'reference2' in counts.keys()
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'StatsTest.test_reference_stats']
+    # import sys;sys.argv = ['', 'StatsTest.test_ref_counts']
     unittest.main()

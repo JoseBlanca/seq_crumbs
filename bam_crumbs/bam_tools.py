@@ -8,7 +8,6 @@ import pysam
 
 from bam_crumbs.utils.flag import create_flag
 from bam_crumbs.settings import get_setting
-from bam_crumbs.utils.bin import get_binary_path
 
 # pylint: disable=C0111
 

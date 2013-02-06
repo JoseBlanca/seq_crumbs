@@ -1,12 +1,14 @@
 from __future__ import division
 
+from subprocess import Popen, PIPE
+
 from numpy import histogram, zeros, median, sum
-import pysam
 
 from crumbs.statistics import draw_histogram, IntCounter, LABELS
 
 from bam_crumbs.settings import get_setting
 from bam_crumbs.utils.flag import SAM_FLAG_BINARIES, SAM_FLAGS
+from bam_crumbs.utils.bin import get_binary_path
 
 # pylint: disable=C0111
 
@@ -23,7 +25,7 @@ def count_reads(ref_name, bams, start=None, end=None):
 
 
 class ArrayWrapper(object):
-    'A thin wrapper aroung numpy array to have the same interface as IntCounter'
+    'A thin wrapper around numpy to have the same interface as IntCounter'
     def __init__(self, array, bins=DEFAULT_N_BINS, max_in_distrib=None):
         self.array = array
         self.labels = LABELS.copy()
@@ -231,7 +233,11 @@ def get_reference_counts_dict(bam_fpaths):
 
 def get_reference_counts(bam_fpath):
     'Using samtools idxstats it generates dictionaries with read counts'
-    for line in pysam.idxstats(bam_fpath):
+    cmd = [get_binary_path('samtools'), 'idxstats', bam_fpath]
+    idx_process = Popen(cmd, stdout=PIPE)
+    # we're not using pysam.idxstats here because the stdout differed
+    # depending on how the tests were run
+    for line in idx_process.stdout:
         ref_name, ref_length, mapped_reads, unmapped_reads = line.split()
         if ref_name == '*':
             ref_name = None
