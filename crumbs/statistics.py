@@ -291,7 +291,7 @@ def draw_histogram(bin_limits, counts):
         bins.append((bin_start, bin_end))
 
     limit_fmt_int = '{:>' + str(max_ndigits) + 'd}'
-    limit_fmt_float = '{:>' + str(max_ndigits) + '.3f}'
+    limit_fmt_float = '{:>' + str(max_ndigits) + '.5f}'
     limit_to_padded_str = lambda n: limit_fmt_int.format(n) if isinstance(n, int) else limit_fmt_float.format(n)
 
     count_fmt = '{:>' + str(max_count_ndigits) + 'd}'
