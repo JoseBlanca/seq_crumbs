@@ -2,7 +2,7 @@ from __future__ import division
 
 from subprocess import Popen, PIPE
 
-from numpy import histogram, zeros, median, sum
+from numpy import histogram, zeros, median, sum as np_sum
 
 from crumbs.statistics import draw_histogram, IntCounter, LABELS
 
@@ -58,7 +58,7 @@ class ArrayWrapper(object):
 
     @property
     def sum(self):
-        return sum(self.array)
+        return np_sum(self.array)
 
     def calculate_distribution(self, bins=None, min_=None, max_=None):
         if max_ is None and self._max_in_distrib is not None:
@@ -142,7 +142,7 @@ class ReferenceStats(object):
                         msg = 'The reference lengths do not match in the bams'
                         raise RuntimeError(msg)
             first_bam = False
-        million_reads = sum(nreads) / 1e6
+        million_reads = np_sum(nreads) / 1e6
         nreads /= kb_lengths  # rpks
         nreads /= million_reads  # rpkms
         self._rpkms = ArrayWrapper(nreads, max_in_distrib=self._max_rpkm,
