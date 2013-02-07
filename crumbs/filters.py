@@ -49,7 +49,7 @@ class FilterByFeatureTypes():
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
 
         for seqrec in filterpacket[SEQS_PASSED]:
-            feats_in_seq = [f.type for f in seqrec.features if f in feat_types]
+            feats_in_seq = [f.type for f in seqrec.features if f.type in feat_types]
             passed = True if feats_in_seq else False
             if reverse:
                 passed = not(passed)
