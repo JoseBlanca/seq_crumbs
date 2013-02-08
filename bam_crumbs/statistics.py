@@ -30,11 +30,10 @@ def count_reads(ref_name, bams, start=None, end=None):
 
 class ArrayWrapper(object):
     'A thin wrapper around numpy to have the same interface as IntCounter'
-    def __init__(self, array, bins=DEFAULT_N_BINS, max_in_distrib=None):
+    def __init__(self, array, bins=DEFAULT_N_BINS):
         self.array = array
         self.labels = LABELS.copy()
         self._bins = bins
-        self._max_in_distrib = max_in_distrib
 
     @property
     def min(self):
@@ -65,8 +64,6 @@ class ArrayWrapper(object):
         return np_sum(self.array)
 
     def calculate_distribution(self, bins=None, min_=None, max_=None):
-        if max_ is None and self._max_in_distrib is not None:
-            max_ = self._max_in_distrib
         if min_ is None:
             min_ = self.min
         if max_ is None:
@@ -83,6 +80,9 @@ class ArrayWrapper(object):
         self.labels.update(labels)
 
     def __str__(self):
+        return self.write()
+
+    def write(self, max_in_distrib=None):
         'It writes some basic stats of the values'
         if self.count != 0:
             labels = self.labels
@@ -102,7 +102,7 @@ class ArrayWrapper(object):
             if labels['items'] is not None:
                 text += '{}: {}\n'.format(labels['items'], self.count)
             text += '\n'
-            distrib = self.calculate_distribution(max_=self._max_in_distrib,
+            distrib = self.calculate_distribution(max_=max_in_distrib,
                                                   bins=self._bins)
             text += draw_histogram(distrib['bin_limits'], distrib['counts'])
             return text
@@ -112,10 +112,9 @@ class ArrayWrapper(object):
 class ReferenceStats(object):
     def __init__(self, bams,
                  n_most_abundant_refs=DEFAULT_N_MOST_ABUNDANT_REFERENCES,
-                 bins=DEFAULT_N_BINS, max_rpkm=None):
+                 bins=DEFAULT_N_BINS):
         self._bams = bams
         self._bins = bins
-        self._max_rpkm = max_rpkm
         self._rpkms = None
         self._tot_reads = 0
         self._lengths = None
@@ -157,8 +156,7 @@ class ReferenceStats(object):
 
         million_reads = n_reads / 1e6
         rpks /= million_reads  # rpkms
-        self._rpkms = ArrayWrapper(rpks, max_in_distrib=self._max_rpkm,
-                                   bins=self._bins)
+        self._rpkms = ArrayWrapper(rpks, bins=self._bins)
 
         abundant_refs = BestItemsKeeper(self._n_most_expressed_reads,
                                         izip(references, rpks),
@@ -181,9 +179,12 @@ class ReferenceStats(object):
         return self._most_abundant_refs
 
     def __str__(self):
+        return self.write()
+
+    def write(self, max_rpkm=None):
         result = 'RPKMs\n'
         result += '-----\n'
-        result += str(self.rpkms)
+        result += self.rpkms.write(max_in_distrib=max_rpkm)
         result += '\n'
         result += 'Most represented references\n'
         result += '---------------------------\n'

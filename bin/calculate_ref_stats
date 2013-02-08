@@ -39,6 +39,11 @@ def _setup_argparse():
                         default=get_setting('DEFAULT_N_BINS'),
                         help='number of bins for the distributions')
     parser.add_argument('--max_rpkm', type=float, help='max RPKM')
+    n_abundant_refs = get_setting('DEFAULT_N_MOST_ABUNDANT_REFERENCES')
+    hlp = 'Number of most represented references to print '
+    hlp += '(default: %(default)s)'
+    parser.add_argument('--most_abundant_refs', type=int,
+                        default=n_abundant_refs, help=hlp)
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
     return parser
@@ -52,7 +57,8 @@ def _parse_args(parser):
     out_fhand = getattr(parsed_args, 'outfile')
 
     args = {'out_fhand': out_fhand, 'in_fhands': in_fhands,
-            'max_rpkm': parsed_args.max_rpkm, 'bins': parsed_args.nbins}
+            'max_rpkm': parsed_args.max_rpkm, 'bins': parsed_args.nbins,
+            'n_abundant_refs': parsed_args.most_abundant_refs}
     return args, parsed_args
 
 
@@ -65,8 +71,9 @@ def run():
     out_fhand = args['out_fhand']
 
     bams = [pysam.Samfile(f.name) for f in in_fhands]
-    stats = ReferenceStats(bams, max_rpkm=args['max_rpkm'], bins=args['bins'])
-    out_fhand.write(str(stats))
+    stats = ReferenceStats(bams, bins=args['bins'],
+                           n_most_abundant_refs=args['n_abundant_refs'])
+    out_fhand.write(stats.write(max_rpkm=args['max_rpkm'],))
     out_fhand.close()
 
 if __name__ == '__main__':
