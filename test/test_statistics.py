@@ -386,8 +386,6 @@ class BestItemsKeeperTest(unittest.TestCase):
         best_items.update(items)
         assert best_items == [[5], [4], [3], [2], [1]]
 
-
-
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'CalculateStatsTest.test_stats_bin']
     unittest.main()
