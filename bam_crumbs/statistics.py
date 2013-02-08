@@ -164,7 +164,7 @@ class ReferenceStats(object):
                                         izip(references, rpks),
                                         key=itemgetter(1))
         abundant_refs = [{'reference': i[0], 'rpkm': i[1] / million_reads} for i in abundant_refs]
-        self._most_abundant_refs = abundant_refs 
+        self._most_abundant_refs = abundant_refs
 
         self._lengths = length_counts
 
