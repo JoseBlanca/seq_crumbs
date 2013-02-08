@@ -42,8 +42,9 @@ class StatsTest(unittest.TestCase):
         assert list(rpkms.calculate_distribution()['counts'])[0] == 1
         assert 'minimum:' in str(rpkms)
         assert 'Most represented' in str(refstats)
-
+        
         refstats = ReferenceStats([bam, bam])
+        assert len(set([i['reference'] for i in refstats.most_abundant_refs])) == 2
         assert refstats.rpkms.max - 600240.1 < 0.1
 
     def test_ref_stats_bin(self):

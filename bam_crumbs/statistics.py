@@ -2,6 +2,7 @@ from __future__ import division
 
 from subprocess import Popen, PIPE
 from operator import itemgetter
+from itertools import izip
 
 from numpy import histogram, zeros, median, sum as np_sum
 
@@ -125,10 +126,8 @@ class ReferenceStats(object):
     def _count_reads(self):
         nreferences = self._bams[0].nreferences
         rpks = zeros(nreferences)
-        kb_lengths = zeros(nreferences)
+        references = []
         length_counts = IntCounter()
-        most_expressed_reads = BestItemsKeeper(self._n_most_expressed_reads,
-                                               key=itemgetter(1))
 
         first_bam = True
         n_reads = 0
@@ -143,28 +142,29 @@ class ReferenceStats(object):
                     continue
                 kb_len = count['length'] / 1000
                 rpk = count['mapped_reads'] / kb_len
-                rpks[index] = rpk
-                most_expressed_reads.add((count['reference'], rpk))
+                rpks[index] += rpk
                 if first_bam:
                     # For the reference lengths we use the first BAM to make
-                    kb_lengths[index] = kb_len
+                    references.append(count['reference'])
                     length_counts[count['length']] += 1
                 else:
                     # the bams should be sorted with the references in the same
                     # order
-                    if kb_lengths[index] != kb_len:
+                    if references[index] != count['reference']:
                         msg = 'The reference lengths do not match in the bams'
                         raise RuntimeError(msg)
             first_bam = False
-        del kb_lengths  # it's only used to check the bams
 
         million_reads = n_reads / 1e6
         rpks /= million_reads  # rpkms
         self._rpkms = ArrayWrapper(rpks, max_in_distrib=self._max_rpkm,
                                    bins=self._bins)
 
+        most_expressed_reads = BestItemsKeeper(self._n_most_expressed_reads,
+                                               izip(references, rpks),
+                                               key=itemgetter(1))
         abundant_refs = [{'reference': i[0], 'rpkm': i[1] / million_reads} for i in most_expressed_reads]
-        self._most_abundant_refs = abundant_refs
+        self._most_abundant_refs = abundant_refs 
 
         self._lengths = length_counts
 
@@ -187,7 +187,7 @@ class ReferenceStats(object):
         result += '\n'
         result += 'Most represented references\n'
         result += '---------------------------\n'
-        result += '\n'.join(['{reference:s}: {rpkm:.5f}\n'.format(**r) for r in self.most_abundant_refs])
+        result += ''.join(['{reference:s}: {rpkm:.5f}\n'.format(**r) for r in self.most_abundant_refs])
         result += '\n'
         result += 'Lengths\n'
         result += '-----\n'
