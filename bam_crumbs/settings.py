@@ -32,6 +32,7 @@ _PICARD_TOOLS_DIR = os.path.join(_THIRD_PART_JAVA_DIR, 'picard-tools')
 _TEMP_DIR = None
 
 _DEFAULT_N_BINS = 80
+_DEFAULT_N_MOST_ABUNDANT_REFERENCES = 20
 
 
 class _Settings(dict):

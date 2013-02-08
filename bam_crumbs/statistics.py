@@ -1,10 +1,12 @@
 from __future__ import division
 
 from subprocess import Popen, PIPE
+from operator import itemgetter
 
 from numpy import histogram, zeros, median, sum as np_sum
 
-from crumbs.statistics import draw_histogram, IntCounter, LABELS
+from crumbs.statistics import (draw_histogram, IntCounter, LABELS,
+                               BestItemsKeeper)
 
 from bam_crumbs.settings import get_setting
 from bam_crumbs.utils.flag import SAM_FLAG_BINARIES, SAM_FLAGS
@@ -14,6 +16,7 @@ from bam_crumbs.utils.bin import get_binary_path
 
 
 DEFAULT_N_BINS = get_setting('DEFAULT_N_BINS')
+DEFAULT_N_MOST_ABUNDANT_REFERENCES = get_setting('DEFAULT_N_MOST_ABUNDANT_REFERENCES')
 
 
 def count_reads(ref_name, bams, start=None, end=None):
@@ -106,33 +109,42 @@ class ArrayWrapper(object):
 
 
 class ReferenceStats(object):
-    def __init__(self, bams, max_rpkm=None, bins=DEFAULT_N_BINS):
+    def __init__(self, bams,
+                 n_most_abundant_refs=DEFAULT_N_MOST_ABUNDANT_REFERENCES,
+                 bins=DEFAULT_N_BINS, max_rpkm=None):
         self._bams = bams
         self._bins = bins
         self._max_rpkm = max_rpkm
         self._rpkms = None
         self._tot_reads = 0
         self._lengths = None
+        self._n_most_expressed_reads = n_most_abundant_refs
+        self._most_abundant_refs = None
         self._count_reads()
 
     def _count_reads(self):
         nreferences = self._bams[0].nreferences
-        nreads = zeros(nreferences)
+        rpks = zeros(nreferences)
         kb_lengths = zeros(nreferences)
         length_counts = IntCounter()
+        most_expressed_reads = BestItemsKeeper(self._n_most_expressed_reads,
+                                               key=itemgetter(1))
+
         first_bam = True
-        n_unmapped_reads = 0
+        n_reads = 0
         for bam in self._bams:
             if bam.nreferences != nreferences:
                 msg = 'BAM files should have the same references'
                 raise ValueError(msg)
             for index, count in enumerate(get_reference_counts(bam.filename)):
+                n_reads += count['unmapped_reads'] + count['mapped_reads']
                 if count['reference'] is None:
                     # some non-mapped reads have reference = None
                     continue
-                nreads[index] = count['mapped_reads']
-                n_unmapped_reads += count['unmapped_reads']
                 kb_len = count['length'] / 1000
+                rpk = count['mapped_reads'] / kb_len
+                rpks[index] = rpk
+                most_expressed_reads.add((count['reference'], rpk))
                 if first_bam:
                     # For the reference lengths we use the first BAM to make
                     kb_lengths[index] = kb_len
@@ -144,11 +156,16 @@ class ReferenceStats(object):
                         msg = 'The reference lengths do not match in the bams'
                         raise RuntimeError(msg)
             first_bam = False
-        million_reads = (np_sum(nreads) + n_unmapped_reads) / 1e6
-        nreads /= kb_lengths  # rpks
-        nreads /= million_reads  # rpkms
-        self._rpkms = ArrayWrapper(nreads, max_in_distrib=self._max_rpkm,
+        del kb_lengths  # it's only used to check the bams
+
+        million_reads = n_reads / 1e6
+        rpks /= million_reads  # rpkms
+        self._rpkms = ArrayWrapper(rpks, max_in_distrib=self._max_rpkm,
                                    bins=self._bins)
+
+        abundant_refs = [{'reference': i[0], 'rpkm': i[1] / million_reads} for i in most_expressed_reads]
+        self._most_abundant_refs = abundant_refs
+
         self._lengths = length_counts
 
     @property
@@ -159,10 +176,18 @@ class ReferenceStats(object):
     def rpkms(self):
         return self._rpkms
 
+    @property
+    def most_abundant_refs(self):
+        return self._most_abundant_refs
+
     def __str__(self):
         result = 'RPKMs\n'
         result += '-----\n'
         result += str(self.rpkms)
+        result += '\n'
+        result += 'Most represented references\n'
+        result += '---------------------------\n'
+        result += '\n'.join(['{reference:s}: {rpkm:.5f}\n'.format(**r) for r in self.most_abundant_refs])
         result += '\n'
         result += 'Lengths\n'
         result += '-----\n'

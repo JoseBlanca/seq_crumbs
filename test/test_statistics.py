@@ -9,7 +9,8 @@ from bam_crumbs.utils.test import TEST_DATA_DIR
 from bam_crumbs.utils.bin import BIN_DIR
 from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
                                    CoverageCounter, _flag_to_binary,
-    get_reference_counts, get_reference_counts_dict)
+                                   get_reference_counts,
+                                   get_reference_counts_dict)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -28,7 +29,7 @@ class StatsTest(unittest.TestCase):
     def test_reference_stats(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         bam = pysam.Samfile(bam_fpath)
-        refstats = ReferenceStats([bam])
+        refstats = ReferenceStats([bam], n_most_abundant_refs=1)
         rpkms = refstats.rpkms
         assert rpkms.min - 291715.28 < 0.1
         assert rpkms.max - 600240.1 < 0.1
@@ -37,8 +38,10 @@ class StatsTest(unittest.TestCase):
         assert rpkms.variance - 23796889620.7 < 0.1
         assert rpkms.count == 2
         assert rpkms.sum - 891955.38 < 0.1
+        assert refstats.most_abundant_refs[0]['reference'] == 'reference1'
         assert list(rpkms.calculate_distribution()['counts'])[0] == 1
         assert 'minimum:' in str(rpkms)
+        assert 'Most represented' in str(refstats)
 
         refstats = ReferenceStats([bam, bam])
         assert refstats.rpkms.max - 600240.1 < 0.1
