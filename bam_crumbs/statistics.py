@@ -160,10 +160,10 @@ class ReferenceStats(object):
         self._rpkms = ArrayWrapper(rpks, max_in_distrib=self._max_rpkm,
                                    bins=self._bins)
 
-        most_expressed_reads = BestItemsKeeper(self._n_most_expressed_reads,
-                                               izip(references, rpks),
-                                               key=itemgetter(1))
-        abundant_refs = [{'reference': i[0], 'rpkm': i[1] / million_reads} for i in most_expressed_reads]
+        abundant_refs = BestItemsKeeper(self._n_most_expressed_reads,
+                                        izip(references, rpks),
+                                        key=itemgetter(1))
+        abundant_refs = [{'reference': i[0], 'rpkm': i[1] / million_reads} for i in abundant_refs]
         self._most_abundant_refs = abundant_refs 
 
         self._lengths = length_counts
