@@ -44,7 +44,10 @@ class StatsTest(unittest.TestCase):
         assert 'Most represented' in str(refstats)
 
         refstats = ReferenceStats([bam, bam])
-        assert len(set([i['reference'] for i in refstats.most_abundant_refs])) == 2
+        n_max_expressed = len(set([i['reference'] for i in refstats.most_abundant_refs])) 
+        assert n_max_expressed == 2
+        max_rpkm = refstats.most_abundant_refs[0]['rpkm']
+        assert max_rpkm - refstats.rpkms.max < 0.1
         assert refstats.rpkms.max - 600240.1 < 0.1
 
     def test_ref_stats_bin(self):
