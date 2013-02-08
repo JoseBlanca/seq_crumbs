@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=C0111
+
 from __future__ import division
 from collections import Counter
 import operator
@@ -731,3 +733,76 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
             'qual_boxplot': qual_boxplot,
             'kmer': kmer_str,
             'dustscore': dust_str}
+
+
+class BestItemsKeeper(object):
+    '''It keeps a sorted list with the best items added.
+
+    The interface is similar to a list, but with add and update
+    '''
+    def __init__(self, num_items, initializer=None, key=None, reverse=False):
+        '''The initiator
+
+        num_items: The number of items to keep (int)
+        initializer: An iterator to initiate the list of best items
+        key: Analogous to the key in sorted
+        '''
+        self._num_items = num_items
+        if key is None:
+            key = lambda x: x
+        self._key = key
+        self._best_items = []
+        self._best0_key = None
+        self._reverse = reverse
+        if initializer is not None:
+            self.update(initializer)
+
+    def add(self, item):
+        best = self._best_items
+        key = self._key
+
+        if len(best) >= self._num_items:
+            remove_first_item = self._best0_key < key(item)
+            if self._reverse:
+                remove_first_item = not(remove_first_item)
+            if remove_first_item:
+                best.pop(0)
+            else:
+                return
+        self._insort(item)
+
+    def update(self, items):
+        for item in items:
+            self.add(item)
+
+    def _insort(self, item):
+        'Insert item inside the sorted list.'
+
+        items = self._best_items
+        key = self._key
+        reverse = self._reverse
+        # range in which to look for the insertion place
+        low, high = 0, len(items)
+
+        item_val = key(item)
+
+        while low < high:
+            mid = (low + high) // 2
+            insert = item_val < key(items[mid])
+            if reverse:
+                insert = not(insert)
+            if insert:
+                high = mid
+            else:
+                low = mid + 1
+        items.insert(low, item)
+        self._best0_key = key(items[0])
+
+    def __getitem__(self, index):
+        return self._best_items[index]
+
+    def __eq__(self, other):
+        return self._best_items == other
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
