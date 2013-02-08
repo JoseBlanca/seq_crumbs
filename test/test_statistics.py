@@ -369,6 +369,10 @@ class BestItemsKeeperTest(unittest.TestCase):
         assert [6, 7, 8, 9, 10] == best_items
         assert best_items[0] == 6
         assert best_items[:1] == [6]
+        best_items.add(6)
+        assert best_items == [6, 7, 8, 9, 10]
+
+        best_items.add(6)
 
         items = [[i] for i in range(1, 10)]
         key = lambda x: -(x[0])
@@ -381,6 +385,8 @@ class BestItemsKeeperTest(unittest.TestCase):
         best_items = BestItemsKeeper(5, key=key, reverse=True)
         best_items.update(items)
         assert best_items == [[5], [4], [3], [2], [1]]
+
+
 
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'CalculateStatsTest.test_stats_bin']
