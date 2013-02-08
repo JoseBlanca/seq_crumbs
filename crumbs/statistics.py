@@ -762,11 +762,11 @@ class BestItemsKeeper(object):
         key = self._key
 
         if len(best) >= self._num_items:
-            remove_first_item = self._best0_key < key(item)
+            remove_last_item = self._best0_key < key(item)
             if self._reverse:
-                remove_first_item = not(remove_first_item)
-            if remove_first_item:
-                best.pop(0)
+                remove_last_item = not(remove_last_item)
+            if remove_last_item:
+                best.pop()
             else:
                 return
         self._insort(item)
@@ -788,7 +788,7 @@ class BestItemsKeeper(object):
 
         while low < high:
             mid = (low + high) // 2
-            insert = item_val < key(items[mid])
+            insert = item_val > key(items[mid])
             if reverse:
                 insert = not(insert)
             if insert:
@@ -806,3 +806,6 @@ class BestItemsKeeper(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __str__(self):
+        return str(self._best_items)

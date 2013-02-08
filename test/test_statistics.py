@@ -363,14 +363,14 @@ class BestItemsKeeperTest(unittest.TestCase):
     def test_best_items(self):
         items = reversed(range(1, 10))
         best_items = BestItemsKeeper(5, items)
-        assert best_items == [5, 6, 7, 8, 9]
+        assert best_items == [9, 8, 7, 6, 5]
         best_items.add(10)
-        assert best_items == [6, 7, 8, 9, 10]
-        assert [6, 7, 8, 9, 10] == best_items
-        assert best_items[0] == 6
-        assert best_items[:1] == [6]
+        assert best_items == [10, 9, 8, 7, 6]
+        assert [10, 9, 8, 7, 6] == best_items
+        assert best_items[-1] == 6
+        assert best_items[:1] == [10]
         best_items.add(6)
-        assert best_items == [6, 7, 8, 9, 10]
+        assert best_items == [10, 9, 8, 7, 6]
 
         best_items.add(6)
 
@@ -378,13 +378,13 @@ class BestItemsKeeperTest(unittest.TestCase):
         key = lambda x: -(x[0])
         best_items = BestItemsKeeper(5, key=key)
         best_items.update(items)
-        assert best_items == [[5], [4], [3], [2], [1]]
+        assert best_items == [[1], [2], [3], [4], [5]]
 
         items = [[i] for i in range(1, 10)]
         key = lambda x: x[0]
         best_items = BestItemsKeeper(5, key=key, reverse=True)
         best_items.update(items)
-        assert best_items == [[5], [4], [3], [2], [1]]
+        assert best_items == [[1], [2], [3], [4], [5]]
 
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'CalculateStatsTest.test_stats_bin']
