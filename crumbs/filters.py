@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=C0111
+
 from __future__ import division
 
 from crumbs.utils.tags import SEQS_PASSED, SEQS_FILTERED_OUT
@@ -30,7 +32,7 @@ def seq_to_filterpackets(seq_packets):
 
 
 class FilterByFeatureTypes():
-    'It filters out sequences not annotated witith the given feature types'
+    'It filters out sequences not annotated with the given feature types'
     def __init__(self, feature_types, reverse=False):
         '''The initiator
 
@@ -47,7 +49,7 @@ class FilterByFeatureTypes():
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
 
         for seqrec in filterpacket[SEQS_PASSED]:
-            feats_in_seq = [f.type for f in seqrec.features if f in feat_types]
+            feats_in_seq = [f.type for f in seqrec.features if f.type in feat_types]
             passed = True if feats_in_seq else False
             if reverse:
                 passed = not(passed)
@@ -59,16 +61,23 @@ class FilterByFeatureTypes():
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
-class FilterByReadCount(object):
-    def __init__(self, read_counts, min_rpkms, reverse=False):
+class FilterByRpkm(object):
+    def __init__(self, read_counts, min_rpkm, reverse=False):
+        '''The init
+
+        read_counts its a dict:
+            - keys are the sequence names
+            - values should be dicts with length, mapped_reads and
+            unmmapped_reads, counts
+        '''
         self._read_counts = read_counts
-        self._min_rpkms = min_rpkms
+        self._min_rpkm = min_rpkm
         self._total_reads = sum([v['mapped_reads'] + v['unmapped_reads'] for v in read_counts.values()])
         self._reverse = reverse
 
     def __call__(self, filterpacket):
         read_counts = self._read_counts
-        min_rpkms = self._min_rpkms
+        min_rpkm = self._min_rpkm
         total_reads = self._total_reads
         reverse = self._reverse
 
@@ -77,13 +86,11 @@ class FilterByReadCount(object):
         for seqrecord in filterpacket[SEQS_PASSED]:
             count = read_counts[seqrecord.id]
             kb_len = count['length'] / 1000
-            num_reads = count['mapped_reads'] + count['unmapped_reads']
 
             million_reads = total_reads / 1e6
-            rpks = num_reads / kb_len  # rpks
-            rpkms = rpks / million_reads  # rpkms
-
-            passed = True if rpkms > min_rpkms else False
+            rpk = count['mapped_reads'] / kb_len  # rpks
+            rpkm = rpk / million_reads  # rpkms
+            passed = True if rpkm >= min_rpkm else False
             if reverse:
                 passed = not(passed)
 

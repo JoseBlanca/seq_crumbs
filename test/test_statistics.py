@@ -15,6 +15,8 @@
 
 # pylint: disable=R0201
 # pylint: disable=R0904
+# pylint: disable=C0111
+
 from os.path import join
 import unittest
 from subprocess import check_output
@@ -27,7 +29,7 @@ from Bio.Seq import Seq
 from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                calculate_sequence_stats, NuclFreqsPlot,
                                KmerCounter, calculate_dust_score,
-                               calculate_nx)
+                               calculate_nx, BestItemsKeeper)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqrecords
@@ -355,6 +357,34 @@ class BaseFreqPlotTest(unittest.TestCase):
 
         ascii = plot.ascii_plot
         assert '0 (A: 0.43, C: 0.14, G: 0.00, T: 0.43, N: 0.00) | aaa' in ascii
+
+
+class BestItemsKeeperTest(unittest.TestCase):
+    def test_best_items(self):
+        items = reversed(range(1, 10))
+        best_items = BestItemsKeeper(5, items)
+        assert best_items == [9, 8, 7, 6, 5]
+        best_items.add(10)
+        assert best_items == [10, 9, 8, 7, 6]
+        assert [10, 9, 8, 7, 6] == best_items
+        assert best_items[-1] == 6
+        assert best_items[:1] == [10]
+        best_items.add(6)
+        assert best_items == [10, 9, 8, 7, 6]
+
+        best_items.add(6)
+
+        items = [[i] for i in range(1, 10)]
+        key = lambda x: -(x[0])
+        best_items = BestItemsKeeper(5, key=key)
+        best_items.update(items)
+        assert best_items == [[1], [2], [3], [4], [5]]
+
+        items = [[i] for i in range(1, 10)]
+        key = lambda x: x[0]
+        best_items = BestItemsKeeper(5, key=key, reverse=True)
+        best_items.update(items)
+        assert best_items == [[1], [2], [3], [4], [5]]
 
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'CalculateStatsTest.test_stats_bin']

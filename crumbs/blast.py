@@ -73,12 +73,11 @@ def _blastdb_exists(dbpath, dbtype=None):
     'It checks if a a blast db exists giving its path'
     assert dbtype in (NUCL, PROT, None)
     if dbtype == NUCL:
-        exts = ['.nin']
+        exts = ['.nin', '.00.nin']
     elif dbtype == PROT:
-        exts = ['.pin']
+        exts = ['.pin', '.00.pin']
     else:
-        exts = ['.nin', '.pin']
-
+        exts = ['.nin', '.pin', '.00.nin', '.00.pin']
     return any([os.path.exists(dbpath + ext) for ext in exts])
 
 

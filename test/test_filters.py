@@ -15,9 +15,11 @@
 
 # pylint: disable=R0201
 # pylint: disable=R0904
+# pylint: disable=W0402
+# pylint: disable=C0111
 
 import unittest
-# pylint: disable=W0402
+
 from string import ascii_lowercase
 from random import choice
 from subprocess import check_output, call, CalledProcessError
@@ -29,7 +31,7 @@ from Bio.Seq import Seq
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
-                            seq_to_filterpackets, FilterByReadCount)
+                            seq_to_filterpackets, FilterByRpkm)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL, SEQS_FILTERED_OUT, SEQS_PASSED
@@ -381,24 +383,28 @@ class ComplexityFilterTest(unittest.TestCase):
         assert '>s2\n' in result
 
 
-class ReadCountFIlterTest(unittest.TestCase):
+class RpkmFilterTest(unittest.TestCase):
     def test_filter_by_read_count(self):
-        seq1 = 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAAAAAAAAAAAAAAAAAAAAAAAAA'
-        seq2 = 'CATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGCTAGCTAGTT'
+        seq1 = 'T' * 1000
+        seq2 = 'A' * 1000
         seqs = {SEQS_PASSED: [SeqRecord(Seq(seq1), id='seq1'),
                               SeqRecord(Seq(seq2), id='seq2')],
                 SEQS_FILTERED_OUT: []}
-        read_counts = {'seq1': {'mapped_reads': 1000000000,
-                                'unmapped_reads': 1000000000,
+        read_counts = {'seq1': {'mapped_reads': 10,
+                                'unmapped_reads': 999989,
                                 'length': len(seq1)},
-                       'seq2': {'mapped_reads': 100, 'unmapped_reads': 100,
+                       'seq2': {'mapped_reads': 1, 'unmapped_reads': 0,
                                 'length': len(seq1)}}
-        filter_ = FilterByReadCount(read_counts, 1000)
+        filter_ = FilterByRpkm(read_counts, 2)
         seqs2 = filter_(seqs)
         assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq2'
         assert seqs2[SEQS_PASSED][0].id == 'seq1'
 
-        filter_ = FilterByReadCount(read_counts, 1000, reverse=True)
+        filter_ = FilterByRpkm(read_counts, 1)
+        seqs2 = filter_(seqs)
+        assert not seqs2[SEQS_FILTERED_OUT]
+
+        filter_ = FilterByRpkm(read_counts, 2, reverse=True)
         seqs2 = filter_(seqs)
         assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq1'
         assert seqs2[SEQS_PASSED][0].id == 'seq2'
