@@ -211,7 +211,7 @@ class PolyaAnnotator(object):
 
 
 class BlastAnnotator(object):
-    'It guess the direction of the seq using blast'
+    'It annotates using blast'
     def __init__(self, blastdb, program, dbtype=None, filters=None,
                  params=None):
         'Initializes the class'

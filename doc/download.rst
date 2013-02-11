@@ -4,6 +4,22 @@ Download
 
 The recommended method to get seq_crumbs is to download one of the releases, but if you want to access to the latest code you can do it at github_.
 
+seq_crumbs 0.1.7
+----------------
+
+Changelog:
+
+  * Performance gains in pair related binaries and cat_seqs, sample_seqs and seq_heads
+  * Output format will be the same as input format, except for convert_format
+  * new binary: fastqual_to_fastq
+  * several bugfixes
+
+
+Released on 10-2-13
+
+  * :download:`Source distribution <downloads/seq_crumbs-0.1.7.tar.gz>`.
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.7-x64-linux.tar.gz>`
+
 seq_crumbs 0.1.6
 ----------------
 
