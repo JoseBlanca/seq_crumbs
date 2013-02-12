@@ -20,7 +20,7 @@ from crumbs.utils.bin_utils import (main, create_basic_parallel_argparse,
                                     parse_basic_parallel_args)
 from crumbs.transcript_orientations import TranscriptOrientator
 from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.seqio import write_seq_packets, read_seq_packets
+from crumbs.seqio import write_seqrecord_packets, read_seqrecord_packets
 from crumbs.settings import get_setting
 
 
@@ -96,16 +96,18 @@ def orientate_transcripts():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    seqrecord_packets = read_seqrecord_packets(in_fhands,
+                                               file_format=args['in_format'])
     polya_params = args['polya_params']
     estscan_params = args['estscan_params']
     blast_params = args['blast_params']
     orientator = TranscriptOrientator(polya_params, estscan_params,
                                       blast_params)
 
-    seq_packets, workers = process_seq_packets(seq_packets, [orientator],
-                                               processes=args['processes'])
-    write_seq_packets(out_fhand, seq_packets, args['out_format'],
+    seqrecord_packets, workers = process_seq_packets(seqrecord_packets,
+                                                     [orientator],
+                                                   processes=args['processes'])
+    write_seqrecord_packets(out_fhand, seqrecord_packets, args['out_format'],
                       workers=workers)
 
 if __name__ == '__main__':

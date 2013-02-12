@@ -26,7 +26,7 @@ from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality, TrimWithBlastShort)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS, VECTOR
-from crumbs.seqio import read_seq_packets
+from crumbs.seqio import read_seqrecord_packets
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
@@ -328,7 +328,7 @@ class TrimBlastShortTest(unittest.TestCase):
 
         blast_trim = TrimWithBlastShort(oligos=adaptors)
         fhand = StringIO(FASTQ4)
-        seq_packets = list(read_seq_packets([fhand]))
+        seq_packets = list(read_seqrecord_packets([fhand]))
         # It should trim the first and the second reads.
         res = [s.annotations.get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
                                            for s in blast_trim(seq_packets[0])]

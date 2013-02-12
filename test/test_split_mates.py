@@ -29,7 +29,8 @@ from Bio.Seq import Seq
 
 from crumbs.split_mates import MatePairSplitter
 from crumbs.settings import get_setting
-from crumbs.seqio import read_seq_packets, write_seq_packets, read_seqrecords
+from crumbs.seqio import (read_seqrecord_packets, write_seqrecord_packets,
+                          read_seqrecords)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.seq_utils import process_seq_packets
@@ -150,11 +151,11 @@ class MateSplitterTest(unittest.TestCase):
 
         splitter = MatePairSplitter()
         new_seqs = []
-        for packet in read_seq_packets([mate_fhand], 2):
+        for packet in read_seqrecord_packets([mate_fhand], 2):
             new_seqs.append(splitter(packet))
 
         out_fhand = StringIO()
-        write_seq_packets(out_fhand, new_seqs, file_format='fasta')
+        write_seqrecord_packets(out_fhand, new_seqs, file_format='fasta')
 
         result = out_fhand.getvalue()
         xpect = r'>seq1\1'
@@ -195,7 +196,7 @@ class MateSplitterTest(unittest.TestCase):
 
         splitter = MatePairSplitter(linkers=linkers)
         new_seqs = []
-        for packet in read_seq_packets([open(seq_fpath)], 2):
+        for packet in read_seqrecord_packets([open(seq_fpath)], 2):
             new_seqs.extend(splitter(packet))
         seq_names = [seq.name for seq in new_seqs]
         assert 'G109AZL01BJHT8\\1' in seq_names
@@ -208,7 +209,7 @@ class MateSplitterTest(unittest.TestCase):
         linkers = list(read_seqrecords([open(linker_fpath)]))
 
         splitter = MatePairSplitter(linkers=linkers)
-        seq_packets = read_seq_packets([open(seq_fpath)], 2)
+        seq_packets = read_seqrecord_packets([open(seq_fpath)], 2)
         seq_packets = process_seq_packets(seq_packets, [splitter])[0]
 
         new_seqs = [seq for l in list(seq_packets) for seq in l]
@@ -224,7 +225,7 @@ class MateSplitterTest(unittest.TestCase):
 
         splitter = MatePairSplitter(linkers=linkers)
         new_seqs = []
-        for packet in read_seq_packets([open(seq_fpath)], 2):
+        for packet in read_seqrecord_packets([open(seq_fpath)], 2):
             new_seqs.extend(splitter(packet))
         seq_names = [seq.name for seq in new_seqs]
         assert 'G109AZL01D8U3X\\1' in seq_names
@@ -237,7 +238,7 @@ class MateSplitterTest(unittest.TestCase):
         linkers = list(read_seqrecords([open(linker_fpath)]))
 
         splitter = MatePairSplitter(linkers=linkers)
-        seq_packets = read_seq_packets([open(seq_fpath)], 2)
+        seq_packets = read_seqrecord_packets([open(seq_fpath)], 2)
         seq_packets = process_seq_packets(seq_packets, [splitter])[0]
 
         new_seqs = [seq for l in list(seq_packets) for seq in l]

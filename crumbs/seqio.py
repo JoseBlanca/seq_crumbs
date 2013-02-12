@@ -35,7 +35,7 @@ from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
 from crumbs.settings import get_setting
 
 
-def clean_seq_stream(seqs):
+def clean_seqrecord_stream(seqs):
     'It removes the empty seqs and fixes the descriptions.'
     for seq in seqs:
         if seq and str(seq.seq):
@@ -50,12 +50,13 @@ def write_seqrecords(seqs, fhand=None, file_format='fastq'):
 
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
-    seqs = clean_seq_stream(seqs)
+    seqs = clean_seqrecord_stream(seqs)
     SeqIO.write(seqs, fhand, file_format)
     return fhand
 
 
-def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
+def write_seqrecord_packets(fhand, seq_packets, file_format='fastq',
+                            workers=None):
     'It writes to file a stream of SeqRecord lists'
     try:
         write_seqrecords(chain.from_iterable(seq_packets), fhand,
@@ -73,7 +74,7 @@ def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
 
     if filtered_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
-        return write_seq_packets(fhand=passed_fhand, seq_packets=seq_packets,
+        return write_seqrecord_packets(fhand=passed_fhand, seq_packets=seq_packets,
                                  file_format=file_format, workers=workers)
     for packet in filter_packets:
         try:
@@ -102,7 +103,7 @@ def title2ids(title):
     return id_, name, desc
 
 
-def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'),
+def read_seqrecord_packets(fhands, size=get_setting('PACKET_SIZE'),
                      file_format=GUESS_FORMAT):
     '''It yields SeqRecords in packets of the given size.'''
     seqs = read_seqrecords(fhands, file_format=file_format)

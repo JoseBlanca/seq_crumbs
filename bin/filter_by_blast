@@ -19,7 +19,7 @@ import sys
 
 from crumbs.utils.bin_utils import (main, parse_filter_args,
                                     create_filter_argparse)
-from crumbs.seqio import read_seq_packets, write_filter_packets
+from crumbs.seqio import read_seqrecord_packets, write_filter_packets
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.filters import FilterBlastMatch, seq_to_filterpackets
 
@@ -97,8 +97,9 @@ def filter_by_blast():
     passed_fhand = args['out_fhand']
     filtered_fhand = args['filtered_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
-    filter_packets = seq_to_filterpackets(seq_packets)
+    seqrecord_packets = read_seqrecord_packets(in_fhands,
+                                               file_format=args['in_format'])
+    filter_packets = seq_to_filterpackets(seqrecord_packets)
 
     database = args['blastdb']
     program = args['blast_program']
