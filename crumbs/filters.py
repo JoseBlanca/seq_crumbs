@@ -25,9 +25,10 @@ except ImportError:
     # This is an optional requirement
     pass
 
-from crumbs.utils.tags import SEQS_PASSED, SEQS_FILTERED_OUT
+from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
+                               SEQRECORD)
 from crumbs.utils.seq_utils import (uppercase_length, get_uppercase_segments,
-                                    get_name)
+                                    get_name, get_file_format)
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
@@ -295,21 +296,51 @@ class FilterBowtie2Match(object):
         self.min_mapq = min_mapq
 
     def __call__(self, filterpacket):
-        seqs_passed = []
         reverse = self._reverse
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        seqs = filterpacket[SEQS_PASSED]
+
         index_fpath = self._index_fpath
         get_or_create_bowtie2_index(index_fpath)
-        bam_fhand = NamedTemporaryFile(suffix='.bam')
-        reads_fhand = NamedTemporaryFile(suffix='.fastq')
-        write_seqs(seqs, reads_fhand, file_format='fastq')
+
+        seqs = filterpacket[SEQS_PASSED]
+
+        seq_class = seqs[0].kind
+        extra_params = []
+        if seq_class == SEQRECORD:
+            if 'phred_quality' in seqs[0].object.letter_annotations.viewkeys():
+                file_format = 'fastq'
+            else:
+                extra_params.append('-f')
+                file_format = 'fasta'
+        elif seq_class == SEQITEM:
+            file_format = get_file_format(seqs[0])
+            if 'illumina' in file_format:
+                extra_params.append('--phred64')
+            elif 'fasta' in file_format:
+                extra_params.append('-f')
+            elif 'fastq' in file_format:
+                pass
+            else:
+                msg = 'For FilterBowtie2Match and SeqItems fastq or fasta '
+                msg += 'files are required'
+                raise RuntimeError(msg)
+        else:
+            raise NotImplementedError()
+
+        reads_fhand = NamedTemporaryFile(suffix=file_format)
+        write_seqs(seqs, reads_fhand, file_format=file_format)
         reads_fhand.flush()
+
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
         map_with_bowtie2(index_fpath, bam_fhand.name,
-                         unpaired_fpaths=[reads_fhand.name])
+                         unpaired_fpaths=[reads_fhand.name],
+                         extra_params=extra_params)
+
         index_bam(bam_fhand.name)
         mapped_reads = _get_mapped_reads(bam_fhand.name, self.min_mapq)
         os.remove(bam_fhand.name + '.bai')
+
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
 
         for seq in seqs:
             passed = False if get_name(seq) in mapped_reads else True

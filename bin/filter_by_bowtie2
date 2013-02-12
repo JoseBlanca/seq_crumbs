@@ -22,7 +22,6 @@ from crumbs.utils.bin_utils import (main, parse_filter_args,
 from crumbs.seqio import write_filter_packets, read_seq_packets
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.filters import seq_to_filterpackets, FilterBowtie2Match
-from crumbs.utils.tags import SEQITEM
 from crumbs.mapping import get_or_create_bowtie2_index
 from crumbs.settings import get_setting
 
@@ -37,7 +36,6 @@ def _setup_argparse():
     parser.add_argument('-m', '--min_mapq',
                         default=get_setting('DEFAULT_MIN_MAPQ'),
                         help=hlp)
-
     return parser
 
 
@@ -64,6 +62,7 @@ def filter_by_bowtie2():
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
                                    size=get_setting('PACKET_SIZE') * 100)
+
     filter_packets = seq_to_filterpackets(seq_packets)
     index_ = get_or_create_bowtie2_index(args['index'])
     filter_by_bowtie2 = FilterBowtie2Match(index_, min_mapq=args['min_mapq'],

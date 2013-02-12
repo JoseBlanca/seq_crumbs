@@ -305,3 +305,13 @@ def get_name(seq):
     elif seq_class == SEQRECORD:
         name = seq.id
     return name
+
+
+def get_file_format(seq):
+    seq_class = seq.kind
+
+    if seq_class == SEQITEM:
+        fmt = seq.file_format
+    elif seq_class == SEQRECORD:
+        fmt = None
+    return fmt

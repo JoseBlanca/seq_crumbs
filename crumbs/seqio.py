@@ -69,6 +69,7 @@ def write_seqrecord_packets(fhand, seq_packets, file_format='fastq',
 
 def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
     'It writes to file a stream of seq lists'
+    file_format = _remove_one_line(file_format)
     try:
         write_seqs(chain.from_iterable(seq_packets), fhand,
                    file_format=file_format)
@@ -85,14 +86,14 @@ def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
 
     if filtered_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
-        return write_seqrecord_packets(fhand=passed_fhand, seq_packets=seq_packets,
+        return write_seq_packets(fhand=passed_fhand, seq_packets=seq_packets,
                                  file_format=file_format, workers=workers)
     for packet in filter_packets:
         try:
-            write_seqrecords(packet[SEQS_PASSED], fhand=passed_fhand,
-                             file_format=file_format)
-            write_seqrecords(packet[SEQS_FILTERED_OUT], fhand=filtered_fhand,
-                             file_format=file_format)
+            write_seqs(packet[SEQS_PASSED], fhand=passed_fhand,
+                       file_format=file_format)
+            write_seqs(packet[SEQS_FILTERED_OUT], fhand=filtered_fhand,
+                       file_format=file_format)
         except BaseException:
             if workers is not None:
                 workers.terminate()
@@ -160,7 +161,7 @@ def read_seqrecords(fhands, file_format=GUESS_FORMAT):
 
 def _remove_one_line(file_format):
     'It removes the one-line from the format'
-    if file_format.endswith('-one_line'):
+    if file_format and file_format.endswith('-one_line'):
         file_format = file_format[:-9]
     return file_format
 
@@ -267,7 +268,7 @@ def _get_name_from_lines(lines):
     return name
 
 
-SeqWrapper = namedtuple('Seq', ['kind', 'object'])
+SeqWrapper = namedtuple('Seq', ['kind', 'object', 'file_format'])
 SeqItem = namedtuple('SeqItem', ['name', 'lines'])
 
 
@@ -310,9 +311,9 @@ def _itemize_fastq(fhand):
     return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
 
 
-def assing_kind_to_seqs(kind, seqs):
+def assing_kind_to_seqs(kind, seqs, file_format):
     'It puts each seq into a NamedTuple named Seq'
-    return (SeqWrapper(kind, seq) for seq in seqs)
+    return (SeqWrapper(kind, seq, file_format) for seq in seqs)
 
 
 def _read_seqitems(fhands, file_format):
@@ -331,19 +332,25 @@ def _read_seqitems(fhands, file_format):
         else:
             msg = 'Format not supported by the itemizers: ' + file_format
             raise NotImplementedError(msg)
-        seq_iter = assing_kind_to_seqs(SEQITEM, seq_iter)
+        seq_iter = assing_kind_to_seqs(SEQITEM, seq_iter, file_format)
         seq_iters.append(seq_iter)
     return chain.from_iterable(seq_iters)
 
 
-def _write_seqitems(items, fhand):
+def _write_seqitems(items, fhand, file_format):
     'It writes one seq item (tuple of name and string)'
     for seq in items:
+        if file_format and _remove_one_line(seq.file_format) != file_format:
+            msg = 'Input and output file formats do not match, you should not '
+            msg += 'use SeqItems: ' + str(seq.file_format) + ' '
+            msg += str(file_format)
+            raise RuntimeError(msg)
         fhand.write(''.join(seq.object[1]))
 
 
 def write_seqs(seqs, fhand, file_format=None):
     'It writes the given sequences'
+    file_format = _remove_one_line(file_format)
     seqs, seqs2 = tee(seqs)
     try:
         seq = seqs2.next()
@@ -352,7 +359,7 @@ def write_seqs(seqs, fhand, file_format=None):
         return
     seq_class = seq.kind
     if seq_class == SEQITEM:
-        _write_seqitems(seqs, fhand)
+        _write_seqitems(seqs, fhand, file_format)
     elif seq_class == SEQRECORD:
         seqs = (seq.object for seq in seqs)
         write_seqrecords(seqs, fhand, file_format)
@@ -391,7 +398,7 @@ def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
         elif seq_class == SEQRECORD:
             try:
                 seqs = read_seqrecords(fhands, file_format)
-                return assing_kind_to_seqs(SEQRECORD, seqs)
+                return assing_kind_to_seqs(SEQRECORD, seqs, None)
             except NotImplementedError:
                 continue
         else:

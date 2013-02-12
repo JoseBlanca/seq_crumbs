@@ -35,7 +35,8 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
     FilterBowtie2Match)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.tags import NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM
+from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
+                               SEQRECORD)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.mapping import get_or_create_bowtie2_index
 from crumbs.seqio import read_seq_packets
@@ -433,33 +434,49 @@ class BamFilterTest(unittest.TestCase):
 class FilterBowtie2Test(unittest.TestCase):
     @staticmethod
     def test_filter_by_bowtie2():
-        # TODO, test with fasta and fastq input file
         directory = TemporaryDir()
         index_fpath = get_or_create_bowtie2_index(os.path.join(TEST_DATA_DIR,
                                                           'arabidopsis_genes'),
                                                   directory=directory.name)
-        reads_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
+        fastq_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
+        fasta_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fasta')
 
-        seq_packets = read_seq_packets([open(reads_fpath)],
-                                       prefered_seq_classes=[SEQITEM])
-        filter_packets = seq_to_filterpackets(seq_packets)
-
-        filter_ = FilterBowtie2Match(index_fpath)
-        filter_packet = list(filter_packets)[0]
-        filter_packets = filter_(filter_packet)
-        assert [s[1].name for s in filter_packets[SEQS_PASSED]] == ['no_arabi']
-        assert [s[1].name for s in filter_packets[SEQS_FILTERED_OUT]] == [
+        passed = ['no_arabi']
+        seqs_to_names = lambda seqs: [s[1].name for s in seqs]
+        for preffered_classes in [[SEQITEM], [SEQRECORD]]:
+            for reads_fpath in [fastq_fpath, fasta_fpath]:
+                seq_packets = read_seq_packets([open(reads_fpath)],
+                                        prefered_seq_classes=preffered_classes)
+                filter_packets = seq_to_filterpackets(seq_packets)
+                filter_ = FilterBowtie2Match(index_fpath)
+                filter_packet = list(filter_packets)[0]
+                filter_packets = filter_(filter_packet)
+                assert seqs_to_names(filter_packets[SEQS_PASSED]) == passed
+                assert seqs_to_names(filter_packets[SEQS_FILTERED_OUT]) == [
                                                      'read1', 'read2', 'read3']
         directory.close()
 
-        # with a fasta file
+    @staticmethod
+    def test_filter_by_bowtie2_bin():
+        filter_bin = os.path.join(BIN_DIR, 'filter_by_bowtie2')
+        assert 'usage' in check_output([filter_bin, '-h'])
+        directory = TemporaryDir()
+        index_fpath = get_or_create_bowtie2_index(os.path.join(TEST_DATA_DIR,
+                                                          'arabidopsis_genes'),
+                                                  directory=directory.name)
 
-
-
-
-
-# test bowtie2 filter, seqrecords y seqitems
+        fastq_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
+        fasta_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fasta')
+        for reads_fpath in [fastq_fpath, fasta_fpath]:
+            out_fhand = NamedTemporaryFile(suffix='.seqs')
+            filtered_fhand = NamedTemporaryFile(suffix='.seqs')
+            cmd = [filter_bin, '-i', index_fpath, '-o', out_fhand.name,
+                   '-e', filtered_fhand.name, reads_fpath]
+            check_output(cmd)
+            assert 'no_arabi' in open(out_fhand.name).read()
+            assert 'read1' in open(filtered_fhand.name).read()
+        directory.close()
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'FilterBowtie2Test']
+    #import sys;sys.argv = ['', 'FilterBowtie2Test']
     unittest.main()

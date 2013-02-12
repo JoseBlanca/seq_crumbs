@@ -43,7 +43,8 @@ def get_or_create_bowtie2_index(fpath, directory=None):
 
 def map_with_bowtie2(index_fpath, bam_fpath, paired_fpaths=None,
                      unpaired_fpaths=None, readgroup=None, threads=None,
-                     log_fpath=None, preset='very-sensitive-local'):
+                     log_fpath=None, preset='very-sensitive-local',
+                     extra_params=None):
     '''It maps with bowtie2.
 
     paired_seqs is a list of tuples, in which each tuple are paired seqs
@@ -52,12 +53,17 @@ def map_with_bowtie2(index_fpath, bam_fpath, paired_fpaths=None,
     if readgroup is None:
         readgroup = {}
 
+    if extra_params is None:
+        extra_params = []
+
     if paired_fpaths is None and unpaired_fpaths is None:
         raise RuntimeError('At least one file to map is required')
 
     binary = get_binary_path('bowtie2')
     cmd = [binary, '-x', index_fpath, '--{0}'.format(preset),
            '-p', get_num_threads(threads)]
+
+    cmd.extend(extra_params)
     if unpaired_fpaths:
         cmd.extend(['-U', ','.join(unpaired_fpaths)])
     if paired_fpaths:

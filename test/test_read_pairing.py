@@ -71,7 +71,7 @@ class PairMatcherTest(unittest.TestCase):
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
         seqs = flat_zip_longest(fwd_seqs, rev_seqs)
-        seqs = assing_kind_to_seqs(SEQRECORD, seqs)
+        seqs = assing_kind_to_seqs(SEQRECORD, seqs, None)
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format)
 
         output = out_fhand.getvalue()
@@ -110,7 +110,7 @@ class PairMatcherTest(unittest.TestCase):
         out_format = 'fastq'
 
         seqs = flat_zip_longest(fwd_seqs, rev_seqs)
-        seqs = assing_kind_to_seqs(SEQRECORD, seqs)
+        seqs = assing_kind_to_seqs(SEQRECORD, seqs, None)
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format)
         output = out_fhand.getvalue()
         assert '@seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in output
@@ -128,7 +128,7 @@ class PairMatcherTest(unittest.TestCase):
         'All reads end up in orphan'
         seqs = [SeqRecord(Seq('ACT'), id='seq1'),
                 SeqRecord(Seq('ACT'), id='seq2')]
-        seqs = list(assing_kind_to_seqs(SEQRECORD, seqs))
+        seqs = list(assing_kind_to_seqs(SEQRECORD, seqs, None))
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format='fasta')
@@ -284,7 +284,8 @@ class PairMatcherTest(unittest.TestCase):
         # With SeqRecord
         seq = SeqRecord(id=r'seq8:136:FC706VJ:2:2104:15343:197393\1',
                         seq=Seq('ACT'))
-        name, dir_ = _parse_pair_direction_and_name(SeqWrapper(SEQRECORD, seq))
+        name, dir_ = _parse_pair_direction_and_name(SeqWrapper(SEQRECORD, seq,
+                                                               None))
         assert name == 'seq8:136:FC706VJ:2:2104:15343:197393'
         assert dir_ == FWD
 
