@@ -67,6 +67,17 @@ def write_seqrecord_packets(fhand, seq_packets, file_format='fastq',
         raise
 
 
+def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
+    'It writes to file a stream of seq lists'
+    try:
+        write_seqs(chain.from_iterable(seq_packets), fhand,
+                   file_format=file_format)
+    except BaseException:
+        if workers is not None:
+            workers.terminate()
+        raise
+
+
 def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                          file_format='fastq', workers=None):
     'It writes the filter stream into passed and filtered out sequence files'
@@ -101,6 +112,14 @@ def title2ids(title):
     else:
         desc = ''
     return id_, name, desc
+
+
+def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'),
+                     file_format=GUESS_FORMAT, prefered_seq_classes=None):
+    '''It yields Seqitems in packets of the given size.'''
+    seqs = read_seqs(fhands, file_format,
+                     prefered_seq_classes=prefered_seq_classes)
+    return group_in_packets(seqs, size)
 
 
 def read_seqrecord_packets(fhands, size=get_setting('PACKET_SIZE'),
