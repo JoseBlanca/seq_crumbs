@@ -17,12 +17,19 @@
 
 from __future__ import division
 
+try:
+    import pysam
+except ImportError:
+    # This is an optional requirement
+    pass
+
 from crumbs.utils.tags import SEQS_PASSED, SEQS_FILTERED_OUT
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
+from crumbs.utils.sam import IS_UNMAPPED, bit_tag_is_in_int_flag
 
 
 def seq_to_filterpackets(seq_packets):
@@ -31,7 +38,7 @@ def seq_to_filterpackets(seq_packets):
         yield {SEQS_PASSED: packet, SEQS_FILTERED_OUT: []}
 
 
-class FilterByFeatureTypes():
+class FilterByFeatureTypes(object):
     'It filters out sequences not annotated with the given feature types'
     def __init__(self, feature_types, reverse=False):
         '''The initiator
@@ -170,6 +177,20 @@ class FilterById(object):
                 filtered_out.append(seqrecord)
 
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+
+
+class FilterByBam(FilterById):
+    'It filters the reads not mapped in the given BAM files'
+    def __init__(self, bam_fpaths, min_mapq=0, reverse=False):
+        seq_ids = self._get_mapped_reads(bam_fpaths, min_mapq)
+        super(FilterByBam, self).__init__(seq_ids, reverse=reverse)
+
+    def _get_mapped_reads(self, bam_fpaths, min_mapq):
+        mapped_reads = []
+        for fpath in bam_fpaths:
+            bam = pysam.Samfile(fpath)
+            mapped_reads.extend(read.qname for read in bam.fetch() if not read.is_unmapped and (not min_mapq or read.mapq > min_mapq))
+        return mapped_reads
 
 
 class FilterByQuality(object):

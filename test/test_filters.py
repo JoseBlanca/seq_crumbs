@@ -31,7 +31,7 @@ from Bio.Seq import Seq
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
-                            seq_to_filterpackets, FilterByRpkm)
+                            seq_to_filterpackets, FilterByRpkm, FilterByBam)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL, SEQS_FILTERED_OUT, SEQS_PASSED
@@ -408,6 +408,22 @@ class RpkmFilterTest(unittest.TestCase):
         seqs2 = filter_(seqs)
         assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq1'
         assert seqs2[SEQS_PASSED][0].id == 'seq2'
+
+
+class BamFilterTest(unittest.TestCase):
+    'It tests the filtering of the mapped reads in a BAM file'
+    @staticmethod
+    def test_bam_filter():
+        'it test filter by being mapped in a BAM file'
+        reads = [SeqRecord(seq=Seq('aaa'), id='seq{}'.format(n)) for n in range(16, 23)]
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        filter_ = FilterByBam([bam_fpath])
+        filterpacket = {SEQS_PASSED: reads, SEQS_FILTERED_OUT: []}
+        new_filterpacket = filter_(filterpacket)
+        passed = [s.id for s in new_filterpacket[SEQS_PASSED]]
+        assert  passed == ['seq16', 'seq17', 'seq18']
+        filtered_out = [s.id for s in new_filterpacket[SEQS_FILTERED_OUT]]
+        assert filtered_out == ['seq19', 'seq20', 'seq21', 'seq22']
 
 
 if __name__ == "__main__":
