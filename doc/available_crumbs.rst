@@ -20,7 +20,7 @@ filter_by_blast
     It filters the sequences using blast
 
 filter_by_complexity
-	It filters the sequences according to its complexity.
+  It filters the sequences according to its complexity.
 
 trim_by_case
     It trims the sequences according to its case.
@@ -67,4 +67,6 @@ calculate_stats
 orientate_transcripts
     It reverse complements transcripts according to polyA, ORF or blast hits
 
+fastqual_to_fastq
+    It converts fasta and qual files to a fastq format file
 .. include:: links.txt
