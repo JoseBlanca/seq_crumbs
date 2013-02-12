@@ -378,3 +378,19 @@ def parse_trimmer_args(parser):
     args, parsed_args = parse_basic_parallel_args(parser)
     args['mask'] = parsed_args.mask
     return args, parsed_args
+
+
+def get_num_threads(threads):
+    """It returns num of threads to use in parallel.
+
+    You can pass to the funaction the  memory you want to use each thread.
+    It calculates the number of treads
+    In megabytes
+    """
+    phisical_threads = os.sysconf('SC_NPROCESSORS_ONLN')
+    if not threads:
+        return "1"
+    elif type(threads) == type(0):
+        return threads
+    else:
+        return phisical_threads
