@@ -80,7 +80,7 @@ def map_with_bowtie2(index_fpath, bam_fpath, paired_fpaths=None,
     else:
         stderr = open(log_fpath, 'w')
 
-    #raw_input(' '.join(cmd))
+#    raw_input(' '.join(cmd))
     bowtie2 = popen(cmd, stderr=stderr, stdout=PIPE)
     # print bowtie2.stdout.read()
     cmd = [get_binary_path('samtools'), 'view', '-h', '-b', '-S', '-', '-o',

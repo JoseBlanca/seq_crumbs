@@ -95,10 +95,10 @@ class TemporaryDir(object):
         self._name = tempfile.mkdtemp(suffix=suffix, prefix=prefix,
                                       dir=directory)
 
-    def get_name(self):
+    @property
+    def name(self):
         'Returns path to the dict'
         return self._name
-    name = property(get_name)
 
     def close(self):
         '''It removes the temp dir'''
@@ -142,8 +142,8 @@ def rel_symlink(path1, path2):
     fname2 = os.path.split(path2)[-1]
     rel_path1 = _rel_path(path1, path2)
 
-    #we need a temp dir to be thread safe when creating the link
-    #we cannot use chdir, that is not threadsafe
+    # we need a temp dir to be thread safe when creating the link
+    # we cannot use chdir, that is not threadsafe
     temp_dir = tempfile.mkdtemp()
     try:
         temp_link_path = os.path.join(temp_dir, fname2)

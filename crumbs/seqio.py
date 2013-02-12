@@ -114,16 +114,16 @@ def title2ids(title):
     return id_, name, desc
 
 
-def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'),
+def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'), out_format=None,
                      file_format=GUESS_FORMAT, prefered_seq_classes=None):
     '''It yields Seqitems in packets of the given size.'''
-    seqs = read_seqs(fhands, file_format,
+    seqs = read_seqs(fhands, file_format, out_format=out_format,
                      prefered_seq_classes=prefered_seq_classes)
     return group_in_packets(seqs, size)
 
 
 def read_seqrecord_packets(fhands, size=get_setting('PACKET_SIZE'),
-                     file_format=GUESS_FORMAT):
+                           file_format=GUESS_FORMAT):
     '''It yields SeqRecords in packets of the given size.'''
     seqs = read_seqrecords(fhands, file_format=file_format)
     return group_in_packets(seqs, size)
@@ -326,7 +326,7 @@ def _read_seqitems(fhands, file_format):
 
         if file_format == 'fasta':
             seq_iter = _itemize_fasta(fhand)
-        elif file_format == 'fastq-one_line':
+        elif file_format in ('fastq-one_line', 'fastq-illumina-one_line'):
             seq_iter = _itemize_fastq(fhand)
         else:
             msg = 'Format not supported by the itemizers: ' + file_format

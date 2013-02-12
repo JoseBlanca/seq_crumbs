@@ -301,7 +301,7 @@ def get_name(seq):
         seq_class = seq.kind
         seq = seq.object
     if seq_class == SEQITEM:
-        name = seq.lines[0].split()[0]
+        name = seq.name
     elif seq_class == SEQRECORD:
         name = seq.id
     return name

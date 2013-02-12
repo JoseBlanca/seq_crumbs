@@ -31,10 +31,14 @@ from Bio.Seq import Seq
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
-                            seq_to_filterpackets, FilterByRpkm, FilterByBam)
+                            seq_to_filterpackets, FilterByRpkm, FilterByBam,
+    FilterBowtie2Match)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.tags import NUCL, SEQS_FILTERED_OUT, SEQS_PASSED
+from crumbs.utils.tags import NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM
+from crumbs.utils.file_utils import TemporaryDir
+from crumbs.mapping import get_or_create_bowtie2_index
+from crumbs.seqio import read_seq_packets
 
 
 class PacketConversionTest(unittest.TestCase):
@@ -425,8 +429,37 @@ class BamFilterTest(unittest.TestCase):
         filtered_out = [s.id for s in new_filterpacket[SEQS_FILTERED_OUT]]
         assert filtered_out == ['seq19', 'seq20', 'seq21', 'seq22']
 
+
+class FilterBowtie2Test(unittest.TestCase):
+    @staticmethod
+    def test_filter_by_bowtie2():
+        # TODO, test with fasta and fastq input file
+        directory = TemporaryDir()
+        index_fpath = get_or_create_bowtie2_index(os.path.join(TEST_DATA_DIR,
+                                                          'arabidopsis_genes'),
+                                                  directory=directory.name)
+        reads_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
+
+        seq_packets = read_seq_packets([open(reads_fpath)],
+                                       prefered_seq_classes=[SEQITEM])
+        filter_packets = seq_to_filterpackets(seq_packets)
+
+        filter_ = FilterBowtie2Match(index_fpath)
+        filter_packet = list(filter_packets)[0]
+        filter_packets = filter_(filter_packet)
+        assert [s[1].name for s in filter_packets[SEQS_PASSED]] == ['no_arabi']
+        assert [s[1].name for s in filter_packets[SEQS_FILTERED_OUT]] == [
+                                                     'read1', 'read2', 'read3']
+        directory.close()
+
+        # with a fasta file
+
+
+
+
+
 # test bowtie2 filter, seqrecords y seqitems
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'ComplexityFilterTest']
+    import sys;sys.argv = ['', 'FilterBowtie2Test']
     unittest.main()

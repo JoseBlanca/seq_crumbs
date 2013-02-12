@@ -91,6 +91,9 @@ _DEFATULT_DUST_THRESHOLD = 7
 
 _TEMP_DIR = None
 
+# min_mapq to use as a filter for maped reads
+_DEFAULT_MIN_MAPQ = 0
+
 
 class _Settings(dict):
     '''A class that stores the seq_crumbs settings.'''
@@ -105,7 +108,7 @@ class _Settings(dict):
         for key, val in globals().viewitems():
             if not key.isupper():
                 continue
-            key = key[1:]   # strip the underscore
+            key = key[1:]  # strip the underscore
             super(_Settings, self).__setitem__(key, val)
 
         # Are there any environment variable to update the settings?

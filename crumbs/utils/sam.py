@@ -13,22 +13,25 @@
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
+import subprocess
 from operator import or_
+
+from crumbs.utils.bin_utils import get_binary_path
 
 # pylint: disable=C0111
 
 
-IS_PAIRED = 0x0001           # the read is paired in sequencing
-IS_IN_PROPER_PAIR = 0x0002   # the read is mapped in a proper pair
-IS_UNMAPPED = 0x0004         # the query sequence itself is unmapped
-MATE_IS_UNMAPPED = 0x0008    # the mate is unmapped
-STRAND = 0x0010              # strand of the query (1 for reverse)
-MATE_STRAND = 0x0020         # strand of the mate
-IS_FIRST_IN_PAIR = 0x0040    # the read is the first read in a pair
-IS_SECOND_IN_PAIR = 0x0080   # the read is the second read in a pair
-IS_NOT_PRIMARY = 0x0100      # the alignment is not primary
-FAILED_QUALITY = 0x0200      # the read fails platform/vendor quality checks
-IS_DUPLICATE = 0x0400        # the read is either a PCR or an optical duplicate
+IS_PAIRED = 0x0001  # the read is paired in sequencing
+IS_IN_PROPER_PAIR = 0x0002  # the read is mapped in a proper pair
+IS_UNMAPPED = 0x0004  # the query sequence itself is unmapped
+MATE_IS_UNMAPPED = 0x0008  # the mate is unmapped
+STRAND = 0x0010  # strand of the query (1 for reverse)
+MATE_STRAND = 0x0020  # strand of the mate
+IS_FIRST_IN_PAIR = 0x0040  # the read is the first read in a pair
+IS_SECOND_IN_PAIR = 0x0080  # the read is the second read in a pair
+IS_NOT_PRIMARY = 0x0100  # the alignment is not primary
+FAILED_QUALITY = 0x0200  # the read fails platform/vendor quality checks
+IS_DUPLICATE = 0x0400  # the read is either a PCR or an optical duplicate
 
 
 SAM_FLAG_BITS = [IS_PAIRED, IS_IN_PROPER_PAIR, IS_UNMAPPED, MATE_IS_UNMAPPED,
@@ -48,3 +51,9 @@ def int_flag_to_bit_tags(flag):
 
 def bit_tag_is_in_int_flag(bit_flag, int_flag):
     return bit_flag in int_flag_to_bit_tags(int_flag)
+
+
+def index_bam(bam_fpath):
+    'It indexes a bam file'
+    samtools_binary = get_binary_path('samtools')
+    subprocess.check_call([samtools_binary, 'index', bam_fpath])

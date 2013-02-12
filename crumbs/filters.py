@@ -17,6 +17,7 @@
 
 from __future__ import division
 from tempfile import NamedTemporaryFile
+import os
 
 try:
     import pysam
@@ -33,6 +34,7 @@ from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
 from crumbs.mapping import  get_or_create_bowtie2_index, map_with_bowtie2
 from crumbs.seqio import write_seqs
+from crumbs.utils.sam import index_bam
 
 
 def seq_to_filterpackets(seq_packets):
@@ -287,9 +289,10 @@ class FilterBlastMatch(object):
 
 class FilterBowtie2Match(object):
     'It filters a seq if it maps against a bowtie2 index'
-    def __init__(self, index_fpath, reverse=False):
+    def __init__(self, index_fpath, reverse=False, min_mapq=None):
         self._index_fpath = index_fpath
         self._reverse = reverse
+        self.min_mapq = min_mapq
 
     def __call__(self, filterpacket):
         seqs_passed = []
@@ -301,10 +304,12 @@ class FilterBowtie2Match(object):
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         reads_fhand = NamedTemporaryFile(suffix='.fastq')
         write_seqs(seqs, reads_fhand, file_format='fastq')
-
+        reads_fhand.flush()
         map_with_bowtie2(index_fpath, bam_fhand.name,
                          unpaired_fpaths=[reads_fhand.name])
-        mapped_reads = _get_mapped_reads(bam_fhand.name)
+        index_bam(bam_fhand.name)
+        mapped_reads = _get_mapped_reads(bam_fhand.name, self.min_mapq)
+        os.remove(bam_fhand.name + '.bai')
 
         for seq in seqs:
             passed = False if get_name(seq) in mapped_reads else True
