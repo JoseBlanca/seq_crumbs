@@ -31,6 +31,7 @@ from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE, SEQITEM,
                                SEQRECORD)
 
 # pylint: disable=R0903
+# pylint: disable=C0111
 
 
 def replace_seq_same_length(seqrecord, seq_str):
@@ -291,3 +292,16 @@ def get_title(seq):
         msg = 'Do not know how to guess title form this seq class'
         raise NotImplementedError(msg)
     return title
+
+
+def get_name(seq):
+    if 'SeqRecord' in seq.__class__.__name__:
+        seq_class = SEQRECORD
+    else:
+        seq_class = seq.kind
+        seq = seq.object
+    if seq_class == SEQITEM:
+        name = seq.lines[0].split()[0]
+    elif seq_class == SEQRECORD:
+        name = seq.id
+    return name

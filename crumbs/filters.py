@@ -16,6 +16,7 @@
 # pylint: disable=C0111
 
 from __future__ import division
+from tempfile import NamedTemporaryFile
 
 try:
     import pysam
@@ -24,12 +25,14 @@ except ImportError:
     pass
 
 from crumbs.utils.tags import SEQS_PASSED, SEQS_FILTERED_OUT
-from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
+from crumbs.utils.seq_utils import (uppercase_length, get_uppercase_segments,
+                                    get_name)
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
-from crumbs.utils.sam import IS_UNMAPPED, bit_tag_is_in_int_flag
+from crumbs.mapping import  get_or_create_bowtie2_index, map_with_bowtie2
+from crumbs.seqio import write_seqs
 
 
 def seq_to_filterpackets(seq_packets):
@@ -179,6 +182,11 @@ class FilterById(object):
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
+def _get_mapped_reads(bam_fpath, min_mapq=0):
+    bam = pysam.Samfile(bam_fpath)
+    return [read.qname for read in bam.fetch() if not read.is_unmapped and (not min_mapq or read.mapq > min_mapq)]
+
+
 class FilterByBam(FilterById):
     'It filters the reads not mapped in the given BAM files'
     def __init__(self, bam_fpaths, min_mapq=0, reverse=False):
@@ -188,8 +196,7 @@ class FilterByBam(FilterById):
     def _get_mapped_reads(self, bam_fpaths, min_mapq):
         mapped_reads = []
         for fpath in bam_fpaths:
-            bam = pysam.Samfile(fpath)
-            mapped_reads.extend(read.qname for read in bam.fetch() if not read.is_unmapped and (not min_mapq or read.mapq > min_mapq))
+            mapped_reads.extend(_get_mapped_reads(fpath, min_mapq=min_mapq))
         return mapped_reads
 
 
@@ -256,6 +263,7 @@ class FilterBlastMatch(object):
 
     def __call__(self, filterpacket):
         'It filters the seq by blast match'
+        reverse = self._reverse
         seqs_passed = []
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
         seqrecords = filterpacket[SEQS_PASSED]
@@ -264,18 +272,50 @@ class FilterBlastMatch(object):
 
         for seqrecord in seqrecords:
             segments = matcher.get_matched_segments(seqrecord.id)
-            if segments is None:
-                passed = True
-            else:
-                passed = False
+            passed = True if segments is None else False
 
-            if self._reverse:
+            if reverse:
                 passed = not(passed)
 
             if passed:
                 seqs_passed.append(seqrecord)
             else:
                 filtered_out.append(seqrecord)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+
+
+class FilterBowtie2Match(object):
+    'It filters a seq if it maps against a bowtie2 index'
+    def __init__(self, index_fpath, reverse=False):
+        self._index_fpath = index_fpath
+        self._reverse = reverse
+
+    def __call__(self, filterpacket):
+        seqs_passed = []
+        reverse = self._reverse
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+        seqs = filterpacket[SEQS_PASSED]
+        index_fpath = self._index_fpath
+        get_or_create_bowtie2_index(index_fpath)
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
+        reads_fhand = NamedTemporaryFile(suffix='.fastq')
+        write_seqs(seqs, reads_fhand, file_format='fastq')
+
+        map_with_bowtie2(index_fpath, bam_fhand.name,
+                         unpaired_fpaths=[reads_fhand.name])
+        mapped_reads = _get_mapped_reads(bam_fhand.name)
+
+        for seq in seqs:
+            passed = False if get_name(seq) in mapped_reads else True
+
+            if reverse:
+                passed = not(passed)
+
+            if passed:
+                seqs_passed.append(seq)
+            else:
+                filtered_out.append(seq)
 
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 

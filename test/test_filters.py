@@ -425,6 +425,7 @@ class BamFilterTest(unittest.TestCase):
         filtered_out = [s.id for s in new_filterpacket[SEQS_FILTERED_OUT]]
         assert filtered_out == ['seq19', 'seq20', 'seq21', 'seq22']
 
+# test bowtie2 filter, seqrecords y seqitems
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'ComplexityFilterTest']
