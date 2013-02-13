@@ -32,14 +32,18 @@ from Bio.Seq import Seq
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
                             seq_to_filterpackets, FilterByRpkm, FilterByBam,
-    FilterBowtie2Match)
+                            FilterBowtie2Match)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
                                SEQRECORD)
 from crumbs.utils.file_utils import TemporaryDir
+from crumbs.utils.seq_utils import get_name
 from crumbs.mapping import get_or_create_bowtie2_index
-from crumbs.seqio import read_seq_packets
+from crumbs.seqio import read_seq_packets, SeqWrapper
+
+
+_seqs_to_names = lambda seqs: [get_name(s) for s in seqs]
 
 
 class PacketConversionTest(unittest.TestCase):
@@ -180,20 +184,22 @@ class QualityFilterTest(unittest.TestCase):
         'It filters the reads given a quality threshold'
         seq1 = SeqRecord(Seq('AAcTg'), id='seq1',
                     letter_annotations={'phred_quality': [42, 42, 40, 42, 40]})
+        seq1 = SeqWrapper(object=seq1, kind=SEQRECORD, file_format=None)
         seq2 = SeqRecord(Seq('AAcTg'), id='seq2',
                     letter_annotations={'phred_quality': [40, 40, 42, 40, 42]})
+        seq2 = SeqWrapper(object=seq2, kind=SEQRECORD, file_format=None)
         seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
 
-        filter_by_id = FilterByQuality(threshold=41)
-        passed = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+        filter_ = FilterByQuality(threshold=41)
+        passed = _seqs_to_names(filter_(seqs)[SEQS_PASSED])
         assert passed == ['seq1']
 
-        filter_by_id = FilterByQuality(threshold=41, reverse=True)
-        filtered = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
-        assert filtered == ['seq2']
+        filter_ = FilterByQuality(threshold=41, reverse=True)
+        passed = _seqs_to_names(filter_(seqs)[SEQS_PASSED])
+        assert passed == ['seq2']
 
-        filter_by_id = FilterByQuality(threshold=41.5, ignore_masked=True)
-        passed = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+        filter_ = FilterByQuality(threshold=41.5, ignore_masked=True)
+        passed = _seqs_to_names(filter_(seqs)[SEQS_PASSED])
         assert passed == ['seq1']
 
     def test_filter_by_qual_bin(self):
@@ -442,7 +448,6 @@ class FilterBowtie2Test(unittest.TestCase):
         fasta_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fasta')
 
         passed = ['no_arabi']
-        seqs_to_names = lambda seqs: [s[1].name for s in seqs]
         for preffered_classes in [[SEQITEM], [SEQRECORD]]:
             for reads_fpath in [fastq_fpath, fasta_fpath]:
                 seq_packets = read_seq_packets([open(reads_fpath)],
@@ -451,8 +456,8 @@ class FilterBowtie2Test(unittest.TestCase):
                 filter_ = FilterBowtie2Match(index_fpath)
                 filter_packet = list(filter_packets)[0]
                 filter_packets = filter_(filter_packet)
-                assert seqs_to_names(filter_packets[SEQS_PASSED]) == passed
-                assert seqs_to_names(filter_packets[SEQS_FILTERED_OUT]) == [
+                assert _seqs_to_names(filter_packets[SEQS_PASSED]) == passed
+                assert _seqs_to_names(filter_packets[SEQS_FILTERED_OUT]) == [
                                                      'read1', 'read2', 'read3']
         directory.close()
 
@@ -478,5 +483,5 @@ class FilterBowtie2Test(unittest.TestCase):
         directory.close()
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterBowtie2Test']
+    #import sys;sys.argv = ['', 'QualityFilterTest']
     unittest.main()

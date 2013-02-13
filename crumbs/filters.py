@@ -28,7 +28,7 @@ except ImportError:
 from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
                                SEQRECORD)
 from crumbs.utils.seq_utils import (uppercase_length, get_uppercase_segments,
-                                    get_name, get_file_format)
+                                    get_name, get_file_format, get_str_seq)
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
@@ -172,15 +172,15 @@ class FilterById(object):
         reverse = self.reverse
         seqs_passed = []
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        for seqrecord in filterpacket[SEQS_PASSED]:
-            passed = True if seqrecord.id in seq_ids else False
+        for seq in filterpacket[SEQS_PASSED]:
+            passed = True if get_name(seq) in seq_ids else False
             if reverse:
                 passed = not(passed)
 
             if passed:
-                seqs_passed.append(seqrecord)
+                seqs_passed.append(seq)
             else:
-                filtered_out.append(seqrecord)
+                filtered_out.append(seq)
 
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
@@ -223,17 +223,18 @@ class FilterByQuality(object):
 
         seqs_passed = []
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        for seqrecord in filterpacket[SEQS_PASSED]:
+        for seq in filterpacket[SEQS_PASSED]:
+            seq_object = seq.object
             try:
-                quals = seqrecord.letter_annotations['phred_quality']
+                quals = seq_object.letter_annotations['phred_quality']
             except KeyError:
                 msg = 'Some of the input sequences do not have qualities: {}'
-                msg = msg.format(seqrecord.id)
+                msg = msg.format(get_name(seq))
                 raise WrongFormatError(msg)
             if ignore_masked:
-                seq = str(seqrecord.seq)
+                str_seq = str(seq_object.seq)
                 seg_quals = [quals[segment[0]: segment[1] + 1]
-                                    for segment in get_uppercase_segments(seq)]
+                                for segment in get_uppercase_segments(str_seq)]
                 qual = sum(sum(q) * len(q) for q in seg_quals) / len(quals)
             else:
                 qual = sum(quals) / len(quals)
@@ -241,9 +242,9 @@ class FilterByQuality(object):
             if reverse:
                 passed = not(passed)
             if passed:
-                seqs_passed.append(seqrecord)
+                seqs_passed.append(seq)
             else:
-                filtered_out.append(seqrecord)
+                filtered_out.append(seq)
 
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
@@ -305,6 +306,8 @@ class FilterBowtie2Match(object):
 
         seq_class = seqs[0].kind
         extra_params = []
+        # Which format do we need for the bowtie2 input read file fasta or
+        # fastq?
         if seq_class == SEQRECORD:
             if 'phred_quality' in seqs[0].object.letter_annotations.viewkeys():
                 file_format = 'fastq'

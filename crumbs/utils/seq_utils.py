@@ -315,3 +315,13 @@ def get_file_format(seq):
     elif seq_class == SEQRECORD:
         fmt = None
     return fmt
+
+
+def get_str_seq(seq):
+    seq_class = seq.kind
+    seq = seq.object
+    if seq_class == SEQITEM:
+        seq = seq.lines[1].rstrip()
+    elif seq_class == SEQRECORD:
+        seq = str(seq.seq)
+    return seq

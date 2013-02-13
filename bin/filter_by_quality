@@ -20,8 +20,9 @@ import sys
 from crumbs.utils.bin_utils import (main, parse_filter_args,
                                     create_filter_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.seqio import read_seqrecord_packets, write_filter_packets
+from crumbs.seqio import read_seq_packets, write_filter_packets
 from crumbs.filters import FilterByQuality, seq_to_filterpackets
+from crumbs.utils.tags import SEQRECORD
 
 
 def _setup_argparse(description):
@@ -52,9 +53,9 @@ def run():
     passed_fhand = args['out_fhand']
     filtered_fhand = args['filtered_fhand']
 
-    seqrecord_packets = read_seqrecord_packets(in_fhands,
-                                               file_format=args['in_format'])
-    filter_packets = seq_to_filterpackets(seqrecord_packets)
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
+                                   prefered_seq_classes=[SEQRECORD])
+    filter_packets = seq_to_filterpackets(seq_packets)
     filter_ = FilterByQuality(threshold=args['threshold'],
                               reverse=args['reverse'],
                               ignore_masked=args['ignore_masked'])
