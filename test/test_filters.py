@@ -38,12 +38,13 @@ from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
                                SEQRECORD)
 from crumbs.utils.file_utils import TemporaryDir
-from crumbs.utils.seq_utils import get_name
+from crumbs.utils.seq_utils import get_name, get_str_seq
 from crumbs.mapping import get_or_create_bowtie2_index
 from crumbs.seqio import read_seq_packets, SeqWrapper
 
 
 _seqs_to_names = lambda seqs: [get_name(s) for s in seqs]
+_seqs_to_str_seqs = lambda seqs: [get_str_seq(s) for s in seqs]
 
 
 class PacketConversionTest(unittest.TestCase):
@@ -59,8 +60,9 @@ class PacketConversionTest(unittest.TestCase):
 def _create_seqrecord(string):
     'Given an string it returns a SeqRecord'
     # pylint: disable=W0612
-    return SeqRecord(Seq(string),
+    seq = SeqRecord(Seq(string),
                      id=''.join([choice(ascii_lowercase) for i in range(6)]))
+    return SeqWrapper(kind=SEQRECORD, object=seq, file_format=None)
 
 
 def _make_fhand(content=''):
@@ -80,39 +82,39 @@ class LengthFilterTest(unittest.TestCase):
         seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
 
         filter_by_length = FilterByLength(minimum=4)
-        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        passed = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_PASSED])
         assert passed == ['aCTg']
-        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        filtr = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_FILTERED_OUT])
         assert filtr == ['AC']
 
         filter_by_length = FilterByLength(minimum=5)
-        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        passed = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_PASSED])
         assert passed == []
-        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        filtr = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_FILTERED_OUT])
         assert filtr == ['aCTg', 'AC']
 
         filter_by_length = FilterByLength(minimum=2, ignore_masked=True)
-        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        passed = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_PASSED])
         assert passed == ['aCTg', 'AC']
-        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        filtr = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_FILTERED_OUT])
         assert filtr == []
 
         filter_by_length = FilterByLength(minimum=3, ignore_masked=True)
-        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        passed = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_PASSED])
         assert passed == []
-        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        filtr = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_FILTERED_OUT])
         assert filtr == ['aCTg', 'AC']
 
         filter_by_length = FilterByLength(maximum=3, ignore_masked=True)
-        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        passed = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_PASSED])
         assert passed == ['aCTg', 'AC']
-        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        filtr = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_FILTERED_OUT])
         assert filtr == []
 
         filter_by_length = FilterByLength(maximum=3)
-        passed = [str(s.seq) for s in filter_by_length(seqs)[SEQS_PASSED]]
+        passed = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_PASSED])
         assert passed == ['AC']
-        filtr = [str(s.seq) for s in filter_by_length(seqs)[SEQS_FILTERED_OUT]]
+        filtr = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_FILTERED_OUT])
         assert filtr == ['aCTg']
 
         seq1 = _create_seqrecord('aCTTATg')
@@ -483,5 +485,5 @@ class FilterBowtie2Test(unittest.TestCase):
         directory.close()
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'QualityFilterTest']
+    import sys;sys.argv = ['', 'LengthFilterTest']
     unittest.main()

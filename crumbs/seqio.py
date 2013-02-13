@@ -269,7 +269,7 @@ def _get_name_from_lines(lines):
 
 
 SeqWrapper = namedtuple('Seq', ['kind', 'object', 'file_format'])
-SeqItem = namedtuple('SeqItem', ['name', 'lines'])
+SeqItem = namedtuple('SeqItem', ['name', 'lines', 'length'])
 
 
 def _itemize_fasta(fhand):
@@ -281,14 +281,16 @@ def _itemize_fasta(fhand):
             continue
         if line.startswith('>'):
             if lines:
-                yield SeqItem(_get_name_from_lines(lines), lines)
+                yield SeqItem(_get_name_from_lines(lines), lines,
+                              len(lines[1]) - 1)
                 lines = []
         lines.append(line)
         if len(lines) == 1 and not lines[0].startswith('>'):
             raise RuntimeError('Not a valid fasta file')
     else:
         if lines:
-            yield SeqItem(_get_name_from_lines(lines), lines)
+            yield SeqItem(_get_name_from_lines(lines), lines,
+                          len(lines[1]) - 1)
 
 
 def _get_name_from_chunk_fastq(lines):
@@ -308,7 +310,7 @@ def _get_name_from_chunk_fastq(lines):
 def _itemize_fastq(fhand):
     'It returns the fhand divided in chunks, one per seq'
     blobs = group_in_packets(fhand, 4)
-    return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
+    return (SeqItem(_get_name_from_lines(lines), lines, len(lines[1]) - 1) for lines in blobs)
 
 
 def assing_kind_to_seqs(kind, seqs, file_format):

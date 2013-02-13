@@ -28,7 +28,8 @@ except ImportError:
 from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
                                SEQRECORD)
 from crumbs.utils.seq_utils import (uppercase_length, get_uppercase_segments,
-                                    get_name, get_file_format, get_str_seq)
+                                    get_name, get_file_format, get_str_seq,
+                                    get_length)
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score
@@ -137,9 +138,9 @@ class FilterByLength(object):
         ignore_masked = self.ignore_masked
         seqs_passed = []
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        for seqrecord in filterpacket[SEQS_PASSED]:
-            seq = str(seqrecord.seq)
-            length = uppercase_length(seq) if ignore_masked else len(seq)
+        for seq in filterpacket[SEQS_PASSED]:
+            str_seq = get_str_seq(seq)
+            length = uppercase_length(str_seq) if ignore_masked else get_length(seq)
             passed = True
             if min_ is not None and length < min_:
                 passed = False
@@ -147,9 +148,9 @@ class FilterByLength(object):
                 passed = False
 
             if passed:
-                seqs_passed.append(seqrecord)
+                seqs_passed.append(seq)
             else:
-                filtered_out.append(seqrecord)
+                filtered_out.append(seq)
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
