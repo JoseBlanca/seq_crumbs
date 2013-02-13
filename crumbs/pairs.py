@@ -23,7 +23,7 @@ from crumbs.utils.tags import FWD, REV
 from crumbs.seqio import write_seqrecords, _remove_one_line, write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.utils.seq_utils import guess_format, get_title
+from crumbs.utils.seq_utils import guess_format, get_title, get_name
 
 
 def _parse_pair_direction_and_name(seq):
@@ -243,3 +243,22 @@ def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
         write_seqs([seq2], out_fhand2, out_format)
     out_fhand1.flush()
     out_fhand2.flush()
+
+
+def group_seqs_in_pairs(seqs):
+    '''It generates lists of paired reads.
+
+    The paired reads should be interleaved.
+    '''
+    paired_seqs = []
+    prev_name = None
+    for seq in iter(seqs):
+        name = _parse_pair_direction_and_name(seq)[0]
+        if prev_name and name != prev_name:
+            yield paired_seqs
+            paired_seqs = []
+        paired_seqs.append(seq)
+        prev_name = name
+    else:
+        if paired_seqs:
+            yield paired_seqs

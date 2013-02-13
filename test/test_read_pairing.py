@@ -22,20 +22,22 @@ from Bio.bgzf import BgzfReader
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
                           _index_seq_file, match_pairs_unordered,
                           _parse_pair_direction_and_name_from_title,
-                          _parse_pair_direction_and_name)
+                          _parse_pair_direction_and_name, group_seqs_in_pairs)
 from crumbs.iterutils import flat_zip_longest
+from crumbs.utils.tags import FWD, SEQRECORD, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.seq_utils import get_str_seq
 from crumbs.seqio import read_seqrecords, read_seqs, assing_kind_to_seqs
 from crumbs.exceptions import InterleaveError, PairDirectionError
-from crumbs.utils.tags import FWD, SEQRECORD
-from crumbs.seqio import write_seqs, SeqWrapper
+from crumbs.seqio import write_seqs, SeqWrapper, SeqItem
 
 # pylint: disable=R0201
 # pylint: disable=R0904
+# pylint: disable=C0111
 
 
 class PairMatcherTest(unittest.TestCase):
@@ -475,6 +477,30 @@ class IndexedPairMatcher(unittest.TestCase):
         keys = index_.keys()
         assert 'seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in keys
 
+
+class PairGrouperTest(unittest.TestCase):
+    @staticmethod
+    def test_pair_grouper():
+        seq1 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.f\n', 'A\n'], 1),
+                          'fasta')
+        seq2 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.r\n', 'C\n'], 1),
+                          'fasta')
+        seq3 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.f\n', 'T\n'], 1),
+                          'fasta')
+        seq4 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.r\n', 'G\n'], 1),
+                          'fasta')
+        seqs = seq1, seq2, seq3, seq4
+        paired_seqs = list(group_seqs_in_pairs(seqs))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['T', 'G']
+        assert len(paired_seqs) == 2
+
+    @staticmethod
+    def test_empty_iter():
+        paired_seqs = list(group_seqs_in_pairs([]))
+        assert not paired_seqs
+
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'PairMatcherTest.test_all_orphan']
+    #import sys;sys.argv = ['', 'PairGrouperTest']
     unittest.main()
