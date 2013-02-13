@@ -348,17 +348,19 @@ class ComplexityFilterTest(unittest.TestCase):
         'It tests the complexity filter'
         seq1 = 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAAAAAAAAAAAAAAAAAAAAAAAAA'
         seq2 = 'CATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGCTAGCTAGTT'
-        seqs = {SEQS_PASSED: [SeqRecord(Seq(seq1), id='seq1'),
-                              SeqRecord(Seq(seq2), id='seq2')],
-                SEQS_FILTERED_OUT: []}
+        seq1 = SeqRecord(Seq(seq1), id='seq1')
+        seq2 = SeqRecord(Seq(seq2), id='seq2')
+        seq1 = SeqWrapper(SEQRECORD, seq1, None)
+        seq2 = SeqWrapper(SEQRECORD, seq2, None)
+        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
 
         filter_dust = FilterDustComplexity()
         filter_packet = filter_dust(seqs)
         assert len(filter_packet[SEQS_PASSED]) == 1
         assert len(filter_packet[SEQS_FILTERED_OUT]) == 1
 
-        assert filter_packet[SEQS_PASSED][0].id == 'seq2'
-        assert filter_packet[SEQS_FILTERED_OUT][0].id == 'seq1'
+        assert _seqs_to_names(filter_packet[SEQS_PASSED])[0] == 'seq2'
+        assert _seqs_to_names(filter_packet[SEQS_FILTERED_OUT])[0] == 'seq1'
 
         # reverse
         filter_dust = FilterDustComplexity(reverse=True)
@@ -366,8 +368,8 @@ class ComplexityFilterTest(unittest.TestCase):
         assert len(filter_packet[SEQS_PASSED]) == 1
         assert len(filter_packet[SEQS_FILTERED_OUT]) == 1
 
-        assert filter_packet[SEQS_PASSED][0].id == 'seq1'
-        assert filter_packet[SEQS_FILTERED_OUT][0].id == 'seq2'
+        assert _seqs_to_names(filter_packet[SEQS_PASSED])[0] == 'seq1'
+        assert _seqs_to_names(filter_packet[SEQS_FILTERED_OUT])[0] == 'seq2'
 
     @staticmethod
     def test_filter_by_dust_bin():
@@ -485,5 +487,5 @@ class FilterBowtie2Test(unittest.TestCase):
         directory.close()
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'LengthFilterTest']
+    #import sys;sys.argv = ['', 'ComplexityFilterTest']
     unittest.main()

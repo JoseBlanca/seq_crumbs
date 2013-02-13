@@ -32,7 +32,8 @@ from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                calculate_nx, BestItemsKeeper)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import read_seqrecords
+from crumbs.seqio import read_seqs, SeqWrapper
+from crumbs.utils.tags import SEQRECORD
 
 
 class HistogramTest(unittest.TestCase):
@@ -224,10 +225,13 @@ class DustCalculationTest(unittest.TestCase):
         for seq, score, scorex3, scorex4 in zip(seqs, scores, scoresx3,
                                                 scoresx4):
             seqrec = SeqRecord(Seq(seq))
+            seqrec = SeqWrapper(SEQRECORD, seqrec, None)
             assert calculate_dust_score(seqrec) - score < 0.01
             seqrec = SeqRecord(Seq(seq * 3))
+            seqrec = SeqWrapper(SEQRECORD, seqrec, None)
             assert calculate_dust_score(seqrec) - scorex3 < 0.01
             seqrec = SeqRecord(Seq(seq * 4))
+            seqrec = SeqWrapper(SEQRECORD, seqrec, None)
             assert calculate_dust_score(seqrec) - scorex4 < 0.01
 
 
@@ -259,7 +263,8 @@ class CalculateStatsTest(unittest.TestCase):
         for val in range(1, 6):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
-        seqs = read_seqrecords(in_fhands, file_format='fastq')
+        seqs = read_seqs(in_fhands, file_format='fastq',
+                         prefered_seq_classes=[SEQRECORD])
         results = calculate_sequence_stats(seqs, nxs=[50])
         assert 'maximum: 4' in results['length']
         assert 'N50' in results['length']
@@ -270,7 +275,8 @@ class CalculateStatsTest(unittest.TestCase):
         assert results['kmer'] == ''
 
         infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
-        seqs = list(read_seqrecords(infhands, file_format='fasta'))
+        seqs = list(read_seqs(infhands, file_format='fasta',
+                              prefered_seq_classes=[SEQRECORD]))
         kmers = calculate_sequence_stats(seqs)['kmer']
         assert not 'Kmer distribution' in kmers
 

@@ -23,6 +23,7 @@ import re
 from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
+from crumbs.utils.seq_utils import get_str_seq
 
 LABELS = {'title': 'histogram', 'xlabel': 'values',
           'ylabel': 'count', 'minimum': 'minimum',
@@ -572,7 +573,7 @@ def _calculate_rawscore(string):
     return sum(tc * (tc - 1) * 0.5 for tc in triplet_counts.viewvalues())
 
 
-def calculate_dust_score(seqrecord):
+def calculate_dust_score(seq):
     '''It returns the dust score.
 
     From: "A Fast and Symmetric DUST Implementation to Mask Low-Complexity DNA
@@ -581,7 +582,7 @@ def calculate_dust_score(seqrecord):
 
     and re-implemented from PRINSEQ
     '''
-    seq = str(seqrecord.seq)
+    seq = get_str_seq(seq)
     length = len(seq)
     if length == 3:
         return 0
@@ -643,15 +644,16 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
     kmer_counter = KmerCounter(kmer_size) if kmer_size else None
     dustscores = IntCounter()
     for seq in seqs:
-        lengths[len(seq)] += 1
-        if 'phred_quality' in seq.letter_annotations:
-            quals = seq.letter_annotations['phred_quality']
+        seqrec = seq.object
+        lengths[len(seqrec)] += 1
+        if 'phred_quality' in seqrec.letter_annotations:
+            quals = seqrec.letter_annotations['phred_quality']
             for index, qual in enumerate(quals):
                 quals_per_pos.append(index + 1, qual)
-        for index, nucl in enumerate(str(seq.seq)):
+        for index, nucl in enumerate(str(seqrec.seq)):
             nucl_freq.append(index, nucl)
         if kmer_counter is not None:
-            kmer_counter.count_seq(str(seq.seq))
+            kmer_counter.count_seq(str(seqrec.seq))
         if do_dust_stats:
             dustscore = calculate_dust_score(seq)
             if dustscore is not None:
