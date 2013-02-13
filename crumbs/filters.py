@@ -37,46 +37,79 @@ from crumbs.settings import get_setting
 from crumbs.mapping import  get_or_create_bowtie2_index, map_with_bowtie2
 from crumbs.seqio import write_seqs
 from crumbs.utils.sam import index_bam
+from crumbs.pairs import group_seqs_in_pairs
 
 
-def seq_to_filterpackets(seq_packets):
+def seq_to_filterpackets(seq_packets, group_paired_reads=False):
     'It yields packets suitable for the filters'
+
     for packet in seq_packets:
+        if group_paired_reads:
+            packet = list(group_seqs_in_pairs(packet))
+        else:
+            packet = [[seq] for seq in packet]
         yield {SEQS_PASSED: packet, SEQS_FILTERED_OUT: []}
 
 
-class FilterByFeatureTypes(object):
+def _reverse_bools(bools):
+    return (not bool_ for bool_ in bools)
+
+
+class _BaseFilter(object):
+    def __init__(self, failed_drags_pair=True, reverse=False):
+        self.reverse = reverse
+        self.failed_drags_pair = failed_drags_pair
+
+    def _setup_checks(self, filterpacket):
+        pass
+
+    def _do_check(self, seq):
+        raise NotImplementedError()
+
+    def __call__(self, filterpacket):
+        self._setup_checks(filterpacket)
+        reverse = self.reverse
+        failed_drags_pair = self.failed_drags_pair
+        seqs_passed = []
+        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
+        for paired_seqs in filterpacket[SEQS_PASSED]:
+            checks = (self._do_check(seq)for seq in paired_seqs)
+            if reverse:
+                checks = _reverse_bools(checks)
+
+            if failed_drags_pair:
+                pair_passed = True if all(checks) else False
+            else:
+                pair_passed = True if any(checks) else False
+
+            if pair_passed:
+                seqs_passed.append(paired_seqs)
+            else:
+                filtered_out.append(paired_seqs)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+
+
+class FilterByFeatureTypes(_BaseFilter):
     'It filters out sequences not annotated with the given feature types'
-    def __init__(self, feature_types, reverse=False):
+    def __init__(self, feature_types, reverse=False, failed_drags_pair=True):
         '''The initiator
 
         feat_types is a list of types of features to use to filter'''
 
         self._feat_types = feature_types
-        self._reverse = reverse
+        super(FilterByFeatureTypes, self).__init__(reverse=reverse,
+                                           failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, filterpacket):
-        'It filters out sequences not annotated with the given feature types'
-        reverse = self._reverse
-        feat_types = self._feat_types
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-
-        for seqrec in filterpacket[SEQS_PASSED]:
-            feats_in_seq = [f.type for f in seqrec.features if f.type in feat_types]
-            passed = True if feats_in_seq else False
-            if reverse:
-                passed = not(passed)
-            if passed:
-                seqs_passed.append(seqrec)
-            else:
-                filtered_out.append(seqrec)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+    def _do_check(self, seq):
+        seq = seq.object
+        f_in_seq = [f.type for f in seq.features if f.type in self._feat_types]
+        return True if f_in_seq else False
 
 
-class FilterByRpkm(object):
-    def __init__(self, read_counts, min_rpkm, reverse=False):
+class FilterByRpkm(_BaseFilter):
+    def __init__(self, read_counts, min_rpkm, reverse=False,
+                 failed_drags_pair=True):
         '''The init
 
         read_counts its a dict:
@@ -86,39 +119,25 @@ class FilterByRpkm(object):
         '''
         self._read_counts = read_counts
         self._min_rpkm = min_rpkm
-        self._total_reads = sum([v['mapped_reads'] + v['unmapped_reads'] for v in read_counts.values()])
-        self._reverse = reverse
+        total_reads = sum([v['mapped_reads'] + v['unmapped_reads'] for v in read_counts.values()])
+        self._million_reads = total_reads / 1e6
+        super(FilterByRpkm, self).__init__(reverse=reverse,
+                                           failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, filterpacket):
-        read_counts = self._read_counts
-        min_rpkm = self._min_rpkm
-        total_reads = self._total_reads
-        reverse = self._reverse
+    def _do_check(self, seq):
+        count = self._read_counts[get_name(seq)]
 
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        for seqrecord in filterpacket[SEQS_PASSED]:
-            count = read_counts[seqrecord.id]
-            kb_len = count['length'] / 1000
+        kb_len = count['length'] / 1000
+        rpk = count['mapped_reads'] / kb_len  # rpks
+        rpkm = rpk / self._million_reads  # rpkms
 
-            million_reads = total_reads / 1e6
-            rpk = count['mapped_reads'] / kb_len  # rpks
-            rpkm = rpk / million_reads  # rpkms
-            passed = True if rpkm >= min_rpkm else False
-            if reverse:
-                passed = not(passed)
-
-            if passed:
-                seqs_passed.append(seqrecord)
-            else:
-                filtered_out.append(seqrecord)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+        return True if rpkm >= self._min_rpkm else False
 
 
-class FilterByLength(object):
+class FilterByLength(_BaseFilter):
     'It removes the sequences according to their length.'
-    def __init__(self, minimum=None, maximum=None, ignore_masked=False):
+    def __init__(self, minimum=None, maximum=None, ignore_masked=False,
+                 failed_drags_pair=True):
         '''The initiator.
 
         threshold - minimum length to pass the filter (integer)
@@ -130,33 +149,25 @@ class FilterByLength(object):
         self.min = minimum
         self.max = maximum
         self.ignore_masked = ignore_masked
+        super(FilterByLength, self).__init__(reverse=False,
+                                           failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, filterpacket):
-        'It filters out the short seqrecords.'
+    def _do_check(self, seq):
         min_ = self.min
         max_ = self.max
-        ignore_masked = self.ignore_masked
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        for seq in filterpacket[SEQS_PASSED]:
-            str_seq = get_str_seq(seq)
-            length = uppercase_length(str_seq) if ignore_masked else get_length(seq)
-            passed = True
-            if min_ is not None and length < min_:
-                passed = False
-            if max_ is not None and length > max_:
-                passed = False
+        length = uppercase_length(get_str_seq(seq)) if self.ignore_masked else get_length(seq)
 
-            if passed:
-                seqs_passed.append(seq)
-            else:
-                filtered_out.append(seq)
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+        passed = True
+        if min_ is not None and length < min_:
+            passed = False
+        if max_ is not None and length > max_:
+            passed = False
+        return passed
 
 
-class FilterById(object):
+class FilterById(_BaseFilter):
     'It removes the sequences not found in the given set'
-    def __init__(self, seq_ids, reverse=False):
+    def __init__(self, seq_ids, failed_drags_pair=True, reverse=False):
         '''The initiator.
 
         seq_ids - An iterator with the sequence ids to keep
@@ -165,25 +176,11 @@ class FilterById(object):
         if not isinstance(seq_ids, set):
             seq_ids = set(seq_ids)
         self.seq_ids = seq_ids
-        self.reverse = reverse
+        super(FilterById, self).__init__(failed_drags_pair=failed_drags_pair,
+                                              reverse=reverse)
 
-    def __call__(self, filterpacket):
-        'It filters out the seqrecords not found in the list.'
-        seq_ids = self.seq_ids
-        reverse = self.reverse
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        for seq in filterpacket[SEQS_PASSED]:
-            passed = True if get_name(seq) in seq_ids else False
-            if reverse:
-                passed = not(passed)
-
-            if passed:
-                seqs_passed.append(seq)
-            else:
-                filtered_out.append(seq)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+    def _do_check(self, seq):
+        return True if get_name(seq) in self.seq_ids else False
 
 
 def _get_mapped_reads(bam_fpath, min_mapq=0):
@@ -204,55 +201,42 @@ class FilterByBam(FilterById):
         return mapped_reads
 
 
-class FilterByQuality(object):
+class FilterByQuality(_BaseFilter):
     'It removes the sequences according to its quality'
-    def __init__(self, threshold, reverse=False, ignore_masked=False):
+    def __init__(self, threshold, ignore_masked=False, failed_drags_pair=True,
+                 reverse=False):
         '''The initiator.
 
         threshold - minimum quality to pass the filter (float)
         reverse - if True keep the sequences not found on the list
         '''
         self.threshold = float(threshold)
-        self.reverse = reverse
         self.ignore_masked = ignore_masked
+        super(FilterByQuality, self).__init__(reverse=reverse,
+                                           failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, filterpacket):
-        'It filters out the seqrecords not found in the list.'
-        threshold = self.threshold
-        reverse = self.reverse
-        ignore_masked = self.ignore_masked
-
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        for seq in filterpacket[SEQS_PASSED]:
-            seq_object = seq.object
-            try:
-                quals = seq_object.letter_annotations['phred_quality']
-            except KeyError:
-                msg = 'Some of the input sequences do not have qualities: {}'
-                msg = msg.format(get_name(seq))
-                raise WrongFormatError(msg)
-            if ignore_masked:
-                str_seq = str(seq_object.seq)
-                seg_quals = [quals[segment[0]: segment[1] + 1]
-                                for segment in get_uppercase_segments(str_seq)]
-                qual = sum(sum(q) * len(q) for q in seg_quals) / len(quals)
-            else:
-                qual = sum(quals) / len(quals)
-            passed = True if qual >= threshold else False
-            if reverse:
-                passed = not(passed)
-            if passed:
-                seqs_passed.append(seq)
-            else:
-                filtered_out.append(seq)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+    def _do_check(self, seq):
+        seq_object = seq.object
+        try:
+            quals = seq_object.letter_annotations['phred_quality']
+        except KeyError:
+            msg = 'Some of the input sequences do not have qualities: {}'
+            msg = msg.format(get_name(seq))
+            raise WrongFormatError(msg)
+        if self.ignore_masked:
+            str_seq = str(seq_object.seq)
+            seg_quals = [quals[segment[0]: segment[1] + 1]
+                            for segment in get_uppercase_segments(str_seq)]
+            qual = sum(sum(q) * len(q) for q in seg_quals) / len(quals)
+        else:
+            qual = sum(quals) / len(quals)
+        return True if qual >= self.threshold else False
 
 
-class FilterBlastMatch(object):
+class FilterBlastMatch(_BaseFilter):
     'It filters a seq if there is a match against a blastdb'
-    def __init__(self, database, program, filters, dbtype=None, reverse=False):
+    def __init__(self, database, program, filters, dbtype=None,
+                 failed_drags_pair=True, reverse=False):
         '''The initiator
             database: path to a file with seqs or a blast database
             filter_params:
@@ -263,48 +247,35 @@ class FilterBlastMatch(object):
         self._blast_db = database
         self._blast_program = program
         self._filters = filters
-        self._reverse = reverse
         self._dbtype = dbtype
+        super(FilterBlastMatch, self).__init__(reverse=reverse,
+                                          failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, filterpacket):
-        'It filters the seq by blast match'
-        reverse = self._reverse
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        seqs = filterpacket[SEQS_PASSED]
-        matcher = Blaster(seqs, self._blast_db, dbtype=self._dbtype,
-                          program=self._blast_program, filters=self._filters)
+    def _setup_checks(self, filterpacket):
+        seqs = [s for seqs in filterpacket[SEQS_PASSED]for s in seqs]
+        self._matcher = Blaster(seqs, self._blast_db, dbtype=self._dbtype,
+                                program=self._blast_program,
+                                filters=self._filters)
 
-        for seq in seqs:
-            segments = matcher.get_matched_segments(get_name(seq))
-            passed = True if segments is None else False
-
-            if reverse:
-                passed = not(passed)
-
-            if passed:
-                seqs_passed.append(seq)
-            else:
-                filtered_out.append(seq)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+    def _do_check(self, seq):
+        segments = self._matcher.get_matched_segments(get_name(seq))
+        return True if segments is None else False
 
 
-class FilterBowtie2Match(object):
+class FilterBowtie2Match(_BaseFilter):
     'It filters a seq if it maps against a bowtie2 index'
-    def __init__(self, index_fpath, reverse=False, min_mapq=None):
+    def __init__(self, index_fpath, reverse=False, min_mapq=None,
+                 failed_drags_pair=True):
         self._index_fpath = index_fpath
         self._reverse = reverse
         self.min_mapq = min_mapq
+        super(FilterBowtie2Match, self).__init__(reverse=reverse,
+                                          failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, filterpacket):
-        reverse = self._reverse
-
+    def _setup_checks(self, filterpacket):
         index_fpath = self._index_fpath
         get_or_create_bowtie2_index(index_fpath)
-
-        seqs = filterpacket[SEQS_PASSED]
-
+        seqs = [s for seqs in filterpacket[SEQS_PASSED]for s in seqs]
         seq_class = seqs[0].kind
         extra_params = []
         # Which format do we need for the bowtie2 input read file fasta or
@@ -340,50 +311,24 @@ class FilterBowtie2Match(object):
                          extra_params=extra_params)
 
         index_bam(bam_fhand.name)
-        mapped_reads = _get_mapped_reads(bam_fhand.name, self.min_mapq)
+        self.mapped_reads = _get_mapped_reads(bam_fhand.name, self.min_mapq)
         os.remove(bam_fhand.name + '.bai')
 
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-
-        for seq in seqs:
-            passed = False if get_name(seq) in mapped_reads else True
-
-            if reverse:
-                passed = not(passed)
-
-            if passed:
-                seqs_passed.append(seq)
-            else:
-                filtered_out.append(seq)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+    def _do_check(self, seq):
+        return False if get_name(seq) in self.mapped_reads else True
 
 
-class FilterDustComplexity(object):
+class FilterDustComplexity(_BaseFilter):
     'It filters a sequence according to its dust score'
     def __init__(self, threshold=get_setting('DEFATULT_DUST_THRESHOLD'),
-                 reverse=False):
+                 reverse=False, failed_drags_pair=True):
         '''The initiator
         '''
         self._threshold = threshold
-        self._reverse = reverse
+        super(FilterDustComplexity, self).__init__(reverse=reverse,
+                                          failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, filterpacket):
-        'It filters the seq by blast match'
-        seqs_passed = []
-        filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-
+    def  _do_check(self, seq):
         threshold = self._threshold
-        reverse = self._reverse
-        for seqrecord in filterpacket[SEQS_PASSED]:
-            dustscore = calculate_dust_score(seqrecord)
-            passed = True if dustscore < threshold else False
-            if reverse:
-                passed = not(passed)
-            if passed:
-                seqs_passed.append(seqrecord)
-            else:
-                filtered_out.append(seqrecord)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
+        dustscore = calculate_dust_score(seq)
+        return True if dustscore < threshold else False

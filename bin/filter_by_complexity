@@ -53,9 +53,11 @@ def run():
 
     seqrecord_packets = read_seq_packets(in_fhands,
                                          file_format=args['in_format'])
-    filter_packets = seq_to_filterpackets(seqrecord_packets)
+    filter_packets = seq_to_filterpackets(seqrecord_packets,
+                                       group_paired_reads=args['paired_reads'])
     filter_ = FilterDustComplexity(threshold=args['threshold'],
-                                   reverse=args['reverse'])
+                                   reverse=args['reverse'],
+                                     failed_drags_pair=args['fail_drags_pair'])
     filter_packets, workers = process_seq_packets(filter_packets, [filter_],
                                                processes=args['processes'])
 

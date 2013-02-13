@@ -71,8 +71,8 @@ def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
     'It writes to file a stream of seq lists'
     file_format = _remove_one_line(file_format)
     try:
-        write_seqs(chain.from_iterable(seq_packets), fhand,
-                   file_format=file_format)
+        seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
+        write_seqs(seqs, fhand, file_format=file_format)
     except BaseException:
         if workers is not None:
             workers.terminate()
@@ -88,12 +88,14 @@ def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
         return write_seq_packets(fhand=passed_fhand, seq_packets=seq_packets,
                                  file_format=file_format, workers=workers)
+
+    flatten_pairs = lambda pairs: (seq for pair in pairs for seq in pair)
     for packet in filter_packets:
         try:
-            write_seqs(packet[SEQS_PASSED], fhand=passed_fhand,
+            write_seqs(flatten_pairs(packet[SEQS_PASSED]), fhand=passed_fhand,
                        file_format=file_format)
-            write_seqs(packet[SEQS_FILTERED_OUT], fhand=filtered_fhand,
-                       file_format=file_format)
+            write_seqs(flatten_pairs(packet[SEQS_FILTERED_OUT]),
+                       fhand=filtered_fhand, file_format=file_format)
         except BaseException:
             if workers is not None:
                 workers.terminate()

@@ -63,10 +63,12 @@ def filter_by_bowtie2():
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
                                    size=get_setting('PACKET_SIZE') * 100)
 
-    filter_packets = seq_to_filterpackets(seq_packets)
+    filter_packets = seq_to_filterpackets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
     index_ = get_or_create_bowtie2_index(args['index'])
     filter_by_bowtie2 = FilterBowtie2Match(index_, min_mapq=args['min_mapq'],
-                                           reverse=args['reverse'])
+                                           reverse=args['reverse'],
+                                     failed_drags_pair=args['fail_drags_pair'])
 
     filter_packets, workers = process_seq_packets(filter_packets,
                                                   [filter_by_bowtie2],

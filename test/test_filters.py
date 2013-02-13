@@ -28,11 +28,12 @@ from tempfile import NamedTemporaryFile
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
+from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
                             seq_to_filterpackets, FilterByRpkm, FilterByBam,
-                            FilterBowtie2Match)
+                            FilterBowtie2Match, FilterByFeatureTypes)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -43,8 +44,8 @@ from crumbs.mapping import get_or_create_bowtie2_index
 from crumbs.seqio import read_seq_packets, SeqWrapper
 
 
-_seqs_to_names = lambda seqs: [get_name(s) for s in seqs]
-_seqs_to_str_seqs = lambda seqs: [get_str_seq(s) for s in seqs]
+_seqs_to_names = lambda seqs: [get_name(s) for pair in seqs for s in pair]
+_seqs_to_str_seqs = lambda seqs: [get_str_seq(s) for pai in seqs for s in pai]
 
 
 class PacketConversionTest(unittest.TestCase):
@@ -53,7 +54,8 @@ class PacketConversionTest(unittest.TestCase):
         'It converts seq packets into filter packets'
         seqpackets = [['ACT'], ['CTG', 'TTT']]
         filter_packets = list(seq_to_filterpackets(iter(seqpackets)))
-        assert [p[SEQS_PASSED] for p in filter_packets] == seqpackets
+        expected = [[['ACT']], [['CTG'], ['TTT']]]
+        assert [p[SEQS_PASSED] for p in filter_packets] == expected
         assert [p[SEQS_FILTERED_OUT] for p in filter_packets] == [[], []]
 
 
@@ -79,7 +81,7 @@ class LengthFilterTest(unittest.TestCase):
         'It filters the seqs according to its length'
         seq1 = _create_seqrecord('aCTg')
         seq2 = _create_seqrecord('AC')
-        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
+        seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
 
         filter_by_length = FilterByLength(minimum=4)
         passed = _seqs_to_str_seqs(filter_by_length(seqs)[SEQS_PASSED])
@@ -119,7 +121,7 @@ class LengthFilterTest(unittest.TestCase):
 
         seq1 = _create_seqrecord('aCTTATg')
         seq2 = _create_seqrecord('ACCGCGC')
-        filter_packet = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
+        filter_packet = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
         filter_by_length = FilterByLength(minimum=7, maximum=8,
                                           ignore_masked=True)
         assert len(filter_by_length(filter_packet)[SEQS_PASSED]) == 1
@@ -149,22 +151,60 @@ class LengthFilterTest(unittest.TestCase):
         assert not result
         assert '>s1\naCTg\n>s2\nAC\n' in open(filtered_fhand.name).read()
 
+        # with pairs
+        fasta = '>s1.f\naCTg\n>s1.r\nAC\n>s2.f\naTg\n>s2.r\nAC\n'
+        fasta += '>s3.f\naCTg\n>s3.r\nACTG\n'
+        fasta_fhand = _make_fhand(fasta)
+        try:
+            stderr = NamedTemporaryFile(suffix='.stderr')
+            result = check_output([filter_bin, '-n', '4', '--paired_reads',
+                                   fasta_fhand.name], stderr=stderr)
+            self.fail('CalledProcessError expected')
+        except CalledProcessError:
+            pass
+        result = check_output([filter_bin, '-n', '4', '--paired_reads',
+                               '--fail_drags_pair', 'true', fasta_fhand.name])
+        assert '>s3.f\naCTg\n>s3.r\nACTG\n' in result
+
+        result = check_output([filter_bin, '-n', '4', '--paired_reads',
+                               '--fail_drags_pair', 'false', fasta_fhand.name])
+        assert '>s1.f\naCTg\n>s1.r\nAC\n>s3.f\naCTg\n>s3.r\nACTG\n' in result
+
 
 class SeqListFilterTest(unittest.TestCase):
     'It tests the filtering using a list of sequences'
     def test_seq_list_filter(self):
         'It filters the reads given a list of ids'
         seq1 = SeqRecord(Seq('ACTG'), id='seq1')
+        seq1 = SeqWrapper(object=seq1, kind=SEQRECORD, file_format=None)
         seq2 = SeqRecord(Seq('ACTG'), id='seq2')
-        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
+        seq2 = SeqWrapper(object=seq2, kind=SEQRECORD, file_format=None)
+        seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
         ids = ['seq1']
         filter_by_id = FilterById(ids)
-        passed = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
+
+        passed = _seqs_to_names(filter_by_id(seqs)[SEQS_PASSED])
         assert passed == ['seq1']
 
         filter_by_id = FilterById(set(ids), reverse=True)
-        filtered = [str(s.id) for s in filter_by_id(seqs)[SEQS_PASSED]]
-        assert filtered == ['seq2']
+        passed = _seqs_to_names(filter_by_id(seqs)[SEQS_PASSED])
+        assert passed == ['seq2']
+
+    def test_with_pairs(self):
+        seq1 = SeqRecord(Seq('ACTG'), id='seq1')
+        seq1 = SeqWrapper(object=seq1, kind=SEQRECORD, file_format=None)
+        seq2 = SeqRecord(Seq('ACTG'), id='seq2')
+        seq2 = SeqWrapper(object=seq2, kind=SEQRECORD, file_format=None)
+        seqs = {SEQS_PASSED: [[seq1, seq2]], SEQS_FILTERED_OUT: []}
+        ids = ['seq1']
+
+        filter_by_id = FilterById(ids, failed_drags_pair=True)
+        passed = _seqs_to_names(filter_by_id(seqs)[SEQS_PASSED])
+        assert not passed
+
+        filter_by_id = FilterById(ids, failed_drags_pair=False)
+        passed = _seqs_to_names(filter_by_id(seqs)[SEQS_PASSED])
+        assert passed == ['seq1', 'seq2']
 
     def test_filter_by_name_bin(self):
         'It uses the filter_by_name binary'
@@ -190,7 +230,7 @@ class QualityFilterTest(unittest.TestCase):
         seq2 = SeqRecord(Seq('AAcTg'), id='seq2',
                     letter_annotations={'phred_quality': [40, 40, 42, 40, 42]})
         seq2 = SeqWrapper(object=seq2, kind=SEQRECORD, file_format=None)
-        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
+        seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
 
         filter_ = FilterByQuality(threshold=41)
         passed = _seqs_to_names(filter_(seqs)[SEQS_PASSED])
@@ -248,7 +288,8 @@ class BlastMatchFilterTest(unittest.TestCase):
         seq = 'ATCATGTAGTTACACATGAACACACACATG'
         seq += match
         seq1 = SeqRecord(Seq(seq), id='seq')
-        seqs = {SEQS_PASSED: [seq1], SEQS_FILTERED_OUT: []}
+        seq1 = SeqWrapper(object=seq1, kind=SEQRECORD, file_format=None)
+        seqs = {SEQS_PASSED: [[seq1]], SEQS_FILTERED_OUT: []}
         filters = [{'kind': 'score_threshold', 'score_key': 'expect',
                     'max_score': 0.001},
                    {'kind': 'score_threshold', 'score_key': 'identity',
@@ -368,7 +409,7 @@ class ComplexityFilterTest(unittest.TestCase):
         seq2 = SeqRecord(Seq(seq2), id='seq2')
         seq1 = SeqWrapper(SEQRECORD, seq1, None)
         seq2 = SeqWrapper(SEQRECORD, seq2, None)
-        seqs = {SEQS_PASSED: [seq1, seq2], SEQS_FILTERED_OUT: []}
+        seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
 
         filter_dust = FilterDustComplexity()
         filter_packet = filter_dust(seqs)
@@ -418,18 +459,21 @@ class RpkmFilterTest(unittest.TestCase):
     def test_filter_by_read_count(self):
         seq1 = 'T' * 1000
         seq2 = 'A' * 1000
-        seqs = {SEQS_PASSED: [SeqRecord(Seq(seq1), id='seq1'),
-                              SeqRecord(Seq(seq2), id='seq2')],
-                SEQS_FILTERED_OUT: []}
+        seq1 = SeqRecord(Seq(seq1), id='seq1')
+        seq2 = SeqRecord(Seq(seq2), id='seq2')
+        seq1 = SeqWrapper(SEQRECORD, seq1, None)
+        seq2 = SeqWrapper(SEQRECORD, seq2, None)
+        seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
+
         read_counts = {'seq1': {'mapped_reads': 10,
                                 'unmapped_reads': 999989,
-                                'length': len(seq1)},
+                                'length': len(seq1.object)},
                        'seq2': {'mapped_reads': 1, 'unmapped_reads': 0,
-                                'length': len(seq1)}}
+                                'length': len(seq2.object)}}
         filter_ = FilterByRpkm(read_counts, 2)
         seqs2 = filter_(seqs)
-        assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq2'
-        assert seqs2[SEQS_PASSED][0].id == 'seq1'
+        assert _seqs_to_names(seqs2[SEQS_FILTERED_OUT]) == ['seq2']
+        assert _seqs_to_names(seqs2[SEQS_PASSED]) == ['seq1']
 
         filter_ = FilterByRpkm(read_counts, 1)
         seqs2 = filter_(seqs)
@@ -437,8 +481,8 @@ class RpkmFilterTest(unittest.TestCase):
 
         filter_ = FilterByRpkm(read_counts, 2, reverse=True)
         seqs2 = filter_(seqs)
-        assert seqs2[SEQS_FILTERED_OUT][0].id == 'seq1'
-        assert seqs2[SEQS_PASSED][0].id == 'seq2'
+        assert _seqs_to_names(seqs2[SEQS_FILTERED_OUT]) == ['seq1']
+        assert _seqs_to_names(seqs2[SEQS_PASSED]) == ['seq2']
 
 
 class BamFilterTest(unittest.TestCase):
@@ -447,13 +491,14 @@ class BamFilterTest(unittest.TestCase):
     def test_bam_filter():
         'it test filter by being mapped in a BAM file'
         reads = [SeqRecord(seq=Seq('aaa'), id='seq{}'.format(n)) for n in range(16, 23)]
+        reads = [[SeqWrapper(SEQRECORD, r, None)] for r in reads]
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         filter_ = FilterByBam([bam_fpath])
         filterpacket = {SEQS_PASSED: reads, SEQS_FILTERED_OUT: []}
         new_filterpacket = filter_(filterpacket)
-        passed = [s.id for s in new_filterpacket[SEQS_PASSED]]
+        passed = _seqs_to_names(new_filterpacket[SEQS_PASSED])
         assert  passed == ['seq16', 'seq17', 'seq18']
-        filtered_out = [s.id for s in new_filterpacket[SEQS_FILTERED_OUT]]
+        filtered_out = _seqs_to_names(new_filterpacket[SEQS_FILTERED_OUT])
         assert filtered_out == ['seq19', 'seq20', 'seq21', 'seq22']
 
 
@@ -502,6 +547,22 @@ class FilterBowtie2Test(unittest.TestCase):
             assert 'read1' in open(filtered_fhand.name).read()
         directory.close()
 
+
+class FilterByFeatureTypeTest(unittest.TestCase):
+    def test_filter_by_feat_type(self):
+        orf = SeqFeature(FeatureLocation(3, 4), type='ORF')
+        seq1 = SeqRecord(Seq('aaaa'), id='seq1', features=[orf])
+        seq2 = SeqRecord(Seq('aaaa'), id='seq2')
+        seq1 = SeqWrapper(SEQRECORD, seq1, None)
+        seq2 = SeqWrapper(SEQRECORD, seq2, None)
+        seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
+
+        filter_ = FilterByFeatureTypes(['ORF'])
+        seqs = filter_(seqs)
+        assert len(seqs[SEQS_FILTERED_OUT]) == 1
+        assert len(seqs[SEQS_PASSED]) == 1
+
+
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'BlastMatchFilterTest.test_filter_blast_bin_fastq']
+    #import sys;sys.argv = ['', 'BamFilterTest']
     unittest.main()

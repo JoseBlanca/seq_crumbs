@@ -100,6 +100,9 @@ def main(funct):
     except KeyboardInterrupt, error:
         stderr.write('Program stopped by user request\n')
         return 16
+    except argparse.ArgumentError, error:
+        stderr.write(str(error) + '\n')
+        return 17
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq_crumbs developers would appreciate your feedback.\n'
@@ -263,6 +266,15 @@ def create_basic_parallel_argparse(**kwargs):
     return parser
 
 
+def _to_bool(string):
+    if string.lower()[0] == 'f':
+        return False
+    elif string.lower()[0] == 't':
+        return True
+    elif string.isdigit():
+        return bool(int(string))
+
+
 def create_filter_argparse(add_reverse=True, **kwargs):
     'It returns a cmd parser for the filter executables'
     parser = create_basic_parallel_argparse(**kwargs)
@@ -273,6 +285,11 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     parser.add_argument('-e', '--filtered_file',
                         help='Filtered out sequences output file',
                         type=argparse.FileType('wt'))
+    parser.add_argument('--paired_reads', action='store_true',
+                        help='Filtered out sequences output file')
+    parser.add_argument('--fail_drags_pair', type=_to_bool,
+                        choices=(True, False),
+                        help='Filtered out sequences output file')
     return parser
 
 
@@ -370,6 +387,19 @@ def parse_filter_args(parser, add_reverse=True):
     if add_reverse:
         args['reverse'] = parsed_args.reverse
     args['filtered_fhand'] = parsed_args.filtered_file
+    paired_reads = parsed_args.paired_reads
+    args['paired_reads'] = paired_reads
+    if paired_reads:
+        # in this case fail_drags_pair is required
+        fail_drags_pair = parsed_args.fail_drags_pair
+        if fail_drags_pair is None:
+            msg = 'For pairs fail_drags_pair is required'
+            raise argparse.ArgumentError(parsed_args.fail_drags_pair, msg)
+        print fail_drags_pair
+    else:
+        fail_drags_pair = None
+    args['fail_drags_pair'] = fail_drags_pair
+
     return args, parsed_args
 
 

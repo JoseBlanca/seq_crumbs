@@ -98,13 +98,15 @@ def filter_by_blast():
     filtered_fhand = args['filtered_fhand']
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
-    filter_packets = seq_to_filterpackets(seq_packets)
+    filter_packets = seq_to_filterpackets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
 
     database = args['blastdb']
     program = args['blast_program']
     filters = _prepare_filters(args)
     filter_by_blast = FilterBlastMatch(database, program, filters,
-                                       reverse=args['reverse'])
+                                     reverse=args['reverse'],
+                                     failed_drags_pair=args['fail_drags_pair'])
 
     filter_packets, workers = process_seq_packets(filter_packets,
                                                   [filter_by_blast],

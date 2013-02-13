@@ -55,10 +55,12 @@ def run():
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
                                    prefered_seq_classes=[SEQRECORD])
-    filter_packets = seq_to_filterpackets(seq_packets)
+    filter_packets = seq_to_filterpackets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
     filter_ = FilterByQuality(threshold=args['threshold'],
                               reverse=args['reverse'],
-                              ignore_masked=args['ignore_masked'])
+                              ignore_masked=args['ignore_masked'],
+                              failed_drags_pair=args['fail_drags_pair'])
     filter_packets, workers = process_seq_packets(filter_packets, [filter_],
                                                   processes=args['processes'])
 
