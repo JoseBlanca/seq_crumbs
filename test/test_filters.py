@@ -340,6 +340,22 @@ class BlastMatchFilterTest(unittest.TestCase):
         assert result == ''
         assert ">seq\nATCATGTAGTTACACATG" in open(filtered_fhand.name).read()
 
+    def test_filter_blast_bin_fastq(self):
+        filter_bin = os.path.join(BIN_DIR, 'filter_by_blast')
+        blastdb = os.path.join(TEST_DATA_DIR, 'blastdbs', 'arabidopsis_genes')
+        # With fastq
+        match = 'CCAAAGTACGGTCTCACAAGCGGTCTCTTACCGGACACCGTCACCGATTTCACCCTCT'
+        seq = 'ATCATGTAGTTACACATGAACACACACATG'
+        seq += match
+
+        fastq = '@seq\n' + seq + '\n+\n' + 'a' * len(seq) + '\n'
+        seq_fhand = _make_fhand(fastq + fastq)
+
+        result = check_output([filter_bin, '-b', blastdb, '-x', '1e-27',
+                               seq_fhand.name])
+
+        assert 'CATGAACACACACAT' in result
+
 
 class ComplexityFilterTest(unittest.TestCase):
     'It tests the filtering by complexity'
@@ -487,5 +503,5 @@ class FilterBowtie2Test(unittest.TestCase):
         directory.close()
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'ComplexityFilterTest']
+    #import sys;sys.argv = ['', 'BlastMatchFilterTest.test_filter_blast_bin_fastq']
     unittest.main()

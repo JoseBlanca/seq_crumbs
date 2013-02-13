@@ -17,7 +17,7 @@ import os.path
 import subprocess
 import tempfile
 
-from crumbs.seqio import seqio, write_seqrecords, guess_seq_type
+from crumbs.seqio import seqio, write_seqrecords, guess_seq_type, write_seqs
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
 from crumbs.utils.tags import NUCL, PROT
@@ -166,7 +166,12 @@ def _do_blast_2(db_fpath, queries, program, dbtype=None, blast_format=None,
     blast_format is a list of fields.
     '''
 
-    query_fhand = write_seqrecords(queries, file_format='fasta')
+    if queries[0].__class__.__name__ == 'SeqRecord':
+        # TODO, remove this case once everything is adapted to the SeqWrapper
+        # based io
+        query_fhand = write_seqrecords(queries, file_format='fasta')
+    else:
+        query_fhand = write_seqs(queries, file_format='fasta')
     query_fhand.flush()
 
     blastdb = get_or_create_blastdb(db_fpath, dbtype=dbtype)

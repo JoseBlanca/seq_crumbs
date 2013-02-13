@@ -271,21 +271,21 @@ class FilterBlastMatch(object):
         reverse = self._reverse
         seqs_passed = []
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
-        seqrecords = filterpacket[SEQS_PASSED]
-        matcher = Blaster(seqrecords, self._blast_db, dbtype=self._dbtype,
+        seqs = filterpacket[SEQS_PASSED]
+        matcher = Blaster(seqs, self._blast_db, dbtype=self._dbtype,
                           program=self._blast_program, filters=self._filters)
 
-        for seqrecord in seqrecords:
-            segments = matcher.get_matched_segments(seqrecord.id)
+        for seq in seqs:
+            segments = matcher.get_matched_segments(get_name(seq))
             passed = True if segments is None else False
 
             if reverse:
                 passed = not(passed)
 
             if passed:
-                seqs_passed.append(seqrecord)
+                seqs_passed.append(seq)
             else:
-                filtered_out.append(seqrecord)
+                filtered_out.append(seq)
 
         return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 

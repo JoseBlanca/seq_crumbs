@@ -342,16 +342,24 @@ def _read_seqitems(fhands, file_format):
 def _write_seqitems(items, fhand, file_format):
     'It writes one seq item (tuple of name and string)'
     for seq in items:
-        if file_format and _remove_one_line(seq.file_format) != file_format:
+        seqitems_fmt = _remove_one_line(seq.file_format)
+        if file_format and 'fastq' in seqitems_fmt and 'fasta' in file_format:
+            seq_lines = seq.object.lines
+            fhand.write('>' + seq_lines[0][1:] + seq_lines[1])
+        elif file_format and seqitems_fmt != file_format:
             msg = 'Input and output file formats do not match, you should not '
             msg += 'use SeqItems: ' + str(seq.file_format) + ' '
             msg += str(file_format)
             raise RuntimeError(msg)
-        fhand.write(''.join(seq.object[1]))
+        else:
+            fhand.write(''.join(seq.object.lines))
 
 
-def write_seqs(seqs, fhand, file_format=None):
+def write_seqs(seqs, fhand=None, file_format=None):
     'It writes the given sequences'
+    if fhand is None:
+        fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
+
     file_format = _remove_one_line(file_format)
     seqs, seqs2 = tee(seqs)
     try:
@@ -367,6 +375,7 @@ def write_seqs(seqs, fhand, file_format=None):
         write_seqrecords(seqs, fhand, file_format)
     else:
         raise ValueError('Unknown class for seq: ' + seq_class)
+    return fhand
 
 
 def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
@@ -375,11 +384,12 @@ def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
     if not prefered_seq_classes:
         prefered_seq_classes = [SEQITEM, SEQRECORD]
 
+    if file_format == GUESS_FORMAT:
+        in_format = guess_format(fhands[0])
+    else:
+        in_format = file_format
+
     if out_format not in (None, GUESS_FORMAT):
-        if file_format == GUESS_FORMAT:
-            in_format = guess_format(fhands[0])
-        else:
-            in_format = file_format
 
         if in_format != out_format:
             if SEQITEM in prefered_seq_classes:
@@ -394,12 +404,12 @@ def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
     for seq_class in prefered_seq_classes:
         if seq_class == SEQITEM:
             try:
-                return _read_seqitems(fhands, file_format)
+                return _read_seqitems(fhands, in_format)
             except NotImplementedError:
                 continue
         elif seq_class == SEQRECORD:
             try:
-                seqs = read_seqrecords(fhands, file_format)
+                seqs = read_seqrecords(fhands, in_format)
                 return assing_kind_to_seqs(SEQRECORD, seqs, None)
             except NotImplementedError:
                 continue
