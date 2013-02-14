@@ -481,14 +481,10 @@ class IndexedPairMatcher(unittest.TestCase):
 class PairGrouperTest(unittest.TestCase):
     @staticmethod
     def test_pair_grouper():
-        seq1 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.f\n', 'A\n'], 1),
-                          'fasta')
-        seq2 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.r\n', 'C\n'], 1),
-                          'fasta')
-        seq3 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.f\n', 'T\n'], 1),
-                          'fasta')
-        seq4 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.r\n', 'G\n'], 1),
-                          'fasta')
+        seq1 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.f\n', 'A\n']), 'fasta')
+        seq2 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.r\n', 'C\n']), 'fasta')
+        seq3 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.f\n', 'T\n']), 'fasta')
+        seq4 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.r\n', 'G\n']), 'fasta')
         seqs = seq1, seq2, seq3, seq4
         paired_seqs = list(group_seqs_in_pairs(seqs))
         assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C']

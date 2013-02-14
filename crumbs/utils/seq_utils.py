@@ -331,7 +331,7 @@ def get_length(seq):
     seq_class = seq.kind
     seq = seq.object
     if seq_class == SEQITEM:
-        length = seq.length
+        length = len(seq.lines[1]) - 1
     elif seq_class == SEQRECORD:
         length = len(seq)
     return length
