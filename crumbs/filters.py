@@ -17,7 +17,6 @@
 
 from __future__ import division
 from tempfile import NamedTemporaryFile
-import os
 
 try:
     import pysam
@@ -36,7 +35,6 @@ from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
 from crumbs.mapping import  get_or_create_bowtie2_index, map_with_bowtie2
 from crumbs.seqio import write_seqs
-from crumbs.utils.sam import index_bam
 from crumbs.pairs import group_seqs_in_pairs
 
 
