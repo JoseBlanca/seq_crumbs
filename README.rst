@@ -28,6 +28,9 @@ filter_by_name
 filter_by_blast
     It filters the sequences using blast
 
+filter_by_bowtie2
+    It filters the sequences using bowtie2
+
 filter_by_complexity
 	It filters the sequences according to its complexity.
 
