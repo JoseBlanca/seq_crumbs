@@ -185,7 +185,7 @@ class FilterById(_BaseFilter):
 
 def _get_mapped_reads(bam_fpath, min_mapq=0):
     bam = pysam.Samfile(bam_fpath)
-    return [read.qname for read in bam.fetch() if not read.is_unmapped and (not min_mapq or read.mapq > min_mapq)]
+    return [read.qname for read in bam if not read.is_unmapped and (not min_mapq or read.mapq > min_mapq)]
 
 
 class FilterByBam(FilterById):
@@ -310,9 +310,7 @@ class FilterBowtie2Match(_BaseFilter):
                          unpaired_fpaths=[reads_fhand.name],
                          extra_params=extra_params)
 
-        index_bam(bam_fhand.name)
         self.mapped_reads = _get_mapped_reads(bam_fhand.name, self.min_mapq)
-        os.remove(bam_fhand.name + '.bai')
 
     def _do_check(self, seq):
         return False if get_name(seq) in self.mapped_reads else True
