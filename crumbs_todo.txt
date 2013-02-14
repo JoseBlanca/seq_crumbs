@@ -4,6 +4,7 @@ TODO
 
 read_seqrecords should be private, the only public should be based on the SeqWrapper IO.
 Remove the seqrecord.__class__.__name__ once everything has SeqWrappers
+split file_format into format and style to remove the -one-line problem
 
 
 Add a test for sample, head or cat with different input formats, it should fail.

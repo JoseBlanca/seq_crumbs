@@ -71,8 +71,8 @@ def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
     'It writes to file a stream of seq lists'
     file_format = _remove_one_line(file_format)
     try:
-        seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
-        write_seqs(seqs, fhand, file_format=file_format)
+        write_seqs(chain.from_iterable(seq_packets), fhand,
+                   file_format=file_format)
     except BaseException:
         if workers is not None:
             workers.terminate()
@@ -86,8 +86,8 @@ def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
 
     if filtered_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
-        return write_seq_packets(fhand=passed_fhand, seq_packets=seq_packets,
-                                 file_format=file_format, workers=workers)
+        seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
+        return write_seqs(seqs, passed_fhand, file_format=file_format)
 
     flatten_pairs = lambda pairs: (seq for pair in pairs for seq in pair)
     for packet in filter_packets:
@@ -270,7 +270,7 @@ def _get_name_from_lines(lines):
     return name
 
 
-SeqWrapper = namedtuple('Seq', ['kind', 'object', 'file_format'])
+SeqWrapper = namedtuple('SeqWrapper', ['kind', 'object', 'file_format'])
 SeqItem = namedtuple('SeqItem', ['name', 'lines'])
 
 
@@ -378,7 +378,8 @@ def write_seqs(seqs, fhand=None, file_format=None):
     return fhand
 
 
-def read_seqs(fhands, file_format, out_format=None, prefered_seq_classes=None):
+def read_seqs(fhands, file_format=GUESS_FORMAT, out_format=None,
+              prefered_seq_classes=None):
     'It returns a stream of seqs in different codings: seqrecords, seqitems...'
 
     if not prefered_seq_classes:

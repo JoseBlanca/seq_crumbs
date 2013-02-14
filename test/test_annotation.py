@@ -24,8 +24,11 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.annotation import (EstscanOrfAnnotator, _detect_polya_tail,
                                PolyaAnnotator, BlastAnnotator)
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.seqio import read_seqrecords
-from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME, NUCL
+from crumbs.seqio import read_seqs, SeqWrapper
+from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME, NUCL, SEQRECORD
+
+
+_wrap_seq = lambda seq: SeqWrapper(SEQRECORD, seq, None)
 
 
 class AnnotationTest(unittest.TestCase):
@@ -36,30 +39,31 @@ class AnnotationTest(unittest.TestCase):
         fpath = os.path.join(TEST_DATA_DIR, 'orf_test.fasta')
         estscan_matrix = os.path.join(TEST_DATA_DIR,
                                       'Arabidopsis_thaliana.smat')
-        seq_records = list(read_seqrecords([open(fpath)]))
+        seq_records = list(read_seqs([open(fpath)],
+                                     prefered_seq_classes=[SEQRECORD]))
         orf_annotator = EstscanOrfAnnotator(estscan_matrix)
         seq_records = orf_annotator(seq_records)
-        orf1 = seq_records[0].features[0]
-        orf2 = seq_records[1].features[0]
+        orf1 = seq_records[0].object.features[0]
+        orf2 = seq_records[1].object.features[0]
         assert orf1.strand == 1
         assert orf1.location.start.position == 0
         assert orf1.location.end.position == 541
         assert orf2.strand == -1
         assert orf2.location.start.position == 0
         assert orf2.location.end.position == 541
-        assert not seq_records[2].features
+        assert not seq_records[2].object.features
 
     def test_polya_annotator(self):
         'It annotates poly-A or poly-T regions'
         seq1 = SeqRecord(seq=Seq('atccgtcagcatcCAATAAAAA'), id='seq1')
         seq2 = SeqRecord(seq=Seq('TTTTcTTcatccgtcag'), id='seq2')
         seq3 = SeqRecord(seq=Seq('TTTTcTTatccgtcagcatcCAATAAAAA'), id='seq3')
-        seqs = [seq1, seq2, seq3]
+        seqs = [_wrap_seq(seq1), _wrap_seq(seq2), _wrap_seq(seq3)]
         annotator = PolyaAnnotator(min_len=5, max_cont_mismatches=0)
         seqs = annotator(seqs)
-        polya1 = seqs[0].features[0]
-        assert not seqs[1].features
-        polya3 = seqs[2].features[0]
+        polya1 = seqs[0].object.features[0]
+        assert not seqs[1].object.features
+        polya3 = seqs[2].object.features[0]
 
         assert polya1.type == 'polyA_sequence'
         assert polya1.location.start.position == 17
@@ -74,12 +78,12 @@ class AnnotationTest(unittest.TestCase):
         seq1 = SeqRecord(seq=Seq('atccgtcagcatcCAATAAAAA'), id='seq1')
         seq2 = SeqRecord(seq=Seq('TTTTcTTcatccgtcag'), id='seq2')
         seq3 = SeqRecord(seq=Seq('TTTTcTTatccgtcagcatcCAATAAAAA'), id='seq3')
-        seqs = [seq1, seq2, seq3]
+        seqs = [_wrap_seq(seq1), _wrap_seq(seq2), _wrap_seq(seq3)]
         annotator = PolyaAnnotator(min_len=4, max_cont_mismatches=1)
         seqs = annotator(seqs)
-        polya1 = seqs[0].features[0]
-        polya2 = seqs[1].features[0]
-        polya3 = seqs[2].features[0]
+        polya1 = seqs[0].object.features[0]
+        polya2 = seqs[1].object.features[0]
+        polya3 = seqs[2].object.features[0]
 
         assert polya1.type == 'polyA_sequence'
         assert polya1.location.start.position == 17
@@ -144,7 +148,7 @@ class AnnotationTest(unittest.TestCase):
         seq2 = SeqRecord(seq=Seq(seq_reverse), id='seq_reverse')
         seq3 = SeqRecord(seq=Seq('ttgtcatcgtagctagctagctgactgatcga'),
                                  id='seq_nomatch')
-        seqrecords = [seq1, seq2, seq3]
+        seqrecords = [_wrap_seq(seq1), _wrap_seq(seq2), _wrap_seq(seq3)]
 
         annotator = BlastAnnotator(blastdb=blastdb, program='blastn',
                                    dbtype=NUCL)
@@ -153,22 +157,24 @@ class AnnotationTest(unittest.TestCase):
         seq2 = seqrecords[1]
         seq3 = seqrecords[2]
 
-        assert seq1.features[0].strand == 1
-        assert seq1.features[0].qualifiers['Target']['name'] == 'AT1G55265.1'
-        assert seq1.features[0].location.start.position == 0
-        assert seq1.features[0].qualifiers['score']
-        assert seq1.features[0].qualifiers['identity'] == 100.0
-        assert seq1.features[0].qualifiers['blastdb'] == 'arabidopsis_genes'
+        seq1_feat0 = seq1.object.features[0]
+        assert seq1_feat0.strand == 1
+        assert seq1_feat0.qualifiers['Target']['name'] == 'AT1G55265.1'
+        assert seq1_feat0.location.start.position == 0
+        assert seq1_feat0.qualifiers['score']
+        assert seq1_feat0.qualifiers['identity'] == 100.0
+        assert seq1_feat0.qualifiers['blastdb'] == 'arabidopsis_genes'
 
-        assert seq2.features[0].location.strand == -1
-        assert seq2.features[0].location.start.position == 0
-        assert seq2.features[0].location.end.position == 281
-        assert seq2.features[0].qualifiers['Target']['name'] == 'AT1G55265.1'
-        assert seq2.features[0].qualifiers['Target']['start'] == 79
-        assert seq2.features[0].qualifiers['Target']['end'] == 360
+        seq2_feat0 = seq2.object.features[0]
+        assert seq2_feat0.location.strand == -1
+        assert seq2_feat0.location.start.position == 0
+        assert seq2_feat0.location.end.position == 281
+        assert seq2_feat0.qualifiers['Target']['name'] == 'AT1G55265.1'
+        assert seq2_feat0.qualifiers['Target']['start'] == 79
+        assert seq2_feat0.qualifiers['Target']['end'] == 360
 
-        assert len(seq2.features) == 1
-        assert len(seq3.features) == 0
+        assert len(seq2.object.features) == 1
+        assert len(seq3.object.features) == 0
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']

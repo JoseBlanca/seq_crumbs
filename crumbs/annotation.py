@@ -22,16 +22,17 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from crumbs.utils.bin_utils import (get_binary_path, popen,
                                     check_process_finishes)
 from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME
-from crumbs.seqio import write_seqrecords, read_seqrecords
+from crumbs.utils.seq_utils import get_description, get_name, get_str_seq
+from crumbs.seqio import write_seqs, read_seqs
 from crumbs.blast import Blaster
 from crumbs.settings import get_setting
 
 # pylint: disable=R0903
 
 
-def _run_estscan(seqrecords, pep_out_fpath, dna_out_fpath, matrix_fpath):
+def _run_estscan(seqs, pep_out_fpath, dna_out_fpath, matrix_fpath):
     'It runs estscan in the input seqs'
-    seq_fhand = write_seqrecords(seqrecords, file_format='fasta')
+    seq_fhand = write_seqs(seqs, file_format='fasta')
     seq_fhand.flush()
     binary = get_binary_path('estscan')
 
@@ -44,12 +45,12 @@ def _run_estscan(seqrecords, pep_out_fpath, dna_out_fpath, matrix_fpath):
 
 def _read_estcan_result(fhand, result, file_type):
     'It reads a dna or pep ESTscan result file'
-    for seq in read_seqrecords([fhand], file_format='fasta'):
-        items = [i.strip() for i in seq.description.split(';')]
+    for seq in read_seqs([fhand], file_format='fasta'):
+        items = [i.strip() for i in get_description(seq).split(';')]
         strand = -1 if 'minus strand' in items else 1
         start, end = items[0].split(' ', 3)[1:3]
         # estscan changes the name, we have to fix it
-        seqid = seq.id.strip(';')
+        seqid = get_name(seq).strip(';')
         try:
             seq_orfs = result[seqid]
         except KeyError:
@@ -61,7 +62,7 @@ def _read_estcan_result(fhand, result, file_type):
         else:
             orf = {}
             seq_orfs[orf_key] = orf
-        orf[file_type] = seq.seq
+        orf[file_type] = get_str_seq(seq)
 
 
 def _read_estcan_results(pep_fhand, dna_fhand):
@@ -78,31 +79,31 @@ class EstscanOrfAnnotator(object):
         'Initiator'
         self._usage_matrix = usage_matrix
 
-    def __call__(self, seqrecords):
+    def __call__(self, seqs):
         'It runs the actual annotations'
         pep_fhand = NamedTemporaryFile()
         dna_fhand = NamedTemporaryFile()
-        _run_estscan(seqrecords, pep_fhand.name, dna_fhand.name,
+        _run_estscan(seqs, pep_fhand.name, dna_fhand.name,
                      self._usage_matrix)
         # now we read the result files
         estscan_result = _read_estcan_results(open(pep_fhand.name),
                                               open(dna_fhand.name))
-        for seq in seqrecords:
-            seq_name = seq.id
+        for seq in seqs:
+            seq_name = get_name(seq)
             orfs = estscan_result.get(seq_name, {})
             feats = []
-            for (start, end, strand), seqs in orfs.viewitems():
+            for (start, end, strand), str_seqs in orfs.viewitems():
                 start -= 1
                 # end is fine  -- end[
                 feat = SeqFeature(location=FeatureLocation(start, end, strand),
-                                  type='ORF', qualifiers=seqs)
+                                  type='ORF', qualifiers=str_seqs)
                 feats.append(feat)
             if feats:
-                seq.features.extend(feats)
+                seq.object.features.extend(feats)
 
         dna_fhand.close()
         pep_fhand.close()
-        return seqrecords
+        return seqs
 
 
 def _detect_polya_tail(seq, location, min_len, max_cont_mismatches):
@@ -160,9 +161,9 @@ def _detect_polya_tail(seq, location, min_len, max_cont_mismatches):
     return result
 
 
-def _annotate_polya(seqrecord, min_len, max_cont_mismatches):
+def _annotate_polya(seq, min_len, max_cont_mismatches):
     'It annotates the polyA with the EMBOSS trimest method'
-    str_seq = str(seqrecord.seq)
+    str_seq = get_str_seq(seq)
     polya = _detect_polya_tail(str_seq, THREE_PRIME, min_len,
                                max_cont_mismatches)
     polyt = _detect_polya_tail(str_seq, FIVE_PRIME, min_len,
@@ -184,7 +185,8 @@ def _annotate_polya(seqrecord, min_len, max_cont_mismatches):
         start, end = polya if chosen_tail == 'A' else polyt
         feat = SeqFeature(location=FeatureLocation(start, end, strand),
                           type='polyA_sequence')
-        seqrecord.features.append(feat)
+        # We're assuming that the seq has a SeqRecord in it
+        seq.object.features.append(feat)
 
 
 class PolyaAnnotator(object):
@@ -229,7 +231,7 @@ class BlastAnnotator(object):
         blasts = matcher.blasts
         blastdb = os.path.basename(self.blastdb)
         for seqrecord in seqrecords:
-            align_result = blasts.get(seqrecord.id, None)
+            align_result = blasts.get(get_name(seqrecord), None)
             if not align_result:
                 continue
             match_counter = 0
@@ -259,6 +261,5 @@ class BlastAnnotator(object):
                     feature = SeqFeature(location=location, type='match_part',
                                          qualifiers=qualifiers,
                                        id='match{0:03d}'.format(match_counter))
-                    seqrecord.features.append(feature)
-
+                    seqrecord.object.features.append(feature)
         return seqrecords

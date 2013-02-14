@@ -238,11 +238,11 @@ def _guess_format(fhand, force_file_as_non_seek):
 
 def append_to_description(seqrecord, text):
     'it appends the text to the seqrecord description'
-    desc = seqrecord.description
-    if desc == '<unknown description>' or desc == seqrecord.id:
+    desc = get_description(seqrecord)
+    if desc in (None, get_name(seqrecord), '<unknown description>'):
         desc = ''
     desc += text
-    seqrecord.description = desc
+    seqrecord.object.description = desc
 
 
 class _FunctionRunner(object):
@@ -292,6 +292,19 @@ def get_title(seq):
         msg = 'Do not know how to guess title form this seq class'
         raise NotImplementedError(msg)
     return title
+
+
+def get_description(seq):
+    seq_class = seq.kind
+    seq = seq.object
+    if seq_class == SEQITEM:
+        title_items = seq.lines[0].split(' ', 1)
+        desc = title_items[1] if len(title_items) == 2 else None
+    elif seq_class == SEQRECORD:
+        desc = seq.description
+        if desc == '<unknown description>':  # BioPython default
+            return None
+    return desc
 
 
 def get_name(seq):

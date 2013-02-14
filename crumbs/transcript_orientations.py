@@ -19,6 +19,8 @@ import os.path
 from crumbs.annotation import (PolyaAnnotator, EstscanOrfAnnotator,
                                BlastAnnotator)
 from crumbs.utils.seq_utils import append_to_description
+from crumbs.utils.tags import SEQRECORD
+from crumbs.seqio import SeqWrapper
 
 
 class TranscriptOrientator(object):
@@ -28,7 +30,6 @@ class TranscriptOrientator(object):
 
     def __init__(self, polya_params=None, estscan_params=None,
                  blast_params=None):
-        'Initiatilzes the class'
         self._polya_params = polya_params
         self._estscan_params = estscan_params
         self._blast_params = blast_params
@@ -82,19 +83,19 @@ class TranscriptOrientator(object):
         scores = [feat.qualifiers['score'] for feat in features]
         return features[scores.index(min(scores))]
 
-    def _guess_orientations(self, seqrecords, annotator_name, blastdb):
+    def _guess_orientations(self, seqs, annotator_name, blastdb):
         '''It returns the orientation of the annotated transcripts.'''
         orientations = []
-        for seqrecord in seqrecords:
+        for seq in seqs:
             if annotator_name == 'polyA':
-                feature = self._polya_selector(seqrecord.features)
+                feature = self._polya_selector(seq.object.features)
             elif annotator_name == 'estscan_orf':
-                feature = self._orf_selector(seqrecord.features)
+                feature = self._orf_selector(seq.object.features)
             elif  annotator_name == 'blast':
-                feature = self._match_part_selector(seqrecord.features,
+                feature = self._match_part_selector(seq.object.features,
                                                     blastdb=blastdb)
             else:
-                raise NotImplementedError('this annotator type not supported')
+                raise NotImplementedError('This annotator type not supported')
 
             orientation = None if feature is None else feature.strand
             orientations.append(orientation)
@@ -114,28 +115,27 @@ class TranscriptOrientator(object):
                     break
             annotator = BlastAnnotator(**blast_param)
         else:
-            raise NotImplementedError('this annotator type not supported')
+            raise NotImplementedError('This annotator type not supported')
         return annotator
 
-    def __call__(self, seqrecords):
-        'It makes the job'
+    def __call__(self, seqs):
+        'It orientates seqs, that should have a SeqRecord in it'
         orientations = None
-        orientation_log = [None] * len(seqrecords)
+        orientation_log = [None] * len(seqs)
 
         for annotator in self._annotators:
             if orientations:
                 to_annalyze = [not o for o in orientations]
-                seqrecords_to_annalyze = list(compress(seqrecords,
-                                                       to_annalyze))
+                seqs_to_analyze = list(compress(seqs, to_annalyze))
             else:
-                orientations = [None] * len(seqrecords)
-                seqrecords_to_annalyze = seqrecords
+                orientations = [None] * len(seqs)
+                seqs_to_analyze = seqs
 
             annotator_name = annotator['name']
             blastdb = annotator.get('blastdb', None)
             annotator = self._get_annotator(annotator_name, blastdb)
 
-            annot_seqrecords = annotator(seqrecords_to_annalyze)
+            annot_seqrecords = annotator(seqs_to_analyze)
             annot_strands = self._guess_orientations(annot_seqrecords,
                                                      annotator_name,
                                                      blastdb=blastdb)
@@ -152,18 +152,19 @@ class TranscriptOrientator(object):
                     analyzed_seqs_index += 1
         # Now we reverse the seqs that we have guess that are reversed
         reorientated_seqrecords = []
-        for orientation, seqrecord, reason in zip(orientations, seqrecords,
-                                                      orientation_log):
+        for orientation, seq, reason in zip(orientations, seqs,
+                                            orientation_log):
             if orientation == -1:
-                seqrecord = seqrecord.reverse_complement(id=True,
-                                                         description=True,
-                                                         annotations=True,
-                                                         features=True,
-                                                         dbxrefs=True,
-                                                         name=True)
+                rev_seqrecord = seq.object.reverse_complement(id=True,
+                                                              description=True,
+                                                              annotations=True,
+                                                              features=True,
+                                                              dbxrefs=True,
+                                                              name=True)
+                seq = SeqWrapper(SEQRECORD, rev_seqrecord, None)
                 # we mark the reason why it has been reversed
                 text = '(reversed because of: {})'.format(reason)
-                append_to_description(seqrecord, text)
+                append_to_description(seq, text)
 
-            reorientated_seqrecords.append(seqrecord)
+            reorientated_seqrecords.append(seq)
         return reorientated_seqrecords
