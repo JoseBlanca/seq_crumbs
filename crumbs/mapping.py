@@ -61,7 +61,7 @@ def map_with_bowtie2(index_fpath, bam_fpath, paired_fpaths=None,
 
     binary = get_binary_path('bowtie2')
     cmd = [binary, '-x', index_fpath, '--{0}'.format(preset),
-           '-p', get_num_threads(threads)]
+           '-p', str(get_num_threads(threads))]
 
     cmd.extend(extra_params)
     if unpaired_fpaths:
