@@ -367,6 +367,7 @@ def write_seqs(seqs, fhand=None, file_format=None):
     except StopIteration:
         # No sequences to write, so we're done
         return
+    del seqs2
     seq_class = seq.kind
     if seq_class == SEQITEM:
         _write_seqitems(seqs, fhand, file_format)
