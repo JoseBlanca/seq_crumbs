@@ -55,6 +55,10 @@ _EXTERNAL_BIN_PREFIX = 'crumbs_'
 # mark True if need the path or assumes that is on the path
 _ADD_PATH_TO_EXT_BIN = True
 
+_THIRD_PART_JAVA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                                   'third_party', 'java')
+_PICARD_TOOLS_DIR = os.path.join(_THIRD_PART_JAVA_DIR, 'picard-tools')
+
 # how many reads can be hold in memory by default
 _DEFAULT_SEQS_IN_MEM_LIMIT = 500000
 
