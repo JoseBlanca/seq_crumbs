@@ -93,7 +93,7 @@ _DUST_WINDOWSIZE = 64
 _DUST_WINDOWSTEP = 32
 _DEFATULT_DUST_THRESHOLD = 7
 
-_TEMP_DIR = '/home/peio/work_in/bug_parallel/memdir'
+_TEMP_DIR = None 
 
 # min_mapq to use as a filter for maped reads
 _DEFAULT_MIN_MAPQ = 0
