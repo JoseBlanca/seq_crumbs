@@ -61,7 +61,7 @@ def filter_by_bowtie2():
     filtered_fhand = args['filtered_fhand']
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
-                                   size=get_setting('PACKET_SIZE') * 100)
+                                   size=get_setting('PACKET_SIZE') * 10)
 
     filter_packets = seq_to_filterpackets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
