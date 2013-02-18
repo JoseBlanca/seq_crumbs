@@ -21,7 +21,7 @@ from tempfile import NamedTemporaryFile
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.mapping import (get_or_create_bowtie2_index, _bowtie2_index_exists,
                             map_with_bowtie2, get_or_create_bwa_index,
-                            _bwa_index_exists, map_with_bwa_sw)
+                            _bwa_index_exists, map_with_bwasw)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.utils.bin_utils import get_binary_path
 
@@ -89,7 +89,7 @@ class Bwa2Test(unittest.TestCase):
         directory = TemporaryDir()
         index_fpath = get_or_create_bwa_index(reference_fpath, directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        map_with_bwa_sw(index_fpath, bam_fhand.name, unpaired_fpath=reads_fpath)
+        map_with_bwasw(index_fpath, bam_fhand.name, unpaired_fpath=reads_fpath)
         out = subprocess.check_output([get_binary_path('samtools'), 'view',
                                        bam_fhand.name])
         assert  'TTCTGATTCAATCTACTTCAAAGTTGGCTTTATCAATAAG' in out

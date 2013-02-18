@@ -66,7 +66,7 @@ def get_or_create_bwa_index(fpath, directory=None):
     return index_fpath
 
 
-def map_with_bwa_sw(index_fpath, bam_fpath, unpaired_fpath=None,
+def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
                     paired_fpaths=None, readgroup=None, threads=None,
                     log_fpath=None, extra_params=None):
     'It maps with bwa ws algorithm'
