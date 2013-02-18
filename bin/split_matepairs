@@ -25,7 +25,8 @@ from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.settings import get_setting
 from crumbs.split_mates import MatePairSplitter
-from crumbs.seqio import read_seqrecord_packets, write_seqrecord_packets
+from crumbs.seqio import (read_seqrecord_packets, write_seqrecord_packets,
+                          flush_fhand)
 
 
 def _setup_argparse():
@@ -79,7 +80,7 @@ def split_matepairs():
 
     write_seqrecord_packets(args['out_fhand'], seqrecord_packets,
                             args['out_format'], workers=workers)
-    args['out_fhand'].flush()
+    flush_fhand(args['out_fhand'])
 
 if __name__ == '__main__':
     sys.exit(main(split_matepairs))

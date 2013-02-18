@@ -21,7 +21,7 @@ from crumbs.utils.bin_utils import (main, create_basic_parallel_argparse,
 from crumbs.transcript_orientations import TranscriptOrientator
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.utils.tags import SEQRECORD
-from crumbs.seqio import write_seq_packets, read_seq_packets
+from crumbs.seqio import write_seq_packets, read_seq_packets, flush_fhand
 from crumbs.settings import get_setting
 
 
@@ -109,6 +109,7 @@ def orientate_transcripts():
                                                processes=args['processes'])
     write_seq_packets(out_fhand, seq_packets, args['out_format'],
                       workers=workers)
+    flush_fhand(out_fhand)
 
 if __name__ == '__main__':
 #    sys.argv.append("-h")

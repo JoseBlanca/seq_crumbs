@@ -22,7 +22,7 @@ import os.path
 import argparse
 
 from crumbs.sff_extract import SffExtractor
-from crumbs.seqio import write_seqrecords
+from crumbs.seqio import write_seqrecords, flush_fhand
 from crumbs.exceptions import FileNotFoundError
 from crumbs.utils.bin_utils import main, build_version_msg
 
@@ -87,7 +87,7 @@ def extract_sff():
                              max_nucl_freq_threshold=args['max_percent'])
     seqs = extractor.seqs
     write_seqrecords(seqs, args['out_fhand'])
-    args['out_fhand'].flush()
+    flush_fhand(args['out_fhand'])
 
     stderr = sys.stderr
     an_error_apeared = 0

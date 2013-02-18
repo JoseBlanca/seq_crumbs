@@ -19,7 +19,7 @@ import sys
 
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
-from crumbs.seqio import write_seqs, guess_format, read_seqs
+from crumbs.seqio import write_seqs, guess_format, read_seqs, flush_fhand
 from crumbs.exceptions import IncompatibleFormatError
 
 
@@ -49,7 +49,7 @@ def cat_seqs():
 
     seqs = read_seqs(in_fhands, file_format=args['in_format'])
     write_seqs(seqs, out_fhand, out_format)
-    out_fhand.flush()
+    flush_fhand(out_fhand)
 
 if __name__ == '__main__':
     sys.exit(main(cat_seqs))

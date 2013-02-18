@@ -20,10 +20,11 @@ from Bio.SeqIO import _index
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
 from crumbs.utils.tags import FWD, REV
-from crumbs.seqio import write_seqrecords, _remove_one_line, write_seqs
+from crumbs.seqio import (write_seqrecords, _remove_one_line, write_seqs,
+                          flush_fhand)
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.utils.seq_utils import guess_format, get_title, get_name
+from crumbs.utils.seq_utils import guess_format, get_title
 
 
 def _parse_pair_direction_and_name(seq):
@@ -183,7 +184,7 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
         write_seqs(orphan_seqs, orphan_out_fhand, out_format)
 
     orphan_out_fhand.flush()
-    out_fhand.flush()
+    flush_fhand(out_fhand)
 
 
 def _check_name_and_direction_match(seq1, seq2):

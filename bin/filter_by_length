@@ -20,7 +20,7 @@ import sys
 from crumbs.utils.bin_utils import (main, parse_filter_args,
                                     create_filter_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.seqio import read_seq_packets, write_filter_packets
+from crumbs.seqio import read_seq_packets, write_filter_packets, flush_fhand
 from crumbs.filters import FilterByLength, seq_to_filterpackets
 
 
@@ -65,7 +65,7 @@ def filter_by_length():
 
     write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                          args['out_format'], workers=workers)
-    passed_fhand.flush()
+    flush_fhand(passed_fhand)
     if filtered_fhand is not None:
         filtered_fhand.flush()
 

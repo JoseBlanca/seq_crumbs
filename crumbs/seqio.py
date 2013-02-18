@@ -35,6 +35,8 @@ from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
 from crumbs.settings import get_setting
 
 
+# pylint: disable=C0111
+
 def clean_seqrecord_stream(seqs):
     'It removes the empty seqs and fixes the descriptions.'
     for seq in seqs:
@@ -51,7 +53,12 @@ def write_seqrecords(seqs, fhand=None, file_format='fastq'):
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
     seqs = clean_seqrecord_stream(seqs)
-    SeqIO.write(seqs, fhand, file_format)
+    try:
+        SeqIO.write(seqs, fhand, file_format)
+    except IOError, error:
+        # The pipe could be already closed
+        if not 'Broken pipe' in str(error):
+            raise
     return fhand
 
 
@@ -191,7 +198,7 @@ def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
                 msg = 'No qualities available to write output file'
                 raise IncompatibleFormatError(msg)
             raise
-    out_fhand.flush()
+    flush_fhand(out_fhand)
 
 
 def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
@@ -345,14 +352,24 @@ def _write_seqitems(items, fhand, file_format):
         seqitems_fmt = _remove_one_line(seq.file_format)
         if file_format and 'fastq' in seqitems_fmt and 'fasta' in file_format:
             seq_lines = seq.object.lines
-            fhand.write('>' + seq_lines[0][1:] + seq_lines[1])
+            try:
+                fhand.write('>' + seq_lines[0][1:] + seq_lines[1])
+            except IOError, error:
+                # The pipe could be already closed
+                if not 'Broken pipe' in str(error):
+                    raise
         elif file_format and seqitems_fmt != file_format:
             msg = 'Input and output file formats do not match, you should not '
             msg += 'use SeqItems: ' + str(seq.file_format) + ' '
             msg += str(file_format)
             raise RuntimeError(msg)
         else:
-            fhand.write(''.join(seq.object.lines))
+            try:
+                fhand.write(''.join(seq.object.lines))
+            except IOError, error:
+                # The pipe could be already closed
+                if not 'Broken pipe' in str(error):
+                    raise
 
 
 def write_seqs(seqs, fhand=None, file_format=None):
@@ -418,3 +435,12 @@ def read_seqs(fhands, file_format=GUESS_FORMAT, out_format=None,
         else:
             raise ValueError('Unknown class for seq: ' + seq_class)
     raise RuntimeError('We should not be here, fixme')
+
+
+def flush_fhand(fhand):
+    try:
+        fhand.flush()
+    except IOError, error:
+        # The pipe could be already closed
+        if not 'Broken pipe' in str(error):
+            raise

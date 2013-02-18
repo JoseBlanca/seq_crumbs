@@ -24,7 +24,8 @@ from crumbs.utils.bin_utils import (main, parse_trimmer_args,
                                     create_trimmer_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.trim import TrimWithBlastShort, TrimOrMask
-from crumbs.seqio import read_seqrecord_packets, write_seqrecord_packets
+from crumbs.seqio import (read_seqrecord_packets, write_seqrecord_packets,
+                          flush_fhand)
 
 
 def _setup_argparse():
@@ -68,7 +69,7 @@ def run():
                                                processes=args['processes'])
     write_seqrecord_packets(out_fhand, seq_packets, args['out_format'],
                       workers=workers)
-    out_fhand.flush()
+    flush_fhand(out_fhand)
 
 if __name__ == '__main__':
     sys.exit(main(run))

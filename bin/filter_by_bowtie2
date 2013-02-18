@@ -19,7 +19,7 @@ import sys
 
 from crumbs.utils.bin_utils import (main, parse_filter_args,
                                     create_filter_argparse)
-from crumbs.seqio import write_filter_packets, read_seq_packets
+from crumbs.seqio import write_filter_packets, read_seq_packets, flush_fhand
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.filters import seq_to_filterpackets, FilterBowtie2Match
 from crumbs.mapping import get_or_create_bowtie2_index
@@ -76,7 +76,7 @@ def filter_by_bowtie2():
 
     write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                          args['out_format'], workers=workers)
-    passed_fhand.flush()
+    flush_fhand(passed_fhand)
     if filtered_fhand is not None:
         filtered_fhand.flush()
 

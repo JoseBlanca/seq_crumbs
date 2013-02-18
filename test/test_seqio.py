@@ -15,16 +15,19 @@
 
 # pylint: disable=R0201
 # pylint: disable=R0904
+# pylint: disable=C0111
 
 import os
 import unittest
 from  cStringIO import StringIO
 from tempfile import NamedTemporaryFile
+from subprocess import Popen, PIPE
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.bin_utils import BIN_DIR
 
 from crumbs.seqio import (guess_seq_type, fastaqual_to_fasta, seqio,
                           write_seqrecords, read_seqrecords, _itemize_fasta,
@@ -182,6 +185,54 @@ class SimpleIOTest(unittest.TestCase):
         fhand = StringIO()
         write_seqs(seqs, fhand)
         assert fhand.getvalue() == '>s1\nACTG\n>s2 desc\nACTG\n'
+
+
+class PipingTest(unittest.TestCase):
+    'It tests that we get no error when trying to write in a closed pipe'
+    def test_write_closed_pipe(self):
+        seq_fhand = NamedTemporaryFile(suffix='.fasta')
+        n_seqs = 1000
+        for i in range(n_seqs):
+            seq_fhand.write('>s\nACTG\n')
+        seq_fhand.flush()
+        in_fpath = seq_fhand.name
+        seq_head = os.path.join(BIN_DIR, 'seq_head')
+
+        process_seq = Popen([seq_head, '-n', str(n_seqs), in_fpath],
+                            stdout=PIPE)
+        stdout = NamedTemporaryFile(suffix='.stdout')
+        process_head = Popen(['head', '-n', '1'], stdin=process_seq.stdout,
+                             stdout=stdout)
+        process_seq.stdout.close()  # Allow seq_head to receive a SIGPIPE if
+                                    # head exits.
+        process_head.communicate()
+
+        assert open(stdout.name).read() == '>s\n'
+        seq_fhand.close()
+        stdout.close()
+
+        # With SeqRecords
+        gb_fpath = os.path.join(TEST_DATA_DIR, 'sequence.gb')
+        gb_content = open(gb_fpath).read()
+        seq_fhand = NamedTemporaryFile(suffix='.gb')
+        n_seqs = 100
+        for i in range(n_seqs):
+            seq_fhand.write(gb_content)
+        seq_fhand.flush()
+        in_fpath = seq_fhand.name
+
+        process_seq = Popen([seq_head, '-n', str(n_seqs), in_fpath],
+                            stdout=PIPE)
+        stdout = NamedTemporaryFile(suffix='.stdout')
+        process_head = Popen(['head', '-n', '1'], stdin=process_seq.stdout,
+                             stdout=stdout)
+        process_seq.stdout.close()  # Allow seq_head to receive a SIGPIPE if
+                                    # head exits.
+        process_head.communicate()
+
+        seq_fhand.close()
+        assert 'LOCUS' in open(stdout.name).read()
+        stdout.close()
 
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']

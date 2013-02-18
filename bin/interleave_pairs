@@ -19,7 +19,7 @@ import sys
 import argparse
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
-from crumbs.seqio import read_seqs, write_seqs
+from crumbs.seqio import read_seqs, write_seqs, flush_fhand
 from crumbs.pairs import interleave_pairs
 
 
@@ -54,7 +54,7 @@ def run():
 
     seqs = interleave_pairs(seq1, seq2, skip_checks=args['skip_checks'])
     write_seqs(seqs, args['out_fhand'])
-    args['out_fhand'].flush()
+    flush_fhand(args['out_fhand'])
 
 if __name__ == '__main__':
     sys.exit(main(run))
