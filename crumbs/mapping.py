@@ -83,7 +83,6 @@ def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
         extra_params = []
 
     binary = get_binary_path('bwa')
-
     cmd = [binary, 'bwasw', '-t', str(get_num_threads(threads)), index_fpath]
     cmd.extend(extra_params)
 
@@ -96,7 +95,7 @@ def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
         stderr = NamedTemporaryFile(suffix='.stderr')
     else:
         stderr = open(log_fpath, 'w')
-    # raw_input(' '.join(cmd))
+    #raw_input(' '.join(cmd))
     bwa = popen(cmd, stderr=stderr, stdout=PIPE)
 
     # add readgroup using picard
@@ -109,6 +108,7 @@ def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
            'RGLB={0}'.format(readgroup['LB']),
            'RGPL={0}'.format(readgroup['PL']),
            'RGSM={0}'.format(readgroup['SM']),
+           'RGPU={0}'.format(readgroup['PU']),
            'VALIDATION_STRINGENCY=LENIENT']
     else:
         cmd = [get_binary_path('samtools'), 'view', '-h', '-b', '-S', '-',
@@ -117,6 +117,8 @@ def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
     samtools = popen(cmd, stdin=bwa.stdout, stderr=stderr)
     bwa.stdout.close()  # Allow p1 to receive a SIGPIPE if samtools exits.
     samtools.communicate()
+    if bwa.returncode or samtools.returncode:
+        raise RuntimeError(open(stderr.name).read())
 
 
 def _bowtie2_index_exists(index_path):
