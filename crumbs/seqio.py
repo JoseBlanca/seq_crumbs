@@ -94,7 +94,12 @@ def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
     if filtered_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
         seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
-        return write_seqs(seqs, passed_fhand, file_format=file_format)
+        try:
+            return write_seqs(seqs, passed_fhand, file_format=file_format)
+        except BaseException:
+            if workers is not None:
+                workers.terminate()
+            raise
 
     flatten_pairs = lambda pairs: (seq for pair in pairs for seq in pair)
     for packet in filter_packets:
