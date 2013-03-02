@@ -39,6 +39,7 @@ START = 0
 END = 1
 BGZF = 'bgzf'
 GZIP = 'gzip'
+BZIP2 = 'bzip2'
 
 NUCL = 'nucl'
 PROT = 'prot'

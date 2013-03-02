@@ -87,7 +87,7 @@ Most Seq Crumbs take can their input from the standard input to be able to work 
 Alternatively several input sequence files can be provided as a list of arguments.
 By default they throw their output to the standard output, although this behaviour can be changed with the *-o* parameter (or *--outfile*).
 
-seq_crumbs supports compressed gzip and BGZF_ files.
+seq_crumbs supports compressed gzip, BGZF_ and bzip2 files.
 When used as input it autodetects the compressed files.
 It can also generate compressed outputs.
 

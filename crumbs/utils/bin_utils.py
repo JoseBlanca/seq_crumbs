@@ -32,7 +32,7 @@ from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, compress_fhand)
 from crumbs.utils.seq_utils import guess_format
 from crumbs.settings import get_setting
-from crumbs.utils.tags import (OUTFILE, GUESS_FORMAT, BGZF, GZIP,
+from crumbs.utils.tags import (OUTFILE, GUESS_FORMAT, BGZF, GZIP, BZIP2,
                                ERROR_ENVIRON_VARIABLE)
 from crumbs import __version__ as version
 
@@ -212,7 +212,8 @@ def create_get_binary_path(module_path, get_setting):
                 return binary_path
 
         # At this point there is not available binary for the working platform
-        msg = '{} not available for this platform: {}'.format(binary_name, system)
+        msg = '{} not available for this platform: {}'.format(binary_name,
+                                                              system)
         raise MissingBinaryError(msg)
     return _get_binary_path
 
@@ -243,6 +244,8 @@ def create_basic_argparse(**kwargs):
                        help='Compress the output in gzip format')
     group.add_argument('-Z ', '--bgzf', action='store_true',
                        help='Compress the output in bgzf format')
+    group.add_argument('-B ', '--bzip2', action='store_true',
+                       help='Compress the output in bzip2 format')
     return parser
 
 
@@ -305,10 +308,13 @@ def get_requested_compression(parsed_args):
     comp_kind = None
     bgzf = getattr(parsed_args, 'bgzf', False)
     gzip = getattr(parsed_args, 'gzip', False)
+    bzip2 = getattr(parsed_args, 'bzip2', False)
     if bgzf:
         comp_kind = BGZF
     elif gzip:
         comp_kind = GZIP
+    elif bzip2:
+        comp_kind = BZIP2
     return comp_kind
 
 

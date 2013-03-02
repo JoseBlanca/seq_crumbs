@@ -22,7 +22,8 @@ from subprocess import check_call
 
 from Bio.bgzf import BgzfWriter
 
-from crumbs.utils.tags import BGZF, GZIP
+from crumbs.utils.tags import BGZF, GZIP, BZIP2
+from crumbs.utils import BZ2File
 
 
 def wrap_in_buffered_reader(fhand, force_wrap=False):
@@ -73,18 +74,23 @@ def uncompress_if_required(fhand):
     magic = peek_chunk_from_file(fhand, 2)
     if magic == '\037\213':
         fhand = GzipFile(fileobj=fhand)
+    elif magic == 'BZ':
+        fhand = BZ2File(fhand)
     return fhand
 
 
 def compress_fhand(fhand, compression_kind=None):
-    'Compreses the file if required'
+    'Compresses the file if required'
     if compression_kind == BGZF:
         if fhand_is_seekable(fhand):
             fhand = BgzfWriter(fileobj=fhand)
         else:
-            raise RuntimeError('bgzf is only available to seekable files')
+            raise RuntimeError('bgzf is only available for seekable files')
     elif compression_kind == GZIP:
         fhand = GzipFile(fileobj=fhand)
+    elif compression_kind == BZIP2:
+        mode = 'w' if 'w' in fhand.mode else 'r'
+        fhand = BZ2File(fhand, mode=mode)
     return fhand
 
 

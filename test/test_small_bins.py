@@ -22,6 +22,7 @@ from gzip import GzipFile
 
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import count_seqs_in_files
+from crumbs.utils import BZ2File
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -87,7 +88,7 @@ class CatTest(unittest.TestCase):
             stderr_str = open(stderr.name).read()
             assert 'output format is incompatible with input' in stderr_str
 
-    def test_gziped_output(self):
+    def test_compressed_output(self):
         'It writes a gziped file'
         in_fhand = self.make_fasta()
         cat_bin = os.path.join(BIN_DIR, 'cat_seqs')
@@ -98,7 +99,7 @@ class CatTest(unittest.TestCase):
             check_output([cat_bin, '-Z', in_fhand.name], stderr=stderr)
             self.fail('CalledProcessError expected')
         except CalledProcessError:
-            msg = 'bgzf is only available to seekable files'
+            msg = 'bgzf is only available for seekable files'
             assert msg in open(stderr.name).read()
 
         # bgzf
@@ -112,7 +113,12 @@ class CatTest(unittest.TestCase):
         result = GzipFile(fileobj=StringIO(result)).read()
         assert '\nACTATCATGGCAGATA\n' in  result
 
-    def test_compressed_input(self):
+        # bzip2
+        result = check_output([cat_bin, '-B', in_fhand.name])
+        result = BZ2File(StringIO(result)).read()
+        assert '\nACTATCATGGCAGATA\n' in  result
+
+    def test_gzipped_input(self):
         'It can read compressed files'
         # we need a compressed file
         in_fhand = self.make_fasta()
@@ -120,6 +126,18 @@ class CatTest(unittest.TestCase):
         out_fhand = NamedTemporaryFile()
         check_output([cat_bin, '-Z', '-o', out_fhand.name, in_fhand.name])
         result = GzipFile(out_fhand.name).read()
+        assert '\nACTATCATGGCAGATA\n' in  result
+
+        result = check_output([cat_bin, out_fhand.name])
+        assert '>seq1\nACTATCATGGCAGATA\n' in  result
+
+    def test_bzipped2_input(self):
+        # we need a compressed file
+        in_fhand = self.make_fasta()
+        cat_bin = os.path.join(BIN_DIR, 'cat_seqs')
+        out_fhand = NamedTemporaryFile()
+        check_output([cat_bin, '-B', '-o', out_fhand.name, in_fhand.name])
+        result = BZ2File(out_fhand.name).read()
         assert '\nACTATCATGGCAGATA\n' in  result
 
         result = check_output([cat_bin, out_fhand.name])
