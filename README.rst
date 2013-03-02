@@ -82,20 +82,21 @@ orientate_transcripts
 General Usage
 ---------------
 
-All Seq Crumbs try to share a consistent interface.
+All seq crumbs try to share a consistent interface.
 Most Seq Crumbs take can their input from the standard input to be able to work with Unix Pipes.
 Alternatively several input sequence files can be provided as a list of arguments.
 By default they throw their output to the standard output, although this behaviour can be changed with the *-o* parameter (or *--outfile*).
 
-Seq Crumbs supports compressed gzip and BGZF_ files.
+seq_crumbs supports compressed gzip and BGZF_ files.
 When used as input it autodetects the compressed files.
 It can also generate compressed outputs.
 
-The sequence formats accepted by Seq Crumbs are the ones supported by Biopython's SeqIO_ module.
+The sequence formats accepted by seq_crumbs are the ones supported by Biopython's SeqIO_ module.
 As output only Sanger and Illumina fastq and fasta files are supported.
 
-Seq Crumbs can take advantage of the multiprocessor computers by splitting the computational load into several processes.
+seq_crumbs can take advantage of the multiprocessor computers by splitting the computational load into several processes.
 
+The filtering seq crumbs can be aware of the paired reads and can filter both reads of the pairs together.
 
 Installation
 ------------
