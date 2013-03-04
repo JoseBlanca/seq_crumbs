@@ -27,7 +27,8 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                ExternalBinaryError, MissingBinaryError,
                                IncompatibleFormatError,
                                UndecidedFastqVersionError, MaxNumReadsInMem,
-                               PairDirectionError, InterleaveError)
+                               PairDirectionError, InterleaveError,
+                               OptionalRequirementError)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, compress_fhand)
 from crumbs.utils.seq_utils import guess_format
@@ -100,6 +101,9 @@ def main(funct):
     except KeyboardInterrupt, error:
         stderr.write('Program stopped by user request\n')
         return 16
+    except OptionalRequirementError, error:
+        stderr.write(str(error) + '\n')
+        return 17
     except Exception as error:
         msg = 'An unexpected error happened.\n'
         msg += 'The seq_crumbs developers would appreciate your feedback.\n'

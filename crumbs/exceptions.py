@@ -90,3 +90,8 @@ class PairDirectionError(Exception):
 class InterleaveError(Exception):
     'Error in the alteranation of forward and reverse reads'
     pass
+
+
+class OptionalRequirementError(Exception):
+    'An optional module is not present'
+    pass
