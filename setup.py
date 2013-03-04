@@ -13,6 +13,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+from sys import version_info
 import os
 import fnmatch
 import glob
@@ -180,5 +181,10 @@ setup_args = {
 
 if _SETUPTOOLS:
     setup_args['install_requires'] = ['biopython >= 1.60']
+    if version_info[0] < 3 or (version_info[0] == 3 and version_info[1] < 3):
+        # until python 3.3 the standard file module has no support for 
+        # wrapping file object and required to open a new file
+        # bz2file is a backport of the python 3.3 std library module
+        setup_args['install_requires'].append('bz2file')
 
 setup(**setup_args)
