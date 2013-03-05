@@ -33,7 +33,7 @@ from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqs, SeqWrapper
-from crumbs.utils.tags import SEQRECORD
+from crumbs.utils.tags import SEQRECORD, SEQITEM
 
 
 class HistogramTest(unittest.TestCase):
@@ -290,6 +290,22 @@ class CalculateStatsTest(unittest.TestCase):
         dust = calculate_sequence_stats(seqs, do_dust_stats=True)['dustscore']
         assert 'average: 1.83\nvariance: 0.14\nnum. seqs.: 6\n' in dust
         assert '% above 7 (low complexity): 0.00' in dust
+
+    @staticmethod
+    def test_calculate_stats_seqitems():
+        'It tests the calculate stat function with seqitems'
+        in_fhands = []
+        for val in range(1, 6):
+            fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
+            in_fhands.append(fhand)
+        seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQITEM])
+        results = calculate_sequence_stats(seqs, nxs=[50])
+        assert 'maximum: 4' in results['length']
+        assert 'N50' in results['length']
+        assert not results['qual_boxplot']
+        assert not results['quality']
+        assert '0 (A: 1.00, C: 0.00, G: 0.00, T: 0.00' in  results['nucl_freq']
+        assert results['kmer'] == ''
 
     def test_stats_bin(self):
         'It tests the statistics binary'

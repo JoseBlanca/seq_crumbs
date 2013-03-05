@@ -18,11 +18,11 @@
 import argparse
 import sys
 
-from crumbs.utils.tags import GUESS_FORMAT, OUTFILE
+from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE, SEQRECORD, SEQITEM)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required)
 from crumbs.utils.bin_utils import main, build_version_msg
-from crumbs.utils.tags import SEQRECORD
+from crumbs.utils.seq_utils import guess_format
 from crumbs.seqio import read_seqs
 from crumbs.statistics import calculate_sequence_stats
 from crumbs.settings import get_setting
@@ -77,6 +77,9 @@ def _parse_args(parser):
         wrapped_fhands.append(fhand)
 
     in_format = parsed_args.in_format
+    if in_format == GUESS_FORMAT:
+        in_format = guess_format(wrapped_fhands[0])
+
     out_fhand = getattr(parsed_args, OUTFILE)
     kmer_size = parsed_args.kmer_size
     complexity_stats = parsed_args.complex_stats
@@ -102,8 +105,12 @@ def run():
     kmer_size = args['kmer_size']
     do_dust_stats = args['do_dust_stats']
 
+    if 'fasta' in in_format:
+        prefered_seq_classes = [SEQITEM, SEQRECORD]
+    else:
+        prefered_seq_classes = [SEQRECORD]
     seqs = read_seqs(in_fhands, file_format=in_format,
-                     prefered_seq_classes=[SEQRECORD])
+                     prefered_seq_classes=prefered_seq_classes)
     stat_strs = calculate_sequence_stats(seqs, kmer_size, nxs=[50, 95],
                                          do_dust_stats=do_dust_stats)
     out_fhand.write(stat_strs['length'])
