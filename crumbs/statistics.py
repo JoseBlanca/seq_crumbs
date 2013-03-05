@@ -744,6 +744,17 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
             'dustscore': dust_str}
 
 
+def count_seqs(seqs):
+    'It counts the number of sequences and the total length.'
+    # get data
+    lengths = IntCounter()
+    for seq in seqs:
+        lengths[get_length(seq)] += 1
+
+    return {'num_seqs': lengths.count,
+            'total_length': lengths.sum}
+
+
 class BestItemsKeeper(object):
     '''It keeps a sorted list with the best items added.
 

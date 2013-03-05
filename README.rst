@@ -76,6 +76,9 @@ deinterleave_pairs
 calculate_stats
     It generates basic statistics for the given sequence files
 
+count_seqs
+	It counts the number of sequences and the total length for the given files
+
 orientate_transcripts
     It reverse complements transcripts according to polyA, ORF or blast hits
 

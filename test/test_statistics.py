@@ -29,7 +29,8 @@ from Bio.Seq import Seq
 from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                calculate_sequence_stats, NuclFreqsPlot,
                                KmerCounter, calculate_dust_score,
-                               calculate_nx, BestItemsKeeper)
+                               calculate_nx, BestItemsKeeper,
+                               count_seqs)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import read_seqs, SeqWrapper
@@ -351,6 +352,37 @@ class CalculateStatsTest(unittest.TestCase):
         cmd.append(join(TEST_DATA_DIR, 'arabidopsis_genes'))
         result = check_output(cmd)
         assert 'Dustscores' in result
+
+    @staticmethod
+    def test_count_seqs():
+        in_fhands = []
+        for val in range(1, 6):
+            fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
+            in_fhands.append(fhand)
+        seqs = read_seqs(in_fhands, file_format='fastq',
+                         prefered_seq_classes=[SEQRECORD])
+        counts = count_seqs(seqs)
+        assert counts == {'total_length': 96, 'num_seqs': 24}
+
+    def test_count_seqs_bin(self):
+
+        bin_ = join(BIN_DIR, 'count_seqs')
+
+        # help
+        assert 'usage' in check_output([bin_, '-h'])
+
+        # fasta
+        in_fhand1 = self.make_fasta()
+        in_fhand2 = self.make_fasta()
+        result = check_output([bin_, in_fhand1.name, in_fhand2.name])
+        assert result == '2 32\n'
+
+        # fastq
+        cmd = [bin_]
+        for val in range(1, 6):
+            cmd.append(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
+        result = check_output(cmd)
+        assert result == '24 96\n'
 
 
 class BaseFreqPlotTest(unittest.TestCase):
