@@ -70,6 +70,19 @@ class BlastTest(unittest.TestCase):
         finally:
             db_dir.close()
 
+    def test_remote_blast(self):
+        'It does a remote blast search'
+        seq_fhand = NamedTemporaryFile()
+        fasta = '>seq1\nCTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGT'
+        fasta += 'GTGACATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGC\n'
+        seq_fhand.write(fasta)
+        seq_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        do_blast(seq_fhand.name, 'nt', program='blastn',
+                 out_fpath=out_fhand.name, remote=True)
+        assert '</BlastOutput>' in open(out_fhand.name).read()
+
+
     @staticmethod
     def test_get_or_create_blastdb():
         'It test the blastdb kind'

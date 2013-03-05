@@ -17,6 +17,8 @@ import os.path
 import subprocess
 import tempfile
 
+from Bio.Blast import NCBIWWW
+
 from crumbs.seqio import seqio, write_seqrecords, guess_seq_type, write_seqs
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
@@ -39,6 +41,8 @@ BLAST_FIELDS = {'query': 'qseqid', 'subject': 'sseqid', 'identity': 'pident',
 TASKS = {'blastn': ('megablast', 'blastn', 'blastn-short', 'dc-megablast',
                    'rmblastn'),
         'blastp': ('blastp', 'blastp-short', 'deltablast')}
+
+REMOTE_BLAST_DBS = ['nt', 'nr']
 
 
 def generate_tabblast_format(fmt):
@@ -107,10 +111,25 @@ def get_or_create_blastdb(blastdb_or_path, dbtype=None, directory=None):
     return dbpath
 
 
-def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
-    'It does a blast'
+def _do_blast_remote(query_fpath, database, program, out_fpath, params=None):
+    'It does a blast using NCBI WWW server'
+    # output always XML, although it can be configured the types are not
+    # compatible with command line output types
     if not params:
         params = {}
+    evalue, task = _parse_blast_params(params, program)
+    ncbi_params = {'program': program, 'database': database,
+                   'sequence': open(query_fpath).read(), 'expect': evalue}
+    if task:
+        ncbi_params['service'] = task
+
+    result_handle = NCBIWWW.qblast(**ncbi_params)
+    out_fhand = open(out_fpath, 'w')
+    out_fhand.write(result_handle.read())
+    out_fhand.close()
+
+
+def _parse_blast_params(params, program):
     if 'expect' in params:
         if 'evalue' in params:
             msg = 'expect and evalue cannot be given as params at the same '
@@ -135,6 +154,27 @@ def do_blast(query_fpath, db_fpath, program, out_fpath, params=None):
         assert task in available_tasks
     else:
         task = None
+
+    return evalue, task
+
+
+def do_blast(query_fpath, db_fpath, program, out_fpath, params=None,
+             remote=False):
+    database = os.path.basename(db_fpath)
+    if remote and database in REMOTE_BLAST_DBS:
+        _do_blast_remote(query_fpath, database, program, out_fpath,
+                          params=params)
+    else:
+        _do_blast_local(query_fpath, db_fpath, program, out_fpath,
+                         params=params)
+
+
+def _do_blast_local(query_fpath, db_fpath, program, out_fpath, params=None):
+    'It does a blast'
+    if not params:
+        params = {}
+    evalue, task = _parse_blast_params(params, program)
+
     if 'outfmt' in params:
         outfmt = params['outfmt']
         del params['outfmt']
