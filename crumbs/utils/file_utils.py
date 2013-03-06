@@ -156,21 +156,20 @@ def _rel_path(path1, path2):
 
 
 def rel_symlink(path1, path2):
-    'It makes the relative symlink'
+    'It makes the relative to path1 from within dirname(path2)'
+    # The working directory can not be used because it is not thread safe
+    # working directory is a global environment variable shared by all threads
     path1 = os.path.abspath(path1)
     path2 = os.path.abspath(path2)
-    fname2 = os.path.split(path2)[-1]
     rel_path1 = _rel_path(path1, path2)
 
-    # we need a temp dir to be thread safe when creating the link
-    # we cannot use chdir, that is not threadsafe
+    fname2 = os.path.split(path2)[-1]
+
     temp_dir = tempfile.mkdtemp()
     try:
         temp_link_path = os.path.join(temp_dir, fname2)
 
-        cmd = ['ln', '-s', '-T', rel_path1, temp_link_path]
-        check_call(cmd)
-        cmd2 = ['mv', temp_link_path, path2]
-        check_call(cmd2)
+        os.symlink(rel_path1, temp_link_path)
+        shutil.move(temp_link_path, path2)
     finally:
         os.rmdir(temp_dir)
