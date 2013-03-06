@@ -23,7 +23,7 @@ import re
 from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
-from crumbs.utils.seq_utils import get_str_seq
+from crumbs.utils.seq_utils import get_str_seq, get_length
 
 LABELS = {'title': 'histogram', 'xlabel': 'values',
           'ylabel': 'count', 'minimum': 'minimum',
@@ -644,16 +644,23 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
     kmer_counter = KmerCounter(kmer_size) if kmer_size else None
     dustscores = IntCounter()
     for seq in seqs:
-        seqrec = seq.object
-        lengths[len(seqrec)] += 1
-        if 'phred_quality' in seqrec.letter_annotations:
-            quals = seqrec.letter_annotations['phred_quality']
-            for index, qual in enumerate(quals):
-                quals_per_pos.append(index + 1, qual)
-        for index, nucl in enumerate(str(seqrec.seq)):
+        seq_obj = seq.object
+        lengths[get_length(seq)] += 1
+        try:
+            letter_annots = seq_obj.letter_annotations
+        except AttributeError:
+            letter_annots = None
+        if letter_annots and 'phred_quality' in letter_annots:
+            quals = seq_obj.letter_annotations['phred_quality']
+        else:
+            quals = []
+        for index, qual in enumerate(quals):
+            quals_per_pos.append(index + 1, qual)
+        str_seq = get_str_seq(seq)
+        for index, nucl in enumerate(str_seq):
             nucl_freq.append(index, nucl)
         if kmer_counter is not None:
-            kmer_counter.count_seq(str(seqrec.seq))
+            kmer_counter.count_seq(str_seq)
         if do_dust_stats:
             dustscore = calculate_dust_score(seq)
             if dustscore is not None:
@@ -735,6 +742,17 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
             'qual_boxplot': qual_boxplot,
             'kmer': kmer_str,
             'dustscore': dust_str}
+
+
+def count_seqs(seqs):
+    'It counts the number of sequences and the total length.'
+    # get data
+    lengths = IntCounter()
+    for seq in seqs:
+        lengths[get_length(seq)] += 1
+
+    return {'num_seqs': lengths.count,
+            'total_length': lengths.sum}
 
 
 class BestItemsKeeper(object):

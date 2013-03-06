@@ -2,10 +2,15 @@
 TODO
 -----
 
+The cleaners should be able to work with the pairs. For instance, the quality
+clearner could end up removing a read. In that case the pair should go to the
+orphan. To do that the cleaners should deal with a stream of pair list, like
+the filters and not with a stream of reads.
+What happens when all the quality is trimmed from a seq? Is the seq filtered out? Is the seq None?
+
 read_seqrecords should be private, the only public should be based on the SeqWrapper IO.
 Remove the seqrecord.__class__.__name__ once everything has SeqWrappers
 split file_format into format and style to remove the -one-line problem
-
 
 Add a test for sample, head or cat with different input formats, it should fail.
 Take a look at python bedtools for the segments

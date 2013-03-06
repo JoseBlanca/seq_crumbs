@@ -24,13 +24,12 @@ from crumbs.utils.file_utils import (wrap_in_buffered_reader,
 from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.utils.seq_utils import guess_format
 from crumbs.seqio import read_seqs
-from crumbs.statistics import calculate_sequence_stats
-from crumbs.settings import get_setting
+from crumbs.statistics import count_seqs
 
 
 def _setup_argparse():
     'It returns the argument parser'
-    description = 'Calculate statistics of the given files'
+    description = 'Counts the number of sequences and the total length'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('input', default=sys.stdin, nargs='*',
                         help='Sequence input files to process (default STDIN)',
@@ -40,15 +39,6 @@ def _setup_argparse():
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
                         help='Sequence output file (default STDOUT)',
                         type=argparse.FileType('wt'))
-    help_kmer_size = 'kmer size to calculate (default: %(default)s)'
-    parser.add_argument('-k', '--kmer_size', type=int, help=help_kmer_size,
-                        default=get_setting('DEFAULT_KMER_SIZE'),
-                        dest='kmer_size')
-    parser.add_argument('-c', '--complexity', action='store_true',
-                        help='Do complexity (kmer) stats, (default False)',
-                        dest='complex_stats')
-    parser.add_argument('-d', '--dust', action='store_true',
-                        help='Do dustscore stats, (default False)')
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
     return parser
@@ -56,12 +46,6 @@ def _setup_argparse():
 
 def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
-    args = sys.argv
-    if (('-k' in args or '--kmer_size' in args) and
-        not ('-c' in args or '--complexity_stats' in args)):
-        # if we ask for a kmer we want the stats done
-        sys.argv.insert(1, '-c')
-        print sys.argv
 
     parsed_args = parser.parse_args()
     # we have to wrap the file in a BufferedReader to allow peeking into stdin
@@ -81,16 +65,9 @@ def _parse_args(parser):
         in_format = guess_format(wrapped_fhands[0])
 
     out_fhand = getattr(parsed_args, OUTFILE)
-    kmer_size = parsed_args.kmer_size
-    complexity_stats = parsed_args.complex_stats
-    do_dust_stats = parsed_args.dust
-
-    if not complexity_stats:
-        kmer_size = None
 
     args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
-            'original_in_fhands': in_fhands, 'in_format': in_format,
-            'kmer_size': kmer_size, 'do_dust_stats': do_dust_stats}
+            'original_in_fhands': in_fhands, 'in_format': in_format}
     return args, parsed_args
 
 
@@ -102,8 +79,6 @@ def run():
     in_fhands = args['in_fhands']
     in_format = args['in_format']
     out_fhand = args['out_fhand']
-    kmer_size = args['kmer_size']
-    do_dust_stats = args['do_dust_stats']
 
     if 'fasta' in in_format:
         prefered_seq_classes = [SEQITEM, SEQRECORD]
@@ -111,14 +86,9 @@ def run():
         prefered_seq_classes = [SEQRECORD]
     seqs = read_seqs(in_fhands, file_format=in_format,
                      prefered_seq_classes=prefered_seq_classes)
-    stat_strs = calculate_sequence_stats(seqs, kmer_size, nxs=[50, 95],
-                                         do_dust_stats=do_dust_stats)
-    out_fhand.write(stat_strs['length'])
-    out_fhand.write(stat_strs['quality'])
-    out_fhand.write(stat_strs['nucl_freq'])
-    out_fhand.write(stat_strs['qual_boxplot'])
-    out_fhand.write(stat_strs['kmer'])
-    out_fhand.write(stat_strs['dustscore'])
+    counts = count_seqs(seqs)
+    result = '{num_seqs:d} {total_length:d}\n'.format(**counts)
+    out_fhand.write(result)
     out_fhand.close()
 
 if __name__ == '__main__':

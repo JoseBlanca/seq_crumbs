@@ -20,7 +20,7 @@
 import unittest
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 import os.path
 from random import choice
 
@@ -283,7 +283,8 @@ class SplitMatesBinTest(unittest.TestCase):
 
         cmd = [mate_bin, '-o', out_fhand.name, '-l', TITANIUM_LINKER,
                mate_fhand.name]
-        check_output(cmd)
+        from subprocess import call
+        call(cmd)
         result = open(out_fhand.name).read()
         assert result.startswith(r'>seq1\1')
 
@@ -292,6 +293,26 @@ class SplitMatesBinTest(unittest.TestCase):
         check_output(cmd)
         result = open(out_fhand.name).read()
         assert result.startswith(r'>seq1\1')
+
+        # Error if a file path is given
+        cmd = [mate_bin, '-o', out_fhand.name, '-l', 'adaptors.fasta',
+               mate_fhand.name]
+        stderr = NamedTemporaryFile(suffix='.stderr')
+        try:
+            check_output(cmd, stderr=stderr)
+            self.fail('Error expected')
+        except CalledProcessError:
+            pass
+
+        # Error if not DNA is given
+        cmd = [mate_bin, '-o', out_fhand.name, '-l', 'iamnotasequence',
+               mate_fhand.name]
+        stderr = NamedTemporaryFile(suffix='.stderr')
+        try:
+            check_output(cmd, stderr=stderr)
+            self.fail('Error expected')
+        except CalledProcessError:
+            pass
 
     def test_parallel_bin(self):
         'The mate pairs binary runs in parallel'
@@ -309,5 +330,5 @@ class SplitMatesBinTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-#    import sys;sys.argv = ['', 'TestPool']
+    #import sys;sys.argv = ['', 'SplitMatesBinTest.test_matepair_bin']
     unittest.main()

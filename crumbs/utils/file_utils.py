@@ -22,7 +22,12 @@ from subprocess import check_call
 
 from Bio.bgzf import BgzfWriter
 
-from crumbs.utils.tags import BGZF, GZIP
+from crumbs.utils.tags import BGZF, GZIP, BZIP2
+try:
+    from crumbs.utils import BZ2File
+except ImportError:
+    pass
+from crumbs.exceptions import OptionalRequirementError
 
 
 def wrap_in_buffered_reader(fhand, force_wrap=False):
@@ -68,23 +73,38 @@ def peek_chunk_from_file(fhand, chunk_size):
     return chunk
 
 
+BZIP_ERROR = 'bz2file (Python < 3.3) or bz2 module is required to work with '
+BZIP_ERROR += 'bzip2 files'
+
+
 def uncompress_if_required(fhand):
     'It returns a uncompressed handle if required'
     magic = peek_chunk_from_file(fhand, 2)
     if magic == '\037\213':
         fhand = GzipFile(fileobj=fhand)
+    elif magic == 'BZ':
+        try:
+            fhand = BZ2File(fhand)
+        except NameError:
+            raise OptionalRequirementError(BZIP_ERROR)
     return fhand
 
 
 def compress_fhand(fhand, compression_kind=None):
-    'Compreses the file if required'
+    'Compresses the file if required'
     if compression_kind == BGZF:
         if fhand_is_seekable(fhand):
             fhand = BgzfWriter(fileobj=fhand)
         else:
-            raise RuntimeError('bgzf is only available to seekable files')
+            raise RuntimeError('bgzf is only available for seekable files')
     elif compression_kind == GZIP:
         fhand = GzipFile(fileobj=fhand)
+    elif compression_kind == BZIP2:
+        mode = 'w' if 'w' in fhand.mode else 'r'
+        try:
+            fhand = BZ2File(fhand, mode=mode)
+        except NameError:
+            raise OptionalRequirementError(BZIP_ERROR)
     return fhand
 
 
