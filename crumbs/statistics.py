@@ -746,13 +746,14 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
 
 def count_seqs(seqs):
     'It counts the number of sequences and the total length.'
-    # get data
-    lengths = IntCounter()
+    num_seqs = 0
+    total_len = 0
     for seq in seqs:
-        lengths[get_length(seq)] += 1
+        total_len += get_length(seq)
+        num_seqs += 1
 
-    return {'num_seqs': lengths.count,
-            'total_length': lengths.sum}
+    return {'num_seqs': num_seqs,
+            'total_length': total_len}
 
 
 class BestItemsKeeper(object):
