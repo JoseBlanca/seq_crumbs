@@ -29,12 +29,14 @@ TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
 
 # pylint: disable=R0201
 # pylint: disable=R0904
+# pylint: disable=C0111
 
 
 class BlastTest(unittest.TestCase):
-    'It tests the blast infraestructure'
+    'It tests the blast infrastructure'
 
-    def test_blastdb(self):
+    @staticmethod
+    def test_blastdb():
         'It creates a blast database.'
         db_name = 'arabidopsis_genes'
         seq_fpath = os.path.join(TEST_DATA_DIR, db_name)
@@ -48,7 +50,6 @@ class BlastTest(unittest.TestCase):
             assert os.path.exists(db_path)
             index_fpath = os.path.join(db_dir.name, db_name + '.nsq')
             assert os.path.exists(index_fpath)
-
         finally:
             db_dir.close()
 
@@ -82,10 +83,8 @@ class BlastTest(unittest.TestCase):
                  out_fpath=out_fhand.name, remote=True)
         assert '</BlastOutput>' in open(out_fhand.name).read()
 
-
     @staticmethod
     def test_get_or_create_blastdb():
-        'It test the blastdb kind'
         blastdb = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
 
         directory = TemporaryDir()
@@ -132,5 +131,5 @@ class BlastMater(unittest.TestCase):
         assert [expected_region] == linker_region
 
 if __name__ == '__main__':
-    # import sys;sys.argv = ['', 'BlastTest.test_blastdb']
+    import sys;sys.argv = ['', 'BlastTest.test_get_or_create_blastdb']
     unittest.main()
