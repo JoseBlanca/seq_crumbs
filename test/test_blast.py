@@ -18,11 +18,13 @@ import os.path
 from tempfile import NamedTemporaryFile
 
 from crumbs.blast import (do_blast, BlasterForFewSubjects,
-                          get_or_create_blastdb, _blastdb_exists)
+                          get_or_create_blastdb, _blastdb_exists, Blaster)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import get_setting
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
 
 LINKERS = get_setting('LINKERS')
 TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
@@ -82,6 +84,13 @@ class BlastTest(unittest.TestCase):
                  out_fpath=out_fhand.name, remote=True)
         assert '</BlastOutput>' in open(out_fhand.name).read()
 
+        # fail if outfmt is not xml
+        try:
+            do_blast(seq_fhand.name, 'nt', program='blastn',
+                out_fpath=out_fhand.name, remote=True, params={'outfmt':'txt'})
+            self.fail()
+        except RuntimeError:
+            pass
 
     @staticmethod
     def test_get_or_create_blastdb():
@@ -130,6 +139,18 @@ class BlastMater(unittest.TestCase):
                                              elongate_for_global=True)
         linker_region = matcher.get_matched_segments_for_read('seq1')[0]
         assert [expected_region] == linker_region
+
+
+class BlasterTest(unittest.TestCase):
+    def test_blaster(self):
+        seq = 'GAGAAATTCCTTTGGAAGTTATTCCGTAGCATAAGAGCTGAAACTTCAGAGCAAGTTT'
+        seq += 'TCATTGGGCAAAATGGGGGAACAACCTATCTTCAGCACTCGAGCTCATGTCTTCCAAATTGA'
+        seq += 'CCCAAACACAAAGAAGAACTGGGTACCCACCAGCAAGCATGCAGTTACTGTGTCTTATTTCT'
+        seq += 'ATGACAGCACAAGAAATGTGTATAGGATAATCAGTTTAGATGGCTCAAAGGCAATAATAAAT'
+        seq += 'AGTACCATCACCCCAAACATGACA'
+        seqrec = SeqRecord(Seq(seq), id='seq')
+        blaster = Blaster([seqrec], 'nr', 'blastn', remote=True)
+        assert blaster.get_matched_segments('seq') == [(1, 1740)]
 
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'BlastTest.test_blastdb']

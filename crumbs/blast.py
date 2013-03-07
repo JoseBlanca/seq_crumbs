@@ -26,7 +26,7 @@ from crumbs.utils.tags import NUCL, PROT
 from crumbs.alignment_result import (filter_alignments, ELONGATED, QUERY,
                                      covered_segments_from_match_parts,
                                      elongate_match_parts_till_global,
-                                     TabularBlastParser)
+                                     TabularBlastParser, BlastParser)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import get_setting
 
@@ -118,6 +118,14 @@ def _do_blast_remote(query_fpath, database, program, out_fpath, params=None):
     if not params:
         params = {}
     evalue, task = _parse_blast_params(params, program)
+    if database not in REMOTE_BLAST_DBS:
+        msg = "Can't perform a blast against {} in NCBI servers"
+        msg = msg.format(database)
+        raise RuntimeError(msg)
+    if 'outfmt' in params and params['outfmt'] != "XML":
+        msg = "To performs a remote blast the output format must be xml"
+        raise RuntimeError(msg)
+
     ncbi_params = {'program': program, 'database': database,
                    'sequence': open(query_fpath).read(), 'expect': evalue}
     if task:
@@ -160,13 +168,12 @@ def _parse_blast_params(params, program):
 
 def do_blast(query_fpath, db_fpath, program, out_fpath, params=None,
              remote=False):
-    database = os.path.basename(db_fpath)
-    if remote and database in REMOTE_BLAST_DBS:
-        _do_blast_remote(query_fpath, database, program, out_fpath,
-                          params=params)
+    if remote:
+        _do_blast_remote(query_fpath, db_fpath, program, out_fpath,
+                         params=params)
     else:
         _do_blast_local(query_fpath, db_fpath, program, out_fpath,
-                         params=params)
+                        params=params)
 
 
 def _do_blast_local(query_fpath, db_fpath, program, out_fpath, params=None):
@@ -196,7 +203,7 @@ def _do_blast_local(query_fpath, db_fpath, program, out_fpath, params=None):
 
 
 def _do_blast_2(db_fpath, queries, program, dbtype=None, blast_format=None,
-                params=None):
+                params=None, remote=False):
     '''It returns an alignment result with the blast.
 
     It is an alternative interface to the one based on fpaths.
@@ -214,21 +221,28 @@ def _do_blast_2(db_fpath, queries, program, dbtype=None, blast_format=None,
         query_fhand = write_seqs(queries, file_format='fasta')
     query_fhand.flush()
 
-    blastdb = get_or_create_blastdb(db_fpath, dbtype=dbtype)
+    if remote:
+        blastdb = db_fpath
+        fmt = 'XML' if blast_format is None else blast_format.upper()
+    else:
+        blastdb = get_or_create_blastdb(db_fpath, dbtype=dbtype)
+        if blast_format is None:
+            blast_format = ['query', 'subject', 'query_length', 'subject_length',
+                            'query_start', 'query_end', 'subject_start',
+                            'subject_end', 'expect', 'identity', ]
+        fmt = generate_tabblast_format(blast_format)
 
-    if blast_format is None:
-        blast_format = ['query', 'subject', 'query_length', 'subject_length',
-                        'query_start', 'query_end', 'subject_start',
-                        'subject_end', 'expect', 'identity', ]
-    fmt = generate_tabblast_format(blast_format)
     if params is None:
         params = {}
     params['outfmt'] = fmt
 
     blast_fhand = tempfile.NamedTemporaryFile(suffix='.blast')
-    do_blast(query_fhand.name, blastdb, program, blast_fhand.name, params)
-
-    blasts = TabularBlastParser(blast_fhand, blast_format)
+    do_blast(query_fhand.name, blastdb, program, blast_fhand.name, params,
+             remote=remote)
+    if remote:
+        blasts = BlastParser(blast_fhand)
+    else:
+        blasts = TabularBlastParser(blast_fhand, blast_format)
 
     return blasts, blast_fhand
 
@@ -333,7 +347,7 @@ class Blaster(object):
     '''
 
     def __init__(self, seqrecords, blastdb, program, dbtype=None, params=None,
-                 filters=None):
+                 filters=None, remote=False):
         self.program = program
         if params is None:
             params = {}
@@ -341,6 +355,7 @@ class Blaster(object):
         if filters is None:
             filters = []
         self.filters = filters
+        self._remote = remote
         if dbtype not in (NUCL, PROT, None):
             raise ValueError('dbtype must be NUCL, PROT or None (we guess)')
         self._blasts = self._look_for_blast_matches(seqrecords, blastdb,
@@ -349,7 +364,8 @@ class Blaster(object):
     def _look_for_blast_matches(self, seqrecords, blastdb, dbtype):
         'it makes the blast and filters the results'
         blasts, blast_fhand = _do_blast_2(blastdb, seqrecords, self.program,
-                                          params=self.params, dbtype=dbtype)
+                                          params=self.params, dbtype=dbtype,
+                                          remote=self._remote)
         # print open(blast_fhand.name).read()
         if self.filters is not None:
             blasts = filter_alignments(blasts, config=self.filters)
