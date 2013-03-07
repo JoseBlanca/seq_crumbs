@@ -215,19 +215,20 @@ class PolyaAnnotator(object):
 class BlastAnnotator(object):
     'It annotates using blast'
     def __init__(self, blastdb, program, dbtype=None, filters=None,
-                 params=None):
+                 params=None, remote=False):
         'Initializes the class'
         self.blastdb = blastdb
         self._program = program
         self._filters = [] if filters is None else filters
         self._params = params
         self._dbtype = dbtype
+        self._remote = remote
 
     def __call__(self, seqrecords):
         'It does the work'
         matcher = Blaster(seqrecords, self.blastdb, self._program,
                                self._dbtype, filters=self._filters,
-                               params=self._params)
+                               params=self._params, remote=self._remote)
         blasts = matcher.blasts
         blastdb = os.path.basename(self.blastdb)
         for seqrecord in seqrecords:
