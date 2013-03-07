@@ -314,6 +314,11 @@ class SplitMatesBinTest(unittest.TestCase):
         except CalledProcessError:
             pass
 
+        # ion_torrent option is recognized
+        cmd = [mate_bin, '-o', out_fhand.name, '-l', 'ion_torrent',
+               seq_fpath]
+        check_output(cmd)
+
     def test_parallel_bin(self):
         'The mate pairs binary runs in parallel'
         mate_bin = os.path.join(BIN_DIR, 'split_matepairs')

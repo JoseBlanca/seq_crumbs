@@ -36,8 +36,8 @@ def _setup_argparse():
     description = 'It splits mate pair sequences'
     parser = create_basic_parallel_argparse(description=description)
 
-    hlp = 'platform (454, flx, titanium) or linker sequence (as a string,'
-    hlp += 'several can be given) (required)'
+    hlp = 'platform (454, flx, titanium, ion_torrent) or linker sequence '
+    hlp += '(as a string, several can be given) (required)'
     parser.add_argument('-l', '--linker', dest='linkers', help=hlp,
                         action='append', required=True)
     return parser
@@ -66,6 +66,10 @@ def _parse_args(parser):
             new_linkers.append(get_setting('FLX_LINKER'))
         elif linker.lower() == 'titanium':
             new_linkers.append(get_setting('TITANIUM_LINKER'))
+            new_linkers.append(get_setting('TITANIUM_LINKER_REV'))
+        elif linker.lower() == 'ion_torrent':
+            new_linkers.append(get_setting('ION_TORRENT_LINKER'))
+            new_linkers.append(get_setting('ION_TORRENT_LINKER_REV'))
         elif '.' in linker or '/' in linker:
             msg = 'The given linker is not a sequence or a platform. '
             msg += 'It looks like a file path.'
