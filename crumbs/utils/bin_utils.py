@@ -172,6 +172,8 @@ def popen(*args, **kwargs):
             raise MissingBinaryError(msg)
 
 
+# This function has been modified from
+# http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
 def which(program):
     'It emulates the which Unix utility'
     def is_exe(fpath):
