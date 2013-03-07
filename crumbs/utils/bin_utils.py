@@ -172,6 +172,26 @@ def popen(*args, **kwargs):
             raise MissingBinaryError(msg)
 
 
+def which(program):
+    'It emulates the which Unix utility'
+    def is_exe(fpath):
+        'The file is an executable'
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath = os.path.dirname(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 def create_get_binary_path(module_path, get_setting):
     def _get_binary_path(binary_name):
         '''It return the path to the proper binary. It looks on platform and
@@ -183,7 +203,7 @@ def create_get_binary_path(module_path, get_setting):
             binary_name = get_setting('EXTERNAL_BIN_PREFIX') + binary_name
 
         if not get_setting('ADD_PATH_TO_EXT_BIN'):
-            # I have to check if the bynary is on my current directory.
+            # I have to check if the binary is on my current directory.
             # If it is there use it, else assumes that it is on the path
             if os.path.exists(os.path.join(os.getcwd(), binary_name)):
                 return os.path.join(os.getcwd(), binary_name)
@@ -199,10 +219,6 @@ def create_get_binary_path(module_path, get_setting):
         third_party_path = join(module_path, '..', 'third_party', 'bin')
         third_party_path = os.path.abspath(third_party_path)
 
-        if not os.path.exists(third_party_path):
-            msg = 'Third party bin directory not found, please fix me.'
-            raise MissingBinaryError(msg)
-
         binary_path = os.path.abspath(join(third_party_path, system, arch,
                                            binary_name))
 
@@ -216,6 +232,10 @@ def create_get_binary_path(module_path, get_setting):
                 return binary_path
 
         # At this point there is not available binary for the working platform
+        # Is the binary really in the path?
+        if which(binary_name):
+            return binary_name
+
         msg = '{} not available for this platform: {}'.format(binary_name,
                                                               system)
         raise MissingBinaryError(msg)
