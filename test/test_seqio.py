@@ -143,6 +143,12 @@ class SimpleIOTest(unittest.TestCase):
         assert seqs == [('s1', ['>s1\n', 'ACTG\n']),
                         ('s2', ['>s2 desc\n', 'ACTG\n'])]
 
+        # with several lines
+        fhand = StringIO('>s1\nACTG\nGTAC\n>s2 desc\nACTG\n')
+        seqs = list(_itemize_fasta(fhand))
+        assert seqs == [('s1', ['>s1\n', 'ACTG\n', 'GTAC\n']),
+                        ('s2', ['>s2 desc\n', 'ACTG\n'])]
+
     def test_fastq_itemizer(self):
         'It tests the fasta itemizer'
         fhand = StringIO('@s1\nACTG\n+\n1234\n@s2 desc\nACTG\n+\n4321\n')
