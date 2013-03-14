@@ -299,7 +299,7 @@ class CalculateStatsTest(unittest.TestCase):
         for val in range(1, 6):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
-        seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQITEM])
+        seqs = list(read_seqs(in_fhands, prefered_seq_classes=[SEQITEM]))
         results = calculate_sequence_stats(seqs, nxs=[50])
         assert 'maximum: 4' in results['length']
         assert 'N50' in results['length']

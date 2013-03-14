@@ -15,6 +15,7 @@
 
 # pylint: disable=R0201
 # pylint: disable=R0904
+# pylint: disable=C0111
 
 import unittest
 from cStringIO import StringIO
@@ -27,10 +28,12 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils.file_utils import fhand_is_seekable, wrap_in_buffered_reader
 from crumbs.utils.seq_utils import (uppercase_length, guess_format, ChangeCase,
-                                    _guess_format, get_uppercase_segments)
-from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE
+                                    _guess_format, get_uppercase_segments,
+                                    get_length)
+from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE, SEQITEM
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.seqio import SeqItem, SeqWrapper
 
 
 class GuessFormatTest(unittest.TestCase):
@@ -236,6 +239,20 @@ class ChangeCaseTest(unittest.TestCase):
 
         result = check_output([change_bin, '-a', 'upper', fastq_fhand.name])
         assert '@seq1\nATCGT\n+' in result
+
+
+class SeqMethodsTest(unittest.TestCase):
+    def test_len(self):
+        # with fasta
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        assert get_length(seq) == 8
+
+        # with fastq
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aaaa\n', '+\n', '????\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-one_line')
+        assert get_length(seq) == 4
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'ChangeCaseTest.test_bin']

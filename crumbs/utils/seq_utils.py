@@ -344,7 +344,11 @@ def get_length(seq):
     seq_class = seq.kind
     seq = seq.object
     if seq_class == SEQITEM:
-        length = len(seq.lines[1]) - 1
+        def break_():
+            raise StopIteration
+        length = lambda l: len(l) - 1   # It assumes line break and no spaces
+        seq_lines = (break_() if line[0] == '+' else line for line in seq.lines[1:])
+        length = sum(map(length, seq_lines))
     elif seq_class == SEQRECORD:
         length = len(seq)
     return length
