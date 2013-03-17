@@ -330,25 +330,34 @@ def get_file_format(seq):
     return fmt
 
 
+def _break():
+    raise StopIteration
+
+
+def _get_seqitem_str_lines(seq):
+    fmt = seq.file_format
+    sitem = seq.object
+    if 'fastq' in fmt and not 'multiline' in fmt:
+        lines = sitem.lines[1:2]
+    else:
+        lines = (_break() if l.startswith('+') else l for l in sitem.lines[1:])
+    return lines
+
+
 def get_str_seq(seq):
     seq_class = seq.kind
-    seq = seq.object
     if seq_class == SEQITEM:
-        seq = seq.lines[1].rstrip()
+        seq = ''.join((line.rstrip() for line in _get_seqitem_str_lines(seq)))
     elif seq_class == SEQRECORD:
-        seq = str(seq.seq)
+        seq = str(seq.object.seq)
     return seq
 
 
 def get_length(seq):
     seq_class = seq.kind
-    seq = seq.object
     if seq_class == SEQITEM:
-        def break_():
-            raise StopIteration
         length = lambda l: len(l) - 1   # It assumes line break and no spaces
-        seq_lines = (break_() if line[0] == '+' else line for line in seq.lines[1:])
-        length = sum(map(length, seq_lines))
+        length = sum(map(length, _get_seqitem_str_lines(seq)))
     elif seq_class == SEQRECORD:
-        length = len(seq)
+        length = len(seq.object)
     return length
