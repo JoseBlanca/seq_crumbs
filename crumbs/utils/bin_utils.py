@@ -31,7 +31,7 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                OptionalRequirementError)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, compress_fhand)
-from crumbs.utils.seq_utils import guess_format
+from crumbs.utils.file_formats import guess_format
 from crumbs.settings import get_setting
 from crumbs.utils.tags import (OUTFILE, GUESS_FORMAT, BGZF, GZIP, BZIP2,
                                ERROR_ENVIRON_VARIABLE)

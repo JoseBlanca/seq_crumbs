@@ -25,12 +25,14 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality, TrimWithBlastShort)
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.utils.tags import TRIMMING_RECOMMENDATIONS, VECTOR
-from crumbs.seqio import read_seqrecord_packets
+from crumbs.utils.tags import SEQRECORD, TRIMMING_RECOMMENDATIONS, VECTOR
+from crumbs.utils.seq_utils import get_str_seq, get_annotations, get_qualities
+from crumbs.seqio import read_seq_packets, SeqWrapper
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
 FASTQ3 = '@seq1\nAAAAAATCGTTTTTTT\n+\n00000A???A000000\n'
+
 # pylint: disable=R0201
 # pylint: disable=R0904
 
@@ -50,21 +52,21 @@ class TrimTest(unittest.TestCase):
     def test_trim_seqs():
         'It tests the trim seq function'
         seqs = []
-        seqs.append(SeqRecord(Seq('aaCTTTC')))
-        seqs.append(SeqRecord(Seq('CTTCaa')))
-        seqs.append(SeqRecord(Seq('aaCTCaa')))
-        seqs.append(SeqRecord(Seq('actg')))
-        seqs.append(SeqRecord(Seq('AC')))
+        seqs.append(SeqWrapper(SEQRECORD, SeqRecord(Seq('aaCTTTC')), None))
+        seqs.append(SeqWrapper(SEQRECORD, SeqRecord(Seq('CTTCaa')), None))
+        seqs.append(SeqWrapper(SEQRECORD, SeqRecord(Seq('aaCTCaa')), None))
+        seqs.append(SeqWrapper(SEQRECORD, SeqRecord(Seq('actg')), None))
+        seqs.append(SeqWrapper(SEQRECORD, SeqRecord(Seq('AC')), None))
 
         trim_lowercased_seqs = TrimLowercasedLetters()
         trim = TrimOrMask()
         # pylint: disable=W0141
 
-        res = [str(s.seq) for s in trim(trim_lowercased_seqs(seqs))]
+        res = [get_str_seq(s) for s in trim(trim_lowercased_seqs(seqs))]
         assert res == ['CTTTC', 'CTTC', 'CTC', 'AC']
 
 
-class TrimByCaseTest(unittest.TestCase):
+class TrimByCaseBinTest(unittest.TestCase):
     'It tests the trim_by_case binary'
 
     def test_trim_case_bin(self):
@@ -92,9 +94,12 @@ class TrimEdgesTest(unittest.TestCase):
     def _some_seqs(self):
         'It returns some seqrecords.'
         seqs = []
-        seqs.append(SeqRecord(Seq('ACCG'),
-                              letter_annotations={'dummy': 'dddd'}))
-        seqs.append(SeqRecord(Seq('AAACCCGGG')))
+        seq = SeqRecord(Seq('ACCG'), letter_annotations={'dummy': 'dddd'})
+        seq = SeqWrapper(SEQRECORD, seq, None)
+        seqs.append(seq)
+        seq = SeqRecord(Seq('AAACCCGGG'))
+        seq = SeqWrapper(SEQRECORD, seq, None)
+        seqs.append(seq)
         return seqs
 
     def test_edge_trimming(self):
@@ -102,50 +107,50 @@ class TrimEdgesTest(unittest.TestCase):
         trim = TrimOrMask()
 
         trim_edges = TrimEdges(left=1)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['CCG', 'AACCCGGG']
 
         trim_edges = TrimEdges(right=1)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['ACC', 'AAACCCGG']
 
         trim_edges = TrimEdges(left=1, right=1)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['CC', 'AACCCGG']
 
         trim_edges = TrimEdges(left=2, right=2)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['ACCCG']
 
         trim_edges = TrimEdges(left=3, right=3)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['CCC']
 
         trim = TrimOrMask(mask=True)
         trim_edges = TrimEdges(left=1)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['aCCG', 'aAACCCGGG']
 
         trim_edges = TrimEdges(right=1)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['ACCg', 'AAACCCGGg']
 
         trim_edges = TrimEdges(left=1, right=1)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['aCCg', 'aAACCCGGg']
 
         trim_edges = TrimEdges(left=2, right=2)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['accg', 'aaACCCGgg']
 
         trim_edges = TrimEdges(left=3, right=3)
-        res = [str(s.seq) for s in trim(trim_edges(self._some_seqs()))]
+        res = [get_str_seq(s) for s in trim(trim_edges(self._some_seqs()))]
         assert res == ['accg', 'aaaCCCggg']
 
         # test overlapping mask
         trim1 = TrimEdges(left=3, right=3)
         trim2 = TrimEdges(left=4, right=4)
-        res = [str(s.seq) for s in trim(trim2(trim1(self._some_seqs())))]
+        res = [get_str_seq(s) for s in trim(trim2(trim1(self._some_seqs())))]
         assert res == ['accg', 'aaacCcggg']
 
     def test_trim_edges_bin(self):
@@ -171,32 +176,33 @@ class TrimAndMaskTest(unittest.TestCase):
         'The sequences are trimmed according to the recommendations.'
         seq1 = 'gggtctcatcatcaggg'.upper()
         seq = SeqRecord(Seq(seq1), annotations={TRIMMING_RECOMMENDATIONS: {}})
+        seq = SeqWrapper(SEQRECORD, seq, None)
 
-        trim_rec = seq.annotations[TRIMMING_RECOMMENDATIONS]
+        trim_rec = get_annotations(seq)[TRIMMING_RECOMMENDATIONS]
         seq_trimmer = TrimOrMask()
 
         trim_rec['vector'] = [(0, 3), (8, 13)]
-        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
+        get_annotations(seq)[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
-        assert str(seqs2[0].seq) == 'CTCA'
+        assert get_str_seq(seqs2[0]) == 'CTCA'
 
         trim_rec['vector'] = [(0, 0), (8, 13)]
-        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
+        get_annotations(seq)[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
-        assert str(seqs2[0].seq) == 'GGTCTCA'
+        assert get_str_seq(seqs2[0]) == 'GGTCTCA'
 
         trim_rec['vector'] = [(0, 1), (8, 12)]
         trim_rec['quality'] = [(1, 8), (13, 17)]
-        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
+        get_annotations(seq)[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
         assert not seqs2
 
         trim_rec['vector'] = [(0, 0), (8, 13)]
         trim_rec['quality'] = []
-        seq.annotations[TRIMMING_RECOMMENDATIONS] = trim_rec
+        get_annotations(seq)[TRIMMING_RECOMMENDATIONS] = trim_rec
         seqs2 = seq_trimmer([seq])
-        assert str(seqs2[0].seq) == 'GGTCTCA'
-        assert TRIMMING_RECOMMENDATIONS not in seqs2[0].annotations
+        assert get_str_seq(seqs2[0]) == 'GGTCTCA'
+        assert TRIMMING_RECOMMENDATIONS not in get_annotations(seqs2[0])
 
 
 class TrimByQualityTest(unittest.TestCase):
@@ -211,9 +217,9 @@ class TrimByQualityTest(unittest.TestCase):
         seq = SeqRecord(Seq('ACTGCTGCATAAAA'))
         quals = [10, 10, 20, 30, 30, 30, 40, 40, 30, 30, 20, 20, 10, 10]
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         seqs = trim(trim_quality([seq]))
-        assert seqs[0].letter_annotations['phred_quality'] == [20, 30, 30, 30,
-                                                            40, 40, 30, 30, 20]
+        assert get_qualities(seqs[0]) == [20, 30, 30, 30, 40, 40, 30, 30, 20]
 
         # all bad
         trim_quality = TrimByQuality(window=5, threshold=60)
@@ -223,62 +229,67 @@ class TrimByQualityTest(unittest.TestCase):
         # all OK
         trim_quality = TrimByQuality(window=5, threshold=5)
         seqs = trim(trim_quality([seq]))
-        assert seqs[0].letter_annotations['phred_quality'] == quals
+        assert get_qualities(seqs[0]) == quals
 
         quals = [20, 20, 20, 60, 60, 60, 60, 60, 20, 20, 20, 20]
         trim_quality = TrimByQuality(window=5, threshold=50)
         seq = SeqRecord(Seq('ataataataata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         seqs = trim(trim_quality([seq]))
         expected = [20, 60, 60, 60, 60, 60, 20]
-        assert seqs[0].letter_annotations['phred_quality'] == expected
+        assert get_qualities(seqs[0]) == expected
 
         quals = [40, 18, 10, 40, 40, 5, 8, 30, 14, 3, 40, 40, 40, 11, 6, 5, 3,
                  20, 10, 12, 8, 5, 4, 7, 1]
         seq = SeqRecord(Seq('atatatatagatagatagatagatg'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_quality = TrimByQuality(window=5, threshold=25)
         seqs = trim(trim_quality([seq]))
-        assert seqs[0].letter_annotations['phred_quality'] == [40, 18, 10, 40,
-                                                               40]
+        assert get_qualities(seqs[0]) == [40, 18, 10, 40, 40]
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
         seq = SeqRecord(Seq('atatatatatatatatatatatata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_quality = TrimByQuality(window=5, threshold=25)
         seqs = trim(trim_quality([seq]))
         expected = [40, 4, 27, 38, 40]
-        assert seqs[0].letter_annotations['phred_quality'] == expected
+        assert get_qualities(seqs[0]) == expected
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
         seq = SeqRecord(Seq('atatatatatatatatatatatata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_quality = TrimByQuality(window=5, threshold=25, trim_left=False)
         seqs = trim(trim_quality([seq]))
         expected = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40]
-        assert seqs[0].letter_annotations['phred_quality'] == expected
+        assert get_qualities(seqs[0]) == expected
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
         seq = SeqRecord(Seq('atatatatatatatatatatatata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_quality = TrimByQuality(window=5, threshold=25, trim_right=False)
         seqs = trim(trim_quality([seq]))
         expected = [40, 4, 27, 38, 40, 4, 11, 40, 40, 10, 10, 21, 3, 40, 9, 9,
                     12, 10, 9]
-        assert seqs[0].letter_annotations['phred_quality'] == expected
+        assert get_qualities(seqs[0]) == expected
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
         seq = SeqRecord(Seq('atatatatatatatatatatatata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_quality = TrimByQuality(window=5, threshold=25, trim_right=False,
                                      trim_left=False)
         seqs = trim(trim_quality([seq]))
         expected = quals
-        assert seqs[0].letter_annotations['phred_quality'] == expected
+        assert get_qualities(seqs[0]) == expected
 
     def test_trim_quality_bin(self):
         'It tests the trim_edges binary'
@@ -323,14 +334,19 @@ class TrimBlastShortTest(unittest.TestCase):
     def test_blast_short_trimming(self):
         'It trims oligos using blast-short'
 
-        adaptors = [SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACATGGG')),
-                    SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACTTTTT'))]
+        oligo1 = SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACATGGG'))
+        oligo2 = SeqRecord(Seq('AAGCAGTGGTATCAACGCAGAGTACTTTTT'))
+        oligo1 = SeqWrapper(SEQRECORD, oligo1, None)
+        oligo2 = SeqWrapper(SEQRECORD, oligo2, None)
+
+        adaptors = [oligo1, oligo2]
 
         blast_trim = TrimWithBlastShort(oligos=adaptors)
         fhand = StringIO(FASTQ4)
-        seq_packets = list(read_seqrecord_packets([fhand]))
+        seq_packets = list(read_seq_packets([fhand],
+                                            prefered_seq_classes=[SEQRECORD]))
         # It should trim the first and the second reads.
-        res = [s.annotations.get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
+        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
                                            for s in blast_trim(seq_packets[0])]
         assert res == [[(0, 29)], [(0, 29)], []]
 
@@ -348,5 +364,5 @@ class TrimBlastShortTest(unittest.TestCase):
         assert '\nCGAGAAGAAGGATCCAAGT' in result
 
 if __name__ == '__main__':
-#    import sys;sys.argv = ['', 'TrimTest.test_trim_seqs']
+    #import sys; sys.argv = ['', 'TrimByCaseBinTest']
     unittest.main()

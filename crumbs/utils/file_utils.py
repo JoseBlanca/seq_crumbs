@@ -18,7 +18,6 @@ import shutil
 import io
 from gzip import GzipFile
 import os.path
-from subprocess import check_call
 
 from Bio.bgzf import BgzfWriter
 
