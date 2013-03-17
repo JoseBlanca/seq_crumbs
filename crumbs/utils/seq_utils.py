@@ -176,9 +176,9 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
             not lines[2].startswith('+') or
             not lines[4].startswith('@') or
             len(lines[1]) != len(lines[3])):
-            one_line = ''
+            one_line = '-multiline'
         else:
-            one_line = '-one_line'
+            one_line = ''
 
     if fmt:
         return fmt + one_line

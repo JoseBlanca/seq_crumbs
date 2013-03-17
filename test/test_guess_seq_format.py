@@ -80,6 +80,10 @@ class GuessFormatTest(unittest.TestCase):
         fhand = StringIO('>seq\nACTC\n')
         assert guess_format(fhand) == 'fasta'
 
+        # multiline fasta
+        fhand = StringIO('>seq\nACTC\nACTG\n>seq2\nACTG\n')
+        assert guess_format(fhand) == 'fasta'
+
         # qual
         fhand = StringIO('>seq\n10 20\n')
         assert guess_format(fhand) == 'qual'
@@ -119,8 +123,15 @@ class GuessFormatTest(unittest.TestCase):
         fhand = StringIO(txt)
         assert guess_format(fhand) == 'fastq-illumina'
 
+        txt = '@HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
+        txt += 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCT\n'
+        txt += '+HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1\n'
+        txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
+        txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
+
         fhand = StringIO(txt + txt)
-        assert guess_format(fhand) == 'fastq-illumina-one_line'
+        assert guess_format(fhand) == 'fastq-illumina-multiline'
 
         fhand = StringIO('@HWI-EAS209\n@')
         try:
