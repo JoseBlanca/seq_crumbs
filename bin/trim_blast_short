@@ -17,15 +17,13 @@
 
 import sys
 
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
-
 from crumbs.utils.bin_utils import (main, parse_trimmer_args,
                                     create_trimmer_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.trim import TrimWithBlastShort, TrimOrMask
-from crumbs.seqio import (read_seqrecord_packets, write_seqrecord_packets,
-                          flush_fhand)
+from crumbs.seqio import (read_seq_packets, write_seq_packets,
+                          flush_fhand, SeqWrapper, SeqItem)
+from crumbs.utils.tags import SEQRECORD, SEQITEM
 
 
 def _setup_argparse():
@@ -43,8 +41,10 @@ def _parse_args(parser):
     args, parsed_args = parse_trimmer_args(parser)
 
     oligos = []
-    for i, l in enumerate(parsed_args.oligos):
-        oligos.append(SeqRecord(Seq(l), id='oligo' + str(i)))
+    for oligo_index, str_seq in enumerate(parsed_args.oligos):
+        name = 'oligo' + str(oligo_index)
+        lines = ['>' + name + '\n', str_seq + '\n']
+        oligos.append(SeqWrapper(SEQITEM, SeqItem(name, lines), 'fasta'))
     args['oligos'] = oligos
 
     return args
@@ -58,8 +58,8 @@ def run():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seq_packets = read_seqrecord_packets(in_fhands,
-                                         file_format=args['in_format'])
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
+                                   prefered_seq_classes=[SEQRECORD])
 
     prep_trim = TrimWithBlastShort(oligos=args['oligos'])
     trim_or_mask = TrimOrMask(mask=args['mask'])
@@ -67,7 +67,7 @@ def run():
     seq_packets, workers = process_seq_packets(seq_packets,
                                                [prep_trim, trim_or_mask],
                                                processes=args['processes'])
-    write_seqrecord_packets(out_fhand, seq_packets, args['out_format'],
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
                       workers=workers)
     flush_fhand(out_fhand)
 

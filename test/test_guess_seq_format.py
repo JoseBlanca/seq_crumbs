@@ -20,7 +20,7 @@ from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.utils.seq_utils import guess_format, _guess_format
+from crumbs.utils.file_formats import guess_format, _guess_format
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
 
 # pylint: disable=R0201

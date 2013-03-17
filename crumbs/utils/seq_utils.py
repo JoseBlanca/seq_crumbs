@@ -14,21 +14,16 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import cStringIO
-from array import array
 import itertools
 from multiprocessing import Pool
 from copy import deepcopy
 
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
-from crumbs.settings import get_setting
-from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
 from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE, SEQITEM,
                                SEQRECORD)
+from crumbs.seqio import SeqWrapper
 
 # pylint: disable=R0903
 # pylint: disable=C0111
@@ -44,11 +39,8 @@ def replace_seq_same_length(seqrecord, seq_str):
     return seqrecord
 
 
-def copy_seqrecord(seqrec, seq=None, name=None, id_=None):
-    '''Given a seqrecord it returns a new seqrecord with seq or qual changed.
-
-    This is necessary because our SeqWithQuality is inmutable
-    '''
+def _copy_seqrecord(seqrec, seq=None, name=None, id_=None):
+    'Given a seqrecord it returns a new seqrecord with seq or qual changed.'
     if seq is None:
         seq = seqrec.seq
     if id_ is  None:
@@ -118,122 +110,6 @@ class ChangeCase(object):
             seqrecord = replace_seq_same_length(seqrecord, str_seq)
             processed_seqs.append(seqrecord)
         return processed_seqs
-
-
-def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
-    'It returns the quality characters and the lengths'
-    seqs_to_peek = get_setting('SEQS_TO_GUESS_FASTQ_VERSION')
-    chunk_size = get_setting('CHUNK_TO_GUESS_FASTQ_VERSION')
-
-    lengths = array('I')
-    seqs_analyzed = 0
-    if fhand_is_seekable(fhand) and not force_file_as_non_seek:
-        fmt_fhand = fhand
-        chunk = fmt_fhand.read(chunk_size)
-        fhand.seek(0)
-    else:
-        chunk = peek_chunk_from_file(fhand, chunk_size)
-        fmt_fhand = cStringIO.StringIO(chunk)
-
-    try:
-        for seq in FastqGeneralIterator(fmt_fhand):
-            qual = [ord(char) for char in seq[2]]
-            sanger_chars = [q for q in qual if q < 64]
-            if sanger_chars:
-                fhand.seek(0)
-                return None, True, chunk  # no quals, no lengths, is_sanger
-            lengths.append(len(qual))
-            seqs_analyzed += 1
-            if seqs_analyzed > seqs_to_peek:
-                break
-    except ValueError:
-        raise UnknownFormatError('Malformed fastq')
-    finally:
-        fhand.seek(0)
-    return lengths, None, chunk  # don't know if it's sanger
-
-
-def _guess_fastq_version(fhand, force_file_as_non_seek):
-    '''It guesses the format of fastq files.
-
-    It ignores the solexa fastq version.
-    '''
-    lengths, is_sanger, chunk = _get_some_qual_and_lengths(fhand,
-                                                        force_file_as_non_seek)
-    if is_sanger:
-        fmt = 'fastq'
-    elif is_sanger is False:
-        fmt = 'fastq-illumina'
-    else:
-        fmt = None
-
-    # onle line fastq? All seq in just one line?
-    lines = [l for l in itertools.islice(chunk.splitlines(), 5)]
-    if len(lines) != 5:
-        one_line = ''
-    else:
-        if (not lines[0].startswith('@') or
-            not lines[2].startswith('+') or
-            not lines[4].startswith('@') or
-            len(lines[1]) != len(lines[3])):
-            one_line = '-multiline'
-        else:
-            one_line = ''
-
-    if fmt:
-        return fmt + one_line
-
-    longest_expected_illumina = get_setting('LONGEST_EXPECTED_ILLUMINA_READ')
-    n_long_seqs = [l for l in lengths if l > longest_expected_illumina]
-    if n_long_seqs:
-        msg = 'It was not possible to guess the format of '
-        if hasattr(fhand, 'name'):
-            msg += 'the file ' + fhand.name
-        else:
-            msg += 'a file '
-        msg = '\n. The quality values could be Illumina, but there are '
-        msg += 'sequences longer than %i bp.'
-        msg %= longest_expected_illumina
-        raise UndecidedFastqVersionError(msg)
-    else:
-        return 'fastq-illumina' + one_line
-
-
-def guess_format(fhand):
-    '''It guesses the format of the sequence file.
-
-    It does ignore the solexa fastq version.
-    '''
-    return _guess_format(fhand, force_file_as_non_seek=False)
-
-
-def _guess_format(fhand, force_file_as_non_seek):
-    '''It guesses the format of the sequence file.
-
-    This function is just for testing forcing the fhand as non-seekable.
-    It does ignore the solexa fastq version.
-    '''
-    chunk_size = 1024
-    chunk = peek_chunk_from_file(fhand, chunk_size)
-    if not chunk:
-        raise UnknownFormatError('The file is empty')
-    lines = chunk.splitlines()
-    if chunk.startswith('>'):
-        if lines[1].startswith('>'):
-            raise UnknownFormatError('Malformed fasta')
-        else:
-            first_item = lines[1].strip().split()[0]
-            if first_item.isdigit():
-                return 'qual'
-            else:
-                return 'fasta'
-    elif chunk.startswith('@'):
-        return _guess_fastq_version(fhand, force_file_as_non_seek)
-    elif chunk.startswith('LOCUS'):
-        return 'genbank'
-    elif chunk.startswith('ID'):
-        return 'embl'
-    raise UnknownFormatError('Sequence file of unknown format.')
 
 
 def append_to_description(seqrecord, text):
@@ -352,3 +228,48 @@ def get_length(seq):
     elif seq_class == SEQRECORD:
         length = len(seq)
     return length
+
+
+def get_qualities(seq):
+    seq_class = seq.kind
+    seq = seq.object
+    if seq_class == SEQITEM:
+        raise NotImplementedError('No qualities yet for SeqItem.')
+    elif seq_class == SEQRECORD:
+        annots = seq.letter_annotations['phred_quality']
+    return annots
+
+
+def get_annotations(seq):
+    seq_class = seq.kind
+    seq = seq.object
+    if seq_class == SEQITEM:
+        raise NotImplementedError('SeqItem has no annotation yet.')
+    elif seq_class == SEQRECORD:
+        annots = seq.annotations
+    return annots
+
+
+def copy_seq(seqwrapper, seq=None, name=None):
+    seq_class = seqwrapper.kind
+    seq_obj = seqwrapper.object
+    if seq_class == SEQITEM:
+        # It has to take into account that the seq is a string and it has
+        # to be transformed in a list of lines, with the \n
+        raise NotImplementedError('SeqItem has copy yet.')
+    elif seq_class == SEQRECORD:
+        seq_obj = _copy_seqrecord(seq_obj, seq=seq, name=name, id_=name)
+        seq = SeqWrapper(kind=seqwrapper.kind, object=seq_obj,
+                         file_format=seqwrapper.file_format)
+    return seq
+
+
+def slice_seq(seq, start, stop):
+    seq_class = seq.kind
+    if seq_class == SEQITEM:
+        # The easiest way it to slice the seq string and the qualities list
+        # If its a multiline fastq you can transform it in a single line fastq
+        raise NotImplementedError('SeqItem has no slicing yet.')
+    elif seq_class == SEQRECORD:
+        seq_obj = seq.object[start:stop]
+    return SeqWrapper(seq.kind, object=seq_obj, file_format=seq.file_format)

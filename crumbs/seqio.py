@@ -29,7 +29,7 @@ from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError)
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
-from crumbs.utils.seq_utils import guess_format, peek_chunk_from_file
+from crumbs.utils.file_formats import guess_format, peek_chunk_from_file
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD)
 from crumbs.settings import get_setting

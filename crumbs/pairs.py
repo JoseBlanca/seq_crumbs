@@ -24,7 +24,8 @@ from crumbs.seqio import (write_seqrecords, _remove_multiline, write_seqs,
                           flush_fhand)
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.utils.seq_utils import guess_format, get_title
+from crumbs.utils.seq_utils import get_title
+from crumbs.utils.file_formats import guess_format
 
 
 def _parse_pair_direction_and_name(seq):

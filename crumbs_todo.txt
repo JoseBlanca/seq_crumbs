@@ -7,6 +7,22 @@ clearner could end up removing a read. In that case the pair should go to the
 orphan. To do that the cleaners should deal with a stream of pair list, like
 the filters and not with a stream of reads.
 What happens when all the quality is trimmed from a seq? Is the seq filtered out? Is the seq None?
+How to do it:
+	1. the trimming functs should be able to deal with SeqItems
+		1.1 They have to accept seqs (done)
+		1.2 Move the trimimng bins to the they method, but with SeqRecords as preferred (done)
+		1.3 SeqItems can not store annotations, fix it.
+		1.4 Use SeqItems in the non quality trimmers
+		1.5 Use SeqItems in the quality trimmer
+		
+	2. What happens when a sequence is lost?
+	3. The sequences should be trimmed in pairs.
+		3.1 Trimming functions should work with pair generators
+		3.2 Triming binaries should have an orphan option
+
+flush_fhand function should go to utils.file_utils
+
+rename prefered_seq_classes to preferred_seq_classes
 
 read_seqrecords should be private, the only public should be based on the SeqWrapper IO.
 Remove the seqrecord.__class__.__name__ once everything has SeqWrappers
@@ -15,6 +31,7 @@ split file_format into format and style to remove the -one-line problem
 Add a test for sample, head or cat with different input formats, it should fail.
 Take a look at python bedtools for the segments
 
+SeqWrapper and SeqItem should be in a module with all the seq methods, like get_str_seq
 
 trim_blast_contanimant
 ----------------------
