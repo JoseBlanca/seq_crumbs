@@ -279,13 +279,13 @@ def _get_seqitem_qualities(seqwrap):
         else:
             quals_map = SANGER_QUALS
         if 'multiline' in fmt:
-            lines = (line.rstrip() for line in _get_seqitem_qual_lines(seqwrap))
+            lines = (l.rstrip() for l in _get_seqitem_qual_lines(seqwrap))
         else:
             lines = seqwrap.object.lines[-1:]
         lines = [line.strip() for line in lines]
         quals = itertools.chain(quals_map[char] for l in lines for char in l)
     else:
-        raise RuntimeError('Qualities requested for an unkown SeqItem class')
+        raise RuntimeError('Qualities requested for an unkown SeqItem format')
     return quals
 
 

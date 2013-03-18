@@ -310,6 +310,16 @@ class TrimByQualityTest(unittest.TestCase):
         expected = quals
         assert get_qualities(seqs[0]) == expected
 
+        # With SeqItems
+        seq = SeqItem('s', ['@s\n', 'atatatatatatatatatatatata\n', '\n',
+                            'II.,I*I%<GI%,II++6$I**-+*\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        trim_quality = TrimByQuality(window=5, threshold=25, trim_right=True,
+                                     trim_left=False)
+        seqs = trim(trim_quality([seq]))
+        expected = 'II.,I*I%<GI\n'
+        assert seqs[0].object.lines[3] == expected
+
     def test_trim_quality_bin(self):
         'It tests the trim_edges binary'
         trim_bin = os.path.join(BIN_DIR, 'trim_quality')
