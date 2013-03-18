@@ -301,13 +301,44 @@ def get_annotations(seq):
     return seq.object.annotations
 
 
+def _copy_seqitem(seqwrapper, seq=None, name=None):
+    seq_item = seqwrapper.object
+    name = seq_item.name if name is None else name
+    lines = seq_item.lines
+    fmt = seqwrapper.file_format
+    if seq is None:
+        lines = lines[:]
+    else:
+        if 'fasta' in fmt:
+            lines = [lines[0], seq + '\n']
+        elif 'multiline' in fmt and 'fastq' in fmt:
+            qline = ''.join([qline.strip() for qline in _get_seqitem_qual_lines(seqwrapper)])
+            lines = [lines[0], seq + '\n', '+\n', qline + '\n']
+            fmt = _remove_multiline(fmt)
+            if len(lines[1]) != len(lines[3]):
+                msg = 'Sequence and quality line length do not match'
+                raise ValueError(msg)
+        elif 'fastq' in fmt:
+            lines = [lines[0], seq + '\n', lines[2], lines[3]]
+            if len(lines[1]) != len(lines[3]):
+                msg = 'Sequence and quality line length do not match'
+                raise ValueError(msg)
+        else:
+            raise RuntimeError('Unknown format for a SequenceItem')
+    annotations = seq_item.annotations
+    if annotations is not None:
+        annotations = annotations.copy()
+    seq = SeqWrapper(kind=seqwrapper.kind,
+                     object=SeqItem(name, lines, annotations),
+                     file_format=fmt)
+    return seq
+
+
 def copy_seq(seqwrapper, seq=None, name=None):
     seq_class = seqwrapper.kind
     seq_obj = seqwrapper.object
     if seq_class == SEQITEM:
-        # It has to take into account that the seq is a string and it has
-        # to be transformed in a list of lines, with the \n
-        raise NotImplementedError('SeqItem has copy yet.')
+        seq = _copy_seqitem(seqwrapper, seq=seq, name=name)
     elif seq_class == SEQRECORD:
         seq_obj = _copy_seqrecord(seq_obj, seq=seq, name=name, id_=name)
         seq = SeqWrapper(kind=seqwrapper.kind, object=seq_obj,

@@ -159,6 +159,19 @@ class TrimEdgesTest(unittest.TestCase):
         res = [get_str_seq(s) for s in trim(trim2(trim1(self._some_seqs())))]
         assert res == ['accg', 'aaacCcggg']
 
+        # With a SeqItem
+        trim = TrimOrMask(mask=False)
+        seq = SeqItem('s', ['>s\n', 'ACTTTC\n'])
+        seqs = [SeqWrapper(SEQITEM, seq, 'fasta')]
+        trim_edges = TrimEdges(left=1, right=1)
+        res = [get_str_seq(s) for s in trim(trim_edges(seqs))]
+        assert res == ['CTTT']
+
+        trim = TrimOrMask(mask=True)
+        seq = SeqItem('s', ['>s\n', 'ACTTTC\n'])
+        res = [get_str_seq(s) for s in trim(trim_edges(seqs))]
+        assert res == ['aCTTTc']
+
     def test_trim_edges_bin(self):
         'It tests the trim_edges binary'
         trim_bin = os.path.join(BIN_DIR, 'trim_edges')

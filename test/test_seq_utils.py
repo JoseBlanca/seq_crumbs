@@ -29,7 +29,8 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.utils.file_utils import fhand_is_seekable, wrap_in_buffered_reader
 from crumbs.utils.seq_utils import (uppercase_length, ChangeCase,
                                     get_uppercase_segments, get_length,
-                                    get_str_seq, get_qualities, slice_seq)
+                                    get_str_seq, get_qualities, slice_seq,
+                                    copy_seq)
 from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import SeqItem, SeqWrapper
@@ -217,6 +218,34 @@ class SeqMethodsTest(unittest.TestCase):
         seq_ = slice_seq(seq, 1, 5)
         assert list(get_qualities(seq_)) == [1, 1, 1, 2]
         assert get_str_seq(seq_) == get_str_seq(seq)[1: 5]
+
+    def test_copy(self):
+        # with fasta
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'],
+                      annotations={'a': 'b'})
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        seq2 = copy_seq(seq, seq='ACTG')
+        assert seq2.object == SeqItem(name='s1', lines=['>s1\n', 'ACTG\n'],
+                               annotations={'a': 'b'})
+        assert seq.object is not seq2.object
+        assert seq.object.lines is not seq2.object.lines
+
+        # with fastq
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aaaa\n', '+\n', '!???\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        seq2 = copy_seq(seq, seq='ACTG')
+        assert seq2.object == SeqItem(name='seq',
+                               lines=['@seq\n', 'ACTG\n', '+\n', '!???\n'])
+
+        # with multiline fastq
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
+                                         '@AAA\n', 'BBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        seq2 = copy_seq(seq, seq='ACTGactg')
+        assert seq2.object == SeqItem(name='seq',
+                                      lines=['@seq\n', 'ACTGactg\n', '+\n',
+                                             '@AAABBBB\n'])
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'ChangeCaseTest.test_bin']
