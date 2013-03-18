@@ -77,7 +77,6 @@ class TrimByCaseBinTest(unittest.TestCase):
     'It tests the trim_by_case binary'
 
     def test_trim_case_bin(self):
-        'It tests the trim seqs binary'
         trim_bin = os.path.join(BIN_DIR, 'trim_by_case')
         assert 'usage' in check_output([trim_bin, '-h'])
 

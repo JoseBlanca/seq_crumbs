@@ -286,11 +286,13 @@ SeqWrapper = namedtuple('SeqWrapper', ['kind', 'object', 'file_format'])
 _SeqItem = namedtuple('SeqItem', ['name', 'lines', 'annotations'])
 
 
-def SeqItem(name, lines, annotations=None):
-    # This subclass is required to have a default value in a namedtuple
-    if annotations is None:
-        annotations = {}
-    return _SeqItem(name, lines, annotations)
+class SeqItem(_SeqItem):
+    def __new__(cls, name, lines, annotations=None):
+        # This subclass is required to have a default value in a namedtuple
+        if annotations is None:
+            annotations = {}
+        # add default values
+        return super(SeqItem, cls).__new__(cls, name, lines, annotations)
 
 
 def _itemize_fasta(fhand):
