@@ -261,10 +261,9 @@ class BlasterForFewSubjects(object):
     the subject although internally the blast is done with the query and
     subject changed.
     '''
-    def __init__(self, seqs_fpath, seqrecords, program, params=None,
+    def __init__(self, seqs_fpath, seqs, program, params=None,
                  filters=None, elongate_for_global=False, seqs_type=None):
         '''It inits the class.'''
-        self._subjects = seqrecords
         self.program = program
         if params is None:
             params = {}
@@ -275,7 +274,7 @@ class BlasterForFewSubjects(object):
         self.filters = filters
         self.elongate_for_global = elongate_for_global
         self._match_parts = self._look_for_blast_matches(seqs_fpath,
-                                                         seqrecords,
+                                                         seqs,
                                                          seqs_type)
 
     def _look_for_blast_matches(self, seq_fpath, oligos, seqs_type):

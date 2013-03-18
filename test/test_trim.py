@@ -365,7 +365,28 @@ class TrimBlastShortTest(unittest.TestCase):
         seq_packets = list(read_seq_packets([fhand],
                                             prefered_seq_classes=[SEQRECORD]))
         # It should trim the first and the second reads.
-        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
+        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR,
+                                                                        [])
+                                           for s in blast_trim(seq_packets[0])]
+        assert res == [[(0, 29)], [(0, 29)], []]
+
+        # With SeqItems
+        oligo1 = SeqItem('oligo1', ['>oligo1\n',
+                                    'AAGCAGTGGTATCAACGCAGAGTACATGGG\n'])
+        oligo2 = SeqItem('oligo2', ['>oligo2\n',
+                                    'AAGCAGTGGTATCAACGCAGAGTACTTTTT\n'])
+        oligo1 = SeqWrapper(SEQITEM, oligo1, 'fasta')
+        oligo2 = SeqWrapper(SEQITEM, oligo2, 'fasta')
+
+        adaptors = [oligo1, oligo2]
+
+        blast_trim = TrimWithBlastShort(oligos=adaptors)
+        fhand = StringIO(FASTQ4)
+        seq_packets = list(read_seq_packets([fhand],
+                                            prefered_seq_classes=[SEQITEM]))
+        # It should trim the first and the second reads.
+        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR,
+                                                                        [])
                                            for s in blast_trim(seq_packets[0])]
         assert res == [[(0, 29)], [(0, 29)], []]
 

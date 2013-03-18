@@ -58,8 +58,7 @@ def run():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
-                                   prefered_seq_classes=[SEQRECORD])
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
 
     prep_trim = TrimWithBlastShort(oligos=args['oligos'])
     trim_or_mask = TrimOrMask(mask=args['mask'])

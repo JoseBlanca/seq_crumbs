@@ -20,7 +20,7 @@ How to do it:
 		3.1 Trimming functions should work with pair generators
 		3.2 Triming binaries should have an orphan option
 
-calculate stats might use SeqItems
+calculate stats might use SeqItems. The stats could be done with chars instead of quality integers.
 
 file_format should be a property of seqItem not of SeqWrapper
 
