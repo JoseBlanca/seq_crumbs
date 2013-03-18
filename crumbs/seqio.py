@@ -283,7 +283,16 @@ def _get_name_from_lines(lines):
 
 
 SeqWrapper = namedtuple('SeqWrapper', ['kind', 'object', 'file_format'])
-SeqItem = namedtuple('SeqItem', ['name', 'lines'])
+_SeqItem = namedtuple('SeqItem', ['name', 'lines', 'annotations'])
+
+
+class SeqItem(_SeqItem):
+    def __new__(cls, name, lines, annotations=None):
+        # This subclass is required to have a default value in a namedtuple
+        if annotations is None:
+            annotations = {}
+        # add default values
+        return super(SeqItem, cls).__new__(cls, name, lines, annotations)
 
 
 def _itemize_fasta(fhand):

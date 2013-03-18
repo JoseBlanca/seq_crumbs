@@ -25,9 +25,10 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality, TrimWithBlastShort)
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.utils.tags import SEQRECORD, TRIMMING_RECOMMENDATIONS, VECTOR
+from crumbs.utils.tags import (SEQRECORD, SEQITEM, TRIMMING_RECOMMENDATIONS,
+                               VECTOR)
 from crumbs.utils.seq_utils import get_str_seq, get_annotations, get_qualities
-from crumbs.seqio import read_seq_packets, SeqWrapper
+from crumbs.seqio import read_seq_packets, SeqWrapper, SeqItem
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
@@ -65,12 +66,17 @@ class TrimTest(unittest.TestCase):
         res = [get_str_seq(s) for s in trim(trim_lowercased_seqs(seqs))]
         assert res == ['CTTTC', 'CTTC', 'CTC', 'AC']
 
+        seqs = []
+        seq = SeqItem('s', ['>s\n', 'aaCTTTC\n'])
+        seqs.append(SeqWrapper(SEQITEM, seq, 'fasta'))
+        res = [get_str_seq(s) for s in trim(trim_lowercased_seqs(seqs))]
+        assert res == ['CTTTC']
+
 
 class TrimByCaseBinTest(unittest.TestCase):
     'It tests the trim_by_case binary'
 
     def test_trim_case_bin(self):
-        'It tests the trim seqs binary'
         trim_bin = os.path.join(BIN_DIR, 'trim_by_case')
         assert 'usage' in check_output([trim_bin, '-h'])
 
@@ -152,6 +158,19 @@ class TrimEdgesTest(unittest.TestCase):
         trim2 = TrimEdges(left=4, right=4)
         res = [get_str_seq(s) for s in trim(trim2(trim1(self._some_seqs())))]
         assert res == ['accg', 'aaacCcggg']
+
+        # With a SeqItem
+        trim = TrimOrMask(mask=False)
+        seq = SeqItem('s', ['>s\n', 'ACTTTC\n'])
+        seqs = [SeqWrapper(SEQITEM, seq, 'fasta')]
+        trim_edges = TrimEdges(left=1, right=1)
+        res = [get_str_seq(s) for s in trim(trim_edges(seqs))]
+        assert res == ['CTTT']
+
+        trim = TrimOrMask(mask=True)
+        seq = SeqItem('s', ['>s\n', 'ACTTTC\n'])
+        res = [get_str_seq(s) for s in trim(trim_edges(seqs))]
+        assert res == ['aCTTTc']
 
     def test_trim_edges_bin(self):
         'It tests the trim_edges binary'
@@ -291,6 +310,16 @@ class TrimByQualityTest(unittest.TestCase):
         expected = quals
         assert get_qualities(seqs[0]) == expected
 
+        # With SeqItems
+        seq = SeqItem('s', ['@s\n', 'atatatatatatatatatatatata\n', '\n',
+                            'II.,I*I%<GI%,II++6$I**-+*\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        trim_quality = TrimByQuality(window=5, threshold=25, trim_right=True,
+                                     trim_left=False)
+        seqs = trim(trim_quality([seq]))
+        expected = 'II.,I*I%<GI\n'
+        assert seqs[0].object.lines[3] == expected
+
     def test_trim_quality_bin(self):
         'It tests the trim_edges binary'
         trim_bin = os.path.join(BIN_DIR, 'trim_quality')
@@ -346,7 +375,28 @@ class TrimBlastShortTest(unittest.TestCase):
         seq_packets = list(read_seq_packets([fhand],
                                             prefered_seq_classes=[SEQRECORD]))
         # It should trim the first and the second reads.
-        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR, [])
+        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR,
+                                                                        [])
+                                           for s in blast_trim(seq_packets[0])]
+        assert res == [[(0, 29)], [(0, 29)], []]
+
+        # With SeqItems
+        oligo1 = SeqItem('oligo1', ['>oligo1\n',
+                                    'AAGCAGTGGTATCAACGCAGAGTACATGGG\n'])
+        oligo2 = SeqItem('oligo2', ['>oligo2\n',
+                                    'AAGCAGTGGTATCAACGCAGAGTACTTTTT\n'])
+        oligo1 = SeqWrapper(SEQITEM, oligo1, 'fasta')
+        oligo2 = SeqWrapper(SEQITEM, oligo2, 'fasta')
+
+        adaptors = [oligo1, oligo2]
+
+        blast_trim = TrimWithBlastShort(oligos=adaptors)
+        fhand = StringIO(FASTQ4)
+        seq_packets = list(read_seq_packets([fhand],
+                                            prefered_seq_classes=[SEQITEM]))
+        # It should trim the first and the second reads.
+        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(VECTOR,
+                                                                        [])
                                            for s in blast_trim(seq_packets[0])]
         assert res == [[(0, 29)], [(0, 29)], []]
 
@@ -364,5 +414,5 @@ class TrimBlastShortTest(unittest.TestCase):
         assert '\nCGAGAAGAAGGATCCAAGT' in result
 
 if __name__ == '__main__':
-    #import sys; sys.argv = ['', 'TrimByCaseBinTest']
+    #import sys; sys.argv = ['', 'TrimTest']
     unittest.main()

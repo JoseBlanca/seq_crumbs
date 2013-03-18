@@ -119,7 +119,7 @@ def _mask_sequence(seq, segments):
 
 
 class TrimOrMask(object):
-    'It trims and masks the SeqRecords following the trimming recommendations.'
+    'It trims and masks the Seq following the trimming recommendations.'
 
     def __init__(self, mask=False):
         '''The initiator.'''
@@ -232,7 +232,7 @@ class TrimByQuality(object):
         trimmed_seqs = []
         for seq in seqs:
             try:
-                quals = get_qualities(seq)
+                quals = list(get_qualities(seq))
             except KeyError:
                 msg = 'Some of the input sequences do not have qualities: {}'
                 msg = msg.format(get_name(seq))

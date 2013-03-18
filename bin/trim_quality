@@ -67,8 +67,7 @@ def run():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
-                                   prefered_seq_classes=[SEQRECORD])
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     trim_quality = TrimByQuality(window=args['window'],
                                  threshold=args['threshold'],
                                  trim_left=args['left'],
