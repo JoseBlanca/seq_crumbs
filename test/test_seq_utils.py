@@ -28,7 +28,8 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils.file_utils import fhand_is_seekable, wrap_in_buffered_reader
 from crumbs.utils.seq_utils import (uppercase_length, ChangeCase,
-                                    get_uppercase_segments, get_length)
+                                    get_uppercase_segments, get_length,
+                                    get_str_seq, get_qualities, slice_seq)
 from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import SeqItem, SeqWrapper
@@ -149,8 +150,73 @@ class SeqMethodsTest(unittest.TestCase):
         # with fastq
         seq = SeqItem(name='seq',
                       lines=['@seq\n', 'aaaa\n', '+\n', '????\n'])
-        seq = SeqWrapper(SEQITEM, seq, 'fastq-one_line')
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
         assert get_length(seq) == 4
+
+    def test_str_seq(self):
+        # with fasta
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        assert get_str_seq(seq) == 'ACTGGTAC'
+
+        # with fastq
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aaaa\n', '+\n', '????\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        assert get_str_seq(seq) == 'aaaa'
+
+        # with fastq-multiline
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'tttt\n',
+                                         '+\n', '????\n', '????\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-multiline')
+        assert get_str_seq(seq) == 'aaaatttt'
+
+    def test_qualities(self):
+        # with fasta
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        try:
+            assert get_qualities(seq)
+            self.fail('ValueError expected')
+        except ValueError:
+            pass
+
+        # with fastq
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aaaa\n', '+\n', '!???\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        assert list(get_qualities(seq)) == [0, 30, 30, 30]
+
+        # with multiline fastq
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
+                                         '@AAA\n', 'BBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        assert list(get_qualities(seq)) == [0, 1, 1, 1, 2, 2, 2, 2]
+
+    def test_slice(self):
+        # with fasta
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        expected_seq = SeqItem(name='s1', lines=['>s1\n', 'CTGG\n'])
+        expected_seq = SeqWrapper(SEQITEM, expected_seq, 'fasta')
+        assert slice_seq(seq, 1, 5) == expected_seq
+
+        # with fastq
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aata\n', '+\n', '!?!?\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        seq = slice_seq(seq, 1, 3)
+        assert list(get_qualities(seq)) == [30, 0]
+        assert get_str_seq(seq) == 'at'
+        assert seq.object.lines == ['@seq\n', 'at\n', '+\n', '?!\n']
+
+        # with multiline fastq
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaat\n', 'caaa\n', '+\n',
+                                         '@AAA\n', 'BBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        seq_ = slice_seq(seq, 1, 5)
+        assert list(get_qualities(seq_)) == [1, 1, 1, 2]
+        assert get_str_seq(seq_) == get_str_seq(seq)[1: 5]
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'ChangeCaseTest.test_bin']

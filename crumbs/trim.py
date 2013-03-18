@@ -119,7 +119,7 @@ def _mask_sequence(seq, segments):
 
 
 class TrimOrMask(object):
-    'It trims and masks the SeqRecords following the trimming recommendations.'
+    'It trims and masks the Seq following the trimming recommendations.'
 
     def __init__(self, mask=False):
         '''The initiator.'''

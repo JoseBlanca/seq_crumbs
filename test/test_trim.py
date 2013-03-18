@@ -25,9 +25,10 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality, TrimWithBlastShort)
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.utils.tags import SEQRECORD, TRIMMING_RECOMMENDATIONS, VECTOR
+from crumbs.utils.tags import (SEQRECORD, SEQITEM, TRIMMING_RECOMMENDATIONS,
+                               VECTOR)
 from crumbs.utils.seq_utils import get_str_seq, get_annotations, get_qualities
-from crumbs.seqio import read_seq_packets, SeqWrapper
+from crumbs.seqio import read_seq_packets, SeqWrapper, SeqItem
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
@@ -64,6 +65,12 @@ class TrimTest(unittest.TestCase):
 
         res = [get_str_seq(s) for s in trim(trim_lowercased_seqs(seqs))]
         assert res == ['CTTTC', 'CTTC', 'CTC', 'AC']
+
+        seqs = []
+        seq = SeqItem('s', ['>s\n', 'aaCTTTC\n'])
+        seqs.append(SeqWrapper(SEQITEM, seq, 'fasta'))
+        res = [get_str_seq(s) for s in trim(trim_lowercased_seqs(seqs))]
+        assert res == ['CTTTC']
 
 
 class TrimByCaseBinTest(unittest.TestCase):
@@ -364,5 +371,5 @@ class TrimBlastShortTest(unittest.TestCase):
         assert '\nCGAGAAGAAGGATCCAAGT' in result
 
 if __name__ == '__main__':
-    #import sys; sys.argv = ['', 'TrimByCaseBinTest']
+    #import sys; sys.argv = ['', 'TrimTest']
     unittest.main()

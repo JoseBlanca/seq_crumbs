@@ -20,6 +20,10 @@ How to do it:
 		3.1 Trimming functions should work with pair generators
 		3.2 Triming binaries should have an orphan option
 
+calculate stats might use SeqItems
+
+file_format should be a property of seqItem not of SeqWrapper
+
 flush_fhand function should go to utils.file_utils
 
 rename prefered_seq_classes to preferred_seq_classes

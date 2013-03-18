@@ -23,7 +23,7 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils.tags import (UPPERCASE, LOWERCASE, SWAPCASE, SEQITEM,
                                SEQRECORD)
-from crumbs.seqio import SeqWrapper
+from crumbs.seqio import SeqWrapper, SeqItem, _remove_multiline
 
 # pylint: disable=R0903
 # pylint: disable=C0111
@@ -206,48 +206,99 @@ def get_file_format(seq):
     return fmt
 
 
+def _break():
+    raise StopIteration
+
+
+def _is_fastq_plus_line(line, seq_name):
+    if line == '+\n' or line.startswith('+') and seq_name in line:
+        return True
+    else:
+        return False
+
+
+def _sitem_fastq_plus_line_index(lines, seq_name):
+    for index, line in enumerate(lines):
+        if _is_fastq_plus_line(line, seq_name):
+            return index
+    raise ValueError('No fastq plus line in the given lines')
+
+
+def _get_seqitem_str_lines(seq):
+    fmt = seq.file_format
+    sitem = seq.object
+    sname = sitem.name
+    if 'fastq' in fmt and not 'multiline' in fmt:
+        lines = sitem.lines[1:2]
+    else:
+        lines = (_break() if _is_fastq_plus_line(l, sname) else l for l in sitem.lines[1:])
+    return lines
+
+
+def _get_seqitem_qual_lines(seq):
+    fmt = seq.file_format
+    sitem = seq.object
+    if 'fastq' in fmt:
+        if 'multiline' in fmt:
+            lines = sitem.lines[_sitem_fastq_plus_line_index(sitem.lines, get_name(seq)) + 1:]
+        else:
+            lines = sitem.lines[3:4]
+    return lines
+
+
 def get_str_seq(seq):
     seq_class = seq.kind
-    seq = seq.object
     if seq_class == SEQITEM:
-        seq = seq.lines[1].rstrip()
+        seq = ''.join((line.rstrip() for line in _get_seqitem_str_lines(seq)))
     elif seq_class == SEQRECORD:
-        seq = str(seq.seq)
+        seq = str(seq.object.seq)
     return seq
 
 
 def get_length(seq):
     seq_class = seq.kind
-    seq = seq.object
     if seq_class == SEQITEM:
-        def break_():
-            raise StopIteration
         length = lambda l: len(l) - 1   # It assumes line break and no spaces
-        seq_lines = (break_() if line[0] == '+' else line for line in seq.lines[1:])
-        length = sum(map(length, seq_lines))
+        length = sum(map(length, _get_seqitem_str_lines(seq)))
     elif seq_class == SEQRECORD:
-        length = len(seq)
+        length = len(seq.object)
     return length
+
+
+SANGER_QUALS = {chr(i): i - 33 for i in range(33, 127)}
+ILLUMINA_QUALS = {chr(i): i - 64 for i in range(64, 127)}
+
+
+def _get_seqitem_qualities(seqwrap):
+    fmt = seqwrap.file_format.lower()
+    if 'fasta' in fmt:
+        raise ValueError('A fasta file has no qualities')
+    elif 'fastq' in fmt:
+        if 'illumina' in fmt:
+            quals_map = ILLUMINA_QUALS
+        else:
+            quals_map = SANGER_QUALS
+        if 'multiline' in fmt:
+            lines = (line.rstrip() for line in _get_seqitem_qual_lines(seqwrap))
+        else:
+            lines = seqwrap.object.lines[-1:]
+        lines = [line.strip() for line in lines]
+        quals = itertools.chain(quals_map[char] for l in lines for char in l)
+    else:
+        raise RuntimeError('Qualities requested for an unkown SeqItem class')
+    return quals
 
 
 def get_qualities(seq):
     seq_class = seq.kind
-    seq = seq.object
     if seq_class == SEQITEM:
-        raise NotImplementedError('No qualities yet for SeqItem.')
+        return _get_seqitem_qualities(seq)
     elif seq_class == SEQRECORD:
-        annots = seq.letter_annotations['phred_quality']
-    return annots
+        return seq.object.letter_annotations['phred_quality']
 
 
 def get_annotations(seq):
-    seq_class = seq.kind
-    seq = seq.object
-    if seq_class == SEQITEM:
-        raise NotImplementedError('SeqItem has no annotation yet.')
-    elif seq_class == SEQRECORD:
-        annots = seq.annotations
-    return annots
+    return seq.object.annotations
 
 
 def copy_seq(seqwrapper, seq=None, name=None):
@@ -264,12 +315,31 @@ def copy_seq(seqwrapper, seq=None, name=None):
     return seq
 
 
+def _slice_seqitem(seqwrap, start, stop):
+    fmt = seqwrap.file_format
+    seq_obj = seqwrap.object
+    lines = seq_obj.lines
+    seq_str = get_str_seq(seqwrap)
+    seq_str = seq_str[start: stop] + '\n'
+    if 'fasta' in fmt:
+        lines = [lines[0], seq_str]
+    elif 'fastq' in fmt:
+        qual_str = ''.join(line.rstrip() for line in _get_seqitem_qual_lines(seqwrap))
+        qual_str = qual_str[start: stop]
+        qual_str += '\n'
+        lines = [lines[0], seq_str, '+\n', qual_str]
+    else:
+        raise ValueError('Unknown SeqItem type')
+    seq_obj = SeqItem(name=seq_obj.name, lines=lines,
+                      annotations=seq_obj.annotations)
+    return seq_obj
+
+
 def slice_seq(seq, start, stop):
     seq_class = seq.kind
     if seq_class == SEQITEM:
-        # The easiest way it to slice the seq string and the qualities list
-        # If its a multiline fastq you can transform it in a single line fastq
-        raise NotImplementedError('SeqItem has no slicing yet.')
+        seq_obj = _slice_seqitem(seq, start, stop)
     elif seq_class == SEQRECORD:
         seq_obj = seq.object[start:stop]
-    return SeqWrapper(seq.kind, object=seq_obj, file_format=seq.file_format)
+    return SeqWrapper(seq.kind, object=seq_obj,
+                      file_format=_remove_multiline(seq.file_format))
