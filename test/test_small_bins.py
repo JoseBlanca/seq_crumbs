@@ -21,8 +21,9 @@ from StringIO import StringIO
 from gzip import GzipFile
 
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import count_seqs_in_files
+from crumbs.statistics import count_seqs
 from crumbs.utils import BZ2File
+from crumbs.seqio import read_seqs
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -183,16 +184,16 @@ class SampleSeqTest(unittest.TestCase):
 
         #random sample
         result = check_output([sample_seq, '-n', '1', fasta_fhand.name])
-        assert count_seqs_in_files([StringIO(result)], ['fasta']) == 1
+        assert count_seqs(read_seqs([StringIO(result)]))['num_seqs'] == 1
 
         #random sample
         result = check_output([sample_seq, '-n', '2', fasta_fhand.name])
-        assert count_seqs_in_files([StringIO(result)], ['fasta']) == 2
+        assert count_seqs(read_seqs([StringIO(result)]))['num_seqs'] == 2
 
         #random sample with stdin
         result = check_output([sample_seq, '-n', '2'],
                               stdin=open(fasta_fhand.name))
-        assert count_seqs_in_files([StringIO(result)], ['fasta']) == 2
+        assert count_seqs(read_seqs([StringIO(result)]))['num_seqs'] == 2
 
 if __name__ == '__main__':
 #    import sys;sys.argv = ['', 'SampleSeqTest']

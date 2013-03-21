@@ -26,7 +26,7 @@ from Bio.Alphabet import IUPAC
 
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError)
-from crumbs.iterutils import length, group_in_packets
+from crumbs.iterutils import group_in_packets
 from crumbs.utils.file_utils import rel_symlink
 from crumbs.utils.file_formats import (guess_format, peek_chunk_from_file,
                                        _remove_multiline)
@@ -210,33 +210,6 @@ def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
             raise MalformedFile(str(error))
         raise
     out_fhand.flush()
-
-
-def _count_seqs_in_fasta(fhand):
-    'It counts the seqs in a fasta file'
-    count = 0
-    for line in fhand:
-        if line[0] == '>':
-            count += 1
-    return count
-
-
-def count_seqs_in_files(fhands, file_format=GUESS_FORMAT):
-    'It counts the seqs in the given files'
-    count = 0
-    for fhand in fhands:
-        if file_format == GUESS_FORMAT or file_format is None:
-            file_format = guess_format(fhand)
-        else:
-            file_format = file_format
-
-        if file_format == 'fasta':
-            count += _count_seqs_in_fasta(fhand)
-        elif 'fastq' in file_format:
-            count += length(QualityIO.FastqGeneralIterator(fhand))
-        else:
-            count += length(read_seqrecords([fhand]))
-    return count
 
 
 def guess_seq_type(fhand):
