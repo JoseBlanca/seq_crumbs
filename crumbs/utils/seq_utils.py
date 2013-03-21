@@ -272,7 +272,7 @@ ILLUMINA_QUALS = {chr(i): i - 64 for i in range(64, 127)}
 def _get_seqitem_qualities(seqwrap):
     fmt = seqwrap.file_format.lower()
     if 'fasta' in fmt:
-        raise ValueError('A fasta file has no qualities')
+        raise AttributeError('A fasta file has no qualities')
     elif 'fastq' in fmt:
         if 'illumina' in fmt:
             quals_map = ILLUMINA_QUALS
@@ -285,7 +285,7 @@ def _get_seqitem_qualities(seqwrap):
         lines = [line.strip() for line in lines]
         quals = itertools.chain(quals_map[char] for l in lines for char in l)
     else:
-        raise RuntimeError('Qualities requested for an unkown SeqItem format')
+        raise RuntimeError('Qualities requested for an unknown SeqItem format')
     return quals
 
 
@@ -294,7 +294,12 @@ def get_qualities(seq):
     if seq_class == SEQITEM:
         return _get_seqitem_qualities(seq)
     elif seq_class == SEQRECORD:
-        return seq.object.letter_annotations['phred_quality']
+        try:
+            quals = seq.object.letter_annotations['phred_quality']
+        except KeyError:
+            msg = 'The given SeqRecord has no phred_quality'
+            raise AttributeError(msg)
+        return quals
 
 
 def get_annotations(seq):

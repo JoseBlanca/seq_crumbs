@@ -299,12 +299,14 @@ class CalculateStatsTest(unittest.TestCase):
         for val in range(1, 6):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
-        seqs = list(read_seqs(in_fhands, prefered_seq_classes=[SEQITEM]))
+        seqs = read_seqs(in_fhands, file_format='fastq',
+                         prefered_seq_classes=[SEQITEM])
         results = calculate_sequence_stats(seqs, nxs=[50])
         assert 'maximum: 4' in results['length']
         assert 'N50' in results['length']
-        assert not results['qual_boxplot']
-        assert not results['quality']
+        assert '1:30.0,30.0,30.0,30.0,30.0 <[|]>' in results['qual_boxplot']
+        assert '[30 , 31[ (96): **********' in results['quality']
+        assert 'Q30: 100.0' in results['quality']
         assert '0 (A: 1.00, C: 0.00, G: 0.00, T: 0.00' in  results['nucl_freq']
         assert results['kmer'] == ''
 

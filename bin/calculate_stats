@@ -105,12 +105,7 @@ def run():
     kmer_size = args['kmer_size']
     do_dust_stats = args['do_dust_stats']
 
-    if 'fasta' in in_format:
-        prefered_seq_classes = [SEQITEM, SEQRECORD]
-    else:
-        prefered_seq_classes = [SEQRECORD]
-    seqs = read_seqs(in_fhands, file_format=in_format,
-                     prefered_seq_classes=prefered_seq_classes)
+    seqs = read_seqs(in_fhands, file_format=in_format)
     stat_strs = calculate_sequence_stats(seqs, kmer_size, nxs=[50, 95],
                                          do_dust_stats=do_dust_stats)
     out_fhand.write(stat_strs['length'])

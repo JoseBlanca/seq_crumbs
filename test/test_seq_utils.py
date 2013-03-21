@@ -178,8 +178,8 @@ class SeqMethodsTest(unittest.TestCase):
         seq = SeqWrapper(SEQITEM, seq, 'fasta')
         try:
             assert get_qualities(seq)
-            self.fail('ValueError expected')
-        except ValueError:
+            self.fail('AttributeError expected')
+        except AttributeError:
             pass
 
         # with fastq
