@@ -22,7 +22,7 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from crumbs.utils.bin_utils import (get_binary_path, popen,
                                     check_process_finishes)
 from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME
-from crumbs.utils.seq_utils import get_description, get_name, get_str_seq
+from crumbs.seq import get_description, get_name, get_str_seq
 from crumbs.seqio import write_seqs, read_seqs
 from crumbs.blast import Blaster
 from crumbs.settings import get_setting

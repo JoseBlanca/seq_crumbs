@@ -26,9 +26,8 @@ except ImportError:
 
 from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
                                SEQRECORD)
-from crumbs.utils.seq_utils import (uppercase_length, get_uppercase_segments,
-                                    get_name, get_file_format, get_str_seq,
-                                    get_length)
+from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
+from crumbs.seq import get_name, get_file_format, get_str_seq, get_length
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score

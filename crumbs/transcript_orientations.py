@@ -20,7 +20,7 @@ from crumbs.annotation import (PolyaAnnotator, EstscanOrfAnnotator,
                                BlastAnnotator)
 from crumbs.utils.seq_utils import append_to_description
 from crumbs.utils.tags import SEQRECORD
-from crumbs.seqio import SeqWrapper
+from crumbs.seq import SeqWrapper
 
 
 class TranscriptOrientator(object):

@@ -18,7 +18,6 @@ from itertools import chain, tee
 from shutil import copyfileobj
 from tempfile import NamedTemporaryFile
 import cStringIO
-from collections import namedtuple
 
 from Bio import SeqIO
 from Bio.SeqIO import FastaIO
@@ -29,10 +28,12 @@ from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError)
 from crumbs.iterutils import length, group_in_packets
 from crumbs.utils.file_utils import rel_symlink
-from crumbs.utils.file_formats import guess_format, peek_chunk_from_file
+from crumbs.utils.file_formats import (guess_format, peek_chunk_from_file,
+                                       _remove_multiline)
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD)
 from crumbs.settings import get_setting
+from crumbs.seq import SeqWrapper, SeqItem
 
 
 # pylint: disable=C0111
@@ -173,13 +174,6 @@ def read_seqrecords(fhands, file_format=GUESS_FORMAT):
     return chain.from_iterable(seq_iters)
 
 
-def _remove_multiline(file_format):
-    'It removes the multiline from the format'
-    if file_format and file_format.endswith('-multiline'):
-        file_format = file_format[:-9]
-    return file_format
-
-
 def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
     'It converts sequence files between formats'
     if out_format not in get_setting('SUPPORTED_OUTPUT_FORMATS'):
@@ -280,19 +274,6 @@ def _get_name_from_lines(lines):
     'It returns the name and the chunk from a list of names'
     name = lines[0].split()[0][1:]
     return name
-
-
-SeqWrapper = namedtuple('SeqWrapper', ['kind', 'object', 'file_format'])
-_SeqItem = namedtuple('SeqItem', ['name', 'lines', 'annotations'])
-
-
-class SeqItem(_SeqItem):
-    def __new__(cls, name, lines, annotations=None):
-        # This subclass is required to have a default value in a namedtuple
-        if annotations is None:
-            annotations = {}
-        # add default values
-        return super(SeqItem, cls).__new__(cls, name, lines, annotations)
 
 
 def _itemize_fasta(fhand):

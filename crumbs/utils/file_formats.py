@@ -138,3 +138,10 @@ def _guess_format(fhand, force_file_as_non_seek):
     elif chunk.startswith('ID'):
         return 'embl'
     raise UnknownFormatError('Sequence file of unknown format.')
+
+
+def _remove_multiline(file_format):
+    'It removes the multiline from the format'
+    if file_format and file_format.endswith('-multiline'):
+        file_format = file_format[:-9]
+    return file_format

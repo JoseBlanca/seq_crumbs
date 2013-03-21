@@ -33,7 +33,8 @@ from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
                                count_seqs)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import read_seqs, SeqWrapper
+from crumbs.seqio import read_seqs
+from crumbs.seq import SeqWrapper
 from crumbs.utils.tags import SEQRECORD, SEQITEM
 
 

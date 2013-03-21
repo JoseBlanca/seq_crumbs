@@ -18,12 +18,15 @@ How to do it:
 		3.2 Triming binaries should have an orphan option
 
 calculate stats might use SeqItems. The stats could be done with chars instead of quality integers.
+Befor changing that it should be considered if it is worth it.
 
 file_format should be a property of seqItem not of SeqWrapper
 
 flush_fhand function should go to utils.file_utils
 
 rename prefered_seq_classes to preferred_seq_classes
+
+remove seqio.countseqs_in_files there's similar functionality in stats
 
 read_seqrecords should be private, the only public should be based on the SeqWrapper IO.
 Remove the seqrecord.__class__.__name__ once everything has SeqWrappers

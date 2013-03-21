@@ -26,8 +26,9 @@ from crumbs.settings import get_setting
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import SEQRECORD
-from crumbs.utils.seq_utils import get_str_seq
-from crumbs.seqio import read_seqs, SeqWrapper
+from crumbs.seq import get_str_seq
+from crumbs.seqio import read_seqs
+from crumbs.seq import SeqWrapper
 
 POLYA_ANNOTATOR_MISMATCHES = get_setting('POLYA_ANNOTATOR_MISMATCHES')
 

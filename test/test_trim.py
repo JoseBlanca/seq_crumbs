@@ -27,8 +27,9 @@ from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import (SEQRECORD, SEQITEM, TRIMMING_RECOMMENDATIONS,
                                VECTOR)
-from crumbs.utils.seq_utils import get_str_seq, get_annotations, get_qualities
-from crumbs.seqio import read_seq_packets, SeqWrapper, SeqItem
+from crumbs.seq import get_str_seq, get_annotations, get_qualities
+from crumbs.seqio import read_seq_packets
+from crumbs.seq import SeqWrapper, SeqItem
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'

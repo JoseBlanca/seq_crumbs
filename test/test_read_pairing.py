@@ -30,7 +30,7 @@ from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.tags import FWD, SEQRECORD, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.seq_utils import get_str_seq
+from crumbs.seq import get_str_seq
 from crumbs.seqio import read_seqrecords, read_seqs, assing_kind_to_seqs
 from crumbs.exceptions import InterleaveError, PairDirectionError
 from crumbs.seqio import write_seqs, SeqWrapper, SeqItem

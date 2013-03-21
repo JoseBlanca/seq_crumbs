@@ -24,7 +24,8 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.annotation import (EstscanOrfAnnotator, _detect_polya_tail,
                                PolyaAnnotator, BlastAnnotator)
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.seqio import read_seqs, SeqWrapper
+from crumbs.seqio import read_seqs
+from crumbs.seq import SeqWrapper
 from crumbs.utils.tags import FIVE_PRIME, THREE_PRIME, NUCL, SEQRECORD
 
 

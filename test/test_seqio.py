@@ -28,11 +28,9 @@ from Bio.Seq import Seq
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
-
 from crumbs.seqio import (guess_seq_type, fastaqual_to_fasta, seqio,
                           write_seqrecords, read_seqrecords, _itemize_fasta,
                           _itemize_fastq, read_seqs, write_seqs)
-
 from crumbs.utils.tags import SEQITEM, SEQRECORD
 from crumbs.exceptions import IncompatibleFormatError, MalformedFile
 

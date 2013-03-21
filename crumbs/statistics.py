@@ -23,7 +23,7 @@ import re
 from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
-from crumbs.utils.seq_utils import get_str_seq, get_length, get_qualities
+from crumbs.seq import get_str_seq, get_length, get_qualities
 
 LABELS = {'title': 'histogram', 'xlabel': 'values',
           'ylabel': 'count', 'minimum': 'minimum',
