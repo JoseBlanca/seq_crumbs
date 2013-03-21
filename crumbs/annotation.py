@@ -81,6 +81,8 @@ class EstscanOrfAnnotator(object):
 
     def __call__(self, seqs):
         'It runs the actual annotations'
+        if not seqs:
+            return seqs
         pep_fhand = NamedTemporaryFile()
         dna_fhand = NamedTemporaryFile()
         _run_estscan(seqs, pep_fhand.name, dna_fhand.name,
@@ -226,6 +228,8 @@ class BlastAnnotator(object):
 
     def __call__(self, seqrecords):
         'It does the work'
+        if not seqrecords:
+            return seqrecords
         matcher = Blaster(seqrecords, self.blastdb, self._program,
                                self._dbtype, filters=self._filters,
                                params=self._params, remote=self._remote)
