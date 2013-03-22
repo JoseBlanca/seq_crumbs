@@ -21,7 +21,7 @@ from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
                                     create_basic_parallel_argparse)
 from crumbs.utils.seq_utils import process_seq_packets, ChangeCase
 from crumbs.utils.tags import UPPERCASE, LOWERCASE, SWAPCASE
-from crumbs.seqio import (read_seqrecord_packets, write_seqrecord_packets,
+from crumbs.seqio import (read_seq_packets, write_seq_packets,
                           flush_fhand)
 
 
@@ -51,13 +51,11 @@ def run():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seqrecord_packets = read_seqrecord_packets(in_fhands,
-                                               file_format=args['in_format'])
+    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
     change_case = ChangeCase(action=args['action'])
-    seqrecord_packets, workers = process_seq_packets(seqrecord_packets,
-                                                     [change_case],
-                                                   processes=args['processes'])
-    write_seqrecord_packets(out_fhand, seqrecord_packets, args['out_format'],
+    seq_packets, workers = process_seq_packets(seq_packets, [change_case],
+                                               processes=args['processes'])
+    write_seq_packets(out_fhand, seq_packets, args['out_format'],
                       workers=workers)
     flush_fhand(out_fhand)
 

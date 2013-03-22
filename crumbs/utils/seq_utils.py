@@ -17,24 +17,12 @@ import re
 import itertools
 from multiprocessing import Pool
 
-from Bio.Seq import Seq
-
 from crumbs.utils.tags import UPPERCASE, LOWERCASE, SWAPCASE
-from crumbs.seq import get_description, get_name
+from crumbs.seq import get_description, get_name, get_str_seq, copy_seq
 
 
 # pylint: disable=R0903
 # pylint: disable=C0111
-
-
-def replace_seq_same_length(seqrecord, seq_str):
-    'It replaces the str with another of equal length keeping the annots.'
-    annots = seqrecord.letter_annotations
-    seqrecord.letter_annotations = {}
-    alphabet = seqrecord.seq.alphabet
-    seqrecord.seq = Seq(seq_str, alphabet)
-    seqrecord.letter_annotations = annots
-    return seqrecord
 
 
 def uppercase_length(string):
@@ -65,12 +53,12 @@ class ChangeCase(object):
             raise ValueError(msg)
         self.action = action
 
-    def __call__(self, seqrecords):
+    def __call__(self, seqs):
         'It changes the case of the seqrecords.'
         action = self.action
         processed_seqs = []
-        for seqrecord in seqrecords:
-            str_seq = str(seqrecord.seq)
+        for seq in seqs:
+            str_seq = get_str_seq(seq)
             if action == UPPERCASE:
                 str_seq = str_seq.upper()
             elif action == LOWERCASE:
@@ -79,8 +67,8 @@ class ChangeCase(object):
                 str_seq = str_seq.swapcase()
             else:
                 raise NotImplementedError()
-            seqrecord = replace_seq_same_length(seqrecord, str_seq)
-            processed_seqs.append(seqrecord)
+            seq = copy_seq(seq, seq=str_seq)
+            processed_seqs.append(seq)
         return processed_seqs
 
 

@@ -26,12 +26,12 @@ from subprocess import check_output
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.file_utils import fhand_is_seekable, wrap_in_buffered_reader
 from crumbs.utils.seq_utils import (uppercase_length, ChangeCase,
                                     get_uppercase_segments)
-
-from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE
-from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE, SEQRECORD
+from crumbs.seq import assing_kind_to_seqs, get_str_seq
 
 
 class SeekableFileTest(unittest.TestCase):
@@ -113,18 +113,21 @@ class ChangeCaseTest(unittest.TestCase):
     def test_case_change(self):
         'It changes the case of the sequences'
         seqs = [SeqRecord(Seq('aCCg'), letter_annotations={'dummy': 'dddd'})]
+        seqs = assing_kind_to_seqs(SEQRECORD, seqs, None)
         change_case = ChangeCase(action=UPPERCASE)
-        strs = [str(s.seq) for s in change_case(seqs)]
+        strs = [get_str_seq(s) for s in change_case(seqs)]
         assert strs == ['ACCG']
 
         seqs = [SeqRecord(Seq('aCCg'))]
+        seqs = assing_kind_to_seqs(SEQRECORD, seqs, None)
         change_case = ChangeCase(action=LOWERCASE)
-        strs = [str(s.seq) for s in change_case(seqs)]
+        strs = [get_str_seq(s) for s in change_case(seqs)]
         assert strs == ['accg']
 
         seqs = [SeqRecord(Seq('aCCg'))]
+        seqs = assing_kind_to_seqs(SEQRECORD, seqs, None)
         change_case = ChangeCase(action=SWAPCASE)
-        strs = [str(s.seq) for s in change_case(seqs)]
+        strs = [get_str_seq(s) for s in change_case(seqs)]
         assert strs == ['AccG']
 
     def test_bin(self):
