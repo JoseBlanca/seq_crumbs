@@ -88,8 +88,8 @@ def extract_sff():
                              min_left_clip=args['min_left_clip'],
                              max_nucl_freq_threshold=args['max_percent'])
     seqrecords = extractor.seqs
-    seqs = assing_kind_to_seqs(SEQRECORD, seqrecords)
-    write_seqs(seqs, args['out_fhand'])
+    seqs = assing_kind_to_seqs(SEQRECORD, seqrecords, None)
+    write_seqs(seqs, args['out_fhand'], file_format='fastq')
     flush_fhand(args['out_fhand'])
 
     stderr = sys.stderr
