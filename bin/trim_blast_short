@@ -20,10 +20,10 @@ import sys
 from crumbs.utils.bin_utils import (main, parse_trimmer_args,
                                     create_trimmer_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.file_utils import flush_fhand
 from crumbs.utils.tags import SEQITEM
 from crumbs.trim import TrimWithBlastShort, TrimOrMask
-from crumbs.seqio import (read_seq_packets, write_seq_packets,
-                          flush_fhand)
+from crumbs.seqio import read_seq_packets, write_seq_packets
 from crumbs.seq import SeqWrapper, SeqItem
 
 

@@ -172,3 +172,12 @@ def rel_symlink(path1, path2):
         shutil.move(temp_link_path, path2)
     finally:
         os.rmdir(temp_dir)
+
+
+def flush_fhand(fhand):
+    try:
+        fhand.flush()
+    except IOError, error:
+        # The pipe could be already closed
+        if not 'Broken pipe' in str(error):
+            raise

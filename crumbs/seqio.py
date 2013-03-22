@@ -27,7 +27,7 @@ from Bio.Alphabet import IUPAC
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError)
 from crumbs.iterutils import group_in_packets
-from crumbs.utils.file_utils import rel_symlink
+from crumbs.utils.file_utils import rel_symlink, flush_fhand
 from crumbs.utils.file_formats import (guess_format, peek_chunk_from_file,
                                        _remove_multiline)
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
@@ -402,12 +402,3 @@ def read_seqs(fhands, file_format=GUESS_FORMAT, out_format=None,
         else:
             raise ValueError('Unknown class for seq: ' + seq_class)
     raise RuntimeError('We should not be here, fixme')
-
-
-def flush_fhand(fhand):
-    try:
-        fhand.flush()
-    except IOError, error:
-        # The pipe could be already closed
-        if not 'Broken pipe' in str(error):
-            raise

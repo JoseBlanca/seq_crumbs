@@ -18,8 +18,6 @@ Before changing that it should be considered if it is worth it.
 
 file_format should be a property of seqItem not of SeqWrapper
 
-flush_fhand function should go to utils.file_utils
-
 rename prefered_seq_classes to preferred_seq_classes
 
 Add a test for sample, head or cat with different input formats, it should fail.

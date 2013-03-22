@@ -20,9 +20,9 @@ import sys
 from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
                                     create_basic_parallel_argparse)
 from crumbs.utils.seq_utils import process_seq_packets, ChangeCase
+from crumbs.utils.file_utils import flush_fhand
 from crumbs.utils.tags import UPPERCASE, LOWERCASE, SWAPCASE
-from crumbs.seqio import (read_seq_packets, write_seq_packets,
-                          flush_fhand)
+from crumbs.seqio import read_seq_packets, write_seq_packets
 
 
 def _setup_argparse():

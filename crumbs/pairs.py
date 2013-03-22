@@ -19,12 +19,13 @@ from Bio.SeqIO import _index
 
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
-from crumbs.seqio import write_seqs, flush_fhand
+from crumbs.seqio import write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
 from crumbs.seq import get_title, SeqWrapper
 from crumbs.utils.file_formats import guess_format, _remove_multiline
 from crumbs.utils.tags import FWD, REV, SEQRECORD
+from crumbs.utils.file_utils import flush_fhand
 
 
 def _parse_pair_direction_and_name(seq):

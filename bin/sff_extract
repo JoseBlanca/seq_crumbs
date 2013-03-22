@@ -22,10 +22,11 @@ import os.path
 import argparse
 
 from crumbs.sff_extract import SffExtractor
-from crumbs.seqio import write_seqs, flush_fhand
+from crumbs.seqio import write_seqs
 from crumbs.exceptions import FileNotFoundError
 from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.utils.tags import SEQRECORD
+from crumbs.utils.file_utils import flush_fhand
 from crumbs.seq import assing_kind_to_seqs
 
 
