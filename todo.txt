@@ -2,10 +2,6 @@
 TODO
 -----
 
-Is anyone still using read_seqrecords, write_seqrecords?
-
-Can the qual statistics work without transforming to integers?
-
 The cleaners should be able to work with the pairs. For instance, the quality
 clearner could end up removing a read. In that case the pair should go to the
 orphan. To do that the cleaners should deal with a stream of pair list, like
