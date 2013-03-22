@@ -19,13 +19,12 @@ from Bio.SeqIO import _index
 
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError)
-from crumbs.utils.tags import FWD, REV
-from crumbs.seqio import (write_seqrecords, _remove_multiline, write_seqs,
-                          flush_fhand)
+from crumbs.seqio import write_seqs, flush_fhand
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.seq import get_title
-from crumbs.utils.file_formats import guess_format
+from crumbs.seq import get_title, SeqWrapper
+from crumbs.utils.file_formats import guess_format, _remove_multiline
+from crumbs.utils.tags import FWD, REV, SEQRECORD
 
 
 def _parse_pair_direction_and_name(seq):
@@ -123,12 +122,11 @@ def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
     paired, orphans = _get_paired_and_orphan(index_)
 
     # write paired
-    write_seqrecords((index_[title] for title in paired), out_fhand,
-                     out_format)
+    write_seqs((SeqWrapper(SEQRECORD, index_[title], None) for title in paired), out_fhand, out_format)
 
     # orphans
-    write_seqrecords((index_[title] for title in orphans), orphan_out_fhand,
-                     out_format)
+    write_seqs((SeqWrapper(SEQRECORD, index_[title], None) for title in orphans), orphan_out_fhand,
+               out_format)
 
 
 def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,

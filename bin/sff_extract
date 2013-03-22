@@ -22,9 +22,11 @@ import os.path
 import argparse
 
 from crumbs.sff_extract import SffExtractor
-from crumbs.seqio import write_seqrecords, flush_fhand
+from crumbs.seqio import write_seqs, flush_fhand
 from crumbs.exceptions import FileNotFoundError
 from crumbs.utils.bin_utils import main, build_version_msg
+from crumbs.utils.tags import SEQRECORD
+from crumbs.seq import assing_kind_to_seqs
 
 
 def _setup_argparse():
@@ -85,8 +87,9 @@ def extract_sff():
     extractor = SffExtractor(sff_fhands=args['sff_fhands'], trim=args['clip'],
                              min_left_clip=args['min_left_clip'],
                              max_nucl_freq_threshold=args['max_percent'])
-    seqs = extractor.seqs
-    write_seqrecords(seqs, args['out_fhand'])
+    seqrecords = extractor.seqs
+    seqs = assing_kind_to_seqs(SEQRECORD, seqrecords)
+    write_seqs(seqs, args['out_fhand'])
     flush_fhand(args['out_fhand'])
 
     stderr = sys.stderr

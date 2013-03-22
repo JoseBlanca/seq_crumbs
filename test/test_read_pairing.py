@@ -31,9 +31,10 @@ from crumbs.utils.tags import FWD, SEQRECORD, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seq import get_str_seq
-from crumbs.seqio import read_seqrecords, read_seqs, assing_kind_to_seqs
+from crumbs.seqio import read_seqs, read_seqs, assing_kind_to_seqs
 from crumbs.exceptions import InterleaveError, PairDirectionError
-from crumbs.seqio import write_seqs, SeqWrapper, SeqItem
+from crumbs.seqio import write_seqs
+from crumbs.seq import SeqWrapper, SeqItem
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -67,13 +68,12 @@ class PairMatcherTest(unittest.TestCase):
         # with the firsts seqs different
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend3.sfastq')
-        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
-        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)], 'fastq')
+        rev_seqs = read_seqs([open(file2)], 'fastq')
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
         seqs = flat_zip_longest(fwd_seqs, rev_seqs)
-        seqs = assing_kind_to_seqs(SEQRECORD, seqs, None)
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format)
 
         output = out_fhand.getvalue()
@@ -105,14 +105,13 @@ class PairMatcherTest(unittest.TestCase):
         # with reads with no direcction
         file1 = os.path.join(TEST_DATA_DIR, 'pairend7.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
-        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)], 'fastq')
+        rev_seqs = read_seqs([open(file2)], 'fastq')
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
 
         seqs = flat_zip_longest(fwd_seqs, rev_seqs)
-        seqs = assing_kind_to_seqs(SEQRECORD, seqs, None)
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format)
         output = out_fhand.getvalue()
         assert '@seq8:136:FC706VJ:2:2104:15343:197393 1:Y:18:ATCACG' in output
@@ -358,8 +357,8 @@ class InterleavePairsTest(unittest.TestCase):
         'It interleaves two iterators with paired reads'
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = list(read_seqrecords([open(file1)], 'fastq'))
-        rev_seqs = list(read_seqrecords([open(file2)], 'fastq'))
+        fwd_seqs = list(read_seqs([open(file1)], 'fastq'))
+        rev_seqs = list(read_seqs([open(file2)], 'fastq'))
 
         try:
             list(interleave_pairs(fwd_seqs, rev_seqs))
@@ -373,8 +372,8 @@ class InterleavePairsTest(unittest.TestCase):
 
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend1b.sfastq')
-        fwd_seqs = read_seqrecords([open(file1)], 'fastq')
-        rev_seqs = read_seqrecords([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)], 'fastq')
+        rev_seqs = read_seqs([open(file2)], 'fastq')
 
         seqs = list(interleave_pairs(fwd_seqs, rev_seqs))
         assert len(seqs) == 8

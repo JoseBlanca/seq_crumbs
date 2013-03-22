@@ -29,11 +29,12 @@ from Bio.Seq import Seq
 
 from crumbs.split_mates import MatePairSplitter
 from crumbs.settings import get_setting
-from crumbs.seqio import (read_seqrecord_packets, write_seqrecord_packets,
-                          read_seqrecords)
+from crumbs.seqio import read_seq_packets, write_seq_packets, read_seqs
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.tags import SEQRECORD
+from crumbs.seq import get_name, SeqWrapper, get_str_seq
 
 TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
 FLX_LINKER = get_setting('FLX_LINKER')
@@ -60,45 +61,45 @@ class MateSplitterTest(unittest.TestCase):
         'It tests the function that splits seqs using segments'
         # pylint: disable=W0212
         seq = 'aaatttccctt'
-        seqrecord = SeqRecord(Seq(seq), id='seq')
+        seq = SeqWrapper(SEQRECORD, SeqRecord(Seq(seq), id='seq'), None)
         # fake class to test
-        splitter = MatePairSplitter([seqrecord])
+        splitter = MatePairSplitter([seq])
         # segment beginning
-        seqs = splitter._split_by_mate_linker(seqrecord, ([(0, 3)], False))
-        assert str(seqs[0].seq) == 'ttccctt'
-        assert seqs[0].id == 'seq'
+        seqs = splitter._split_by_mate_linker(seq, ([(0, 3)], False))
+        assert get_str_seq(seqs[0]) == 'ttccctt'
+        assert get_name(seqs[0]) == 'seq'
 
         # segment at end
-        seqs = splitter._split_by_mate_linker(seqrecord, ([(7, 10)], False))
-        assert  str(seqs[0].seq) == 'aaatttc'
-        assert seqs[0].id == 'seq'
+        seqs = splitter._split_by_mate_linker(seq, ([(7, 10)], False))
+        assert  get_str_seq(seqs[0]) == 'aaatttc'
+        assert get_name(seqs[0]) == 'seq'
 
         # segmnent in the middle
-        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], True))
-        assert str(seqs[0].seq) == 'aaat'
-        assert str(seqs[1].seq) == 'ctt'
-        assert seqs[0].id == 'seq_pl.part1'
-        assert seqs[1].id == 'seq_pl.part2'
+        seqs = splitter._split_by_mate_linker(seq, ([(4, 7)], True))
+        assert get_str_seq(seqs[0]) == 'aaat'
+        assert get_str_seq(seqs[1]) == 'ctt'
+        assert get_name(seqs[0]) == 'seq_pl.part1'
+        assert get_name(seqs[1]) == 'seq_pl.part2'
 
-        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 7)], False))
-        assert seqs[0].id == r'seq\1'
-        assert seqs[1].id == r'seq\2'
+        seqs = splitter._split_by_mate_linker(seq, ([(4, 7)], False))
+        assert get_name(seqs[0]) == r'seq\1'
+        assert get_name(seqs[1]) == r'seq\2'
 
-        seqs = splitter._split_by_mate_linker(seqrecord, ([(4, 6), (8, 9)],
+        seqs = splitter._split_by_mate_linker(seq, ([(4, 6), (8, 9)],
                                                           False))
-        assert str(seqs[0].seq) == 'aaat'
-        assert str(seqs[1].seq) == 'c'
-        assert str(seqs[2].seq) == 't'
-        assert seqs[0].id == 'seq_mlc.part1'
+        assert get_str_seq(seqs[0]) == 'aaat'
+        assert get_str_seq(seqs[1]) == 'c'
+        assert get_str_seq(seqs[2]) == 't'
+        assert get_name(seqs[0]) == 'seq_mlc.part1'
 
         # all sequence is linker
-        seqs = splitter._split_by_mate_linker(seqrecord, ([(0, 10)], False))
-        assert not str(seqs[0].seq)
+        seqs = splitter._split_by_mate_linker(seq, ([(0, 10)], False))
+        assert not get_str_seq(seqs[0])
 
         # there's no segments
-        seqs = splitter._split_by_mate_linker(seqrecord, ([], False))
-        assert seqrecord.id == seqs[0].id
-        assert str(seqrecord.seq) == str(seqs[0].seq)
+        seqs = splitter._split_by_mate_linker(seq, ([], False))
+        assert get_name(seq) == get_name(seqs[0])
+        assert get_str_seq(seq) == get_str_seq(seqs[0])
 
     def test_many_reads(self):
         'It splits lots of reads to check that blast finds everything'
@@ -110,7 +111,9 @@ class MateSplitterTest(unittest.TestCase):
             seq1 = ''.join(choice('ACTG') for i in range(100))
             seq2 = ''.join(choice('ACTG') for i in range(100))
             seq = seq1 + linker + seq2
-            return SeqRecord(id='seq_' + str(index), seq=Seq(seq))
+            seq = SeqRecord(id='seq_' + str(index), seq=Seq(seq))
+            seq = SeqWrapper(SEQRECORD, seq, None)
+            return seq
 
         # We want to test that blast reports all reads
         packet_size = get_setting('PACKET_SIZE')
@@ -123,7 +126,7 @@ class MateSplitterTest(unittest.TestCase):
             seq_index = index // 2
             pair_index = (index % 2) + 1
             expected_id = 'seq_' + str(seq_index) + '\\' + str(pair_index)
-            assert  seq.id == expected_id
+            assert  get_name(seq) == expected_id
 
     def test_split_mates(self):
         'It tests the detection of oligos in sequence files'
@@ -151,11 +154,11 @@ class MateSplitterTest(unittest.TestCase):
 
         splitter = MatePairSplitter()
         new_seqs = []
-        for packet in read_seqrecord_packets([mate_fhand], 2):
+        for packet in read_seq_packets([mate_fhand], 2):
             new_seqs.append(splitter(packet))
 
         out_fhand = StringIO()
-        write_seqrecord_packets(out_fhand, new_seqs, file_format='fasta')
+        write_seq_packets(out_fhand, new_seqs, file_format='fasta')
 
         result = out_fhand.getvalue()
         xpect = r'>seq1\1'
@@ -174,7 +177,7 @@ class MateSplitterTest(unittest.TestCase):
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq5_mlc.part1\n'
         xpect += 'TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACGATCGATCATGTTGTAT'
-        xpect += 'TG\n'
+        xpect += 'TG'
         xpect += 'TGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq5_mlc.part2\n'
         xpect += 'ACCTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
@@ -192,13 +195,13 @@ class MateSplitterTest(unittest.TestCase):
         'It splits some real reads'
         seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads.fastq')
         linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
-        linkers = list(read_seqrecords([open(linker_fpath)]))
+        linkers = list(read_seqs([open(linker_fpath)]))
 
         splitter = MatePairSplitter(linkers=linkers)
         new_seqs = []
-        for packet in read_seqrecord_packets([open(seq_fpath)], 2):
+        for packet in read_seq_packets([open(seq_fpath)], 2):
             new_seqs.extend(splitter(packet))
-        seq_names = [seq.name for seq in new_seqs]
+        seq_names = [get_name(seq) for seq in new_seqs]
         assert 'G109AZL01BJHT8\\1' in seq_names
         assert 'G109AZL01BJHT8\\2' in seq_names
         assert len(new_seqs) == 20
@@ -206,14 +209,14 @@ class MateSplitterTest(unittest.TestCase):
         # test with process_seq_packet
         seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads.fastq')
         linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
-        linkers = list(read_seqrecords([open(linker_fpath)]))
+        linkers = list(read_seqs([open(linker_fpath)]))
 
         splitter = MatePairSplitter(linkers=linkers)
-        seq_packets = read_seqrecord_packets([open(seq_fpath)], 2)
+        seq_packets = read_seq_packets([open(seq_fpath)], 2)
         seq_packets = process_seq_packets(seq_packets, [splitter])[0]
 
         new_seqs = [seq for l in list(seq_packets) for seq in l]
-        seq_names = [seq.name for seq in new_seqs]
+        seq_names = [get_name(seq) for seq in new_seqs]
         assert 'G109AZL01BJHT8\\1' in seq_names
         assert 'G109AZL01BJHT8\\2' in seq_names
         assert len(new_seqs) == 20
@@ -221,13 +224,13 @@ class MateSplitterTest(unittest.TestCase):
         # reads 2
         seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads2.fastq')
         linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
-        linkers = list(read_seqrecords([open(linker_fpath)]))
+        linkers = list(read_seqs([open(linker_fpath)]))
 
         splitter = MatePairSplitter(linkers=linkers)
         new_seqs = []
-        for packet in read_seqrecord_packets([open(seq_fpath)], 2):
+        for packet in read_seq_packets([open(seq_fpath)], 2):
             new_seqs.extend(splitter(packet))
-        seq_names = [seq.name for seq in new_seqs]
+        seq_names = [get_name(seq) for seq in new_seqs]
         assert 'G109AZL01D8U3X\\1' in seq_names
         assert 'G109AZL01D8U3X\\2' in seq_names
         assert len(new_seqs) == 20
@@ -235,14 +238,14 @@ class MateSplitterTest(unittest.TestCase):
         # test with process_seq_packet
         seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads2.fastq')
         linker_fpath = os.path.join(TEST_DATA_DIR, 'linkers.fasta')
-        linkers = list(read_seqrecords([open(linker_fpath)]))
+        linkers = list(read_seqs([open(linker_fpath)]))
 
         splitter = MatePairSplitter(linkers=linkers)
-        seq_packets = read_seqrecord_packets([open(seq_fpath)], 2)
+        seq_packets = read_seq_packets([open(seq_fpath)], 2)
         seq_packets = process_seq_packets(seq_packets, [splitter])[0]
 
         new_seqs = [seq for l in list(seq_packets) for seq in l]
-        seq_names = [seq.name for seq in new_seqs]
+        seq_names = [get_name(seq) for seq in new_seqs]
         assert 'G109AZL01D8U3X\\1' in seq_names
         assert 'G109AZL01D8U3X\\2' in seq_names
         assert len(new_seqs) == 20
@@ -335,5 +338,5 @@ class SplitMatesBinTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'SplitMatesBinTest.test_matepair_bin']
+    #import sys;sys.argv = ['', 'MateSplitterTest.test_giuseppe_reads']
     unittest.main()

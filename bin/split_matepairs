@@ -25,10 +25,12 @@ from Bio.SeqRecord import SeqRecord
 from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
                                     create_basic_parallel_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.tags import SEQRECORD
 from crumbs.settings import get_setting
 from crumbs.split_mates import MatePairSplitter
-from crumbs.seqio import (read_seqrecord_packets, write_seqrecord_packets,
+from crumbs.seqio import (read_seq_packets, write_seq_packets,
                           flush_fhand)
+from crumbs.seq import SeqWrapper
 
 
 def _setup_argparse():
@@ -81,7 +83,9 @@ def _parse_args(parser):
             new_linkers.append(linker)
     linkers = []
     for i, l in enumerate(new_linkers):
-        linkers.append(SeqRecord(Seq(l), id='linker' + str(i)))
+        linkers.append(SeqWrapper(SEQRECORD,
+                                  SeqRecord(Seq(l), id='linker' + str(i)),
+                                  None))
 
     args['linkers'] = linkers
     return args
@@ -92,16 +96,15 @@ def split_matepairs():
     parser = _setup_argparse()
     args = _parse_args(parser)
 
-    seqrecord_packets = read_seqrecord_packets(args['in_fhands'],
+    seq_packets = read_seq_packets(args['in_fhands'],
                                    file_format=args['in_format'])
 
     mate_splitter = MatePairSplitter(linkers=args['linkers'])
-    seqrecord_packets, workers = process_seq_packets(seqrecord_packets,
-                                                     [mate_splitter],
-                                                   processes=args['processes'])
+    seq_packets, workers = process_seq_packets(seq_packets, [mate_splitter],
+                                               processes=args['processes'])
 
-    write_seqrecord_packets(args['out_fhand'], seqrecord_packets,
-                            args['out_format'], workers=workers)
+    write_seq_packets(args['out_fhand'], seq_packets, args['out_format'],
+                      workers=workers)
     flush_fhand(args['out_fhand'])
 
 if __name__ == '__main__':

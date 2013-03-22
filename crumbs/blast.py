@@ -19,7 +19,7 @@ import tempfile
 
 from Bio.Blast import NCBIWWW
 
-from crumbs.seqio import seqio, write_seqrecords, guess_seq_type, write_seqs
+from crumbs.seqio import seqio, guess_seq_type, write_seqs
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
 from crumbs.utils.tags import NUCL, PROT
@@ -213,12 +213,7 @@ def _do_blast_2(db_fpath, queries, program, dbtype=None, blast_format=None,
     blast_format is a list of fields.
     '''
 
-    if queries[0].__class__.__name__ == 'SeqRecord':
-        # TODO, remove this case once everything is adapted to the SeqWrapper
-        # based io
-        query_fhand = write_seqrecords(queries, file_format='fasta')
-    else:
-        query_fhand = write_seqs(queries, file_format='fasta')
+    query_fhand = write_seqs(queries, file_format='fasta')
     query_fhand.flush()
 
     if remote:
@@ -294,7 +289,6 @@ class BlasterForFewSubjects(object):
 
         # Which are the regions covered in each sequence?
         indexed_match_parts = {}
-        one_oligo = True if len(oligos) == 1 else False
         for blast in blasts:
             oligo = blast['query']
             for match in blast['matches']:
@@ -307,13 +301,10 @@ class BlasterForFewSubjects(object):
 
                 # match_parts = [m['match_parts'] for m in blast['matches']]
                 match_parts = match['match_parts']
-                if one_oligo:
+                try:
+                    indexed_match_parts[read['name']].extend(match_parts)
+                except KeyError:
                     indexed_match_parts[read['name']] = match_parts
-                else:
-                    try:
-                        indexed_match_parts[read['name']].extend(match_parts)
-                    except KeyError:
-                        indexed_match_parts[read['name']] = match_parts
 
         temp_dir.close()
         blast_fhand.close()

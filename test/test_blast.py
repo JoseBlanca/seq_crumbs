@@ -17,14 +17,16 @@ import unittest
 import os.path
 from tempfile import NamedTemporaryFile
 
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+
 from crumbs.blast import (do_blast, BlasterForFewSubjects,
                           get_or_create_blastdb, _blastdb_exists, Blaster)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import get_setting
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.tags import NUCL
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
+from crumbs.utils.tags import NUCL, SEQRECORD
+from crumbs.seq import SeqWrapper, assing_kind_to_seqs
 
 LINKERS = get_setting('LINKERS')
 TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
@@ -133,8 +135,10 @@ class BlastMater(unittest.TestCase):
         seq_5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
         mate_fhand = create_a_matepair_file()
 
+        linkers = assing_kind_to_seqs(SEQRECORD, LINKERS, None)
+
         expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
-        matcher = BlasterForFewSubjects(mate_fhand.name, LINKERS,
+        matcher = BlasterForFewSubjects(mate_fhand.name, linkers,
                                              program='blastn',
                                              elongate_for_global=True)
         linker_region = matcher.get_matched_segments_for_read('seq1')[0]
@@ -148,10 +152,10 @@ class BlasterTest(unittest.TestCase):
         seq += 'CCCAAACACAAAGAAGAACTGGGTACCCACCAGCAAGCATGCAGTTACTGTGTCTTATTTCT'
         seq += 'ATGACAGCACAAGAAATGTGTATAGGATAATCAGTTTAGATGGCTCAAAGGCAATAATAAAT'
         seq += 'AGTACCATCACCCCAAACATGACA'
-        seqrec = SeqRecord(Seq(seq), id='seq')
+        seqrec = SeqWrapper(SEQRECORD, SeqRecord(Seq(seq), id='seq'), None)
         blaster = Blaster([seqrec], 'nr', 'blastn', remote=True)
         assert blaster.get_matched_segments('seq') == [(1, 1740)]
 
 if __name__ == '__main__':
-    import sys;sys.argv = ['', 'BlastTest.test_get_or_create_blastdb']
+    #import sys;sys.argv = ['', 'BlastTest.test_get_or_create_blastdb']
     unittest.main()

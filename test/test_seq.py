@@ -102,6 +102,13 @@ class SeqMethodsTest(unittest.TestCase):
         assert list(get_qualities(seq_)) == [1, 1, 1, 2]
         assert get_str_seq(seq_) == get_str_seq(seq)[1: 5]
 
+        # It tests the stop is None
+        seq = SeqItem('seq', ['>seq\n', 'aCTG'])
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        assert get_str_seq(slice_seq(seq, 1, None)) == 'aCTG'[1:]
+
+        assert get_str_seq(slice_seq(seq, None, 1)) == 'aCTG'[:1]
+
     def test_copy(self):
         # with fasta
         seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'],
@@ -109,7 +116,7 @@ class SeqMethodsTest(unittest.TestCase):
         seq = SeqWrapper(SEQITEM, seq, 'fasta')
         seq2 = copy_seq(seq, seq='ACTG')
         assert seq2.object == SeqItem(name='s1', lines=['>s1\n', 'ACTG\n'],
-                               annotations={'a': 'b'})
+                                      annotations={'a': 'b'})
         assert seq.object is not seq2.object
         assert seq.object.lines is not seq2.object.lines
 
@@ -129,6 +136,20 @@ class SeqMethodsTest(unittest.TestCase):
         assert seq2.object == SeqItem(name='seq',
                                       lines=['@seq\n', 'ACTGactg\n', '+\n',
                                              '@AAABBBB\n'])
+
+    def test_change_name(self):
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aaaa\n', '+seq\n', '!???\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        seq = copy_seq(seq, name='seq2')
+        assert seq.object == ('seq2', ['@seq2\n', 'aaaa\n', '+\n', '!???\n'],
+                              {})
+
+        seq = SeqItem(name='seq', lines=['>seq\n', 'aaaa\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        seq = copy_seq(seq, name='seq2')
+        assert seq.object == ('seq2', ['>seq2\n', 'aaaa\n'],
+                              {})
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'ChangeCaseTest.test_bin']

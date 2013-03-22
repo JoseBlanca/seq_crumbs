@@ -33,12 +33,12 @@ from crumbs.utils.file_formats import (guess_format, peek_chunk_from_file,
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD)
 from crumbs.settings import get_setting
-from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.seq import SeqItem, get_str_seq, assing_kind_to_seqs
 
 
 # pylint: disable=C0111
 
-def clean_seqrecord_stream(seqs):
+def _clean_seqrecord_stream(seqs):
     'It removes the empty seqs and fixes the descriptions.'
     for seq in seqs:
         if seq and str(seq.seq):
@@ -47,13 +47,13 @@ def clean_seqrecord_stream(seqs):
             yield seq
 
 
-def write_seqrecords(seqs, fhand=None, file_format='fastq'):
+def _write_seqrecords(seqs, fhand=None, file_format='fastq'):
     'It writes a stream of sequences to a file'
     file_format = _remove_multiline(file_format)
 
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
-    seqs = clean_seqrecord_stream(seqs)
+    seqs = _clean_seqrecord_stream(seqs)
     try:
         SeqIO.write(seqs, fhand, file_format)
     except IOError, error:
@@ -63,11 +63,11 @@ def write_seqrecords(seqs, fhand=None, file_format='fastq'):
     return fhand
 
 
-def write_seqrecord_packets(fhand, seq_packets, file_format='fastq',
+def _write_seqrecord_packets(fhand, seq_packets, file_format='fastq',
                             workers=None):
     'It writes to file a stream of SeqRecord lists'
     try:
-        write_seqrecords(chain.from_iterable(seq_packets), fhand,
+        _write_seqrecords(chain.from_iterable(seq_packets), fhand,
                          file_format=file_format)
     except BaseException:
         if workers is not None:
@@ -138,14 +138,14 @@ def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'), out_format=None,
     return group_in_packets(seqs, size)
 
 
-def read_seqrecord_packets(fhands, size=get_setting('PACKET_SIZE'),
+def _read_seqrecord_packets(fhands, size=get_setting('PACKET_SIZE'),
                            file_format=GUESS_FORMAT):
     '''It yields SeqRecords in packets of the given size.'''
-    seqs = read_seqrecords(fhands, file_format=file_format)
+    seqs = _read_seqrecords(fhands, file_format=file_format)
     return group_in_packets(seqs, size)
 
 
-def read_seqrecords(fhands, file_format=GUESS_FORMAT):
+def _read_seqrecords(fhands, file_format=GUESS_FORMAT):
     'It returns an iterator of seqrecords'
     seq_iters = []
     for fhand in fhands:
@@ -187,7 +187,7 @@ def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
         else:
             rel_symlink(in_fhands[0].name, out_fhand.name)
     else:
-        seqs = read_seqrecords(in_fhands)
+        seqs = _read_seqrecords(in_fhands)
         try:
             SeqIO.write(seqs, out_fhand, out_format)
         except ValueError, error:
@@ -229,8 +229,8 @@ def guess_seq_type(fhand):
     fhand_ = cStringIO.StringIO(chunk)
     total_letters = 0
     nucleotides = 0
-    for seqrec in read_seqrecords([fhand_]):
-        for letter in str(seqrec.seq):
+    for seq in read_seqs([fhand_]):
+        for letter in get_str_seq(seq):
             total_letters += 1
             if letter in ('gcatnuGCATNU'):
                 nucleotides += 1
@@ -282,15 +282,14 @@ def _get_name_from_chunk_fastq(lines):
     return name
 
 
+def _line_is_not_empty(line):
+    return False if line in ['\n', '\r\n'] else True
+
+
 def _itemize_fastq(fhand):
     'It returns the fhand divided in chunks, one per seq'
-    blobs = group_in_packets(fhand, 4)
+    blobs = group_in_packets(filter(_line_is_not_empty, fhand), 4)
     return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
-
-
-def assing_kind_to_seqs(kind, seqs, file_format):
-    'It puts each seq into a NamedTuple named Seq'
-    return (SeqWrapper(kind, seq, file_format) for seq in seqs)
 
 
 def _read_seqitems(fhands, file_format):
@@ -351,14 +350,14 @@ def write_seqs(seqs, fhand=None, file_format=None):
         seq = seqs2.next()
     except StopIteration:
         # No sequences to write, so we're done
-        return
+        return fhand
     del seqs2
     seq_class = seq.kind
     if seq_class == SEQITEM:
         _write_seqitems(seqs, fhand, file_format)
     elif seq_class == SEQRECORD:
         seqs = (seq.object for seq in seqs)
-        write_seqrecords(seqs, fhand, file_format)
+        _write_seqrecords(seqs, fhand, file_format)
     else:
         raise ValueError('Unknown class for seq: ' + seq_class)
     return fhand
@@ -396,7 +395,7 @@ def read_seqs(fhands, file_format=GUESS_FORMAT, out_format=None,
                 continue
         elif seq_class == SEQRECORD:
             try:
-                seqs = read_seqrecords(fhands, in_format)
+                seqs = _read_seqrecords(fhands, in_format)
                 return assing_kind_to_seqs(SEQRECORD, seqs, None)
             except NotImplementedError:
                 continue

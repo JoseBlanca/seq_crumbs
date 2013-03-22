@@ -39,9 +39,9 @@ from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
                                SEQRECORD)
 from crumbs.utils.file_utils import TemporaryDir
-from crumbs.seq import get_name, get_str_seq
+from crumbs.seq import get_name, get_str_seq, SeqWrapper
 from crumbs.mapping import get_or_create_bowtie2_index
-from crumbs.seqio import read_seq_packets, SeqWrapper
+from crumbs.seqio import read_seq_packets
 
 
 _seqs_to_names = lambda seqs: [get_name(s) for pair in seqs for s in pair]

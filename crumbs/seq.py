@@ -40,12 +40,8 @@ class SeqItem(_SeqItem):
 
 def get_title(seq):
     'Given a seq it returns the title'
-    # TODO remove this check when everything is adapted to the new system
-    if 'SeqRecord' in seq.__class__.__name__:
-        seq_class = SEQRECORD
-    else:
-        seq_class = seq.kind
-        seq = seq.object
+    seq_class = seq.kind
+    seq = seq.object
 
     if seq_class == SEQITEM:
         title = seq.lines[0][1:]
@@ -221,7 +217,6 @@ def _copy_seqrecord(seqrec, seq=None, name=None, id_=None):
 
 def _copy_seqitem(seqwrapper, seq=None, name=None):
     seq_item = seqwrapper.object
-    name = seq_item.name if name is None else name
     lines = seq_item.lines
     fmt = seqwrapper.file_format
     if seq is None:
@@ -243,6 +238,17 @@ def _copy_seqitem(seqwrapper, seq=None, name=None):
                 raise ValueError(msg)
         else:
             raise RuntimeError('Unknown format for a SequenceItem')
+
+    if name:
+        lines[0] = lines[0][0] + name + '\n'
+        if 'fastq' in fmt:
+            if 'multiline' in fmt:
+                line_plus_index = _sitem_fastq_plus_line_index
+            else:
+                line_plus_index = 2
+            lines[line_plus_index] = '+\n'
+    name = seq_item.name if name is None else name
+        
     annotations = seq_item.annotations
     if annotations is not None:
         annotations = annotations.copy()
@@ -284,7 +290,7 @@ def _slice_seqitem(seqwrap, start, stop):
     return seq_obj
 
 
-def slice_seq(seq, start, stop):
+def slice_seq(seq, start=None, stop=None):
     seq_class = seq.kind
     if seq_class == SEQITEM:
         seq_obj = _slice_seqitem(seq, start, stop)
@@ -292,3 +298,8 @@ def slice_seq(seq, start, stop):
         seq_obj = seq.object[start:stop]
     return SeqWrapper(seq.kind, object=seq_obj,
                       file_format=_remove_multiline(seq.file_format))
+
+
+def assing_kind_to_seqs(kind, seqs, file_format):
+    'It puts each seq into a NamedTuple named Seq'
+    return (SeqWrapper(kind, seq, file_format) for seq in seqs)

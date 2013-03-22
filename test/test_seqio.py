@@ -29,7 +29,7 @@ from Bio.Seq import Seq
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.seqio import (guess_seq_type, fastaqual_to_fasta, seqio,
-                          write_seqrecords, read_seqrecords, _itemize_fasta,
+                          _write_seqrecords, _read_seqrecords, _itemize_fasta,
                           _itemize_fastq, read_seqs, write_seqs)
 from crumbs.utils.tags import SEQITEM, SEQRECORD
 from crumbs.exceptions import IncompatibleFormatError, MalformedFile
@@ -115,13 +115,13 @@ class SeqIOTest(unittest.TestCase):
         assert '>NM_019354.2' in result
 
 
-class ReadWriteSeqsTest(unittest.TestCase):
+class ReadWriteSeqRecordsTest(unittest.TestCase):
     'It writes seqrecords in a file'
     def test_write_empy_seq(self):
         'It does not write an empty sequence'
         seq1 = SeqRecord(Seq('ACTG'), id='seq1')
         fhand = StringIO()
-        write_seqrecords([seq1, None, SeqRecord(Seq(''), id='seq2')], fhand,
+        _write_seqrecords([seq1, None, SeqRecord(Seq(''), id='seq2')], fhand,
                          file_format='fasta')
         fhand.flush()
         assert fhand.getvalue() == '>seq1\nACTG\n'
@@ -129,7 +129,7 @@ class ReadWriteSeqsTest(unittest.TestCase):
     def test_read_fasta(self):
         'It tests the reading of a fasta file'
         fhand = StringIO('>seq1\nACTG\n')
-        assert not list(read_seqrecords([fhand]))[0].description
+        assert not list(_read_seqrecords([fhand]))[0].description
 
 
 class SimpleIOTest(unittest.TestCase):
@@ -147,12 +147,25 @@ class SimpleIOTest(unittest.TestCase):
         assert seqs == [('s1', ['>s1\n', 'ACTG\n', 'GTAC\n'], {}),
                         ('s2', ['>s2 desc\n', 'ACTG\n'], {})]
 
+        # With empty lines
+        fhand = StringIO('>s1\nACTG\n\n>s2 desc\nACTG\n')
+        seqs = list(_itemize_fasta(fhand))
+        assert seqs == [('s1', ['>s1\n', 'ACTG\n'], {}),
+                        ('s2', ['>s2 desc\n', 'ACTG\n'], {})]
+
     def test_fastq_itemizer(self):
         'It tests the fasta itemizer'
         fhand = StringIO('@s1\nACTG\n+\n1234\n@s2 desc\nACTG\n+\n4321\n')
         seqs = list(_itemize_fastq(fhand))
         assert seqs == [('s1', ['@s1\n', 'ACTG\n', '+\n', '1234\n'], {}),
                         ('s2', ['@s2 desc\n', 'ACTG\n', '+\n', '4321\n'], {})]
+
+        # Empty line
+        fhand = StringIO('@s1\nACTG\n+\n1234\n\n@s2 desc\nACTG\n+\n4321\n')
+        seqs = list(_itemize_fastq(fhand))
+        assert seqs == [('s1', ['@s1\n', 'ACTG\n', '+\n', '1234\n'], {}),
+                        ('s2', ['@s2 desc\n', 'ACTG\n', '+\n', '4321\n'], {})]
+
 
     def test_seqitems_io(self):
         'It checks the different seq class streams IO'
