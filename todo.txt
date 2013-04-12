@@ -19,6 +19,17 @@ How to do it:
 		3.1 Trimming functions should work with pair generators
 		3.2 Triming binaries should have an orphan option
 
+
+Add fast fastq parsing:
+There's code for fast parsing in:
+https://github.com/ged-lab/khmer/blob/bleeding-edge/lib/read_parsers.cc
+> Nuesto lector:
+> - debería estar escrito en C o C++ y ser importado con cffi
+> - Debe leer pairs no lecturas sueltas.
+> - Todos los threads deben alimentar un mismo iterador como lo hace el del khmer. Así es muy fácil de enlazar a cualquier otra parte del código como si no fuese paralelo.
+
+
+
 calculate stats might use SeqItems. The stats could be done with chars instead of quality integers.
 Before changing that it should be considered if it is worth it.
 
