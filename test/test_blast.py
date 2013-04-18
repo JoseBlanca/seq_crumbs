@@ -75,7 +75,7 @@ class BlastTest(unittest.TestCase):
         finally:
             db_dir.close()
 
-    def test_remote_blast(self):
+    def xtest_remote_blast(self):
         'It does a remote blast search'
         seq_fhand = NamedTemporaryFile()
         fasta = '>seq1\nCTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGT'
@@ -89,8 +89,9 @@ class BlastTest(unittest.TestCase):
 
         # fail if outfmt is not xml
         try:
+            params = {'outfmt': 'txt'}
             do_blast(seq_fhand.name, 'nt', program='blastn',
-                out_fpath=out_fhand.name, remote=True, params={'outfmt':'txt'})
+                out_fpath=out_fhand.name, remote=True, params=params)
             self.fail()
         except RuntimeError:
             pass
@@ -128,7 +129,7 @@ def create_a_matepair_file():
     return mate_fhand
 
 
-class BlastMater(unittest.TestCase):
+class BlastMaterTest(unittest.TestCase):
     'It tests the splitting of mate pairs'
     def test_matching_segments(self):
         'It tests the detection of oligos in sequence files'
