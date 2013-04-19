@@ -18,7 +18,7 @@ from itertools import izip_longest
 from Bio.SeqIO import _index
 
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
-                               InterleaveError)
+                               InterleaveError, MalformedFile)
 from crumbs.seqio import write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
@@ -135,7 +135,7 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
     'It matches the seq pairs in an iterator and splits the orphan seqs'
     buf_fwd = {'index': {}, 'items': []}
     buf_rev = {'index': {}, 'items': []}
-    buf1, buf2 = buf_fwd, buf_rev   # for the all orphan case
+    buf1, buf2 = buf_rev, buf_fwd   # for the all orphan case
     for seq in seqs:
         try:
             seq_name, direction = _parse_pair_direction_and_name(seq)
@@ -143,42 +143,53 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
             write_seqs([seq], orphan_out_fhand, out_format)
             continue
 
+        # buf1 -> buffer for the reads with the same orientation as the
+        # current one
+        # buf2 -> buffer for the reads with the reverse orientation as the
+        # current one
+
         if direction == FWD:
-            buf1 = buf_rev
-            buf2 = buf_fwd
-        else:
             buf1 = buf_fwd
             buf2 = buf_rev
+        else:
+            buf1 = buf_rev
+            buf2 = buf_fwd
 
         try:
-            matching_seq_index = buf1['index'][seq_name]
+            matching_seq_index = buf2['index'][seq_name]
         except KeyError:
             matching_seq_index = None
 
         if matching_seq_index is None:
             # add to buff
-            buf2['items'].append(seq)
-            buf2['index'][seq_name] = len(buf2['items']) - 1
+            buf1['items'].append(seq)
+            buf1['index'][seq_name] = len(buf1['items']) - 1
             # check mem limit
-            sum_items = len(buf1['items'] + buf2['items'])
+            sum_items = len(buf2['items'] + buf1['items'])
             if memory_limit is not None and sum_items >= memory_limit:
                 error_msg = 'There are too many consecutive non matching seqs'
-                error_msg += ' in your input. We have reached the memory limit'
+                error_msg += ' in your input. We have reached the memory limit.'
+                error_msg += 'Are you sure that the reads are sorted and '
+                error_msg += 'interleaved?. You could try with the unordered'
+                error_msg += ' algorith'
                 raise MaxNumReadsInMem(error_msg)
         else:
             # write seqs from buffer1
-            orphan_seqs = buf1['items'][:matching_seq_index]
-            matching_seq = buf1['items'][matching_seq_index]
+            orphan_seqs = buf2['items'][:matching_seq_index]
+            matching_seq = buf2['items'][matching_seq_index]
             write_seqs(orphan_seqs, orphan_out_fhand, out_format)
             write_seqs([matching_seq, seq], out_fhand, out_format)
-            # fix buffers 1
-            buf1['items'] = buf1['items'][matching_seq_index + 1:]
-            buf1['index'] = {s: i for i, s in enumerate(buf1['items'])}
+            # fix buffer 1
+            if matching_seq_index != len(buf2['items']) - 1:
+                msg = 'The given files are not sorted (ordered) and '
+                msg = 'interleaved. You could try with the unordered algorithm'
+                raise MalformedFile(msg)
+            buf2 = {'index': {}, 'items': []}
 
             # writes seqs from buffer 2 and fix buffer2
-            write_seqs(buf2['items'], orphan_out_fhand, out_format)
-            buf2['items'] = []
-            buf2['index'] = {}
+            write_seqs(buf1['items'], orphan_out_fhand, out_format)
+            buf1['items'] = []
+            buf1['index'] = {}
     else:
         orphan_seqs = buf1['items'] + buf2['items']
         write_seqs(orphan_seqs, orphan_out_fhand, out_format)

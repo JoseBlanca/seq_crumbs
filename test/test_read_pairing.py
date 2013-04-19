@@ -31,8 +31,9 @@ from crumbs.utils.tags import FWD, SEQRECORD, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seq import get_str_seq
-from crumbs.seqio import read_seqs, read_seqs, assing_kind_to_seqs
-from crumbs.exceptions import InterleaveError, PairDirectionError
+from crumbs.seqio import read_seqs, assing_kind_to_seqs
+from crumbs.exceptions import (InterleaveError, PairDirectionError,
+                               MalformedFile)
 from crumbs.seqio import write_seqs
 from crumbs.seq import SeqWrapper, SeqItem
 
@@ -44,8 +45,7 @@ from crumbs.seq import SeqWrapper, SeqItem
 class PairMatcherTest(unittest.TestCase):
     'It tests the mate pair checker'
 
-    @staticmethod
-    def test_mate_pair_checker():
+    def test_pair_matcher(self):
         'It test the pair matcher function'
         # with equal seqs but the last ones
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
@@ -123,6 +123,33 @@ class PairMatcherTest(unittest.TestCase):
         assert '@seq6:136:FC706VJ:2:2104:15343:197393.mpl_1' in orp
         assert '@seq7:136:FC706VJ:2:2104:15343:197393.hhhh' in orp
         assert '@seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCAC' in orp
+
+        # File is not sorted
+        file1 = '''@s1.f
+AACCAGTCAAC
++
+CCCFFFFFGHH
+@s2.f
+AACCAGTCAAC
++
+CCCFFFFFGHH
+@s1.r
+AACCAGTCAAC
++
+CCCFFFFFGHH
+'''
+        file1 = StringIO(file1)
+        seqs = read_seqs([file1], 'fastq')
+        out_fhand = StringIO()
+        orphan_out_fhand = StringIO()
+        out_format = 'fastq'
+
+        try:
+            match_pairs(seqs, out_fhand, orphan_out_fhand, out_format)
+            output = out_fhand.getvalue()
+            self.fail('MalformedFile error expected')
+        except MalformedFile:
+            pass
 
     @staticmethod
     def test_all_orphan():
