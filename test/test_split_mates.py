@@ -70,7 +70,7 @@ class MateSplitterTest(unittest.TestCase):
         assert get_name(seqs[0]) == 'seq'
 
         # segment at end
-        seqs = splitter._split_by_mate_linker(seq, ([(7, 10)], False))
+        seqs = splitter._split_by_mate_linker(seq, ([(7, 11)], False))
         assert  get_str_seq(seqs[0]) == 'aaatttc'
         assert get_name(seqs[0]) == 'seq'
 
@@ -189,6 +189,21 @@ class MateSplitterTest(unittest.TestCase):
         xpect += '\n'
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         assert xpect == result
+
+        # with short linker in 3 prima
+        mate_fhand = NamedTemporaryFile(suffix='.fasta')
+        seq = ">seq1\nCATCAATGACATCACAAATGACATCAACAAACTCAAA"
+        seq += "CTCACATACACTGCTGTACCGTAC"
+        mate_fhand.write(seq)
+        mate_fhand.flush()
+        splitter = MatePairSplitter()
+        new_seqs = []
+        for packet in read_seq_packets([mate_fhand], 1):
+            new_seqs.append(splitter(packet))
+        out_fhand = StringIO()
+        write_seq_packets(out_fhand, new_seqs, file_format='fasta')
+
+
 
     @staticmethod
     def test_giuseppe_reads():
@@ -338,5 +353,5 @@ class SplitMatesBinTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'MateSplitterTest.test_giuseppe_reads']
+    # import sys;sys.argv = ['', 'MateSplitterTest.test_giuseppe_reads']
     unittest.main()

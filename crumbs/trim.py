@@ -256,7 +256,7 @@ class TrimWithBlastShort(object):
         db_fhand.flush()
         params = {'task': 'blastn-short', 'expect': '0.0001'}
         filters = [{'kind': 'score_threshold', 'score_key': 'identity',
-                    'min_score': 89},
+                    'min_score': 87},
                    {'kind': 'min_length', 'min_num_residues': 13,
                     'length_in_query': False}]
         matcher = BlasterForFewSubjects(db_fhand.name, self.oligos,
