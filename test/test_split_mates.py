@@ -202,7 +202,8 @@ class MateSplitterTest(unittest.TestCase):
             new_seqs.append(splitter(packet))
         out_fhand = StringIO()
         write_seq_packets(out_fhand, new_seqs, file_format='fasta')
-
+        result = ">seq1\nCATCAATGACATCACAAATGACATCAACAAACTCAAACTCACATACA\n"
+        assert result == out_fhand.getvalue()
 
 
     @staticmethod
