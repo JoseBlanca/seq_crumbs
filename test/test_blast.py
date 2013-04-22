@@ -25,11 +25,11 @@ from crumbs.blast import (do_blast, BlasterForFewSubjects,
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import get_setting
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.tags import NUCL, SEQRECORD
-from crumbs.seq import SeqWrapper, assing_kind_to_seqs
+from crumbs.utils.tags import NUCL, SEQITEM, SEQRECORD
+from crumbs.seq import SeqWrapper, SeqItem, assing_kind_to_seqs
 
-LINKERS = get_setting('LINKERS')
 TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
+FLX_LINKER = get_setting('FLX_LINKER')
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -136,7 +136,9 @@ class BlastMaterTest(unittest.TestCase):
         seq_5 = 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC'
         mate_fhand = create_a_matepair_file()
 
-        linkers = assing_kind_to_seqs(SEQRECORD, LINKERS, None)
+        linkers = [SeqItem('titan', ['>titan\n', TITANIUM_LINKER + '\n']),
+                   SeqItem('flx', ['>flx\n', FLX_LINKER + '\n'])]
+        linkers = assing_kind_to_seqs(SEQITEM, linkers, 'fasta')
 
         expected_region = (len(seq_5), len(seq_5 + TITANIUM_LINKER) - 1)
         matcher = BlasterForFewSubjects(mate_fhand.name, linkers,

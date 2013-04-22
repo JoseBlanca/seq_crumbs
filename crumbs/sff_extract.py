@@ -16,7 +16,7 @@
 from __future__ import division
 from array import array
 
-from Bio.SeqIO.SffIO import SffIterator
+from crumbs.utils.optional_modules import SffIterator
 
 # pylint: disable=R0913
 

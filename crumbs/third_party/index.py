@@ -8,10 +8,10 @@ try:
 except ImportError:
     from UserDict import DictMixin as _dict_base
 
-from Bio._py3k import _bytes_to_string, _as_bytes
-from Bio.SeqIO._index import SeqFileRandomAccess
-from Bio.Alphabet import Alphabet, AlphabetEncoder
-from Bio.SeqIO._index import _FormatToRandomAccess
+from crumbs.utils.optional_modules import (_bytes_to_string, _as_bytes,
+                                           SeqFileRandomAccess, Alphabet,
+                                           AlphabetEncoder,
+                                           _FormatToRandomAccess)
 
 
 def index(filename, format, alphabet=None, key_function=None):

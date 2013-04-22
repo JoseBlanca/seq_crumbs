@@ -4,8 +4,6 @@ TODO
 
 Write the manual
 
-Biopython should be optional. The imports for all optinal modules should be grouped in the same module. That module should be the only place in which the Import errors for the optional modules should be handle.
-
 The cleaners should be able to work with the pairs. For instance, the quality
 clearner could end up removing a read. In that case the pair should go to the
 orphan. To do that the cleaners should deal with a stream of pair list, like

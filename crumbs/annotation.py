@@ -17,7 +17,7 @@ import os.path
 from tempfile import NamedTemporaryFile
 from random import randint
 
-from Bio.SeqFeature import SeqFeature, FeatureLocation
+from crumbs.utils.optional_modules import SeqFeature, FeatureLocation
 
 from crumbs.utils.bin_utils import (get_binary_path, popen,
                                     check_process_finishes)

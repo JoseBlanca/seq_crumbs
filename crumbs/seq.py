@@ -17,8 +17,7 @@ import itertools
 from copy import deepcopy
 from collections import namedtuple
 
-from Bio.SeqRecord import SeqRecord
-
+from crumbs.utils.optional_modules import SeqRecord
 from crumbs.utils.file_formats import _remove_multiline
 from crumbs.utils.tags import SEQITEM, SEQRECORD
 
@@ -248,7 +247,7 @@ def _copy_seqitem(seqwrapper, seq=None, name=None):
                 line_plus_index = 2
             lines[line_plus_index] = '+\n'
     name = seq_item.name if name is None else name
-        
+
     annotations = seq_item.annotations
     if annotations is not None:
         annotations = annotations.copy()

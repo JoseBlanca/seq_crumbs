@@ -104,7 +104,7 @@ The filtering seq crumbs can be aware of the paired reads and can filter both re
 Installation
 ------------
 
-Seq Crumbs depends on Python 2.7 and Biopython_.
+seq_crumbs depends on Python 2.7 and Biopython_ is a recommended dependency.
 The installation manual is located in the INSTALL document.
 
 

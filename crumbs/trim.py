@@ -15,8 +15,7 @@
 
 from operator import itemgetter
 
-from Bio.Seq import Seq
-
+from crumbs.utils.optional_modules import Seq
 from crumbs.utils.tags import (TRIMMING_RECOMMENDATIONS, QUALITY, OTHER,
                                VECTOR, TRIMMING_KINDS)
 from crumbs.utils.seq_utils import get_uppercase_segments

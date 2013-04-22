@@ -60,8 +60,7 @@ import copy
 import os
 from math import log10
 
-from Bio.Blast import NCBIXML
-
+from crumbs.utils.optional_modules import NCBIXML
 from crumbs.utils.tags import SUBJECT, QUERY, ELONGATED
 from crumbs.utils.segments_utils import merge_overlaping_segments
 

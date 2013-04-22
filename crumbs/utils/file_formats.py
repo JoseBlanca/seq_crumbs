@@ -17,8 +17,7 @@ import cStringIO
 from array import array
 import itertools
 
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
-
+from crumbs.utils.optional_modules import FastqGeneralIterator
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError

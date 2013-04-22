@@ -563,5 +563,5 @@ class FilterByFeatureTypeTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'BamFilterTest']
+    #import sys;sys.argv = ['', 'FilterBowtie2Test.test_filter_by_bowtie2']
     unittest.main()

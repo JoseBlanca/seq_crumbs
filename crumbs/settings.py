@@ -16,9 +16,6 @@
 import tempfile
 import os
 
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-
 _SUPPORTED_OUTPUT_FORMATS = ['fasta', 'fastq', 'fastq-illumina']
 
 # number of sequences to process in a chunk. Lenght of the sequence list to
@@ -45,10 +42,7 @@ _TITANIUM_LINKER_REV = 'CGTAATAACTTCGTATAGCATACATTATACGAAGTTATACGA'
 _FWD_454_LINKERS = [_FLX_LINKER, _TITANIUM_LINKER]
 _ION_TORRENT_LINKER = 'CTGCTGTACCGTACATCCGCCTTGGCCGTACAGCAG'
 _ION_TORRENT_LINKER_REV = 'CTGCTGTACGGCCAAGGCGGATGTACGGTACAGCAG'
-_LINKERS = [SeqRecord(Seq(_FLX_LINKER), id='flx_linker'),
-            SeqRecord(Seq(_TITANIUM_LINKER), id='titanium_linker'),
-            SeqRecord(Seq(_ION_TORRENT_LINKER), id='ion_torrent_linker')]
-
+_LINKERS = [_FLX_LINKER, _TITANIUM_LINKER, _ION_TORRENT_LINKER]
 
 # # Use this to modify how get_binary path works
 # if need to modify the binary's name

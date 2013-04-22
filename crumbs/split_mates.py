@@ -18,9 +18,9 @@
 from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqs
 from crumbs.settings import get_setting
-from crumbs.utils.tags import NUCL, SEQRECORD
+from crumbs.utils.tags import NUCL, SEQITEM
 from crumbs.seq import (assing_kind_to_seqs, get_name, slice_seq, get_length,
-                        copy_seq)
+                        copy_seq, SeqItem)
 
 # pylint: disable=R0903
 
@@ -31,8 +31,9 @@ class MatePairSplitter(object):
     def __init__(self, linkers=None):
         'The initiator'
         if linkers is None:
-            linkers = assing_kind_to_seqs(SEQRECORD, get_setting('LINKERS'),
-                                          None)
+            linkers = get_setting('LINKERS')
+            linkers = [SeqItem(str(i), '>%d\n%s\n' % (i, l)) for i, l in enumerate(linkers)]
+            linkers = assing_kind_to_seqs(SEQITEM, linkers, 'fasta')
         self.linkers = list(linkers)
 
     def __call__(self, seqs):

@@ -19,8 +19,7 @@ import io
 from gzip import GzipFile
 import os.path
 
-from Bio.bgzf import BgzfWriter
-
+from crumbs.utils.optional_modules import BgzfWriter
 from crumbs.utils.tags import BGZF, GZIP, BZIP2
 try:
     from crumbs.utils import BZ2File

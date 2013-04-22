@@ -42,15 +42,15 @@ for line in open('crumbs/__init__.py'):
         break
 
 
-def check_dependencies():
-    'If a dependency is not met it stops the installation'
+def check_biopython():
+    'If a Biopython is not installed it recommends to do so'
     if _SETUPTOOLS:
         return  # No need to check anything because it will get installed
     msg = None
     try:
         import Bio
     except ImportError:
-        msg = 'You have to install Bioypython >= 1.60\n'
+        msg = 'For some functionalities Bioypython >= 1.60\n is required'
 
     if not msg:
         try:
@@ -64,7 +64,7 @@ def check_dependencies():
     sys.stderr.write(msg)
     sys.exit(-1)
 
-check_dependencies()
+check_biopython()
 
 
 def opj(*args):

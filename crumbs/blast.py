@@ -17,8 +17,7 @@ import os.path
 import subprocess
 import tempfile
 
-from Bio.Blast import NCBIWWW
-
+from crumbs.utils.optional_modules import NCBIWWW
 from crumbs.seqio import seqio, guess_seq_type, write_seqs
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)

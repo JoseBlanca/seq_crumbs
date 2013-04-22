@@ -148,7 +148,7 @@ class MateSplitterTest(unittest.TestCase):
         # two linkers
         mate_fhand.write('>seq5\n' + linker + seq3 + FLX_LINKER + seq5 + '\n')
         # reverse linker
-        rev_linker = str(get_setting('LINKERS')[1].seq.reverse_complement())
+        rev_linker = get_setting('TITANIUM_LINKER_REV')
         mate_fhand.write('>seq6\n' + seq5 + rev_linker + seq3 + '\n')
         mate_fhand.flush()
 

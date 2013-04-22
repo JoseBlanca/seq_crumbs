@@ -15,8 +15,7 @@
 import re
 from itertools import izip_longest
 
-from Bio.SeqIO import _index
-
+from crumbs.utils.optional_modules import _index
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
                                InterleaveError, MalformedFile)
 from crumbs.seqio import write_seqs

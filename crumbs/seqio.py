@@ -19,11 +19,14 @@ from shutil import copyfileobj
 from tempfile import NamedTemporaryFile
 import cStringIO
 
-from Bio import SeqIO
-from Bio.SeqIO import FastaIO
-from Bio.SeqIO import QualityIO
-from Bio.Alphabet import IUPAC
-
+from crumbs.utils.optional_modules import (FastaIterator, QualPhredIterator,
+                                           PairedFastaQualIterator,
+                                           FastqPhredIterator, write_seqrecs,
+                                           FastqSolexaIterator,
+                                           FastqIlluminaIterator,
+                                           parse_into_seqrecs)
+from crumbs.utils.data import (ambiguous_rna_letters, ambiguous_dna_letters,
+                               extended_protein_letters)
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError)
 from crumbs.iterutils import group_in_packets
@@ -55,7 +58,7 @@ def _write_seqrecords(seqs, fhand=None, file_format='fastq'):
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
     seqs = _clean_seqrecord_stream(seqs)
     try:
-        SeqIO.write(seqs, fhand, file_format)
+        write_seqrecs(seqs, fhand, file_format)
     except IOError, error:
         # The pipe could be already closed
         if not 'Broken pipe' in str(error):
@@ -159,17 +162,17 @@ def _read_seqrecords(fhands, file_format=GUESS_FORMAT):
         if fmt in ('fasta', 'qual') or 'fastq' in fmt:
             title = title2ids
         if fmt == 'fasta':
-            seq_iter = FastaIO.FastaIterator(fhand, title2ids=title)
+            seq_iter = FastaIterator(fhand, title2ids=title)
         elif fmt == 'qual':
-            seq_iter = QualityIO.QualPhredIterator(fhand, title2ids=title)
+            seq_iter = QualPhredIterator(fhand, title2ids=title)
         elif fmt == 'fastq' or fmt == 'fastq-sanger':
-            seq_iter = QualityIO.FastqPhredIterator(fhand, title2ids=title)
+            seq_iter = FastqPhredIterator(fhand, title2ids=title)
         elif fmt == 'fastq-solexa':
-            seq_iter = QualityIO.FastqSolexaIterator(fhand, title2ids=title)
+            seq_iter = FastqSolexaIterator(fhand, title2ids=title)
         elif fmt == 'fastq-illumina':
-            seq_iter = QualityIO.FastqIlluminaIterator(fhand, title2ids=title)
+            seq_iter = FastqIlluminaIterator(fhand, title2ids=title)
         else:
-            seq_iter = SeqIO.parse(fhand, fmt)
+            seq_iter = parse_into_seqrecs(fhand, fmt)
         seq_iters.append(seq_iter)
     return chain.from_iterable(seq_iters)
 
@@ -189,7 +192,7 @@ def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
     else:
         seqs = _read_seqrecords(in_fhands)
         try:
-            SeqIO.write(seqs, out_fhand, out_format)
+            write_seqrecs(seqs, out_fhand, out_format)
         except ValueError, error:
             if error_quality_disagree(error):
                 raise MalformedFile(str(error))
@@ -202,9 +205,9 @@ def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
 
 def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
     'It converts a fasta and a qual file into a fastq format file'
-    seqrecords = SeqIO.QualityIO.PairedFastaQualIterator(seq_fhand, qual_fhand)
+    seqrecords = PairedFastaQualIterator(seq_fhand, qual_fhand)
     try:
-        SeqIO.write(seqrecords, out_fhand.name, 'fastq')
+        write_seqrecs(seqrecords, out_fhand.name, 'fastq')
     except ValueError, error:
         if error_quality_disagree(error):
             raise MalformedFile(str(error))
@@ -213,13 +216,13 @@ def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
 
 
 def guess_seq_type(fhand):
-    '''it guesses the file's seq type'''
+    '''It guesses the file's seq type'''
 
-    rna = set(IUPAC.ambiguous_rna.letters)
-    dna = set(IUPAC.ambiguous_dna.letters)
+    rna = set(ambiguous_rna_letters)
+    dna = set(ambiguous_dna_letters)
     rna_dna = rna.union(dna)
 
-    protein = set(IUPAC.extended_protein.letters)
+    protein = set(extended_protein_letters)
     only_prot = list(protein.difference(rna_dna))
 
     chunk_size = 1024
