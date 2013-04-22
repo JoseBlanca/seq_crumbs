@@ -314,9 +314,10 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     group = parser.add_argument_group('Pairing')
     group.add_argument('--paired_reads', action='store_true',
                         help='Filter considering interleaved pairs')
-    group.add_argument('--fail_drags_pair', type=_to_bool,
-                        choices=(True, False),
-                        help='If one read fails the pair will be filtered out')
+    help_msg = 'If one read fails the pair will be filtered out '
+    help_msg += '(default: %(default)s)'
+    group.add_argument('--fail_drags_pair', type=_to_bool, default='true',
+                        choices=(True, False), help=help_msg)
     return parser
 
 

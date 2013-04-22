@@ -155,13 +155,12 @@ class LengthFilterTest(unittest.TestCase):
         fasta = '>s1.f\naCTg\n>s1.r\nAC\n>s2.f\naTg\n>s2.r\nAC\n'
         fasta += '>s3.f\naCTg\n>s3.r\nACTG\n'
         fasta_fhand = _make_fhand(fasta)
-        try:
-            stderr = NamedTemporaryFile(suffix='.stderr')
-            result = check_output([filter_bin, '-n', '4', '--paired_reads',
-                                   fasta_fhand.name], stderr=stderr)
-            self.fail('CalledProcessError expected')
-        except CalledProcessError:
-            pass
+        stderr = NamedTemporaryFile(suffix='.stderr')
+        result = check_output([filter_bin, '-n', '4', '--paired_reads',
+                               fasta_fhand.name], stderr=stderr)
+        # By default fail drags pair
+        assert '>s3.f\naCTg\n>s3.r\nACTG\n' in result
+
         result = check_output([filter_bin, '-n', '4', '--paired_reads',
                                '--fail_drags_pair', 'true', fasta_fhand.name])
         assert '>s3.f\naCTg\n>s3.r\nACTG\n' in result

@@ -6,8 +6,6 @@ Write the manual
 
 Biopython should be optional. The imports for all optinal modules should be grouped in the same module. That module should be the only place in which the Import errors for the optional modules should be handle.
 
-By default all pairs that have at least one failed read in a filter shoulb be filtered.
-
 The cleaners should be able to work with the pairs. For instance, the quality
 clearner could end up removing a read. In that case the pair should go to the
 orphan. To do that the cleaners should deal with a stream of pair list, like
@@ -38,6 +36,7 @@ file_format should be a property of seqItem not of SeqWrapper
 rename prefered_seq_classes to preferred_seq_classes
 
 Add a test for sample, head or cat with different input formats, it should fail.
+
 Take a look at python bedtools for the segments
 
 SeqWrapper and SeqItem should be in a module with all the seq methods, like get_str_seq
