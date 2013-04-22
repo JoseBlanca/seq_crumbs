@@ -42,7 +42,7 @@ class MatePairSplitter(object):
         seq_fhand.flush()
 
         min_identity = 87.0
-        min_len = 17
+        min_len = 13
         filters = [{'kind': 'min_length', 'min_num_residues': min_len,
                     'length_in_query': False, 'filter_match_parts': True},
                    {'kind': 'score_threshold', 'score_key': 'identity',
@@ -77,7 +77,7 @@ class MatePairSplitter(object):
             if segment_start == 0:
                 new_seq = slice_seq(seq, segment_end + 1, None)
                 return [new_seq]
-            elif segment_end == get_length(seq) - 1:
+            elif segment_end == get_length(seq):
                 new_seq = slice_seq(seq, None, segment_start)
                 return [new_seq]
             else:
