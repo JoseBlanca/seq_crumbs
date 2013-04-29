@@ -39,6 +39,15 @@ Take a look at python bedtools for the segments
 
 SeqWrapper and SeqItem should be in a module with all the seq methods, like get_str_seq
 
+Add Mira traceinfo.xml to sff_extract.
+
+Add crumb sort_by_mid. It should divide the reads, mainly 454, into sets according to their forward and reverse MIDs given a list of MIDs.
+The mids can be located with cutadapt.calign.pyx or with difflib.get_close_matches.
+The second algorithm could be something like:
+	- Look for exact mid matches and store the reads with no exact match.
+	- From the exact ones record the position for the mids in forward and reverse.
+	- Given the position look in the reads with no exact match using get_close_matches.
+
 trim_blast_contanimant
 ----------------------
 
