@@ -26,7 +26,7 @@ from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
                           _index_seq_file, match_pairs_unordered,
                           _parse_pair_direction_and_name_from_title,
                           _parse_pair_direction_and_name, group_seqs_in_pairs,
-    group_seqspackets_in_pairs)
+                          group_seqspackets)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.tags import FWD, SEQRECORD, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
@@ -522,20 +522,6 @@ class PairGrouperTest(unittest.TestCase):
     def test_empty_iter():
         paired_seqs = list(group_seqs_in_pairs([]))
         assert not paired_seqs
-
-    @staticmethod
-    def test_group_seqpackets_in_pairs():
-        seqs = '>s1.f\nA\n>s1.r\nA\n>s2.f\nA\n>s2.r\nA\n'
-        fhand = NamedTemporaryFile()
-        fhand.write(seqs)
-        fhand.flush()
-        packets = read_seq_packets([fhand], size=2,
-                                   prefered_seq_classes=[SEQITEM])
-        # print list(packets)[0]
-        packets = list(group_seqspackets_in_pairs(packets))
-        assert len(packets) == 2
-        assert len(packets[0]) == 1
-        assert len(list(packets[0])[0]) == 2
 
 
 if __name__ == '__main__':

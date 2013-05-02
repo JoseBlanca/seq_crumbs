@@ -273,10 +273,3 @@ def group_seqs_in_pairs(seqs):
     else:
         if paired_seqs:
             yield paired_seqs
-
-
-def group_seqspackets_in_pairs(seq_packets):
-    'It groups pairs inside the seqpackets.'
-    for packet in seq_packets:
-        pairs = list(group_seqs_in_pairs(packet))
-        yield pairs
