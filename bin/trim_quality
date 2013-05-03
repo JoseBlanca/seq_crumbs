@@ -21,8 +21,8 @@ from crumbs.utils.bin_utils import (main, parse_trimmer_args,
                                     create_trimmer_argparse)
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.utils.file_utils import flush_fhand
-from crumbs.trim import TrimByQuality, TrimOrMask
-from crumbs.seqio import read_seq_packets, write_seq_packets
+from crumbs.trim import TrimByQuality, TrimOrMask, seq_to_trim_packets
+from crumbs.seqio import read_seq_packets, write_trim_packets
 from crumbs.settings import get_setting
 
 
@@ -66,21 +66,31 @@ def run():
 
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
+    orphan_fhand = args['orphan_fhand']
 
     seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    trim_packets = seq_to_trim_packets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
+
     trim_quality = TrimByQuality(window=args['window'],
                                  threshold=args['threshold'],
                                  trim_left=args['left'],
-                                 trim_right=args['right'])
-    trim_or_mask = TrimOrMask(mask=args['mask'])
+                                 trim_right=args['right'],
+                                 failed_drags_pair=args['fail_drags_pair'])
+    trim_or_mask = TrimOrMask(mask=args['mask'],
+                              failed_drags_pair=args['fail_drags_pair'])
 
-    seq_packets, workers = process_seq_packets(seq_packets,
+    trim_packets, workers = process_seq_packets(trim_packets,
                                                [trim_quality, trim_or_mask],
                                                processes=args['processes'])
 
-    write_seq_packets(out_fhand, seq_packets, file_format=args['out_format'],
-                      workers=workers)
+    write_trim_packets(out_fhand, orphan_fhand, trim_packets,
+                         args['out_format'], workers=workers)
+
     flush_fhand(out_fhand)
+    if orphan_fhand is not None:
+        orphan_fhand.flush()
+
 
 if __name__ == '__main__':
     sys.exit(main(run))

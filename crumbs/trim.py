@@ -17,7 +17,8 @@ from operator import itemgetter
 
 from crumbs.utils.optional_modules import Seq
 from crumbs.utils.tags import (TRIMMING_RECOMMENDATIONS, QUALITY, OTHER,
-                               VECTOR, TRIMMING_KINDS)
+                               VECTOR, TRIMMING_KINDS, SEQS_PASSED,
+                               ORPHAN_SEQS)
 from crumbs.utils.seq_utils import get_uppercase_segments
 from crumbs.seq import (copy_seq, get_str_seq, get_annotations, get_length,
                         slice_seq, get_qualities, get_name)
@@ -28,31 +29,81 @@ from crumbs.utils.tags import SEQRECORD
 from crumbs.iterutils import rolling_window
 from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqs
+from crumbs.pairs import group_seqs_in_pairs
 
 # pylint: disable=R0903
 
 
-class TrimLowercasedLetters(object):
+def seq_to_trim_packets(seq_packets, group_paired_reads=False):
+    'It yields packets suitable for the filters'
+
+    for packet in seq_packets:
+        if group_paired_reads:
+            packet = list(group_seqs_in_pairs(packet))
+        else:
+            packet = [[seq] for seq in packet]
+        yield {SEQS_PASSED: packet, ORPHAN_SEQS: []}
+
+
+class _BaseTrim(object):
+    'Base Trim class'
+    def __init__(self, failed_drags_pair=True):
+        self.failed_drags_pair = failed_drags_pair
+
+    def _trim_orphans(self, seqs):
+        return seqs
+
+    def __call__(self, trim_packet):
+        'It trims the seqs'
+        self._setup_checks(trim_packet)
+        trimmed_seqs = []
+        orphan_seqs = trim_packet[ORPHAN_SEQS]
+        for paired_seqs in trim_packet[SEQS_PASSED]:
+            trimmed_paired_seqs = []
+            for seq in paired_seqs:
+                trimmed_seq = self._do_trim(seq)
+                trimmed_paired_seqs.append(trimmed_seq)
+            # all sequences are trimed, no lost
+            if None not in trimmed_paired_seqs:
+                trimmed_seqs.append(trimmed_paired_seqs)
+            # all secuences are lost because of trimming
+            elif (len(trimmed_paired_seqs) == 1 or
+                  trimmed_paired_seqs == (None, None)):
+                continue
+            # one of the pairs is lost in trimming
+            else:
+                if not self.failed_drags_pair:
+                    orphans = [s for s in trimmed_paired_seqs if s is not None]
+                    orphan_seqs.extend(orphans)
+        orphan_seqs = self._trim_orphans(orphan_seqs)
+        return {SEQS_PASSED: trimmed_seqs, ORPHAN_SEQS: orphan_seqs}
+
+    def _do_trim(self, seq):
+        raise NotImplementedError()
+
+    def _setup_checks(self, trim_packet):
+        pass
+
+
+class TrimLowercasedLetters(_BaseTrim):
     'It trims the masked segments of the seqrecords.'
 
-    def __call__(self, seqs):
-        'It trims the masked segments of the seqrecords.'
-        trimmed_seqs = []
-        for seq in seqs:
-            str_seq = get_str_seq(seq)
-            unmasked_segments = get_uppercase_segments(str_seq)
-            segment = get_longest_segment(unmasked_segments)
-            if segment is not None:
-                segments = []
-                if segment[0] != 0:
-                    segments.append((0, segment[0] - 1))
-                len_seq = len(str_seq)
-                if segment[1] != len_seq - 1:
-                    segments.append((segment[1] + 1, len_seq - 1))
+    def _do_trim(self, seq):
+        str_seq = get_str_seq(seq)
+        unmasked_segments = get_uppercase_segments(str_seq)
+        segment = get_longest_segment(unmasked_segments)
+        if segment is not None:
+            segments = []
+            if segment[0] != 0:
+                segments.append((0, segment[0] - 1))
+            len_seq = len(str_seq)
+            if segment[1] != len_seq - 1:
+                segments.append((segment[1] + 1, len_seq - 1))
 
-                _add_trim_segments(segments, seq, kind=OTHER)
-                trimmed_seqs.append(seq)
-        return trimmed_seqs
+            _add_trim_segments(segments, seq, kind=OTHER)
+            return seq
+        else:
+            return None
 
 
 def _add_trim_segments(segments, sequence, kind):
@@ -70,9 +121,9 @@ def _add_trim_segments(segments, sequence, kind):
     trim_rec[kind].extend(segments)
 
 
-class TrimEdges(object):
+class TrimEdges(_BaseTrim):
     'It adds a trimming recommendation a fixed number of bases from the seqs.'
-    def __init__(self, left=0, right=0):
+    def __init__(self, left=0, right=0, failed_drags_pair=True):
         '''The initiator.
 
         left - number of bases to trim from the left side
@@ -81,18 +132,19 @@ class TrimEdges(object):
         '''
         self.left = left
         self.right = right
+        self.failed_drags_pair = failed_drags_pair
+        super(TrimEdges, self).__init__(failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, seqs):
+    def _do_trim(self, seq):
         'It trims the edges of the given seqs.'
         left = self.left
         right = self.right
-        for seq in seqs:
-            segments = [(0, left - 1)] if left else []
-            if right:
-                seq_len = get_length(seq)
-                segments.append((seq_len - right, seq_len - 1))
-            _add_trim_segments(segments, seq, kind=OTHER)
-        return seqs
+        segments = [(0, left - 1)] if left else []
+        if right:
+            seq_len = get_length(seq)
+            segments.append((seq_len - right, seq_len - 1))
+        _add_trim_segments(segments, seq, kind=OTHER)
+        return seq
 
 
 def _mask_sequence(seq, segments):
@@ -117,52 +169,56 @@ def _mask_sequence(seq, segments):
     return copy_seq(seq, seq=new_seq)
 
 
-class TrimOrMask(object):
+class TrimOrMask(_BaseTrim):
     'It trims and masks the Seq following the trimming recommendations.'
 
-    def __init__(self, mask=False):
+    def __init__(self, mask=False, failed_drags_pair=True):
         '''The initiator.'''
         self.mask = mask
+        self.failed_drags_pair = failed_drags_pair
+        super(TrimOrMask, self).__init__(failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, seqs):
+    def _do_trim(self, seq):
         'It trims the edges of the given seqs.'
-        mask = self.mask
-        processed_seqs = []
-        for seq in seqs:
-            annots = get_annotations(seq)
-            if not TRIMMING_RECOMMENDATIONS in annots:
-                processed_seqs.append(copy_seq(seq))
-                continue
+        annots = get_annotations(seq)
+        if not TRIMMING_RECOMMENDATIONS in annots:
+            return seq
 
-            trim_rec = annots[TRIMMING_RECOMMENDATIONS]
-            # fixing the trimming recommendations
-            if TRIMMING_RECOMMENDATIONS in annots:
-                del annots[TRIMMING_RECOMMENDATIONS]
+        trim_rec = annots[TRIMMING_RECOMMENDATIONS]
+        # fixing the trimming recommendations
+        if TRIMMING_RECOMMENDATIONS in annots:
+            del annots[TRIMMING_RECOMMENDATIONS]
 
-            trim_segments = []
-            for trim_kind in TRIMMING_KINDS:
-                trim_segments.extend(trim_rec.get(trim_kind, []))
+        trim_segments = []
+        for trim_kind in TRIMMING_KINDS:
+            trim_segments.extend(trim_rec.get(trim_kind, []))
 
-            # masking
-            if mask:
-                seq = _mask_sequence(seq, trim_segments)
+        # masking
+        if self.mask:
+            seq = _mask_sequence(seq, trim_segments)
+        else:
+            # trimming
+            if trim_segments:
+                trim_limits = get_longest_complementary_segment(
+                                            trim_segments, get_length(seq))
+                if trim_limits is None:
+                    # there's no sequence left
+                    return None
             else:
-                # trimming
-                if trim_segments:
-                    trim_limits = get_longest_complementary_segment(
-                                                trim_segments, get_length(seq))
-                    if trim_limits is None:
-                        # there's no sequence left
-                        continue
-                else:
-                    trim_limits = []
+                trim_limits = []
 
-                if trim_limits:
-                    seq = slice_seq(seq, trim_limits[0], trim_limits[1] + 1)
+            if trim_limits:
+                seq = slice_seq(seq, trim_limits[0], trim_limits[1] + 1)
 
-            processed_seqs.append(seq)
+        return seq
 
-        return processed_seqs
+    def _trim_orphans(self, seqs):
+        new_seqs = []
+        for seq in seqs:
+            seq = self._do_trim(seq)
+            if seq is not None:
+                new_seqs.append(seq)
+        return new_seqs
 
 
 def _get_bad_quality_segments(quals, window, threshold, trim_left=True,
@@ -212,45 +268,47 @@ def _get_bad_quality_segments(quals, window, threshold, trim_left=True,
     return segments
 
 
-class TrimByQuality(object):
+class TrimByQuality(_BaseTrim):
     'It trims the low quality regions of the SeqRecords.'
 
-    def __init__(self, window, threshold, trim_left=True, trim_right=True):
+    def __init__(self, window, threshold, trim_left=True, trim_right=True,
+                 failed_drags_pair=True):
         'The initiator'
         self.window = int(window)
         self.threshold = threshold
         self.trim_left = trim_left
         self.trim_right = trim_right
+        super(TrimByQuality, self).__init__(failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, seqs):
+    def _do_trim(self, seq):
         'It trims the masked segments of the seqrecords.'
         window = self.window
         threshold = self.threshold
         trim_left = self.trim_left
         trim_right = self.trim_right
-        trimmed_seqs = []
-        for seq in seqs:
-            try:
-                quals = list(get_qualities(seq))
-            except KeyError:
-                msg = 'Some of the input sequences do not have qualities: {}'
-                msg = msg.format(get_name(seq))
-            segments = _get_bad_quality_segments(quals, window, threshold,
-                                                trim_left, trim_right)
-            if segments is not None:
-                _add_trim_segments(segments, seq, kind=QUALITY)
-            trimmed_seqs.append(seq)
-        return trimmed_seqs
+        try:
+            quals = list(get_qualities(seq))
+        except KeyError:
+            msg = 'Some of the input sequences do not have qualities: {}'
+            msg = msg.format(get_name(seq))
+        segments = _get_bad_quality_segments(quals, window, threshold,
+                                            trim_left, trim_right)
+        if segments is not None:
+            _add_trim_segments(segments, seq, kind=QUALITY)
+
+        return seq
 
 
-class TrimWithBlastShort(object):
+class TrimWithBlastShort(_BaseTrim):
     'It trims adaptors with the blast short algorithm'
-    def __init__(self, oligos):
+    def __init__(self, oligos, failed_drags_pair=True):
         'The initiator'
         self.oligos = oligos
+        super(TrimWithBlastShort, self).__init__(
+                                           failed_drags_pair=failed_drags_pair)
 
-    def __call__(self, seqs):
-        'It trims the masked segments of the SeqWrappers.'
+    def _setup_checks(self, trim_packet):
+        seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
         db_fhand = write_seqs(seqs, file_format='fasta')
         db_fhand.flush()
         params = {'task': 'blastn-short', 'expect': '0.0001'}
@@ -258,12 +316,18 @@ class TrimWithBlastShort(object):
                     'min_score': 87},
                    {'kind': 'min_length', 'min_num_residues': 13,
                     'length_in_query': False}]
-        matcher = BlasterForFewSubjects(db_fhand.name, self.oligos,
-                                        program='blastn', filters=filters,
-                                        params=params,
-                                        elongate_for_global=True)
-        for seq in seqs:
-            segments = matcher.get_matched_segments_for_read(get_name(seq))
-            if segments is not None:
-                _add_trim_segments(segments[0], seq, kind=VECTOR)
-        return seqs
+        self._matcher = BlasterForFewSubjects(db_fhand.name, self.oligos,
+                                             program='blastn', filters=filters,
+                                             params=params,
+                                             elongate_for_global=True)
+
+    def _do_trim(self, seq):
+        'It trims the masked segments of the SeqWrappers.'
+        segments = self._matcher.get_matched_segments_for_read(get_name(seq))
+        if segments is not None:
+            _add_trim_segments(segments[0], seq, kind=VECTOR)
+        return seq
+
+
+# can not put in seqio due to cross imports
+

@@ -52,5 +52,7 @@ THREE_PRIME = "3'"
 SEQS_PASSED = 'seqs_passed'
 SEQS_FILTERED_OUT = 'seqs_filtered_out'
 
+ORPHAN_SEQS = 'orphan_seqs'
+
 SEQITEM = 'seqitem'
 SEQRECORD = 'seqrecord'

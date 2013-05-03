@@ -18,7 +18,7 @@ from copy import deepcopy
 from collections import namedtuple
 
 from crumbs.utils.optional_modules import SeqRecord
-from crumbs.utils.file_formats import _remove_multiline
+from crumbs.utils.file_formats import remove_multiline
 from crumbs.utils.tags import SEQITEM, SEQRECORD
 
 # pylint: disable=C0111
@@ -226,7 +226,7 @@ def _copy_seqitem(seqwrapper, seq=None, name=None):
         elif 'multiline' in fmt and 'fastq' in fmt:
             qline = ''.join([qline.strip() for qline in _get_seqitem_qual_lines(seqwrapper)])
             lines = [lines[0], seq + '\n', '+\n', qline + '\n']
-            fmt = _remove_multiline(fmt)
+            fmt = remove_multiline(fmt)
             if len(lines[1]) != len(lines[3]):
                 msg = 'Sequence and quality line length do not match'
                 raise ValueError(msg)
@@ -296,7 +296,7 @@ def slice_seq(seq, start=None, stop=None):
     elif seq_class == SEQRECORD:
         seq_obj = seq.object[start:stop]
     return SeqWrapper(seq.kind, object=seq_obj,
-                      file_format=_remove_multiline(seq.file_format))
+                      file_format=remove_multiline(seq.file_format))
 
 
 def assing_kind_to_seqs(kind, seqs, file_format):

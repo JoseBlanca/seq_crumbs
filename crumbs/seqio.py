@@ -32,14 +32,14 @@ from crumbs.exceptions import (MalformedFile, error_quality_disagree,
 from crumbs.iterutils import group_in_packets
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
 from crumbs.utils.file_formats import (guess_format, peek_chunk_from_file,
-                                       _remove_multiline)
+                                       remove_multiline)
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
-                               SEQITEM, SEQRECORD)
+                               SEQITEM, SEQRECORD, ORPHAN_SEQS)
 from crumbs.settings import get_setting
 from crumbs.seq import SeqItem, get_str_seq, assing_kind_to_seqs
 
-
 # pylint: disable=C0111
+
 
 def _clean_seqrecord_stream(seqs):
     'It removes the empty seqs and fixes the descriptions.'
@@ -52,7 +52,7 @@ def _clean_seqrecord_stream(seqs):
 
 def _write_seqrecords(seqs, fhand=None, file_format='fastq'):
     'It writes a stream of sequences to a file'
-    file_format = _remove_multiline(file_format)
+    file_format = remove_multiline(file_format)
 
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
@@ -80,7 +80,7 @@ def _write_seqrecord_packets(fhand, seq_packets, file_format='fastq',
 
 def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
     'It writes to file a stream of seq lists'
-    file_format = _remove_multiline(file_format)
+    file_format = remove_multiline(file_format)
     try:
         write_seqs(chain.from_iterable(seq_packets), fhand,
                    file_format=file_format)
@@ -93,7 +93,7 @@ def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
 def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                          file_format='fastq', workers=None):
     'It writes the filter stream into passed and filtered out sequence files'
-    file_format = _remove_multiline(file_format)
+    file_format = remove_multiline(file_format)
 
     if filtered_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in filter_packets)
@@ -112,6 +112,34 @@ def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                        file_format=file_format)
             write_seqs(flatten_pairs(packet[SEQS_FILTERED_OUT]),
                        fhand=filtered_fhand, file_format=file_format)
+        except BaseException:
+            if workers is not None:
+                workers.terminate()
+            raise
+
+
+def write_trim_packets(passed_fhand, orphan_fhand, trim_packets,
+                       file_format='fastq', workers=None, mask=False):
+    'It writes the filter stream into passed and filtered out sequence files'
+    file_format = remove_multiline(file_format)
+
+    if orphan_fhand is None:
+        seq_packets = (p[SEQS_PASSED] for p in trim_packets)
+        seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
+        try:
+            return write_seqs(seqs, passed_fhand, file_format=file_format)
+        except BaseException:
+            if workers is not None:
+                workers.terminate()
+            raise
+
+    flatten_pairs = lambda pairs: (seq for pair in pairs for seq in pair)
+    for packet in trim_packets:
+        try:
+            write_seqs(flatten_pairs(packet[SEQS_PASSED]), fhand=passed_fhand,
+                       file_format=file_format)
+            write_seqs(packet[ORPHAN_SEQS], fhand=orphan_fhand,
+                       file_format=file_format)
         except BaseException:
             if workers is not None:
                 workers.terminate()
@@ -157,7 +185,7 @@ def _read_seqrecords(fhands, file_format=GUESS_FORMAT):
         else:
             fmt = file_format
 
-        fmt = _remove_multiline(fmt)
+        fmt = remove_multiline(fmt)
 
         if fmt in ('fasta', 'qual') or 'fastq' in fmt:
             title = title2ids
@@ -182,7 +210,7 @@ def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
     if out_format not in get_setting('SUPPORTED_OUTPUT_FORMATS'):
         raise IncompatibleFormatError("This output format is not supported")
 
-    in_formats = [_remove_multiline(guess_format(fhand)) for fhand in in_fhands]
+    in_formats = [remove_multiline(guess_format(fhand)) for fhand in in_fhands]
 
     if len(in_fhands) == 1 and in_formats[0] == out_format:
         if copy_if_same_format:
@@ -319,7 +347,7 @@ def _read_seqitems(fhands, file_format):
 def _write_seqitems(items, fhand, file_format):
     'It writes one seq item (tuple of name and string)'
     for seq in items:
-        seqitems_fmt = _remove_multiline(seq.file_format)
+        seqitems_fmt = remove_multiline(seq.file_format)
         if file_format and 'fastq' in seqitems_fmt and 'fasta' in file_format:
             seq_lines = seq.object.lines
             try:
@@ -347,7 +375,7 @@ def write_seqs(seqs, fhand=None, file_format=None):
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
 
-    file_format = _remove_multiline(file_format)
+    file_format = remove_multiline(file_format)
     seqs, seqs2 = tee(seqs)
     try:
         seq = seqs2.next()
