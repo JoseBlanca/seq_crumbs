@@ -75,10 +75,8 @@ def run():
     trim_quality = TrimByQuality(window=args['window'],
                                  threshold=args['threshold'],
                                  trim_left=args['left'],
-                                 trim_right=args['right'],
-                                 failed_drags_pair=args['fail_drags_pair'])
-    trim_or_mask = TrimOrMask(mask=args['mask'],
-                              failed_drags_pair=args['fail_drags_pair'])
+                                 trim_right=args['right'])
+    trim_or_mask = TrimOrMask(mask=args['mask'])
 
     trim_packets, workers = process_seq_packets(trim_packets,
                                                [trim_quality, trim_or_mask],

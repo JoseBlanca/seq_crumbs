@@ -39,9 +39,8 @@ def trim_by_case():
     trim_packets = seq_to_trim_packets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
 
-    trim_lowercased_seqs = TrimLowercasedLetters(
-                                     failed_drags_pair=args['fail_drags_pair'])
-    trim_or_mask = TrimOrMask(failed_drags_pair=args['fail_drags_pair'])
+    trim_lowercased_seqs = TrimLowercasedLetters()
+    trim_or_mask = TrimOrMask()
 
     trim_packets, workers = process_seq_packets(trim_packets,
                                                      [trim_lowercased_seqs,

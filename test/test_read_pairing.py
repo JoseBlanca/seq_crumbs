@@ -25,14 +25,13 @@ from Bio.Seq import Seq
 from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
                           _index_seq_file, match_pairs_unordered,
                           _parse_pair_direction_and_name_from_title,
-                          _parse_pair_direction_and_name, group_seqs_in_pairs,
-                          group_seqspackets)
+                          _parse_pair_direction_and_name, group_seqs_in_pairs)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.tags import FWD, SEQRECORD, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seq import get_str_seq
-from crumbs.seqio import read_seqs, assing_kind_to_seqs, read_seq_packets
+from crumbs.seqio import read_seqs, assing_kind_to_seqs
 from crumbs.exceptions import (InterleaveError, PairDirectionError,
                                MalformedFile)
 from crumbs.seqio import write_seqs

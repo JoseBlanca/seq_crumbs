@@ -47,41 +47,19 @@ def seq_to_trim_packets(seq_packets, group_paired_reads=False):
 
 class _BaseTrim(object):
     'Base Trim class'
-    def __init__(self, failed_drags_pair=True):
-        self.failed_drags_pair = failed_drags_pair
-
-    def _trim_orphans(self, seqs):
-        return seqs
-
     def __call__(self, trim_packet):
         'It trims the seqs'
-        self._setup_checks(trim_packet)
+        self._pre_trim(trim_packet)
         trimmed_seqs = []
-        orphan_seqs = trim_packet[ORPHAN_SEQS]
         for paired_seqs in trim_packet[SEQS_PASSED]:
-            trimmed_paired_seqs = []
-            for seq in paired_seqs:
-                trimmed_seq = self._do_trim(seq)
-                trimmed_paired_seqs.append(trimmed_seq)
-            # all sequences are trimed, no lost
-            if None not in trimmed_paired_seqs:
-                trimmed_seqs.append(trimmed_paired_seqs)
-            # all secuences are lost because of trimming
-            elif (len(trimmed_paired_seqs) == 1 or
-                  trimmed_paired_seqs == (None, None)):
-                continue
-            # one of the pairs is lost in trimming
-            else:
-                if not self.failed_drags_pair:
-                    orphans = [s for s in trimmed_paired_seqs if s is not None]
-                    orphan_seqs.extend(orphans)
-        orphan_seqs = self._trim_orphans(orphan_seqs)
-        return {SEQS_PASSED: trimmed_seqs, ORPHAN_SEQS: orphan_seqs}
+            trimmed_seqs.append([self._do_trim(s) for s in paired_seqs])
+        return {SEQS_PASSED: trimmed_seqs,
+                ORPHAN_SEQS: trim_packet[ORPHAN_SEQS]}
 
     def _do_trim(self, seq):
         raise NotImplementedError()
 
-    def _setup_checks(self, trim_packet):
+    def _pre_trim(self, trim_packet):
         pass
 
 
@@ -101,9 +79,11 @@ class TrimLowercasedLetters(_BaseTrim):
                 segments.append((segment[1] + 1, len_seq - 1))
 
             _add_trim_segments(segments, seq, kind=OTHER)
-            return seq
+
         else:
-            return None
+            segments = [(0, len(seq))]
+            _add_trim_segments(segments, seq, kind=OTHER)
+        return seq
 
 
 def _add_trim_segments(segments, sequence, kind):
@@ -123,7 +103,7 @@ def _add_trim_segments(segments, sequence, kind):
 
 class TrimEdges(_BaseTrim):
     'It adds a trimming recommendation a fixed number of bases from the seqs.'
-    def __init__(self, left=0, right=0, failed_drags_pair=True):
+    def __init__(self, left=0, right=0):
         '''The initiator.
 
         left - number of bases to trim from the left side
@@ -132,8 +112,7 @@ class TrimEdges(_BaseTrim):
         '''
         self.left = left
         self.right = right
-        self.failed_drags_pair = failed_drags_pair
-        super(TrimEdges, self).__init__(failed_drags_pair=failed_drags_pair)
+        super(TrimEdges, self).__init__()
 
     def _do_trim(self, seq):
         'It trims the edges of the given seqs.'
@@ -169,14 +148,31 @@ def _mask_sequence(seq, segments):
     return copy_seq(seq, seq=new_seq)
 
 
-class TrimOrMask(_BaseTrim):
+class TrimOrMask(object):
     'It trims and masks the Seq following the trimming recommendations.'
-
-    def __init__(self, mask=False, failed_drags_pair=True):
+    def __init__(self, mask=False):
         '''The initiator.'''
         self.mask = mask
-        self.failed_drags_pair = failed_drags_pair
-        super(TrimOrMask, self).__init__(failed_drags_pair=failed_drags_pair)
+
+    def __call__(self, trim_packet):
+        'It trims the seqs'
+        trimmed_seqs = []
+        orphan_seqs = trim_packet[ORPHAN_SEQS]
+        for paired_seqs in trim_packet[SEQS_PASSED]:
+            trimmed_paired_seqs = [self._do_trim(s) for s in paired_seqs]
+            # all sequences are trimed, no lost
+            if None not in trimmed_paired_seqs:
+                trimmed_seqs.append(trimmed_paired_seqs)
+            # all secuences are lost because of trimming
+            elif (len(trimmed_paired_seqs) == 1 or
+                  trimmed_paired_seqs == (None, None)):
+                continue
+            # one of the pairs is lost in trimming
+            else:
+                orphans = [s for s in trimmed_paired_seqs if s is not None]
+                orphan_seqs.extend(orphans)
+        orphan_seqs = self._trim_orphans(orphan_seqs)
+        return {SEQS_PASSED: trimmed_seqs, ORPHAN_SEQS: orphan_seqs}
 
     def _do_trim(self, seq):
         'It trims the edges of the given seqs.'
@@ -271,14 +267,13 @@ def _get_bad_quality_segments(quals, window, threshold, trim_left=True,
 class TrimByQuality(_BaseTrim):
     'It trims the low quality regions of the SeqRecords.'
 
-    def __init__(self, window, threshold, trim_left=True, trim_right=True,
-                 failed_drags_pair=True):
+    def __init__(self, window, threshold, trim_left=True, trim_right=True):
         'The initiator'
         self.window = int(window)
         self.threshold = threshold
         self.trim_left = trim_left
         self.trim_right = trim_right
-        super(TrimByQuality, self).__init__(failed_drags_pair=failed_drags_pair)
+        super(TrimByQuality, self).__init__()
 
     def _do_trim(self, seq):
         'It trims the masked segments of the seqrecords.'
@@ -301,13 +296,12 @@ class TrimByQuality(_BaseTrim):
 
 class TrimWithBlastShort(_BaseTrim):
     'It trims adaptors with the blast short algorithm'
-    def __init__(self, oligos, failed_drags_pair=True):
+    def __init__(self, oligos):
         'The initiator'
         self.oligos = oligos
-        super(TrimWithBlastShort, self).__init__(
-                                           failed_drags_pair=failed_drags_pair)
+        super(TrimWithBlastShort, self).__init__()
 
-    def _setup_checks(self, trim_packet):
+    def _pre_trim(self, trim_packet):
         seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
         db_fhand = write_seqs(seqs, file_format='fasta')
         db_fhand.flush()

@@ -159,9 +159,9 @@ class SeqHeadTest(unittest.TestCase):
     def test_seq_head(self):
         'It tests the seq head'
         head_bin = os.path.join(BIN_DIR, 'seq_head')
-        #assert check_output([head_bin, '-h']).startswith('usage')
+        # assert check_output([head_bin, '-h']).startswith('usage')
 
-        #get one seq
+        # get one seq
         fasta_fhand = NamedTemporaryFile()
         fasta_fhand.write('>seq\nACTA\n>seq2\nACTA\n>seq3\nACTA\n')
         fasta_fhand.flush()
@@ -182,15 +182,15 @@ class SampleSeqTest(unittest.TestCase):
         fasta_fhand.write('>seq\nACTA\n>seq2\nACTA\n>seq3\nACTA\n')
         fasta_fhand.flush()
 
-        #random sample
+        # random sample
         result = check_output([sample_seq, '-n', '1', fasta_fhand.name])
         assert count_seqs(read_seqs([StringIO(result)]))['num_seqs'] == 1
 
-        #random sample
+        # random sample
         result = check_output([sample_seq, '-n', '2', fasta_fhand.name])
         assert count_seqs(read_seqs([StringIO(result)]))['num_seqs'] == 2
 
-        #random sample with stdin
+        # random sample with stdin
         result = check_output([sample_seq, '-n', '2'],
                               stdin=open(fasta_fhand.name))
         assert count_seqs(read_seqs([StringIO(result)]))['num_seqs'] == 2

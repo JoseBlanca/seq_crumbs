@@ -62,7 +62,6 @@ class TrimTest(unittest.TestCase):
         seqs.append([SeqWrapper(SEQRECORD, SeqRecord(Seq('AC')), None)])
 
         trim_packet = {SEQS_PASSED: seqs, ORPHAN_SEQS: []}
-
         trim_lowercased_seqs = TrimLowercasedLetters()
         trim = TrimOrMask()
         # pylint: disable=W0141
@@ -97,13 +96,13 @@ class TrimTest(unittest.TestCase):
         trim_packet = trim(trim_lowercased_seqs(trim_packet))
         res = [get_str_seq(s) for l in trim_packet[SEQS_PASSED] for s in l]
         orphan_res = [get_str_seq(s) for s in trim_packet[ORPHAN_SEQS]]
-        assert orphan_res == []
+        assert orphan_res == ['CTTTC']
         assert ['CTTTC', 'CTTTC'] == res
 
         # no drag
         trim_packet = {SEQS_PASSED: seqs, ORPHAN_SEQS: []}
-        trim_lowercased_seqs = TrimLowercasedLetters(failed_drags_pair=False)
-        trim = TrimOrMask(failed_drags_pair=False)
+        trim_lowercased_seqs = TrimLowercasedLetters()
+        trim = TrimOrMask()
         # pylint: disable=W0141
         trim_packet = trim(trim_lowercased_seqs(trim_packet))
         res = [get_str_seq(s) for l in trim_packet[SEQS_PASSED] for s in l]
@@ -140,16 +139,12 @@ class TrimByCaseBinTest(unittest.TestCase):
         result = check_output([trim_bin, fastq_fhand.name, '--paired_reads',
                                '--orphan_file', orphan_fhand.name])
         assert ">s.f\nACT\n>s.r\nACT" in  result
-        assert  open(orphan_fhand.name).read() == ''
+        assert  open(orphan_fhand.name).read() == '>s1.f\nACT\n'
 
-        # fail drags false
+        # no orphan file
         fastq_fhand = _make_fhand(content)
-        orphan_fhand = NamedTemporaryFile()
-        result = check_output([trim_bin, fastq_fhand.name, '--paired_reads',
-                               '--orphan_file', orphan_fhand.name,
-                              '--fail_drags_pair', 'f'])
+        result = check_output([trim_bin, fastq_fhand.name, '--paired_reads'])
         assert ">s.f\nACT\n>s.r\nACT" in  result
-        assert  '>s1.f\nACT' in open(orphan_fhand.name).read()
 
 
 class TrimEdgesTest(unittest.TestCase):
@@ -329,10 +324,6 @@ class TrimByQualityTest(unittest.TestCase):
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
         trim_packet2 = trim(trim_quality(trim_packet))
         assert not trim_packet2[SEQS_PASSED]
-        return
-
-        seqs = trim(trim_quality([seq]))
-        assert not seqs
 
         # all OK
         trim_quality = TrimByQuality(window=5, threshold=5)
@@ -341,7 +332,9 @@ class TrimByQualityTest(unittest.TestCase):
         seq2 = trim_packet2[SEQS_PASSED][0][0]
         assert get_qualities(seq2) == quals
 
+        seq = SeqRecord(Seq('ACTGCTGCATAA'))
         quals = [20, 20, 20, 60, 60, 60, 60, 60, 20, 20, 20, 20]
+
         trim_quality = TrimByQuality(window=5, threshold=50)
         seq.letter_annotations['phred_quality'] = quals
         seq = SeqWrapper(SEQRECORD, seq, None)
@@ -354,7 +347,9 @@ class TrimByQualityTest(unittest.TestCase):
                  20, 10, 12, 8, 5, 4, 7, 1]
         seq = SeqRecord(Seq('atatatatagatagatagatagatg'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
+        trim_quality = TrimByQuality(window=5, threshold=25)
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
         assert get_qualities(seq2) == [40, 18, 10, 40, 40]
@@ -363,16 +358,22 @@ class TrimByQualityTest(unittest.TestCase):
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
         seq = SeqRecord(Seq('atatatatatatatatatatatata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
+        trim_quality = TrimByQuality(window=5, threshold=25)
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
+
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == [40, 4, 27, 38, 40]
+        expected = [40, 4, 27, 38, 40]
+        assert get_qualities(seq2) == expected
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
         seq = SeqRecord(Seq('atatatatatatatatatatatata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
+        trim_quality = TrimByQuality(window=5, threshold=25, trim_left=False)
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
         assert get_qualities(seq2) == [40, 40, 13, 11, 40, 9, 40, 4, 27, 38,
@@ -382,7 +383,9 @@ class TrimByQualityTest(unittest.TestCase):
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
         seq = SeqRecord(Seq('atatatatatatatatatatatata'))
         seq.letter_annotations['phred_quality'] = quals
+        seq = SeqWrapper(SEQRECORD, seq, None)
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
+        trim_quality = TrimByQuality(window=5, threshold=25, trim_right=False)
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
         assert get_qualities(seq2) == [40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
@@ -406,8 +409,7 @@ class TrimByQualityTest(unittest.TestCase):
         seq = SeqWrapper(SEQITEM, seq, 'fastq')
         trim_quality = TrimByQuality(window=5, threshold=25, trim_right=True,
                                      trim_left=False)
-        trim_quality = TrimByQuality(window=5, threshold=25, trim_right=False,
-                                     trim_left=False)
+
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
@@ -511,5 +513,5 @@ class TrimBlastShortTest(unittest.TestCase):
         assert '\nCGAGAAGAAGGATCCAAGT' in result
 
 if __name__ == '__main__':
-#     import sys; sys.argv = ['', 'TrimBlastShortTest']
+#     import sys; sys.argv = ['', 'TrimTest']
     unittest.main()

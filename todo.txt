@@ -1,6 +1,12 @@
-
 TODO
 -----
+
+
+Trim
+----
+Lowercase trim dont have to return None: Done!
+Make trimormask the unique that actually trims the secuences: done!
+
 
 Write the manual
 
@@ -10,10 +16,10 @@ orphan. To do that the cleaners should deal with a stream of pair list, like
 the filters and not with a stream of reads.
 What happens when all the quality is trimmed from a seq? Is the seq filtered out? Is the seq None?
 How to do it:
-	2. What happens when a sequence is lost?
-	3. The sequences should be trimmed in pairs.
-		3.1 Trimming functions should work with pair generators
-		3.2 Triming binaries should have an orphan option
+  2. What happens when a sequence is lost?
+  3. The sequences should be trimmed in pairs.
+    3.1 Trimming functions should work with pair generators
+    3.2 Triming binaries should have an orphan option
 
 
 Add fast fastq parsing:
@@ -44,9 +50,9 @@ Add Mira traceinfo.xml to sff_extract.
 Add crumb sort_by_mid. It should divide the reads, mainly 454, into sets according to their forward and reverse MIDs given a list of MIDs.
 The mids can be located with cutadapt.calign.pyx or with difflib.get_close_matches.
 The second algorithm could be something like:
-	- Look for exact mid matches and store the reads with no exact match.
-	- From the exact ones record the position for the mids in forward and reverse.
-	- Given the position look in the reads with no exact match using get_close_matches.
+  - Look for exact mid matches and store the reads with no exact match.
+  - From the exact ones record the position for the mids in forward and reverse.
+  - Given the position look in the reads with no exact match using get_close_matches.
 
 trim_blast_contanimant
 ----------------------

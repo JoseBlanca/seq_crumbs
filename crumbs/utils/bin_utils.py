@@ -327,16 +327,13 @@ def create_trimmer_argparse(**kwargs):
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
     parser.add_argument('-m', '--mask', dest='mask', action='store_true',
                         help='Do not trim, only mask by lowering the case')
-    parser.add_argument('-e', '--orphan_file',
-                        help='Orphan sequences output file',
-                        type=argparse.FileType('wt'))
+
     group = parser.add_argument_group('Pairing')
     group.add_argument('--paired_reads', action='store_true',
                         help='Trim considering interleaved pairs')
-    help_msg = 'If one read fails the pair will be filtered out '
-    help_msg += '(default: %(default)s)'
-    group.add_argument('--fail_drags_pair', type=_to_bool, default='true',
-                        choices=(True, False), help=help_msg)
+    group.add_argument('-e', '--orphan_file',
+                        help='Orphan sequences output file',
+                        type=argparse.FileType('wt'))
     return parser
 
 
@@ -451,17 +448,6 @@ def parse_trimmer_args(parser):
     args['orphan_fhand'] = parsed_args.orphan_file
     paired_reads = parsed_args.paired_reads
     args['paired_reads'] = paired_reads
-    if paired_reads:
-        # in this case fail_drags_pair is required
-        fail_drags_pair = parsed_args.fail_drags_pair
-        if fail_drags_pair is None:
-            msg = 'For pairs fail_drags_pair is required'
-            parser.error(msg)
-            # raise argparse.ArgumentError(parsed_args.fail_drags_pair, msg)
-    else:
-        fail_drags_pair = None
-    args['fail_drags_pair'] = fail_drags_pair
-
     return args, parsed_args
 
 
