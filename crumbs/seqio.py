@@ -14,7 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 
-from itertools import chain, tee
+from itertools import chain, tee, ifilter
 from shutil import copyfileobj
 from tempfile import NamedTemporaryFile
 import cStringIO
@@ -319,7 +319,7 @@ def _line_is_not_empty(line):
 
 def _itemize_fastq(fhand):
     'It returns the fhand divided in chunks, one per seq'
-    blobs = group_in_packets(filter(_line_is_not_empty, fhand), 4)
+    blobs = group_in_packets(ifilter(_line_is_not_empty, fhand), 4)
     return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
 
 
