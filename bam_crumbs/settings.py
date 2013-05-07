@@ -28,6 +28,7 @@ _ADD_PATH_TO_EXT_BIN = True
 _THIRD_PART_JAVA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                                    'third_party', 'java')
 _PICARD_TOOLS_DIR = os.path.join(_THIRD_PART_JAVA_DIR, 'picard-tools')
+_GATK_DIR = os.path.join(_THIRD_PART_JAVA_DIR, 'gatk')
 
 _TEMP_DIR = None
 
