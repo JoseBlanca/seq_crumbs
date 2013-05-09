@@ -144,3 +144,25 @@ def _realign_bam(bam_fpath, reference_fpath, out_bam_fpath, threads=False):
     check_call(cmd, stderr=stderr, stdout=stdout)
     intervals_fhand.close()
 
+
+def calmd_bam(in_bam_fpath, reference_fpath, out_bam_fpath=None):
+
+    if out_bam_fpath is None:
+        out_bam_fpath = in_bam_fpath
+
+    if out_bam_fpath == in_bam_fpath:
+        realigned_fhand = NamedTemporaryFile(suffix='.realigned.bam', delete=False)
+        temp_out_fpath = realigned_fhand.name
+    else:
+        temp_out_fpath = out_bam_fpath
+
+    _calmd_bam(in_bam_fpath, reference_fpath, temp_out_fpath)
+
+
+def _calmd_bam(bam_fpath, reference_fpath, out_bam_fpath):
+    out_fhand = open(out_bam_fpath, 'wb')
+    for line in pysam.calmd(*["-bAr", bam_fpath, reference_fpath]):
+        out_fhand.write(line)
+    # out_fhand.write(pysam.calmd(*["-bAr", bam_fpath, reference_fpath]))
+    out_fhand.flush()
+    out_fhand.close()
