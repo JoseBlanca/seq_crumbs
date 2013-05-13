@@ -1,13 +1,6 @@
 TODO
 -----
 
-
-Trim
-----
-Lowercase trim dont have to return None: Done!
-Make trimormask the unique that actually trims the secuences: done!
-
-
 Write the manual
 
 The cleaners should be able to work with the pairs. For instance, the quality
