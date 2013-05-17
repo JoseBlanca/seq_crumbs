@@ -29,7 +29,7 @@ from crumbs.utils.data import (ambiguous_rna_letters, ambiguous_dna_letters,
                                extended_protein_letters)
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError)
-from crumbs.iterutils import group_in_packets
+from crumbs.iterutils import group_in_packets, group_in_packets_fill_last
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
 from crumbs.utils.file_formats import (guess_format, peek_chunk_from_file,
                                        remove_multiline)
@@ -319,7 +319,8 @@ def _line_is_not_empty(line):
 
 def _itemize_fastq(fhand):
     'It returns the fhand divided in chunks, one per seq'
-    blobs = group_in_packets(ifilter(_line_is_not_empty, fhand), 4)
+    # group_in_packets_fill_last is faster than group_in_packets
+    blobs = group_in_packets_fill_last(ifilter(_line_is_not_empty, fhand), 4)
     return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
 
 
@@ -335,7 +336,12 @@ def _read_seqitems(fhands, file_format):
         if file_format == 'fasta':
             seq_iter = _itemize_fasta(fhand)
         elif 'multiline' not in file_format and 'fastq' in file_format:
-            seq_iter = _itemize_fastq(fhand)
+            try:
+                seq_iter = _itemize_fastq(fhand)
+            except ValueError as error:
+                if error_quality_disagree(error):
+                    raise MalformedFile(str(error))
+                raise
         else:
             msg = 'Format not supported by the itemizers: ' + file_format
             raise NotImplementedError(msg)

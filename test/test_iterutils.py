@@ -16,7 +16,7 @@
 import unittest
 
 from crumbs.iterutils import (sample, sample_2, length, group_in_packets,
-                              rolling_window)
+                              rolling_window, group_in_packets_fill_last)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -61,13 +61,16 @@ class IterutilsTest(unittest.TestCase):
 
     def test_group_in_packets(self):
         'It groups an iterator in packets of items'
-        packets = [packet for packet in  group_in_packets(range(4), 2)]
-        assert packets == [[0, 1], [2, 3]]
+        packets = list(group_in_packets(range(4), 2))
+        assert packets == [(0, 1), (2, 3)]
 
         packets = [packet for packet in  group_in_packets(range(5), 2)]
-        assert packets == [[0, 1], [2, 3], [4]]
+        assert packets == [(0, 1), (2, 3), (4,)]
 
-        packets = [packet for packet in  group_in_packets([], 2)]
+        packets = list(group_in_packets_fill_last(range(5), 2))
+        assert packets == [(0, 1), (2, 3), (4, None)]
+
+        packets = list(group_in_packets([], 2))
         assert packets == []
 
     def test_rolling_window(self):

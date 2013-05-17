@@ -14,9 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import random
-from itertools import izip_longest
-
-from crumbs.exceptions import error_quality_disagree, MalformedFile
+from itertools import izip_longest, islice
 
 
 def sample(iterator, sample_size):
@@ -80,40 +78,22 @@ def length(iterator):
     return count
 
 
-class group_in_packets(object):
-    '''It groups an iterable into packets of equal number of elements
+def group_in_packets_fill_last(iterable, packet_size, fillvalue=None):
+    'ABCDE -> (A, B), (C, D), (E, None)'
+    # It is faster than group_in_packets
+    iterables = [iter(iterable)] * packet_size
+    kwargs = {'fillvalue': fillvalue}
+    return izip_longest(*iterables, **kwargs)
 
-    [1, 2, 3, 4, 5] -> [[1,2], [3, 4] [5]]
-    '''
-    def __init__(self, iterable, packet_size):
-        'It inits the class'
-        self._packet_size = packet_size
-        self._iterable = iter(iterable)
 
-    def __iter__(self):
-        'Part of the iterator interface'
-        return self
-
-    def next(self):
-        'It returns a packet'
-        # We are returning lists and not generators (as before) because
-        # otherwise we would not be able to use multiproces.Pool
-        packet = []
-        count = 0
-        size = self._packet_size
-        try:
-            for item in self._iterable:
-                packet.append(item)
-                count += 1
-                if count >= size:
-                    break
-        except ValueError as error:
-            if error_quality_disagree(error):
-                raise MalformedFile(str(error))
-            raise
-        if not packet:
-            raise StopIteration
-        return packet
+def group_in_packets(iterable, packet_size):
+    'ABCDE -> (A, B), (C, D), (E,)'
+    iterable = iter(iterable)
+    while True:
+        chunk = tuple(islice(iterable, packet_size))
+        if not chunk:
+            break
+        yield chunk
 
 
 def flat_zip_longest(iter1, iter2, fillvalue=None):
