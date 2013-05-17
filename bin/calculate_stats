@@ -18,7 +18,7 @@
 import argparse
 import sys
 
-from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE, SEQRECORD, SEQITEM)
+from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required)
 from crumbs.utils.bin_utils import main, build_version_msg
