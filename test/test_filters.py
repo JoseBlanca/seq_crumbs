@@ -20,6 +20,7 @@
 
 import unittest
 
+from cStringIO import StringIO
 from string import ascii_lowercase
 from random import choice
 from subprocess import check_output, call, CalledProcessError
@@ -33,7 +34,8 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
                             seq_to_filterpackets, FilterByRpkm, FilterByBam,
-                            FilterBowtie2Match, FilterByFeatureTypes)
+                            FilterBowtie2Match, FilterByFeatureTypes,
+    FilterDuplicates)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -562,6 +564,57 @@ class FilterByFeatureTypeTest(unittest.TestCase):
         assert len(seqs[SEQS_PASSED]) == 1
 
 
+class FilterByDuplicity(unittest.TestCase):
+    def test_filter_by_duplicity(self):
+
+        seq1 = SeqRecord(Seq('aaaa'), id='seq1')
+        seq2 = SeqRecord(Seq('aaaa'), id='seq2')
+        seq3 = SeqRecord(Seq('aaab'), id='seq2')
+        seq1 = SeqWrapper(SEQRECORD, seq1, None)
+        seq2 = SeqWrapper(SEQRECORD, seq2, None)
+        seq3 = SeqWrapper(SEQRECORD, seq3, None)
+        seqs = {SEQS_PASSED: [[seq1], [seq2], [seq3]], SEQS_FILTERED_OUT: []}
+
+        filter_ = FilterDuplicates()
+        seqs = filter_(seqs)
+        assert len(seqs[SEQS_FILTERED_OUT]) == 1
+        assert len(seqs[SEQS_PASSED]) == 2
+
+        seq1 = SeqRecord(Seq('aaaa'), id='seq1.f')
+        seq2 = SeqRecord(Seq('aaaa'), id='seq1.r')
+        seq3 = SeqRecord(Seq('aaaa'), id='seq2.f')
+        seq4 = SeqRecord(Seq('aaab'), id='seq2.r')
+        seq5 = SeqRecord(Seq('aaaa'), id='seq3.f')
+        seq6 = SeqRecord(Seq('aaab'), id='seq3.r')
+
+        seq1 = SeqWrapper(SEQRECORD, seq1, None)
+        seq2 = SeqWrapper(SEQRECORD, seq2, None)
+        seq3 = SeqWrapper(SEQRECORD, seq3, None)
+        seq4 = SeqWrapper(SEQRECORD, seq4, None)
+        seq5 = SeqWrapper(SEQRECORD, seq5, None)
+        seq6 = SeqWrapper(SEQRECORD, seq6, None)
+        seqs = {SEQS_PASSED: [[seq1, seq2], [seq3, seq4], [seq5, seq6]],
+                SEQS_FILTERED_OUT: []}
+
+        seqs = filter_(seqs)
+        assert len(seqs[SEQS_FILTERED_OUT]) == 1
+        assert len(seqs[SEQS_PASSED]) == 2
+
+    def test_dup_bin(self):
+        seqs = '>seq1.f\naaa\n>seq1.r\naaa\n>seq2.f\naab\n>seq2.r\naaa\n'
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(seqs)
+        in_fhand.flush()
+
+        filter_bin = os.path.join(BIN_DIR, 'filter_duplicates')
+        assert 'usage' in check_output([filter_bin, '-h'])
+        result = check_output([filter_bin, in_fhand.name])
+        assert'>seq1.f\naaa\n>seq2.f\naab' in result
+
+        assert 'usage' in check_output([filter_bin, '-h'])
+        result = check_output([filter_bin, in_fhand.name, '--paired_reads'])
+        assert seqs in result
+
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterBowtie2Test.test_filter_by_bowtie2']
+    # import sys;sys.argv = ['', 'FilterBowtie2Test.test_filter_by_bowtie2']
     unittest.main()

@@ -70,7 +70,7 @@ class _BaseFilter(object):
         seqs_passed = []
         filtered_out = filterpacket[SEQS_FILTERED_OUT][:]
         for paired_seqs in filterpacket[SEQS_PASSED]:
-            checks = (self._do_check(seq)for seq in paired_seqs)
+            checks = (self._do_check(seq) for seq in paired_seqs)
             if reverse:
                 checks = _reverse_bools(checks)
 
@@ -102,6 +102,33 @@ class FilterByFeatureTypes(_BaseFilter):
         seq = seq.object
         f_in_seq = [f.type for f in seq.features if f.type in self._feat_types]
         return True if f_in_seq else False
+
+
+class FilterDuplicates(object):
+    'It filters out duplicate secuences'
+    def __init__(self, reverse=False):
+        '''The initiator
+
+        feat_types is a list of types of features to use to filter'''
+        self.reverse = reverse
+        self._prev_pairs = set()
+
+    def __call__(self, filter_packet):
+        seqs_passed = []
+        filtered_out = filter_packet[SEQS_FILTERED_OUT][:]
+        for pair in filter_packet[SEQS_PASSED]:
+            str_pair = tuple(get_str_seq(seq) for seq in pair)
+            duplicated = True if str_pair in self._prev_pairs else False
+            self._prev_pairs.add(str_pair)
+
+            filter_pass = duplicated if self.reverse else not(duplicated)
+
+            if filter_pass:
+                seqs_passed.append(pair)
+            else:
+                filtered_out.append(pair)
+
+        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
 
 
 class FilterByRpkm(_BaseFilter):
