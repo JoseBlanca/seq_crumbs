@@ -134,7 +134,7 @@ class SffExtractBinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'Countermeasures' in open(stderr.name).read()
 
-        #warning avoided
+        # warning avoided
         sff_fpath = os.path.join(TEST_DATA_DIR, '10_454_reads.sff')
         cmd = [sff_bin, '--max_percentage', '70.0', sff_fpath]
         stderr = NamedTemporaryFile()
@@ -158,6 +158,23 @@ class SffExtractBinTest(unittest.TestCase):
         except CalledProcessError:
             assert 'A file was not found: no_file' in open(stderr.name).read()
 
+        # create traceinfofile
+        sff_fpath = os.path.join(TEST_DATA_DIR, '10_454_reads.sff')
+        trace_fhand = NamedTemporaryFile()
+        cmd = [sff_bin, sff_fpath, '-x', trace_fhand.name]
+        stderr = NamedTemporaryFile()
+        try:
+            # it fails because of the clipping warning
+            check_output(cmd, stderr=stderr)
+            self.fail('Error expected')
+        except CalledProcessError:
+            pass
+        xml = open(trace_fhand.name).read()
+        xml_part = "<trace_name>E3MFGYR02JWQ7T</trace_name>\n\t\t"
+        xml_part += "<clip_quality_left>5</clip_quality_left>"
+        assert xml_part in xml
+
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SffExtractBinTest.test_extract_sff']
+    # import sys;sys.argv = ['', 'SffExtractBinTest.test_extract_sff']
     unittest.main()
