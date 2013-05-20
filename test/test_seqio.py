@@ -157,15 +157,14 @@ class SimpleIOTest(unittest.TestCase):
         'It tests the fasta itemizer'
         fhand = StringIO('@s1\nACTG\n+\n1234\n@s2 desc\nACTG\n+\n4321\n')
         seqs = list(_itemize_fastq(fhand))
-        assert seqs == [('s1', ['@s1\n', 'ACTG\n', '+\n', '1234\n'], {}),
-                        ('s2', ['@s2 desc\n', 'ACTG\n', '+\n', '4321\n'], {})]
+        assert seqs == [('s1', ('@s1\n', 'ACTG\n', '+\n', '1234\n'), {}),
+                        ('s2', ('@s2 desc\n', 'ACTG\n', '+\n', '4321\n'), {})]
 
         # Empty line
         fhand = StringIO('@s1\nACTG\n+\n1234\n\n@s2 desc\nACTG\n+\n4321\n')
         seqs = list(_itemize_fastq(fhand))
-        assert seqs == [('s1', ['@s1\n', 'ACTG\n', '+\n', '1234\n'], {}),
-                        ('s2', ['@s2 desc\n', 'ACTG\n', '+\n', '4321\n'], {})]
-
+        assert seqs == [('s1', ('@s1\n', 'ACTG\n', '+\n', '1234\n'), {}),
+                        ('s2', ('@s2 desc\n', 'ACTG\n', '+\n', '4321\n'), {})]
 
     def test_seqitems_io(self):
         'It checks the different seq class streams IO'
