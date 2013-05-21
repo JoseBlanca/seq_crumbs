@@ -22,6 +22,9 @@ filter_by_blast
 filter_by_complexity
   It filters the sequences according to its complexity.
 
+filter_by_bowtie2
+  It filters the sequences using bowtie2
+
 trim_by_case
     It trims the sequences according to its case.
 
@@ -48,6 +51,9 @@ seq_head
 
 sample_seqs
     It does a random sampling of the input sequences.
+
+count_seqs
+    It counts sequences in the input files
 
 change_case
     It modifies the letter case of the sequences. The case can be converted to lower or upper case or swapped.
