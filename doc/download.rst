@@ -9,7 +9,7 @@ seq_crumbs 0.1.8
 
 Changelog:
 
-  * trim binaries now handles paired seqs
+  * trim binaries now handle paired seqs
   * added write xml_traceinfo file option to sff_extract
   * count seqs binary added
   * biopython is now optional

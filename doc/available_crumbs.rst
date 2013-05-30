@@ -75,4 +75,6 @@ orientate_transcripts
 
 fastqual_to_fastq
     It converts fasta and qual files to a fastq format file
+
 .. include:: links.txt
+

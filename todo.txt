@@ -1,5 +1,10 @@
 TODO
 -----
+Improve duplicate performance. Maybe looking at in a dict with the first chunk
+of the sequence instead on an full dict. Implement it in a class with a dict 
+like interface.
+
+Why  write_trim_packets duplicates write_filter_packets?
 
 Write the manual
 
