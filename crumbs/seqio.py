@@ -90,60 +90,57 @@ def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
         raise
 
 
+def _write_filter_trim_packets(passed_fhand, diverted_fhand, packets,
+                               file_format='fastq', workers=None,
+                               seqs_diverted=SEQS_FILTERED_OUT):
+    'It writes the filter stream into passed and filtered out sequence files'
+
+    file_format = remove_multiline(file_format)
+
+    if diverted_fhand is None:
+        seq_packets = (p[SEQS_PASSED] for p in packets)
+        seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
+        try:
+            return write_seqs(seqs, passed_fhand, file_format=file_format)
+        except BaseException:
+            if workers is not None:
+                workers.terminate()
+            raise
+
+    flatten_pairs = lambda pairs: (seq for pair in pairs for seq in pair)
+    for packet in packets:
+        try:
+            write_seqs(flatten_pairs(packet[SEQS_PASSED]), fhand=passed_fhand,
+                       file_format=file_format)
+            # if diverted seqs are filtered aout they are a list of list
+            # as not diverted seqs.
+            # if they are orphan, they are a list of seqs
+            if seqs_diverted == SEQS_FILTERED_OUT :
+                seqs = flatten_pairs(packet[seqs_diverted])
+            else:
+                seqs = packet[seqs_diverted]
+            write_seqs(seqs, fhand=diverted_fhand, file_format=file_format)
+
+        except BaseException:
+            if workers is not None:
+                workers.terminate()
+            raise
+
+
 def write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
                          file_format='fastq', workers=None):
     'It writes the filter stream into passed and filtered out sequence files'
-    file_format = remove_multiline(file_format)
-
-    if filtered_fhand is None:
-        seq_packets = (p[SEQS_PASSED] for p in filter_packets)
-        seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
-        try:
-            return write_seqs(seqs, passed_fhand, file_format=file_format)
-        except BaseException:
-            if workers is not None:
-                workers.terminate()
-            raise
-
-    flatten_pairs = lambda pairs: (seq for pair in pairs for seq in pair)
-    for packet in filter_packets:
-        try:
-            write_seqs(flatten_pairs(packet[SEQS_PASSED]), fhand=passed_fhand,
-                       file_format=file_format)
-            write_seqs(flatten_pairs(packet[SEQS_FILTERED_OUT]),
-                       fhand=filtered_fhand, file_format=file_format)
-        except BaseException:
-            if workers is not None:
-                workers.terminate()
-            raise
+    _write_filter_trim_packets(passed_fhand, filtered_fhand, filter_packets,
+                               file_format=file_format, workers=workers,
+                               seqs_diverted=SEQS_FILTERED_OUT)
 
 
 def write_trim_packets(passed_fhand, orphan_fhand, trim_packets,
-                       file_format='fastq', workers=None, mask=False):
+                       file_format='fastq', workers=None):
     'It writes the filter stream into passed and filtered out sequence files'
-    file_format = remove_multiline(file_format)
-
-    if orphan_fhand is None:
-        seq_packets = (p[SEQS_PASSED] for p in trim_packets)
-        seqs = (s for pair in chain.from_iterable(seq_packets) for s in pair)
-        try:
-            return write_seqs(seqs, passed_fhand, file_format=file_format)
-        except BaseException:
-            if workers is not None:
-                workers.terminate()
-            raise
-
-    flatten_pairs = lambda pairs: (seq for pair in pairs for seq in pair)
-    for packet in trim_packets:
-        try:
-            write_seqs(flatten_pairs(packet[SEQS_PASSED]), fhand=passed_fhand,
-                       file_format=file_format)
-            write_seqs(packet[ORPHAN_SEQS], fhand=orphan_fhand,
-                       file_format=file_format)
-        except BaseException:
-            if workers is not None:
-                workers.terminate()
-            raise
+    _write_filter_trim_packets(passed_fhand, orphan_fhand, trim_packets,
+                               file_format=file_format, workers=workers,
+                               seqs_diverted=ORPHAN_SEQS)
 
 
 def title2ids(title):

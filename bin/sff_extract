@@ -21,7 +21,7 @@ import sys
 import os.path
 import argparse
 
-from crumbs.sff_extract import SffExtractor
+from crumbs.sff_extract import SffExtractor, write_xml_traceinfo
 from crumbs.seqio import write_seqs
 from crumbs.exceptions import FileNotFoundError
 from crumbs.utils.bin_utils import main, build_version_msg
@@ -38,8 +38,13 @@ def _setup_argparse():
 
     parser.add_argument('-o', '--output', dest='output',
                         help='output file (default STDOUT)', default='stdout')
-    parser.add_argument('-c', '--clip', action="store_true", dest='clip',
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-c', '--clip', action="store_true", dest='clip',
                         help='Do recommended trims')
+    group.add_argument('-x', '--mira_xml_info', dest='xml_info',
+                       help='Path to the file to write the xml traceinfo',
+                       type=argparse.FileType('wt'))
+
     msg = 'Clip at least this number of nucleotides (default: %(default)s)'
     parser.add_argument('--min_left_clip', dest='min_left_clip', type=int,
                         help=msg, default=0)
@@ -49,6 +54,7 @@ def _setup_argparse():
                      help=msg, default=50.0)
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
+
     return parser
 
 
@@ -74,6 +80,8 @@ def _parse_args(parser):
     args['clip'] = parsed_args.clip
     args['min_left_clip'] = parsed_args.min_left_clip
     args['max_percent'] = parsed_args.max_percent / 100
+    args['xml_info_fhand'] = parsed_args.xml_info
+
     return args
 
 
@@ -90,6 +98,8 @@ def extract_sff():
                              max_nucl_freq_threshold=args['max_percent'])
     seqrecords = extractor.seqs
     seqs = assing_kind_to_seqs(SEQRECORD, seqrecords, None)
+    if args['xml_info_fhand']:
+        seqs = write_xml_traceinfo(seqs, fhand=args['xml_info_fhand'])
     write_seqs(seqs, args['out_fhand'], file_format='fastq')
     flush_fhand(args['out_fhand'])
 
@@ -117,5 +127,5 @@ def extract_sff():
     return an_error_apeared
 
 if __name__ == '__main__':
-    #sys.argv.append('-h')
+    # sys.argv.append('-h')
     sys.exit(main(extract_sff))

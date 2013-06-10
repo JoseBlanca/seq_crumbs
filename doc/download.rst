@@ -4,6 +4,23 @@ Download
 
 The recommended method to get seq_crumbs is to download one of the releases, but if you want to access to the latest code you can do it at github_.
 
+seq_crumbs 0.1.8
+----------------
+
+Changelog:
+
+  * trim binaries now handle paired seqs
+  * added write xml_traceinfo file option to sff_extract
+  * count seqs binary added
+  * biopython is now optional
+  * several bugfixes
+
+
+Released on 21-5-13
+
+  * :download:`Source distribution <downloads/seq_crumbs-0.1.8.tar.gz>`.
+  * :download:`x64-linux Binary distribution <downloads/seq_crumbs-0.1.8-x64-linux.tar.gz>`
+
 seq_crumbs 0.1.7
 ----------------
 

@@ -22,6 +22,9 @@ filter_by_blast
 filter_by_complexity
     Filters sequences according to their complexity.
 
+filter_by_bowtie2
+  It filters the sequences using bowtie2
+
 trim_by_case
     Trims sequences according to case.
 
@@ -49,6 +52,9 @@ seq_head
 sample_seqs
     Outputs a random sampling of the input sequences.
 
+count_seqs
+    It counts sequences in the input files
+
 change_case
     Modifies the case of sequences. Case can be converted to lower or upper, or swapped.
 
@@ -69,4 +75,6 @@ orientate_transcripts
 
 fastqual_to_fastq
     Converts fasta and qual files to a fastq format file.
+
 .. include:: links.txt
+

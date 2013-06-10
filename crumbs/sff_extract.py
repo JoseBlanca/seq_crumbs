@@ -128,6 +128,52 @@ class SffExtractor(object):
         return advices
 
 
+def _do_seq_xml(seq):
+    seq = seq.object
+    annots = seq.annotations
+    read_len = len(seq)
+    read_name = seq.id
+    if 'E3MFGYR02FTGED' == read_name:
+        print annots, read_len
+    qual_left = annots.get('clip_qual_left', 0)
+    qual_right = annots.get('clip_qual_right', 0)
+    vector_left = annots.get('clip_adapter_left', 0)
+    vector_right = annots.get('clip_adapter_right', 0)
+
+    if vector_right >= read_len:
+        vector_right = 0
+    if qual_right >= read_len:
+        qual_right = 0
+
+    qual_left = 0 if qual_left < 0 else qual_left
+    qual_right = 0 if qual_right < 0 else qual_right
+    vector_left = 0 if vector_left < 0 else vector_left
+    vector_right = 0 if vector_right < 0 else vector_right
+
+    xml = '\t<trace>\n'
+    xml += '\t\t<trace_name>{}</trace_name>\n'.format(read_name)
+    if qual_left:
+        xml += '\t\t<clip_quality_left>{}</clip_quality_left>\n'.format(int(qual_left) + 1)
+    if qual_right:
+        xml += '\t\t<clip_quality_rigth>{}</clip_quality_rigth>\n'.format(qual_right)
+    if vector_left:
+        xml += '\t\t<clip_vector_left>{}</clip_vector_left>\n'.format(int(vector_left) + 1)
+    if vector_right:
+        xml += '\t\t<clip_vector_rigth>{}</clip_vector_rigth>\n'.format(vector_right)
+    xml += '\t</trace>\n'
+
+    return xml
+
+
+def write_xml_traceinfo(seqs, fhand):
+    fhand.write('<?xml version="1.0"?>\n<trace_volume>\n')
+    for seq in seqs:
+        fhand.write(_do_seq_xml(seq))
+        yield seq
+    fhand.write('</trace_volume>\n')
+    fhand.flush()
+
+
 def _get_nucl_with_max_freq(nucls, freq_nucls):
     'It returns the nucleotide with the maximum frequency'
     max_ = None
