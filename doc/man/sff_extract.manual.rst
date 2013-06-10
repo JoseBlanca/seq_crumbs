@@ -21,20 +21,20 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-sff_extract extracts the reads from a list of SFF files and writes them in a sanger fastq file.
+sff_extract extracts reads from a list of SFF files and writes them in a Sanger fastq file.
 
 
 OPTIONS
 =======
 
 **-o**, **-output** *output_sequence_file*
-		The path to the resulting output file, by default STDOUT.
+        The path to the resulting output file, by default STDOUT.
 		
 **-c**, **--clip**
-        Trim the reads by the SFF suggested quality and adaptor limits instead of masking them
+        Trim the reads by the SFF suggested quality and adaptor limits instead of masking them.
         
 **--min_left_clip** *number_of_base_pairs*
-        Mask (or trim) at least the given number of nucleotides
+        Mask (or trim) at least the given number of nucleotides.
         
 **--max_percentage** *percentage*
-        Maximum allowable percentage of reads starting with the same word before tagging the SFF file as "strange"
+        Maximum allowable percentage of reads starting with the same word before tagging the SFF file as "strange".

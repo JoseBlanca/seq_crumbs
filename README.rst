@@ -1,8 +1,11 @@
 
-Seq Crumbs aims to be a collection of small sequence processing utilities.
+Seq Crumbs is a collection of small sequence processing utilities.
 
-Seq Crumbs is modeled after the Unix command line text processing utilities so every utility tries to perform a specific task and most of them take a sequence file as input and create a new processed sequence file as output.
-This design encorages the assembly of the Seq Crumbs utilities with Unix pipes.
+Seq Crumbs is modeled after the Unix command line text processing
+utilities, so every utility tries to perform a specific task. Most of them
+take a sequence file as input and create a new processed sequence file as
+output.  This design encourages chaining the operation of multiple Seq
+Crumbs utilities using Unix pipes.
 
 You can find more information about seq_crumbs in the seq_crumbs_ web site.
 
@@ -11,113 +14,114 @@ Available Crumbs
 ----------------
 
 sff_extract
-  It extracts the reads from a SFF_ file used by 454 and Ion Torrent.
+    Extracts the reads from a SFF_ file used by 454 and Ion Torrent.
 
 split_matepairs
-    It splits the mate-pairs separated by an oligo sequence.
+    Splits the mate-pairs separated by an oligo sequence.
 
 filter_by_quality
-    It filters the sequences according to its mean quality.
+    Filters the sequences according to its mean quality.
 
 filter_by_length
-    It filters sequences according to a length threshold.
+    Filters sequences according to a length threshold.
 
 filter_by_name
-    It filters the sequences with a list of names given in a file.
+    Filters the sequences with a list of names given in a file.
 
 filter_by_blast
-    It filters the sequences using blast
+    Filters the sequences using BLAST.
 
 filter_by_bowtie2
-    It filters the sequences using bowtie2
+    Filters the sequences using bowtie2.
 
 filter_by_complexity
-	It filters the sequences according to its complexity.
+    Filters the sequences according to their complexity.
 
 trim_by_case
-    It trims the sequences according to its case.
+    Trims the sequences according to case.
 
 trim_edges
-    It removes a fixed number of residues from the sequence edges.
+    Removes a fixed number of residues from the sequence edges.
 
 trim_quality
-  It removes with a sliding windows regions of low quality in the edges
+    Removes, using a sliding window, regions of low quality in the edges.
 
 trim_blast_short
-  It removes oligonucleotides by using the blast-short algoritm
+    Removes oligonucleotides by using the blast-short algorithm.
 
 convert_format
-    It changes between the different supported sequence formats.
+    Converts between different supported sequence formats.
 
 guess_seq_format
-    It guesses the format of a file, including Sanger and Illumina fastq formats.
+    Guesses the format of a file, including Sanger and Illumina fastq formats.
 
 cat_seqs
-    It concatenates one or several input sequence files, that can be in different formats, into one output.
+    Concatenates one or more input sequence files, possibly in different formats, into one output.
 
 seq_head
-    It outputs only the first sequences of the given input.
+    Outputs only the first sequences of the given input.
 
 sample_seqs
-    It does a random sampling of the input sequences.
+    Outputs a random sampling of the input sequences.
 
 change_case
-    It modifies the letter case of the sequences. The case can be converted to lower or upper case or swapped.
+    Modifies the letter case of the sequences. The case can be converted to lower or upper case or swapped.
 
 pair_matcher
-    It filters out orphaned read pairs.
+    Filters out orphaned read pairs.
 
 interleave_pairs
-    It interleaves two ordered paired read files.
+    Interleaves two ordered paired read files.
 
 deinterleave_pairs
-    It splits a ordered file of paired reads into two files, one for every end.
+    Splits an ordered file of paired reads into two files, one for each end.
 
 calculate_stats
-    It generates basic statistics for the given sequence files
+    Generates basic statistics for the given sequence files.
 
 count_seqs
-	It counts the number of sequences and the total length for the given files
+    Counts the number of sequences and the total sequence length for the given files.
 
 orientate_transcripts
-    It reverse complements transcripts according to polyA, ORF or blast hits
+    Reverse complements transcripts according to polyA, ORF or blast hits.
 
 General Usage
 ---------------
 
-All seq crumbs try to share a consistent interface.
-Most Seq Crumbs take can their input from the standard input to be able to work with Unix Pipes.
-Alternatively several input sequence files can be provided as a list of arguments.
-By default they throw their output to the standard output, although this behaviour can be changed with the *-o* parameter (or *--outfile*).
+All seq crumbs try to share a consistent interface.  By default most Seq
+Crumbs read from standard input and write to standard output, allowing them
+to to be easily combined using Unix pipes.  Alternatively, several input
+sequence files can be provided as a list of arguments.  Output can also be
+directed to specific files with the *-o* parameter (or *--outfile*).
 
 seq_crumbs supports compressed gzip, BGZF_ and bzip2 files.
 When used as input it autodetects the compressed files.
 It can also generate compressed outputs.
 
-The sequence formats accepted by seq_crumbs are the ones supported by Biopython's SeqIO_ module.
+The sequence formats accepted by seq_crumbs are those supported by Biopython's SeqIO_ module.
 As output only Sanger and Illumina fastq and fasta files are supported.
 
-seq_crumbs can take advantage of the multiprocessor computers by splitting the computational load into several processes.
+seq_crumbs can take advantage of multiprocessor computers by splitting the computational load into several processes.
 
-The filtering seq crumbs can be aware of the paired reads and can filter both reads of the pairs together.
+The filtering seq crumbs can be made aware of paired reads and can filter both reads of pairs at once.
 
 Installation
 ------------
 
-seq_crumbs depends on Python 2.7 and Biopython_ is a recommended dependency.
-The installation manual is located in the INSTALL document.
+seq_crumbs depends on Python 2.7. Biopython_ is a recommended dependency.
+The installation manual is located in the doc/install.rst document.
 
 
 Related software
 ----------------
 
-seq_crumbs relies heavily on Biopython_ and without this free software project it won't be able to provide some of its functionalities.
+seq_crumbs relies heavily on Biopython_ and without this free software project it wouldn't be able to provide some of its functionality.
 
 Biopieces_ is a project with a scope similar to seq_crumbs.
-Biopieces_ is a great software project capable of working with different kinds of biological data using Unix Pipes.
-seq_crumbs tries to be more limited in its scope limiting itself only to sequence files and thus providing a somewhat simpler interface.
+Biopieces_ is a great software project for working with different kinds of biological data using Unix pipes.
+seq_crumbs tries to be more limited in its scope, limiting itself only to sequence files and thus providing a somewhat simpler interface.
 
-Another software very similar in the approach to seq_crumbs is the nice fastx_ collection.
+Another software package very similar in approach to seq_crumbs is the nice fastx_ collection.
 
 Other related software: PRINSEQ_, ea-utils_, Pyrocleaner_, `Sequence Cleaner <http://seqclean.sourceforge.net/>`_, lucy_, `NGS QC Toolkit <http://www.nipgr.res.in/ngsqctoolkit.html>`_, scythe_, sickle_, cutadapt_, trimomatic_ and FastQC_.
 
