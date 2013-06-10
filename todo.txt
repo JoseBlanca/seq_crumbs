@@ -9,7 +9,7 @@ Why  write_trim_packets duplicates write_filter_packets?
 Write the manual
 
 The cleaners should be able to work with the pairs. For instance, the quality
-clearner could end up removing a read. In that case the pair should go to the
+cleaner could end up removing a read. In that case the pair should go to the
 orphan. To do that the cleaners should deal with a stream of pair list, like
 the filters and not with a stream of reads.
 What happens when all the quality is trimmed from a seq? Is the seq filtered out? Is the seq None?
@@ -23,8 +23,8 @@ How to do it:
 Add fast fastq parsing:
 There's code for fast parsing in:
 https://github.com/ged-lab/khmer/blob/bleeding-edge/lib/read_parsers.cc
-> Nuesto lector:
-> - debería estar escrito en C o C++ y ser importado con cffi
+> Nuestro lector:
+> - Debería estar escrito en C o C++ y ser importado con cffi.
 > - Debe leer pairs no lecturas sueltas.
 > - Todos los threads deben alimentar un mismo iterador como lo hace el del khmer. Así es muy fácil de enlazar a cualquier otra parte del código como si no fuese paralelo.
 
@@ -58,7 +58,7 @@ trim_blast_contanimant
 It trims the regions that match with a given fasta file or blast database.
 for instance the vector (Univec)
 
-Enmascara las regiones que tienen un match_part contra una base de datos
+Enmascara las regiones que tienen un match_part contra una base de datos.
 
 trim_with_cutadapt
 ------------------
@@ -89,7 +89,7 @@ grep en el nombre y la descripción
 
 
 trim longest fragemnt trim all fragments
-------------------
+----------------------------------------
 
 a lo mejor el mismo ejecutable con una opción de método
 
@@ -99,8 +99,6 @@ separar flags
 
 
 crumbs_catalog
--------
+--------------
 
 lista los que hay disponibles
-
-
