@@ -11,12 +11,16 @@ seq_crumbs depends on python 2.7 or newer and Biopython_ 1.60 or newer.
 
 An easy way to install Biopython would be to use the packaging system of your Linux distribution or alternatively just run the following command::
 
-  $ easy_instal biopython
+  $ easy_install biopython
 
-If you don't have easy_install installed in your computer.
-You can grab it from here the  setuptools_ site.
+or
 
-Once you have installed all the dependencies you can install seq_crumbs::
+  $ pip install biopython
+
+If you don't have easy_install installed
+you can grab it from the setuptools_ site.
+
+Once you have installed the dependencies you can install seq_crumbs::
 
   $ tar -xvzf seq_crumbs-0.1.tar.gz
   $ cd seq_crumbs-0.1
