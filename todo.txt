@@ -19,6 +19,9 @@ How to do it:
     3.1 Trimming functions should work with pair generators
     3.2 Triming binaries should have an orphan option
 
+Performance
+	1. compare with prinseq
+	2. Is one fat cleaner (qual + length trimming) faster than two piped crumbs?
 
 Add fast fastq parsing:
 There's code for fast parsing in:
