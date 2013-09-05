@@ -142,5 +142,5 @@ def _guess_format(fhand, force_file_as_non_seek):
 def remove_multiline(file_format):
     'It removes the multiline from the format'
     if file_format and file_format.endswith('-multiline'):
-        file_format = file_format[:-9]
+        file_format = file_format[:-10]
     return file_format

@@ -111,13 +111,23 @@ class SeqioBinTest(unittest.TestCase):
                       stdin=open(fastq_fhand.name))
         assert ">seq1\natcgt" in  open(fasta_out_fhand.name).read()
 
+        # fastq to fasta
+        fastq_fhand = NamedTemporaryFile()
+        fastq_fhand.write('@seq1\naaa\naaa\n+\n---\n---\n')
+        fastq_fhand.flush()
+        fasta_out_fhand = NamedTemporaryFile()
+        stderr = NamedTemporaryFile()
+        check_output([seqio_bin, '-o', fasta_out_fhand.name, '-f',
+                          'fasta', fastq_fhand.name], stderr=stderr)
+        out_fasta = open(fasta_out_fhand.name).read()
+        assert ">seq1\naaaaaa\n" == out_fasta
+
     def test_version(self):
         'It can return its version number'
         guess_bin = os.path.join(BIN_DIR, 'convert_format')
         stderr = NamedTemporaryFile()
         check_output([guess_bin, '--version'], stderr=stderr)
         assert 'from seq_crumbs version:' in open(stderr.name).read()
-
 
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'SeqioBinTest.test_seqio_bin']
