@@ -133,8 +133,7 @@ def get_or_create_bowtie2_index(fpath, directory=None):
         index_fpath = os.path.join(directory, os.path.basename(fpath))
     else:
         index_fpath = fpath
-
-    if not _bowtie2_index_exists(fpath):
+    if not _bowtie2_index_exists(index_fpath):
         cmd = [binary, '-f', fpath, index_fpath]
         process = popen(cmd, stdout=PIPE, stderr=PIPE)
         check_process_finishes(process, binary=cmd[0])
