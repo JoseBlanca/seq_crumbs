@@ -1,0 +1,13 @@
+[1]
+    [[CloseToSnvFilter]]
+        distance = 60
+        max_maf = 0.7
+[2]
+    [[HighVariableRegionFilter]]
+        max_variability = 0.05
+        window = 5
+        ref_fpath = '/home/peio/devel/vcf_crumbs/test/test_data/sample_ref.fasta'
+[3]
+	[[CapEnzymeFilter]]
+		all_enzymes = True
+		ref_fpath = '/home/peio/devel/vcf_crumbs/test/test_data/sample_ref.fasta'
