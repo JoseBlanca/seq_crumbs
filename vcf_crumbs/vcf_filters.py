@@ -67,7 +67,7 @@ def count_alleles(record, sample_names=None):
             allele = alleles[genotype]
             if allele not in counts:
                 counts[call.sample][allele] = 0
-            allele_counts = call['RD'] if genotype == 0 else call['AD']
+            allele_counts = call.data.RD if genotype == 0 else call.data.AD
             counts[call.sample][allele] += allele_counts
         if not counts[call.sample]:
             del counts[call.sample]
@@ -400,7 +400,7 @@ class IsVariableFilter(BaseFilter):
         self._clean_filter(record)
         is_variable = variable_in_samples(record, self.samples, self.in_union,
                                           self.max_maf, self.in_all_groups,
-                        self.reference_free, self.min_reads,
+                                          self.reference_free, self.min_reads,
                                           self.min_reads_per_allele)
         if not is_variable:
             record.add_filter(self.name)
@@ -657,5 +657,3 @@ class ChangeAminoSeverityFilter(BaseFilter):
     @property
     def description(self):
         return "Alt alleles change the amino acid and the change is severe"
-
-

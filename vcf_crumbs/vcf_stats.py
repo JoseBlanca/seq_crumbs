@@ -1,22 +1,20 @@
 from __future__ import division
 
-import os
+
 from collections import Counter
 from array import array
 
-from matplotlib.figure import Figure
-from matplotlib import colors, cm
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
 from  vcf import Reader
 
 from crumbs.seq import get_name, get_length
 from crumbs.seqio import read_seqs
 
-FIGURE_SIZE = (15.0, 11.0)  # inche
+
 VARSCAN = 'VarScan'
 GATK = 'gatk'
 
-# taken from cyvcf
+# taken from pyvcf
 HOM_REF = 0
 HET = 1
 HOM_ALT = 2
@@ -67,11 +65,11 @@ def get_data_from_vcf(vcf_path):
     data = {'snps_per_chromo': Counter(),
             'maf_per_snp': [],
             'call_data': {HOM_REF: {'x': array('B'), 'y': array('B'),
-                                    'gq': array('B')},
+                                    'value': array('B')},
                           HET: {'x': array('B'), 'y': array('B'),
-                                'gq': array('B')},
+                                'value': array('B')},
                           HOM_ALT: {'x': array('B'), 'y': array('B'),
-                                    'gq': array('B')}
+                                    'value': array('B')}
                          }
            }
 
@@ -87,7 +85,7 @@ def get_data_from_vcf(vcf_path):
                 gt, gq, dp, rd, ad = _get_call_data(call, snpcaller)
                 call_datas[call.gt_type]['x'].append(rd)
                 call_datas[call.gt_type]['y'].append(ad)
-                call_datas[call.gt_type]['gq'].append(gq)
+                call_datas[call.gt_type]['value'].append(gq)
 
     return data
 
@@ -106,49 +104,3 @@ def calc_density_per_chrom(counts, ref_fhand, size=100):
         else:
             densities[ref_name] = round((seq_count / length) * 100, 2)
     return densities
-
-
-def _get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1, right=0.9, top=0.9,
-                         bottom=0.1):
-    'It returns a matplotlib canvas and axes instance'
-    fig = Figure(figsize=figure_size)
-    canvas = FigureCanvas(fig)
-    axes = fig.add_subplot(111)
-    fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-
-    return canvas, axes
-
-
-def _get_format_from_fname(fname):
-    'It returns the extension as the format for the file'
-    return os.path.splitext(fname)[1][1:]
-
-
-def draw_histogram(values, fhand, bins=10, **kwargs):
-    'It draws a histogram of a pandas Series into a file'
-    canvas, axes = _get_canvas_and_axes()
-    axes.hist(values, bins=bins)
-    for key, value in kwargs.items():
-        getattr(axes, 'set_{}'.format(key))(value)
-
-    canvas.print_figure(fhand, format=_get_format_from_fname(fhand.name))
-    fhand.flush()
-
-
-def draw_scatter(groups, fhand, **kwargs):
-    # groups is a list of x,y and genotype values
-    canvas, axes = _get_canvas_and_axes()
-    for group, colormap, marker in zip(groups, ['Blues', 'Reds', 'Greens'],
-                                       ['^', 's', 'o']):
-        gen_quals = group['gq']
-        #norm = colors.Normalize(vmin=min(gen_quals), vmax=max(gen_quals))
-        norm = colors.Normalize()
-        cmap = cm.get_cmap(colormap)
-        axes.scatter(group['x'], group['y'], norm=norm, c=gen_quals,
-                     cmap=cmap, edgecolors='white', s=50, marker=marker,
-                     alpha=0.5)
-    for key, value in kwargs.items():
-        getattr(axes, 'set_{}'.format(key))(value)
-    canvas.print_figure(fhand, format=_get_format_from_fname(fhand.name))
-    fhand.flush()
-
