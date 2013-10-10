@@ -58,11 +58,12 @@ def count_alleles(record, sample_names=None):
             continue
         if call.sample not in counts:
             counts[call.sample] = {}
-        if call.gt_alleles == ['1', '2']:
-            msg = "This code assumes that there aren't genotypes with both"
-            msg += " alleles being alternate alleles"
-            raise NotImplementedError(msg)
-        for genotype in call.gt_alleles:
+#         if call.gt_alleles == ['1', '2']:
+#             msg = "This code assumes that there aren't genotypes with both"
+#             msg += " alleles being alternate alleles"
+#             print record.CHROM, record.POS
+#             raise NotImplementedError(msg)
+        for index, genotype in enumerate(call.gt_alleles):
             genotype = int(genotype)
             allele = alleles[genotype]
             if allele not in counts:
@@ -72,7 +73,7 @@ def count_alleles(record, sample_names=None):
                 allele_counts = call.data.RD if genotype == 0 else call.data.AD
             else:
                 #GATK
-                allele_counts = call.data.AD[0] if genotype == 0 else sum(call.data.AD[1:])
+                allele_counts = call.data.AD[index]
             counts[call.sample][allele] += allele_counts
         if not counts[call.sample]:
             del counts[call.sample]

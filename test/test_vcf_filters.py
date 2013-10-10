@@ -58,8 +58,11 @@ class AnnotateRecordTests(unittest.TestCase):
         records = Reader(filename=GATK_VCF_PATH)
         rec1 = records.next()
         counts = count_alleles(rec1)
-        print counts
-
+        assert counts == {'all': {'T': 5, 'G': 2}}
+        for record in Reader(filename=GATK_VCF_PATH):
+            if record.CHROM == 'CAUC00157_TC01' and record.POS == 198:
+                counts = count_alleles(record)
+                assert counts == {'all': {'C': 10, 'G': 41}}
 
 
 class FakeClass(object):
