@@ -67,7 +67,12 @@ def count_alleles(record, sample_names=None):
             allele = alleles[genotype]
             if allele not in counts:
                 counts[call.sample][allele] = 0
-            allele_counts = call.data.RD if genotype == 0 else call.data.AD
+            if hasattr(call.data, 'RD'):
+                #VARSCAN
+                allele_counts = call.data.RD if genotype == 0 else call.data.AD
+            else:
+                #GATK
+                allele_counts = call.data.AD[0] if genotype == 0 else sum(call.data.AD[1:])
             counts[call.sample][allele] += allele_counts
         if not counts[call.sample]:
             del counts[call.sample]

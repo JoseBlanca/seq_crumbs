@@ -25,6 +25,7 @@ VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 VCF_INDEL_PATH = join(TEST_DATA_DIR, 'sample_indel.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
 VARI_VCF_PATH = join(TEST_DATA_DIR, 'vari_filter.vcf')
+GATK_VCF_PATH = join(TEST_DATA_DIR, 'gatk_sample.vcf.gz')
 
 
 def floats_are_equal(num1, num2):
@@ -53,6 +54,12 @@ class AnnotateRecordTests(unittest.TestCase):
         assert counts == {'A': 10}
         counts = count_alleles(rec1)['all']
         assert counts == {'A': 10, 'C': 9}
+
+        records = Reader(filename=GATK_VCF_PATH)
+        rec1 = records.next()
+        counts = count_alleles(rec1)
+        print counts
+
 
 
 class FakeClass(object):
