@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+
+'It draws a histogram with the coverage of a bam file'
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of bam_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import argparse
+import sys
+
+from crumbs.utils.bin_utils import main, build_version_msg
+from bam_crumbs.statistics import get_genome_coverage
+from bam_crumbs.plot import draw_scatter
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Calculate clamd in a bam file'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', help='BAM or SAM file to process',
+                        type=argparse.FileType('rt'))
+    parser.add_argument('-o', '--outfile', dest='outfile',
+                help='Output file. Use it if you want to mantain input file',
+                type=argparse.FileType('wt'))
+    parser.add_argument('-m', '--xlim_left', default=0, type=int,
+                        help='Limit of the x axes in the left')
+    parser.add_argument('-M', '--xlim_rigth', type=int,
+                        help='Limit of the x axes in the rigth')
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+
+    parsed_args = parser.parse_args()
+    in_fhand = parsed_args.input
+    out_fhand = getattr(parsed_args, 'outfile')
+    if parsed_args.xlim_rigth is None:
+        xlim = parsed_args.xlim_left
+    else:
+        xlim = (parsed_args.xlim_left,  parsed_args.xlim_rigth)
+    return {'in_fhand': in_fhand, 'out_fhand': out_fhand, 'xlim': xlim}
+
+
+def run():
+    'It makes the actual job'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhand = args['in_fhand']
+    out_fhand = args['out_fhand']
+
+    scatter_group = get_genome_coverage(in_fhand.name)
+
+    kwargs = {'title': 'Histogram of the coverage', 'xlabel': 'Coverage',
+              'ylabel': 'Num. Bases with this coverage', 'xlim': args['xlim']}
+    draw_scatter([scatter_group], out_fhand, plot_lines=True, **kwargs)
+
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(run))

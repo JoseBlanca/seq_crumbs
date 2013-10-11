@@ -2,6 +2,7 @@
 import os.path
 import unittest
 from subprocess import check_output
+from array import array
 
 import pysam
 
@@ -10,7 +11,8 @@ from bam_crumbs.utils.bin import BIN_DIR
 from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
                                    CoverageCounter, _flag_to_binary,
                                    get_reference_counts,
-                                   get_reference_counts_dict)
+                                   get_reference_counts_dict,
+    get_genome_coverage)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -44,7 +46,7 @@ class StatsTest(unittest.TestCase):
         assert 'Most represented' in str(refstats)
 
         refstats = ReferenceStats([bam, bam])
-        n_max_expressed = len(set([i['reference'] for i in refstats.most_abundant_refs])) 
+        n_max_expressed = len(set([i['reference'] for i in refstats.most_abundant_refs]))
         assert n_max_expressed == 2
         max_rpkm = refstats.most_abundant_refs[0]['rpkm']
         assert max_rpkm - refstats.rpkms.max < 0.1
@@ -93,6 +95,17 @@ class StatsTest(unittest.TestCase):
         assert  None in counts.keys()
         assert  'reference2' in counts.keys()
         assert  'reference2' in counts.keys()
+
+
+class GenomeCoverageTest(unittest.TestCase):
+
+    def test_genome_cover(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        scatter_group = get_genome_coverage(bam_fpath)
+        assert scatter_group['x'] == array('h', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        assert scatter_group['y'] == array('h', [2400, 0, 0, 0, 0, 0, 3, 0, 0,
+                                                 144])
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'StatsTest.test_ref_counts']

@@ -3,7 +3,7 @@ from __future__ import division
 from subprocess import Popen, PIPE
 from operator import itemgetter
 from itertools import izip
-
+from array import array
 from numpy import histogram, zeros, median, sum as np_sum
 
 from crumbs.statistics import (draw_histogram, IntCounter, LABELS,
@@ -275,3 +275,22 @@ def get_reference_counts(bam_fpath):
         yield {'reference': ref_name, 'length': ref_length,
                'mapped_reads': int(mapped_reads),
                'unmapped_reads': int(unmapped_reads)}
+
+
+def get_genome_coverage(bam_fpath):
+    cmd = [get_binary_path('bedtools'), 'genomecov', '-ibam', bam_fpath]
+    cover_process = Popen(cmd, stdout=PIPE)
+    coverage_hist = IntCounter()
+    for line in cover_process.stdout:
+        if line.startswith('genome'):
+            cov, value = line.split('\t')[1: 3]
+            coverage_hist[int(cov)] = int(value)
+
+    # convert histohgram to the format that scatter_draw understands
+    scatter_group = {'x': array('l'), 'y': array('l')}
+    for integer in range(0, coverage_hist.max + 1):
+        scatter_group['x'].append(integer)
+        scatter_group['y'].append(coverage_hist[integer])
+
+    return scatter_group
+
