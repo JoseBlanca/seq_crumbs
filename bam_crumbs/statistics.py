@@ -285,7 +285,10 @@ def get_genome_coverage(bam_fpath):
         if line.startswith('genome'):
             cov, value = line.split('\t')[1: 3]
             coverage_hist[int(cov)] = int(value)
+    return coverage_hist
 
+
+def counter_to_scatter_group(coverage_hist):
     # convert histohgram to the format that scatter_draw understands
     scatter_group = {'x': array('l'), 'y': array('l')}
     for integer in range(0, coverage_hist.max + 1):

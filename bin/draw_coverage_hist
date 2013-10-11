@@ -21,7 +21,7 @@ import argparse
 import sys
 
 from crumbs.utils.bin_utils import main, build_version_msg
-from bam_crumbs.statistics import get_genome_coverage
+from bam_crumbs.statistics import get_genome_coverage, counter_to_scatter_group
 from bam_crumbs.plot import draw_scatter
 
 
@@ -64,7 +64,12 @@ def run():
     in_fhand = args['in_fhand']
     out_fhand = args['out_fhand']
 
-    scatter_group = get_genome_coverage(in_fhand.name)
+    coverage_counter = get_genome_coverage(in_fhand.name)
+    sys.stdout.write('Minimum coverage value: {}\n'.format(coverage_counter.min))
+    sys.stdout.write('Minimum coverage value: {}\n'.format(coverage_counter.max))
+    sys.stdout.write('Median value: {}\n'.format(coverage_counter.median))
+
+    scatter_group = counter_to_scatter_group(coverage_counter)
 
     kwargs = {'title': 'Histogram of the coverage', 'xlabel': 'Coverage',
               'ylabel': 'Num. Bases with this coverage', 'xlim': args['xlim']}
