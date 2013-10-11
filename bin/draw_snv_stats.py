@@ -8,8 +8,8 @@ Created on 2013 urr 3
 import argparse
 import os
 
-from vcf_crumbs.vcf_stats import (calc_density_per_chrom, draw_histogram,
-                                 get_data_from_vcf, draw_scatter)
+from vcf_crumbs.vcf_stats import calc_density_per_chrom, get_data_from_vcf
+from bam_crumbs.plot import draw_histogram, draw_scatter
 
 
 def _setup_argparse():
