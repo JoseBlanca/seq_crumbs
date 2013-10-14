@@ -65,9 +65,10 @@ def run():
     out_fhand = args['out_fhand']
 
     coverage_counter = get_genome_coverage(in_fhand.name)
-    sys.stdout.write('Minimum coverage value: {}\n'.format(coverage_counter.min))
-    sys.stdout.write('Minimum coverage value: {}\n'.format(coverage_counter.max))
-    sys.stdout.write('Median value: {}\n'.format(coverage_counter.median))
+    stdout = 'Minimum coverage value: {}\n'.format(coverage_counter.min)
+    stdout += 'Maximum coverage value: {}\n'.format(coverage_counter.max)
+    stdout += 'Median value: {}\n'.format(coverage_counter.median)
+    sys.stdout.write(stdout)
 
     scatter_group = counter_to_scatter_group(coverage_counter)
 
