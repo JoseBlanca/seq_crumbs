@@ -184,11 +184,17 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
                 msg = 'interleaved. You could try with the unordered algorithm'
                 raise MalformedFile(msg)
             buf2 = {'index': {}, 'items': []}
-
             # writes seqs from buffer 2 and fix buffer2
             write_seqs(buf1['items'], orphan_out_fhand, out_format)
-            buf1['items'] = []
-            buf1['index'] = {}
+            buf1 = {'index': {}, 'items': []}
+
+        if direction == FWD:
+            buf_fwd = buf1
+            buf_rev = buf2
+        else:
+            buf_rev = buf1
+            buf_fwd = buf2
+
     else:
         orphan_seqs = buf1['items'] + buf2['items']
         write_seqs(orphan_seqs, orphan_out_fhand, out_format)
