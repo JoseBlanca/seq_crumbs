@@ -58,7 +58,7 @@ def main():
 
     #mafs
     maf_fhand = open(os.path.join(out_dir, 'distrib_maf_per_snv.png'), 'w')
-    kwargs = {'title': 'Maf per snv distribution', 'xlim': (0.5, 1),
+    kwargs = {'title': 'Maf distribution', 'xlim': (0.5, 1),
               'xlabel': 'Maf', 'ylabel': 'Num. Snvs'}
     draw_histogram(data['maf_per_snp'], maf_fhand, bins=20, **kwargs)
 
