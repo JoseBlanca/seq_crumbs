@@ -1,12 +1,14 @@
 TODO
 -----
 Improve duplicate performance. Maybe looking at in a dict with the first chunk
-of the sequence instead on an full dict. Implement it in a class with a dict 
+of the sequence instead on an full dict. Implement it in a class with a dict
 like interface.
 
 Why  write_trim_packets duplicates write_filter_packets?
 
 Write the manual
+
+Add filter to remove Illumina pair end chimeras
 
 The cleaners should be able to work with the pairs. For instance, the quality
 cleaner could end up removing a read. In that case the pair should go to the
