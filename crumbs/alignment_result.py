@@ -434,8 +434,9 @@ class BlastParser(object):
                 definition = "<unknown description>"
 
             length = alignment.length
+            id_ = alignment.hit_id
             subject = {'name': name, 'description': definition,
-                       'length': length}
+                       'length': length, 'id': id_}
 
             # the hsps (match parts)
             match_parts = []
