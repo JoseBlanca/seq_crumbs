@@ -8,8 +8,10 @@ Created on 2013 urr 3
 import argparse
 import os
 
-from vcf_crumbs.vcf_stats import calc_density_per_chrom, get_data_from_vcf
+from vcf_crumbs.vcf_stats import calc_density_per_chrom, get_data_from_vcf, HET,\
+    HOM_ALT, HOM_REF
 from bam_crumbs.plot import draw_histogram, draw_scatter
+import sys
 
 
 def _setup_argparse():
@@ -69,7 +71,9 @@ def main():
               'xlabel': 'Reference_allele count', 'xlim': 0, 'ylim': 0}
 
     draw_scatter(data['call_data'].values(), scatter_fhand, **kwargs)
-
+    sys.stdout.write('Num hete: {}\n'.format(len(data['call_data'][HET]['x'])))
+    sys.stdout.write('Num_hom_ref: {}\n'.format(len(data['call_data'][HOM_REF]['x'])))
+    sys.stdout.write('Num_hom_alt: {}\n'.format(len(data['call_data'][HOM_ALT]['x'])))
 
 if __name__ == '__main__':
     main()
