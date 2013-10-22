@@ -118,15 +118,16 @@ def _get_paired_and_orphan(index_):
 
 def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
-    index_ = _index_seq_file(seq_fpath)
-    paired, orphans = _get_paired_and_orphan(index_)
+    indx = _index_seq_file(seq_fpath)
+    paired, orphans = _get_paired_and_orphan(indx)
 
     # write paired
-    write_seqs((SeqWrapper(SEQRECORD, index_[title], None) for title in paired), out_fhand, out_format)
+    write_seqs((SeqWrapper(SEQRECORD, indx[title], None) for title in paired),
+                out_fhand, out_format)
 
     # orphans
-    write_seqs((SeqWrapper(SEQRECORD, index_[title], None) for title in orphans), orphan_out_fhand,
-               out_format)
+    write_seqs((SeqWrapper(SEQRECORD, indx[title], None) for title in orphans),
+               orphan_out_fhand, out_format)
 
 
 def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
@@ -167,8 +168,8 @@ def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
             sum_items = len(buf2['items'] + buf1['items'])
             if memory_limit is not None and sum_items >= memory_limit:
                 error_msg = 'There are too many consecutive non matching seqs'
-                error_msg += ' in your input. We have reached the memory limit.'
-                error_msg += 'Are you sure that the reads are sorted and '
+                error_msg += ' in your input. We have reached the memory limit'
+                error_msg += '. Are you sure that the reads are sorted and '
                 error_msg += 'interleaved?. You could try with the unordered'
                 error_msg += ' algorith'
                 raise MaxNumReadsInMem(error_msg)
