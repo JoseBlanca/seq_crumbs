@@ -115,7 +115,7 @@ def _write_filter_trim_packets(passed_fhand, diverted_fhand, packets,
             # if diverted seqs are filtered aout they are a list of list
             # as not diverted seqs.
             # if they are orphan, they are a list of seqs
-            if seqs_diverted == SEQS_FILTERED_OUT :
+            if seqs_diverted == SEQS_FILTERED_OUT:
                 seqs = flatten_pairs(packet[seqs_diverted])
             else:
                 seqs = packet[seqs_diverted]
