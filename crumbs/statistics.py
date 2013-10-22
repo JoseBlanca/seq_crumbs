@@ -273,7 +273,6 @@ def draw_histogram(bin_limits, counts):
     fill_char = '*'
 
     assert len(bin_limits) == len(counts) + 1
-
     # pylint: disable=W0108
     number_to_str = lambda n: '{:d}'.format(n) if isinstance(n, int) else '{:.2f}'.format(n)
 

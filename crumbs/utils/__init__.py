@@ -16,7 +16,7 @@
 from sys import version_info
 
 if version_info[0] < 3 or (version_info[0] == 3 and version_info[1] < 3):
-    # until python 3.3 the standard file module has no support for 
+    # until python 3.3 the standard file module has no support for
     # wrapping file object and required to open a new file
     # bz2file is a backport of the python 3.3 std library module
     try:
