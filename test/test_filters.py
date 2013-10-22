@@ -20,7 +20,6 @@
 
 import unittest
 
-from cStringIO import StringIO
 from string import ascii_lowercase
 from random import choice
 from subprocess import check_output, call, CalledProcessError
