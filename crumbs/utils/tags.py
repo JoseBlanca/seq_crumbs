@@ -56,3 +56,7 @@ ORPHAN_SEQS = 'orphan_seqs'
 
 SEQITEM = 'seqitem'
 SEQRECORD = 'seqrecord'
+SANGER_QUALITY = 'fastq'
+ILLUMINA_QUALITY = 'fastq-illumina'
+SANGER_FASTQ_FORMATS = ('fastq-sanger', 'fastq')
+ILLUMINA_FASTQ_FORMATS = ('fastq-illumina',)

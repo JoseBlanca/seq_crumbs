@@ -19,9 +19,9 @@
 
 import unittest
 
-from crumbs.seq import (get_length, get_str_seq, get_qualities, slice_seq,
-                        copy_seq, SeqItem, SeqWrapper)
-from crumbs.utils.tags import SEQITEM
+from crumbs.seq import (get_length, get_str_seq, get_int_qualities,
+        get_str_qualities, slice_seq, copy_seq, SeqItem, SeqWrapper)
+from crumbs.utils.tags import SEQITEM, ILLUMINA_QUALITY
 
 
 class SeqMethodsTest(unittest.TestCase):
@@ -55,12 +55,12 @@ class SeqMethodsTest(unittest.TestCase):
         seq = SeqWrapper(SEQITEM, seq, 'fastq-multiline')
         assert get_str_seq(seq) == 'aaaatttt'
 
-    def test_qualities(self):
+    def test_int_qualities(self):
         # with fasta
         seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fasta')
         try:
-            assert get_qualities(seq)
+            assert get_int_qualities(seq)
             self.fail('AttributeError expected')
         except AttributeError:
             pass
@@ -69,13 +69,47 @@ class SeqMethodsTest(unittest.TestCase):
         seq = SeqItem(name='seq',
                       lines=['@seq\n', 'aaaa\n', '+\n', '!???\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq')
-        assert list(get_qualities(seq)) == [0, 30, 30, 30]
+        assert list(get_int_qualities(seq)) == [0, 30, 30, 30]
 
         # with multiline fastq
         seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
                                          '@AAA\n', 'BBBB\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
-        assert list(get_qualities(seq)) == [0, 1, 1, 1, 2, 2, 2, 2]
+        assert list(get_int_qualities(seq)) == [0, 1, 1, 1, 2, 2, 2, 2]
+
+    def test_str_qualities(self):
+        # with fasta
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fasta')
+        try:
+            assert get_str_qualities(seq, 'fasta')
+            self.fail('ValueError expected')
+        except ValueError:
+            pass
+
+        # with fastq
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aaaa\n', '+\n', '!???\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        assert ''.join(get_str_qualities(seq)) == '!???'
+
+        # with fastq to fastq-illumina
+        seq = SeqItem(name='seq',
+                      lines=['@seq\n', 'aaaa\n', '+\n', '!???\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq')
+        assert ''.join(list(get_str_qualities(seq, ILLUMINA_QUALITY))) == '@^^^'
+
+        # with multiline fastq-illumina
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
+                                         '@AAA\n', 'BBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        assert ''.join(list(get_str_qualities(seq, ILLUMINA_QUALITY))) == '@AAABBBB'
+
+        # with multiline fastq-illumina to fastq
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
+                                         '@AAA\n', 'BBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        assert ''.join(list(get_str_qualities(seq, 'fastq'))) == '!"""####'
 
     def test_slice(self):
         # with fasta
@@ -90,7 +124,7 @@ class SeqMethodsTest(unittest.TestCase):
                       lines=['@seq\n', 'aata\n', '+\n', '!?!?\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq')
         seq = slice_seq(seq, 1, 3)
-        assert list(get_qualities(seq)) == [30, 0]
+        assert list(get_int_qualities(seq)) == [30, 0]
         assert get_str_seq(seq) == 'at'
         assert seq.object.lines == ['@seq\n', 'at\n', '+\n', '?!\n']
 
@@ -99,7 +133,7 @@ class SeqMethodsTest(unittest.TestCase):
                                          '@AAA\n', 'BBBB\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
         seq_ = slice_seq(seq, 1, 5)
-        assert list(get_qualities(seq_)) == [1, 1, 1, 2]
+        assert list(get_int_qualities(seq_)) == [1, 1, 1, 2]
         assert get_str_seq(seq_) == get_str_seq(seq)[1: 5]
 
         # It tests the stop is None

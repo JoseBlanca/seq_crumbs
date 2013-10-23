@@ -34,7 +34,7 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
                             seq_to_filterpackets, FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
-    FilterDuplicates)
+                            FilterDuplicates)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,

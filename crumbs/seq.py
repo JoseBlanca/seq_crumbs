@@ -19,7 +19,9 @@ from collections import namedtuple
 
 from crumbs.utils.optional_modules import SeqRecord
 from crumbs.utils.file_formats import remove_multiline
-from crumbs.utils.tags import SEQITEM, SEQRECORD
+from crumbs.utils.tags import (SEQITEM, SEQRECORD, ILLUMINA_QUALITY,
+                               SANGER_QUALITY, SANGER_FASTQ_FORMATS,
+                               ILLUMINA_FASTQ_FORMATS)
 
 # pylint: disable=C0111
 
@@ -171,7 +173,7 @@ def _get_seqitem_qualities(seqwrap):
     return quals
 
 
-def get_qualities(seq):
+def get_int_qualities(seq):
     seq_class = seq.kind
     if seq_class == SEQITEM:
         return _get_seqitem_qualities(seq)
@@ -182,6 +184,54 @@ def get_qualities(seq):
             msg = 'The given SeqRecord has no phred_quality'
             raise AttributeError(msg)
         return quals
+
+
+SANGER_STRS = {i - 33: chr(i)  for i in range(33, 127)}
+ILLUMINA_STRS = {i - 64: chr(i) for i in range(64, 127)}
+
+
+def _int_quals_to_str_quals(int_quals, out_format):
+    if out_format == SANGER_QUALITY:
+        quals_map = SANGER_STRS
+    elif out_format == ILLUMINA_QUALITY:
+        quals_map = ILLUMINA_STRS
+    else:
+        msg = 'Unknown or not supported quality format'
+        raise ValueError(msg)
+    return itertools.chain(quals_map[int_quality] for int_quality in int_quals)
+
+
+def get_str_qualities(seq, out_format=None):
+    if out_format is None:
+        out_format = seq.file_format
+    out_format = remove_multiline(out_format)
+    if out_format in SANGER_FASTQ_FORMATS:
+        out_format = SANGER_QUALITY
+    elif out_format in ILLUMINA_FASTQ_FORMATS:
+        out_format = ILLUMINA_QUALITY
+
+    seq_class = seq.kind
+    if seq_class == SEQITEM:
+        in_format = remove_multiline(seq.file_format)
+        if 'fasta' in in_format:
+            raise ValueError('A fasta file has no qualities')
+        if in_format in SANGER_FASTQ_FORMATS:
+            in_format = SANGER_QUALITY
+        elif in_format in ILLUMINA_FASTQ_FORMATS:
+            in_format = ILLUMINA_QUALITY
+        else:
+            msg = 'Unknown or not supported quality format: '
+            msg += in_format
+            raise ValueError(msg)
+        if in_format == out_format:
+            quals = ''.join(line.rstrip() for line in _get_seqitem_qual_lines(seq))
+        else:
+            int_quals = get_int_qualities(seq)
+            return ''.join(_int_quals_to_str_quals(int_quals, out_format))
+    elif seq_class == SEQRECORD:
+        int_quals = get_int_qualities(seq)
+        return ''.join(_int_quals_to_str_quals(int_quals, out_format))
+    return quals
 
 
 def get_annotations(seq):
@@ -278,7 +328,7 @@ def _slice_seqitem(seqwrap, start, stop):
     if 'fasta' in fmt:
         lines = [lines[0], seq_str]
     elif 'fastq' in fmt:
-        qual_str = ''.join(line.rstrip() for line in _get_seqitem_qual_lines(seqwrap))
+        qual_str = get_str_qualities(seqwrap)
         qual_str = qual_str[start: stop]
         qual_str += '\n'
         lines = [lines[0], seq_str, '+\n', qual_str]
