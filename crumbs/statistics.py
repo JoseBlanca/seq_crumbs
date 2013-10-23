@@ -23,7 +23,7 @@ import re
 from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
-from crumbs.seq import get_str_seq, get_length, get_qualities
+from crumbs.seq import get_str_seq, get_length, get_int_qualities
 
 LABELS = {'title': 'histogram', 'xlabel': 'values',
           'ylabel': 'count', 'minimum': 'minimum',
@@ -645,7 +645,7 @@ def calculate_sequence_stats(seqs, kmer_size=None, do_dust_stats=False,
     for seq in seqs:
         lengths[get_length(seq)] += 1
         try:
-            quals = get_qualities(seq)
+            quals = get_int_qualities(seq)
         except AttributeError:
             quals = []
         for index, qual in enumerate(quals):

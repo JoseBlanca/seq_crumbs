@@ -21,7 +21,7 @@ from crumbs.utils.tags import (TRIMMING_RECOMMENDATIONS, QUALITY, OTHER,
                                ORPHAN_SEQS)
 from crumbs.utils.seq_utils import get_uppercase_segments
 from crumbs.seq import (copy_seq, get_str_seq, get_annotations, get_length,
-                        slice_seq, get_qualities, get_name)
+                        slice_seq, get_int_qualities, get_name)
 from crumbs.utils.segments_utils import (get_longest_segment, get_all_segments,
                                          get_longest_complementary_segment,
                                          merge_overlaping_segments)
@@ -282,7 +282,7 @@ class TrimByQuality(_BaseTrim):
         trim_left = self.trim_left
         trim_right = self.trim_right
         try:
-            quals = list(get_qualities(seq))
+            quals = list(get_int_qualities(seq))
         except KeyError:
             msg = 'Some of the input sequences do not have qualities: {}'
             msg = msg.format(get_name(seq))

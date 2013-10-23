@@ -28,7 +28,7 @@ from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import (SEQRECORD, SEQITEM, TRIMMING_RECOMMENDATIONS,
                                VECTOR, ORPHAN_SEQS, SEQS_PASSED)
-from crumbs.seq import get_str_seq, get_annotations, get_qualities, get_name
+from crumbs.seq import get_str_seq, get_annotations, get_int_qualities, get_name
 from crumbs.seqio import read_seq_packets
 from crumbs.seq import SeqWrapper, SeqItem
 
@@ -317,7 +317,7 @@ class TrimByQualityTest(unittest.TestCase):
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == [20, 30, 30, 30, 40, 40, 30, 30, 20]
+        assert get_int_qualities(seq2) == [20, 30, 30, 30, 40, 40, 30, 30, 20]
 
         # all bad
         trim_quality = TrimByQuality(window=5, threshold=60)
@@ -330,7 +330,7 @@ class TrimByQualityTest(unittest.TestCase):
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == quals
+        assert get_int_qualities(seq2) == quals
 
         seq = SeqRecord(Seq('ACTGCTGCATAA'))
         quals = [20, 20, 20, 60, 60, 60, 60, 60, 20, 20, 20, 20]
@@ -341,7 +341,7 @@ class TrimByQualityTest(unittest.TestCase):
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == [20, 60, 60, 60, 60, 60, 20]
+        assert get_int_qualities(seq2) == [20, 60, 60, 60, 60, 60, 20]
 
         quals = [40, 18, 10, 40, 40, 5, 8, 30, 14, 3, 40, 40, 40, 11, 6, 5, 3,
                  20, 10, 12, 8, 5, 4, 7, 1]
@@ -352,7 +352,7 @@ class TrimByQualityTest(unittest.TestCase):
         trim_quality = TrimByQuality(window=5, threshold=25)
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == [40, 18, 10, 40, 40]
+        assert get_int_qualities(seq2) == [40, 18, 10, 40, 40]
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
@@ -365,7 +365,7 @@ class TrimByQualityTest(unittest.TestCase):
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
         expected = [40, 4, 27, 38, 40]
-        assert get_qualities(seq2) == expected
+        assert get_int_qualities(seq2) == expected
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
@@ -376,8 +376,8 @@ class TrimByQualityTest(unittest.TestCase):
         trim_quality = TrimByQuality(window=5, threshold=25, trim_left=False)
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == [40, 40, 13, 11, 40, 9, 40, 4, 27, 38,
-                                       40]
+        assert get_int_qualities(seq2) == [40, 40, 13, 11, 40, 9, 40, 4, 27,
+                                           38, 40]
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                  10, 21, 3, 40, 9, 9, 12, 10, 9]
@@ -388,7 +388,7 @@ class TrimByQualityTest(unittest.TestCase):
         trim_quality = TrimByQuality(window=5, threshold=25, trim_right=False)
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == [40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
+        assert get_int_qualities(seq2) == [40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
                                        10, 21, 3, 40, 9, 9, 12, 10, 9]
 
         quals = [40, 40, 13, 11, 40, 9, 40, 4, 27, 38, 40, 4, 11, 40, 40, 10,
@@ -401,7 +401,7 @@ class TrimByQualityTest(unittest.TestCase):
         trim_packet = {SEQS_PASSED: [[seq]], ORPHAN_SEQS: []}
         trim_packet2 = trim(trim_quality(trim_packet))
         seq2 = trim_packet2[SEQS_PASSED][0][0]
-        assert get_qualities(seq2) == quals
+        assert get_int_qualities(seq2) == quals
 
         # With SeqItems
         seq = SeqItem('s', ['@s\n', 'atatatatatatatatatatatata\n', '\n',
