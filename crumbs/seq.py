@@ -45,7 +45,7 @@ def get_title(seq):
     seq = seq.object
 
     if seq_class == SEQITEM:
-        title = seq.lines[0][1:]
+        title = seq.lines[0][1:].rstrip()
     elif seq_class == SEQRECORD:
         title = seq.id + ' ' + seq.description
     else:
@@ -227,10 +227,10 @@ def get_str_qualities(seq, out_format=None):
             quals = ''.join(line.rstrip() for line in _get_seqitem_qual_lines(seq))
         else:
             int_quals = get_int_qualities(seq)
-            return ''.join(_int_quals_to_str_quals(int_quals, out_format))
+            quals = ''.join(_int_quals_to_str_quals(int_quals, out_format))
     elif seq_class == SEQRECORD:
         int_quals = get_int_qualities(seq)
-        return ''.join(_int_quals_to_str_quals(int_quals, out_format))
+        quals = ''.join(_int_quals_to_str_quals(int_quals, out_format))
     return quals
 
 
