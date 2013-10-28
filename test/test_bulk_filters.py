@@ -118,16 +118,30 @@ class FilterDuplicatesTest(unittest.TestCase):
         assert _tabbed_pairs_equal(pair1, seq2) == False
 
     def test_seqitem_pairs_equal(self):
-        seq1 = SeqWrapper(SEQITEM, SeqItem('CUESXEL836',
-                            ['@CUESXEL836 1:Y:18:ATCACG\n',
-                             'TAATACACCCAGTCTCAATTCCATCCTGGGAACTAAGT\n', '+\n',
-                             'TTTDFG5GGEGGF;EGD=D@>GCCGFFGGGCECFE:D@\n']),
-                          'fastq')
-        seq2 = SeqWrapper(SEQITEM, SeqItem('CUESXEL836',
-                            ['@CUESXEL836 2:Y:18:ATCACG\n',
-                             'TCATTACGTAGCTCCGGCTCCGCCATGTCTGTTCCTTC\n', '+\n',
-                             'ABCBEGGGGFGGGGGGGGGGGGGGGGBGGGA<EE=515\n']),
-                          'fastq')
+        seq1 = SeqWrapper(SEQITEM, SeqItem('seq1',
+                            ['@seq1\n', 'TAATAC\n', '+\n',
+                             'TTTDFG\n']), 'fastq')
+        seq2 = SeqWrapper(SEQITEM, SeqItem('seq2',
+                            ['@seq2\n', 'TCATTA\n', '+\n',
+                             'ABCBEG\n']), 'fastq')
+        seq3 = SeqWrapper(SEQITEM, SeqItem('seq3',
+                            ['@seq3\n', 'TAATAC\n', '+\n',
+                             'TTTDFG\n']), 'fastq')
+        seq4 = SeqWrapper(SEQITEM, SeqItem('seq4',
+                            ['@seq4\n', 'ACGCGT\n', '+\n',
+                             'ABCBEG\n']), 'fastq')
+        pair1 = (seq1, seq2)
+        pair2 = (seq2, seq4)
+        pair3 = (seq3, seq2)
+        pair4 = (seq2, seq1)
+
+        assert _seqitem_pairs_equal(pair1, pair3)
+        assert _seqitem_pairs_equal(pair1, pair2) == False
+        assert _seqitem_pairs_equal(pair1, pair4) == False
+        assert _seqitem_pairs_equal(seq1, seq3)
+        assert _seqitem_pairs_equal(seq1, seq2) == False
+        assert _seqitem_pairs_equal(seq1, pair1) == False
+        assert _seqitem_pairs_equal(pair1, seq2) == False
 
     def test_pair_to_tabbed_str(self):
         expected_tabbed_pair = TABBED_PAIR1.rstrip()
