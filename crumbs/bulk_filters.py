@@ -65,16 +65,24 @@ def _seq_to_tabbed_str(read):
 
 def _tabbed_pair_to_seqs_seqitem(pair_line, file_format):
     pair_items = pair_line.rstrip().split('\t')
-
-    if 'fastq' not in file_format:
-        raise NotImplemented('Not implemented yet for fasta')
     seqs = []
-    for read_items in group_in_packets_fill_last(pair_items, 3):
-        title = read_items[0]
-        lines = [read_items[0]+'\n', read_items[1]+'\n', '+\n', read_items[2]+'\n']
-        seqitem = SeqItem(title.split()[0][1:], lines)
-        seq = SeqWrapper(SEQITEM, seqitem, file_format)
-        seqs.append(seq)
+    if 'fasta' in file_format:
+        for read_items in group_in_packets_fill_last(pair_items, 3):
+            title = '>' + read_items[0][1:]
+            lines = [title + '\n', read_items[1] + '\n']
+            seqitem = SeqItem(title.split()[0][1:], lines)
+            seq = SeqWrapper(SEQITEM, seqitem, file_format)
+            seqs.append(seq)
+    elif 'fastq' in file_format:
+        for read_items in group_in_packets_fill_last(pair_items, 3):
+            title = read_items[0]
+            lines = [read_items[0] + '\n', read_items[1] + '\n',
+                     '+\n', read_items[2] + '\n']
+            seqitem = SeqItem(title.split()[0][1:], lines)
+            seq = SeqWrapper(SEQITEM, seqitem, file_format)
+            seqs.append(seq)
+    else:
+        raise ValueError('Format not supported')
     return seqs
 
 
@@ -114,7 +122,11 @@ _convert_fastq_to_tabbed_pairs(in_fhands, out_fhand=stdout)
 '''
 
 
-def filter_duplicates(in_fpaths, in_format=GUESS_FORMAT):
+def filter_duplicates(in_fpaths, in_format='fastq'):
+    '''It filters exact duplicated sequences even with different
+    qualities or names. The output is given in fastq format by default,
+    but allows also fasta format'''
+
     if not in_fpaths:
         raise ValueError('At least one input fpath is required')
     for fpath in in_fpaths:

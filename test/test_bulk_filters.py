@@ -189,7 +189,7 @@ class FilterDuplicatesTest(unittest.TestCase):
         #print fastq_with_dups
         in_fhand.write(fastq_with_dups)
         in_fhand.flush()
-        filtered_pairs = list(filter_duplicates([in_fhand.name], 'fastq'))
+        filtered_pairs = list(filter_duplicates([in_fhand.name]))
 
         fastq_no_dups = FASTQ_NO_DUPS1 + FASTQ_NO_DUPS2
         expected_pairs = list(_read_pairs([StringIO(fastq_no_dups)]))
@@ -207,7 +207,8 @@ class FilterDuplicatesTest(unittest.TestCase):
     def test_no_pairs(self):
         in_fhand1 = NamedTemporaryFile()
         in_fhand2 = NamedTemporaryFile()
-        filtered_pairs = list(filter_duplicates([in_fhand1.name, in_fhand2.name], 'fastq'))
+        in_fpaths = [in_fhand1.name, in_fhand2.name]
+        filtered_pairs = list(filter_duplicates(in_fpaths))
         in_fhand1.close()
         in_fhand2.close()
         assert not filtered_pairs
