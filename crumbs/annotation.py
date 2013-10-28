@@ -45,7 +45,7 @@ def _run_estscan(seqs, pep_out_fpath, dna_out_fpath, matrix_fpath):
 
 def _read_estcan_result(fhand, result, file_type):
     'It reads a dna or pep ESTscan result file'
-    for seq in read_seqs([fhand], file_format='fasta'):
+    for seq in read_seqs([fhand]):
         items = [i.strip() for i in get_description(seq).split(';')]
         strand = -1 if 'minus strand' in items else 1
         start, end = items[0].split(' ', 3)[1:3]

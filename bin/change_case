@@ -51,7 +51,7 @@ def run():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    seq_packets = read_seq_packets(in_fhands)
     change_case = ChangeCase(action=args['action'])
     seq_packets, workers = process_seq_packets(seq_packets, [change_case],
                                                processes=args['processes'])

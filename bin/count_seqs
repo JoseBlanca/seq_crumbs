@@ -22,7 +22,7 @@ from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE, SEQRECORD, SEQITEM)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required)
 from crumbs.utils.bin_utils import main, build_version_msg
-from crumbs.utils.file_formats import guess_format
+from crumbs.utils.file_formats import get_format, set_format
 from crumbs.seqio import read_seqs
 from crumbs.statistics import count_seqs
 
@@ -62,12 +62,16 @@ def _parse_args(parser):
 
     in_format = parsed_args.in_format
     if in_format == GUESS_FORMAT:
-        in_format = guess_format(wrapped_fhands[0])
+        for wrapped_fhand in wrapped_fhands:
+            get_format(wrapped_fhand)
+    else:
+        for wrapped_fhand in wrapped_fhands:
+            set_format(wrapped_fhand, in_format)
 
     out_fhand = getattr(parsed_args, OUTFILE)
 
     args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
-            'original_in_fhands': in_fhands, 'in_format': in_format}
+            'original_in_fhands': in_fhands}
     return args, parsed_args
 
 
@@ -77,15 +81,13 @@ def run():
     args = _parse_args(parser)[0]
 
     in_fhands = args['in_fhands']
-    in_format = args['in_format']
     out_fhand = args['out_fhand']
 
-    if 'fasta' in in_format:
+    if 'fasta' in get_format(in_fhands[0]):
         prefered_seq_classes = [SEQITEM, SEQRECORD]
     else:
         prefered_seq_classes = [SEQRECORD]
-    seqs = read_seqs(in_fhands, file_format=in_format,
-                     prefered_seq_classes=prefered_seq_classes)
+    seqs = read_seqs(in_fhands, prefered_seq_classes=prefered_seq_classes)
     counts = count_seqs(seqs)
     result = '{num_seqs:d} {total_length:d}\n'.format(**counts)
     out_fhand.write(result)

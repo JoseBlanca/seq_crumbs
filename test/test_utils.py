@@ -16,8 +16,10 @@
 import unittest
 import os
 import sys
+import hashlib
 from subprocess import Popen, PIPE, check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
+from cStringIO import StringIO
 
 from crumbs.utils.file_utils import (TemporaryDir, rel_symlink,
                                      wrap_in_buffered_reader)
@@ -28,6 +30,9 @@ from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import ERROR_ENVIRON_VARIABLE
 from crumbs.seqio import guess_seq_type
 from crumbs.settings import get_setting
+from crumbs.utils.file_formats import get_format, FILEFORMAT_INVENTORY,\
+    set_format
+
 
 
 # pylint: disable=R0201
@@ -110,6 +115,39 @@ class UtilsTest(unittest.TestCase):
         fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
         guess_seq_type(open(fpath))
 
+    def test_get_format_fhand(self):
+        "It checks the get/set format functions"
+        #file fhand
+        fhand = NamedTemporaryFile()
+        fhand.write('>seq\natgctacgacta\n')
+        fhand.flush()
+        name = fhand.name
+        id_ = id(fhand)
+
+        file_format = get_format(fhand)
+        assert FILEFORMAT_INVENTORY[(id_, name)] == file_format
+        num_keys = len(FILEFORMAT_INVENTORY)
+
+        file_format = get_format(fhand)
+        assert FILEFORMAT_INVENTORY[(id_, name)] == file_format
+        assert len(FILEFORMAT_INVENTORY) == num_keys
+
+        fhand = NamedTemporaryFile()
+        set_format(fhand, 'fasta')
+
+        assert 'fasta' == get_format(fhand)
+
+    def test_get_format_stringio(self):
+        "It checks the get/set format functions"
+        #stiongIO
+        stringIO_fhand = StringIO('>seq\natgctacgacta\n')
+
+        striongIOhash = hashlib.sha224(stringIO_fhand.getvalue()[:100]).hexdigest()
+        id_ = id(stringIO_fhand)
+
+        file_format = get_format(stringIO_fhand)
+        assert FILEFORMAT_INVENTORY[(id_, striongIOhash)] == file_format
+
 
 class ErrorHandlingTest(unittest.TestCase):
     'It tests the handling of the unexpected errors'
@@ -151,6 +189,9 @@ class SettingsTest(unittest.TestCase):
         out = check_output(cmd, env=environ)
         assert out == '1\n'
 
+
+
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'ErrorHandlingTest.test_error_handling']
+    #import sys;sys.argv = ['', 'UtilsTest.test_get_format_stringio']
     unittest.main()

@@ -54,8 +54,7 @@ def run():
     passed_fhand = args['out_fhand']
     filtered_fhand = args['filtered_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
-                                   prefered_seq_classes=[SEQRECORD])
+    seq_packets = read_seq_packets(in_fhands, prefered_seq_classes=[SEQRECORD])
     filter_packets = seq_to_filterpackets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
     filter_ = FilterByQuality(threshold=args['threshold'],

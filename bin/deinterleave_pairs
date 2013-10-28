@@ -42,7 +42,7 @@ def run():
     parser = _setup_argparse()
     args = parse_basic_args(parser)[0]
 
-    seqs = read_seqs(args['in_fhands'], args['in_format'])
+    seqs = read_seqs(args['in_fhands'])
 
     deinterleave_pairs(seqs, args['out_fhand'][0], args['out_fhand'][1],
                        out_format=args['out_format'])

@@ -169,8 +169,7 @@ class SimpleIOTest(unittest.TestCase):
     def test_seqitems_io(self):
         'It checks the different seq class streams IO'
         fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
-        seqs = list(read_seqs([fhand], 'fasta',
-                              prefered_seq_classes=[SEQITEM]))
+        seqs = list(read_seqs([fhand], prefered_seq_classes=[SEQITEM]))
         assert seqs[0].kind == SEQITEM
         fhand = StringIO()
         write_seqs(seqs, fhand)
@@ -179,8 +178,7 @@ class SimpleIOTest(unittest.TestCase):
 
         # SeqRecord
         fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
-        seqs = list(read_seqs([fhand], 'fasta',
-                              prefered_seq_classes=[SEQRECORD]))
+        seqs = list(read_seqs([fhand], prefered_seq_classes=[SEQRECORD]))
         assert seqs[0].kind == SEQRECORD
         fhand = StringIO()
         write_seqs(seqs, fhand, 'fasta')
@@ -189,14 +187,14 @@ class SimpleIOTest(unittest.TestCase):
         # seqitem not possible with different input and output formats
         fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
         try:
-            seqs = list(read_seqs([fhand], 'fasta', out_format='fastq',
+            seqs = list(read_seqs([fhand], out_format='fastq',
                         prefered_seq_classes=[SEQITEM]))
             self.fail('ValueError expected')
         except ValueError:
             pass
 
         fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')
-        seqs = list(read_seqs([fhand], 'fasta', out_format='fasta',
+        seqs = list(read_seqs([fhand], out_format='fasta',
                         prefered_seq_classes=[SEQITEM]))
         fhand = StringIO()
         write_seqs(seqs, fhand)
@@ -251,5 +249,5 @@ class PipingTest(unittest.TestCase):
         stdout.close()
 
 if __name__ == '__main__':
-    # import sys;sys.argv = ['', 'SffExtractTest.test_items_in_gff']
+    #import sys;sys.argv = ['', 'SeqIOTest.test_guess_seq_type']
     unittest.main()

@@ -49,8 +49,8 @@ def run():
     parser = _setup_argparse()
     args = _parse_args(parser)
 
-    seq1 = read_seqs([args['in_fhands'][0]], args['in_format'])
-    seq2 = read_seqs([args['in_fhands'][1]], args['in_format'])
+    seq1 = read_seqs([args['in_fhands'][0]])
+    seq2 = read_seqs([args['in_fhands'][1]])
 
     seqs = interleave_pairs(seq1, seq2, skip_checks=args['skip_checks'])
     write_seqs(seqs, args['out_fhand'])

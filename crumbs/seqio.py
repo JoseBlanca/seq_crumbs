@@ -31,7 +31,7 @@ from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError)
 from crumbs.iterutils import group_in_packets, group_in_packets_fill_last
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
-from crumbs.utils.file_formats import (guess_format, peek_chunk_from_file,
+from crumbs.utils.file_formats import (get_format, peek_chunk_from_file,
                                        remove_multiline)
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD, ORPHAN_SEQS)
@@ -159,29 +159,24 @@ def title2ids(title):
 
 
 def read_seq_packets(fhands, size=get_setting('PACKET_SIZE'), out_format=None,
-                     file_format=GUESS_FORMAT, prefered_seq_classes=None):
+                     prefered_seq_classes=None):
     '''It yields SeqItems in packets of the given size.'''
-    seqs = read_seqs(fhands, file_format, out_format=out_format,
+    seqs = read_seqs(fhands, out_format=out_format,
                      prefered_seq_classes=prefered_seq_classes)
     return group_in_packets(seqs, size)
 
 
-def _read_seqrecord_packets(fhands, size=get_setting('PACKET_SIZE'),
-                           file_format=GUESS_FORMAT):
+def _read_seqrecord_packets(fhands, size=get_setting('PACKET_SIZE')):
     '''It yields SeqRecords in packets of the given size.'''
-    seqs = _read_seqrecords(fhands, file_format=file_format)
+    seqs = _read_seqrecords(fhands)
     return group_in_packets(seqs, size)
 
 
-def _read_seqrecords(fhands, file_format=GUESS_FORMAT):
+def _read_seqrecords(fhands):
     'It returns an iterator of seqrecords'
     seq_iters = []
     for fhand in fhands:
-        if file_format == GUESS_FORMAT or file_format is None:
-            fmt = guess_format(fhand)
-        else:
-            fmt = file_format
-
+        fmt = get_format(fhand)
         fmt = remove_multiline(fmt)
 
         if fmt in ('fasta', 'qual') or 'fastq' in fmt:
@@ -207,7 +202,7 @@ def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
     if out_format not in get_setting('SUPPORTED_OUTPUT_FORMATS'):
         raise IncompatibleFormatError("This output format is not supported")
 
-    in_formats = [remove_multiline(guess_format(fhand)) for fhand in in_fhands]
+    in_formats = [remove_multiline(get_format(fhand)) for fhand in in_fhands]
 
     if len(in_fhands) == 1 and in_formats[0] == out_format:
         if copy_if_same_format:
@@ -241,8 +236,7 @@ def fastaqual_to_fasta(seq_fhand, qual_fhand, out_fhand):
 
 
 def guess_seq_type(fhand):
-    '''It guesses the file's seq type'''
-
+    '''It guesses if the file is nucleotide or protein'''
     rna = set(ambiguous_rna_letters)
     dna = set(ambiguous_dna_letters)
     rna_dna = rna.union(dna)
@@ -321,14 +315,11 @@ def _itemize_fastq(fhand):
     return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
 
 
-def _read_seqitems(fhands, file_format):
+def _read_seqitems(fhands):
     'it returns an iterator of seq items (tuples of name and chunk)'
     seq_iters = []
     for fhand in fhands:
-        if file_format == GUESS_FORMAT or file_format is None:
-            file_format = guess_format(fhand)
-        else:
-            file_format = file_format
+        file_format = get_format(fhand)
 
         if file_format == 'fasta':
             seq_iter = _itemize_fasta(fhand)
@@ -397,18 +388,12 @@ def write_seqs(seqs, fhand=None, file_format=None):
     return fhand
 
 
-def read_seqs(fhands, file_format=GUESS_FORMAT, out_format=None,
-              prefered_seq_classes=None):
+def read_seqs(fhands, out_format=None, prefered_seq_classes=None):
     'It returns a stream of seqs in different codings: seqrecords, seqitems...'
 
     if not prefered_seq_classes:
         prefered_seq_classes = [SEQITEM, SEQRECORD]
-
-    if file_format == GUESS_FORMAT:
-        in_format = guess_format(fhands[0])
-    else:
-        in_format = file_format
-
+    in_format = get_format(fhands[0])
     if out_format not in (None, GUESS_FORMAT):
 
         if in_format != out_format:
@@ -424,12 +409,12 @@ def read_seqs(fhands, file_format=GUESS_FORMAT, out_format=None,
     for seq_class in prefered_seq_classes:
         if seq_class == SEQITEM:
             try:
-                return _read_seqitems(fhands, in_format)
+                return _read_seqitems(fhands)
             except NotImplementedError:
                 continue
         elif seq_class == SEQRECORD:
             try:
-                seqs = _read_seqrecords(fhands, in_format)
+                seqs = _read_seqrecords(fhands)
                 return assing_kind_to_seqs(SEQRECORD, seqs, None)
             except NotImplementedError:
                 continue

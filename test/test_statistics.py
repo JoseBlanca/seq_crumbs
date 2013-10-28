@@ -265,8 +265,7 @@ class CalculateStatsTest(unittest.TestCase):
         for val in range(1, 6):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
-        seqs = read_seqs(in_fhands, file_format='fastq',
-                         prefered_seq_classes=[SEQRECORD])
+        seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQRECORD])
         results = calculate_sequence_stats(seqs, nxs=[50])
         assert 'maximum: 4' in results['length']
         assert 'N50' in results['length']
@@ -277,8 +276,7 @@ class CalculateStatsTest(unittest.TestCase):
         assert results['kmer'] == ''
 
         infhands = [open(join(TEST_DATA_DIR, 'arabidopsis_genes'))]
-        seqs = list(read_seqs(infhands, file_format='fasta',
-                              prefered_seq_classes=[SEQRECORD]))
+        seqs = list(read_seqs(infhands, prefered_seq_classes=[SEQRECORD]))
         kmers = calculate_sequence_stats(seqs)['kmer']
         assert not 'Kmer distribution' in kmers
 
@@ -300,8 +298,7 @@ class CalculateStatsTest(unittest.TestCase):
         for val in range(1, 6):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
-        seqs = read_seqs(in_fhands, file_format='fastq',
-                         prefered_seq_classes=[SEQITEM])
+        seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQITEM])
         results = calculate_sequence_stats(seqs, nxs=[50])
         assert 'maximum: 4' in results['length']
         assert 'N50' in results['length']
@@ -362,8 +359,7 @@ class CalculateStatsTest(unittest.TestCase):
         for val in range(1, 6):
             fhand = open(join(TEST_DATA_DIR, 'pairend{0}.sfastq'.format(val)))
             in_fhands.append(fhand)
-        seqs = read_seqs(in_fhands, file_format='fastq',
-                         prefered_seq_classes=[SEQRECORD])
+        seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQRECORD])
         counts = count_seqs(seqs)
         assert counts == {'total_length': 96, 'num_seqs': 24}
 

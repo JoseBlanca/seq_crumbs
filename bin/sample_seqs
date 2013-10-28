@@ -52,7 +52,7 @@ def sample_seqs():
     out_fhand = args['out_fhand']
     num_seqs = args['num_seqs']
     try:
-        seqs = read_seqs(in_fhands, file_format=args['in_format'])
+        seqs = read_seqs(in_fhands)
         seqs = sample(seqs, num_seqs)
     except ValueError as error:
         if str(error) == "sample larger than population":

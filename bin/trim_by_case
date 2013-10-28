@@ -35,7 +35,7 @@ def trim_by_case():
     out_fhand = args['out_fhand']
     orphan_fhand = args['orphan_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    seq_packets = read_seq_packets(in_fhands)
     trim_packets = seq_to_trim_packets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
 

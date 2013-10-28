@@ -22,7 +22,7 @@ from crumbs.seqio import write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
 from crumbs.seq import get_title, SeqWrapper
-from crumbs.utils.file_formats import guess_format, remove_multiline
+from crumbs.utils.file_formats import get_format, remove_multiline
 from crumbs.utils.tags import FWD, REV, SEQRECORD
 from crumbs.utils.file_utils import flush_fhand
 
@@ -55,7 +55,7 @@ def _index_seq_file(fpath, file_format=None):
     It uses the title line line as the key and not just the id.
     '''
     if file_format is None:
-        file_format = guess_format(open(fpath))
+        file_format = get_format(open(fpath))
 
     file_format = remove_multiline(file_format)
 
