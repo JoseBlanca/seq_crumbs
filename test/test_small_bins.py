@@ -87,7 +87,20 @@ class CatTest(unittest.TestCase):
             self.fail()
         except CalledProcessError:
             stderr_str = open(stderr.name).read()
-            assert 'output format is incompatible with input' in stderr_str
+            assert 'given input format does not correspond' in stderr_str
+
+        in_fhand1 = self.make_fasta()
+        in_fhand2 = NamedTemporaryFile()
+        in_fhand2.write('@seq\nATAT\n+\n????\n')
+        in_fhand2.flush()
+        try:
+            stderr = NamedTemporaryFile()
+            result = check_output([cat_bin, in_fhand2.name,
+                                   in_fhand1.name], stderr=stderr)
+            self.fail()
+        except CalledProcessError:
+            stderr_str = open(stderr.name).read()
+            assert 'output format taken from first given file' in stderr_str
 
     def test_compressed_output(self):
         'It writes a gziped file'

@@ -34,7 +34,7 @@ def run():
     passed_fhand = args['out_fhand']
     filtered_fhand = args['filtered_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'])
+    seq_packets = read_seq_packets(in_fhands)
     filter_packets = seq_to_filterpackets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
 

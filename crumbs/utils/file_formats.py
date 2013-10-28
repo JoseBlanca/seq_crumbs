@@ -16,11 +16,16 @@
 import cStringIO
 from array import array
 import itertools
+import hashlib
 
 from crumbs.utils.optional_modules import FastqGeneralIterator
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
 from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
+
+FILETYPE = 'file'
+STRINGIOTYPE = 'stringio'
+OTHERTYPE = 'othertype'
 
 
 def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
@@ -101,8 +106,62 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
     else:
         return 'fastq-illumina' + one_line
 
+FILEFORMAT_INVENTORY = {}
 
-def guess_format(fhand):
+
+def _get_instance_type(fhand):
+    try:
+        name = fhand.name
+    except AttributeError:
+        name = None
+    if name:
+        return FILETYPE
+
+    if 'getvalue' in dir(fhand):
+        return STRINGIOTYPE
+    else:
+        return OTHERTYPE
+
+
+def _get_fhand_id(fhand):
+    'get unique id of the fhand'
+    fhand_type = _get_instance_type(fhand)
+    fhand_id = id(fhand)
+    if fhand_type == FILETYPE:
+        key = (fhand_id, fhand.name)
+    elif fhand_type == STRINGIOTYPE:
+        hash_ = hashlib.sha224(fhand.getvalue()[:100]).hexdigest()
+        key = (fhand_id, hash_)
+    else:
+        key = fhand_id
+    return key
+
+
+def get_format(fhand):
+    'It gets the format or it looks in the inventory'
+    id_ = _get_fhand_id(fhand)
+    try:
+        file_format = FILEFORMAT_INVENTORY[id_]
+    except KeyError:
+        file_format = None
+
+    if file_format is None:
+        file_format = _guess_format(fhand, force_file_as_non_seek=False)
+        FILEFORMAT_INVENTORY[id_] = file_format
+
+    return file_format
+
+
+def set_format(fhand, file_format):
+    'It sets the file format in the global inventory variable'
+    id_ = _get_fhand_id(fhand)
+    if id_ in FILEFORMAT_INVENTORY:
+        msg = 'The given instance already setted its file format'
+        raise RuntimeError(msg)
+    FILEFORMAT_INVENTORY[id_] = file_format
+
+
+def xguess_format(fhand):
     '''It guesses the format of the sequence file.
 
     It does ignore the solexa fastq version.

@@ -98,8 +98,7 @@ def orientate_transcripts():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    seq_packets = read_seq_packets(in_fhands, file_format=args['in_format'],
-                                   prefered_seq_classes=[SEQRECORD])
+    seq_packets = read_seq_packets(in_fhands, prefered_seq_classes=[SEQRECORD])
     polya_params = args['polya_params']
     estscan_params = args['estscan_params']
     blast_params = args['blast_params']

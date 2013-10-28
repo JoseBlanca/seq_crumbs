@@ -36,6 +36,7 @@ from crumbs.exceptions import (InterleaveError, PairDirectionError,
                                MalformedFile)
 from crumbs.seqio import write_seqs
 from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.utils.file_formats import set_format
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -50,8 +51,8 @@ class PairMatcherTest(unittest.TestCase):
         # with equal seqs but the last ones
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = read_seqs([open(file1)], file_format='fastq')
-        rev_seqs = read_seqs([open(file2)], file_format='fastq')
+        fwd_seqs = read_seqs([open(file1)])
+        rev_seqs = read_seqs([open(file2)])
 
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
@@ -68,8 +69,8 @@ class PairMatcherTest(unittest.TestCase):
         # with the firsts seqs different
         file1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend3.sfastq')
-        fwd_seqs = read_seqs([open(file1)], 'fastq')
-        rev_seqs = read_seqs([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)])
+        rev_seqs = read_seqs([open(file2)])
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
@@ -86,8 +87,8 @@ class PairMatcherTest(unittest.TestCase):
 
         file1 = os.path.join(TEST_DATA_DIR, 'pairend4.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = read_seqs([open(file1)], 'fastq')
-        rev_seqs = read_seqs([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)])
+        rev_seqs = read_seqs([open(file2)])
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
@@ -105,8 +106,8 @@ class PairMatcherTest(unittest.TestCase):
         # with reads with no direcction
         file1 = os.path.join(TEST_DATA_DIR, 'pairend7.sfastq')
         file2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fwd_seqs = read_seqs([open(file1)], 'fastq')
-        rev_seqs = read_seqs([open(file2)], 'fastq')
+        fwd_seqs = read_seqs([open(file1)])
+        rev_seqs = read_seqs([open(file2)])
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         out_format = 'fastq'
@@ -139,7 +140,8 @@ AACCAGTCAAC
 CCCFFFFFGHH
 '''
         file1 = StringIO(file1)
-        seqs = read_seqs([file1], 'fastq')
+        set_format(file1, 'fastq')
+        seqs = read_seqs([file1])
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         out_format = 'fastq'

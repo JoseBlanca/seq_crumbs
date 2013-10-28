@@ -79,7 +79,7 @@ def run():
                               orphan_out_fhand=args['orphan'],
                               out_format=args['out_format'])
     else:
-        seqs = read_seqs(args['in_fhands'], file_format=args['in_format'])
+        seqs = read_seqs(args['in_fhands'])
         match_pairs(seqs, out_fhand=args['out_fhand'],
                     orphan_out_fhand=args['orphan'],
                     out_format=args['out_format'],

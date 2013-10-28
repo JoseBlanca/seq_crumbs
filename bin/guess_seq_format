@@ -21,7 +21,7 @@ import argparse
 from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required)
-from crumbs.seqio import guess_format
+from crumbs.seqio import get_format
 
 
 def _setup_argparse():
@@ -55,7 +55,7 @@ def guess_seq_format():
 
     parser = _setup_argparse()
     args = _parse_args(parser)
-    fmt = guess_format(args['in_fhand'])
+    fmt = get_format(args['in_fhand'])
     sys.stdout.write(fmt + '\n')
 
 if __name__ == '__main__':

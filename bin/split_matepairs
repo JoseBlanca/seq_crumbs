@@ -95,8 +95,7 @@ def split_matepairs():
     parser = _setup_argparse()
     args = _parse_args(parser)
 
-    seq_packets = read_seq_packets(args['in_fhands'],
-                                   file_format=args['in_format'])
+    seq_packets = read_seq_packets(args['in_fhands'])
 
     mate_splitter = MatePairSplitter(linkers=args['linkers'])
     seq_packets, workers = process_seq_packets(seq_packets, [mate_splitter],

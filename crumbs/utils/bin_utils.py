@@ -31,7 +31,7 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                OptionalRequirementError)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, compress_fhand)
-from crumbs.utils.file_formats import guess_format
+from crumbs.utils.file_formats import get_format, set_format
 from crumbs.settings import get_setting
 from crumbs.utils.tags import (OUTFILE, GUESS_FORMAT, BGZF, GZIP, BZIP2,
                                ERROR_ENVIRON_VARIABLE)
@@ -370,12 +370,23 @@ def parse_basic_args(parser):
     # We have to add the one_line to the fastq files in order to get the
     # speed improvements of the seqitems
     in_format = parsed_args.in_format
-    if 'fastq' in in_format:
-        guessed_in_format = guess_format(wrapped_fhands[0])
-        if '-one_line' in guessed_in_format:
-            in_format += '-one_line'
+    if in_format == GUESS_FORMAT:
+        for wrapped_fhand in wrapped_fhands:
+            get_format(wrapped_fhand)
     else:
-        guessed_in_format = None
+        if in_format != get_format(wrapped_fhands[0]):
+            msg = 'The given input format does not correspond to the input'
+            msg += ' file'
+            raise WrongFormatError(msg)
+
+        if 'fastq' in in_format:
+            for wrapped_fhand in wrapped_fhands:
+                get_format(wrapped_fhand)
+        else:
+            # we dont set the first one because already did in the previous
+            # checking
+            for wrapped_fhand in wrapped_fhands[1:]:
+                set_format(wrapped_fhand, in_format)
 
     out_fhand = getattr(parsed_args, OUTFILE)
 
@@ -397,18 +408,15 @@ def parse_basic_args(parser):
             parser.error(error)
 
     # The default output format is the same as the first file
-    if in_format == GUESS_FORMAT:
-        if not guessed_in_format:
-            guessed_in_format = guess_format(wrapped_fhands[0])
-        out_format = guessed_in_format
+    if 'fastq' in in_format or in_format == GUESS_FORMAT:
+        out_format = get_format(wrapped_fhands[0])
     else:
         out_format = in_format
 
     # The original fhands should be stored, because otherwise they would be
     # closed
     args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
-            'out_format': out_format, 'original_in_fhands': in_fhands,
-            'in_format': in_format}
+            'out_format': out_format, 'original_in_fhands': in_fhands}
     return args, parsed_args
 
 

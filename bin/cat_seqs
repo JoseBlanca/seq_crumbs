@@ -20,7 +20,7 @@ import sys
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
-from crumbs.seqio import write_seqs, guess_format, read_seqs
+from crumbs.seqio import write_seqs, get_format, read_seqs
 from crumbs.exceptions import IncompatibleFormatError
 
 
@@ -29,11 +29,14 @@ def check_format_incompatibilities(in_fhands, out_format):
     if out_format == 'fasta' or out_format is None:
         return
 
-    in_formats = set([guess_format(in_fhand) for in_fhand in in_fhands])
-    msg = 'output format is incompatible with input file formats'
-    if 'fastq' in out_format:
-        if 'fasta' in in_formats:
-            raise IncompatibleFormatError(msg)
+    in_formats = set([get_format(in_fhand) for in_fhand in in_fhands])
+    msg = 'output format taken from first given file, is incompatible with'
+    msg += 'input file formats'
+
+    has_fastq = any(['fastq' in in_format for in_format in in_formats])
+
+    if 'fasta' in in_formats and has_fastq:
+        raise IncompatibleFormatError(msg)
 
 
 def cat_seqs():
@@ -45,10 +48,9 @@ def cat_seqs():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
     out_format = args['out_format']
-
     check_format_incompatibilities(in_fhands, out_format)
 
-    seqs = read_seqs(in_fhands, file_format=args['in_format'])
+    seqs = read_seqs(in_fhands)
     write_seqs(seqs, out_fhand, out_format)
     flush_fhand(out_fhand)
 
