@@ -84,18 +84,16 @@ def _pair_to_tabbed_str(pair):
     return '\t'.join(reads)
 
 
-def _read_pairs(in_fhands, file_format=GUESS_FORMAT):
-    seqs = read_seqs(in_fhands, file_format=file_format,
-                     prefered_seq_classes=[SEQITEM])
+def _read_pairs(in_fhands):
+    seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQITEM])
     seqs = list(seqs)
     pairs = group_seqs_in_pairs(seqs)
     return pairs
 
 
-def _convert_fastq_to_tabbed_pairs(in_fhands, out_fhand,
-                                   file_format=GUESS_FORMAT):
+def _convert_fastq_to_tabbed_pairs(in_fhands, out_fhand):
     'It converts fastq files to one line per pair format'
-    pairs = _read_pairs(in_fhands, file_format=file_format)
+    pairs = _read_pairs(in_fhands)
     pairs_in_one_line = imap(_pair_to_tabbed_str, pairs)
     for pair in pairs_in_one_line:
         try:
