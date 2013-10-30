@@ -25,6 +25,7 @@ from crumbs.seq import (get_str_seq, get_title, get_str_qualities,
 from crumbs.pairs import group_seqs_in_pairs
 from crumbs.seqio import read_seqs
 from crumbs.utils.tags import SEQITEM
+from crumbs.utils.file_formats import get_format
 from crumbs.iterutils import group_in_packets_fill_last
 from crumbs.seq import SeqItem, SeqWrapper
 
@@ -64,8 +65,6 @@ def _seq_to_tabbed_str(read):
         title = title.replace('\t', ' ')
         sequence = get_str_seq(read)
         return '\t'.join([title, sequence])
-    else:
-        raise ValueError('Format not supported')
 
 
 def _tabbed_pair_to_seqs_seqitem(pair_line, file_format):
@@ -153,12 +152,20 @@ def filter_duplicates(in_fhands, out_fhand, paired_reads, out_format='fastq'):
     but allows also fasta format'''
     if not in_fhands:
         raise ValueError('At least one input fhand is required')
+    sort_cmd = ['sort']
     if paired_reads:
-        keys = '3,7'
+        if 'fastq' in get_format(in_fhands[0]):
+            keys = ['2,2', '5,5']
+        else:
+            keys = ['2,2', '4,4']
     else:
-        keys = '3'
-    sort = Popen(['sort', '-k', keys, '-T', '-u'],
-                 stdin=PIPE, stdout=PIPE)
+        keys = ['2,2']
+    for key in keys:
+        sort_cmd.append('-k')
+        sort_cmd.append(key)
+    sort_cmd.extend(['-T', '-u', '-t', "$'\t'"])
+    sort_cmd = ' '.join(sort_cmd)
+    sort = Popen(['/bin/bash', '-c', sort_cmd], stdin=PIPE, stdout=PIPE)
 
     uniq_and_to_fastq_script = NamedTemporaryFile()
     uniq_and_to_fastq_script.write(UNIQUE_SEQITEM_SCRIPT)

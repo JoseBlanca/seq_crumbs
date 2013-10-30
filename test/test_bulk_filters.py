@@ -86,6 +86,15 @@ TCATTACGTAGCTCCGGCTCCGCCATGTCTGTTCCTTC
 +
 ABCBEGGGGFGGGGGGGGGGGGGGGGBGGGA<EE=515
 '''
+FASTQ_NO_DUPS3 = '''@CUESXEL837 1:Y:18:ATCACG
+TAATACACCCAGTCTCAATTCCATCCTGGGAACTAAGT
++
+AEGDFG5GGEGGF;EGD=D@>GCCGFFGGGCECFE:D@
+@CUESXEL837 2:Y:18:ATCACG
+CGCTCTTCTTCGCCACCGTGTTCTTGATATCGGCCTTC
++
+ABCBEGGGGFGGGGGGGGGGGGGGGGBGGGA<EE=515
+'''
 TABBED_PAIR1 = '@CUESXEL836 1:Y:18:ATCACG\tTAATACACCCAGTCTCAATTCCATCCTGGGAACTA'
 TABBED_PAIR1 += 'AGT\tTTTDFG5GGEGGF;EGD=D@>GCCGFFGGGCECFE:D@\t@CUESXEL836 2:Y:'
 TABBED_PAIR1 += '18:ATCACG\tTCATTACGTAGCTCCGGCTCCGCCATGTCTGTTCCTTC\tABCBEGGGGF'
@@ -122,14 +131,15 @@ TABBED_SEQ1_FASTA += 'AACTAAGT\n'
 
 def _test_filter_duplicates(paired_reads):
     in_fhand = NamedTemporaryFile()
-    fastq_with_dups = FASTQ_NO_DUPS1 + FASTQ_DUPS + FASTQ_NO_DUPS2
+    fastq_with_dups = (FASTQ_NO_DUPS1 + FASTQ_DUPS + FASTQ_NO_DUPS2
+                       + FASTQ_NO_DUPS3)
     in_fhand.write(fastq_with_dups)
     in_fhand.flush()
     out_fhand = NamedTemporaryFile()
     filter_duplicates([in_fhand], out_fhand, paired_reads)
     filtered_pairs = list(_read_pairs([open(out_fhand.name)],
                                       paired_reads))
-    fastq_no_dups = FASTQ_NO_DUPS1 + FASTQ_NO_DUPS2
+    fastq_no_dups = FASTQ_NO_DUPS1 + FASTQ_NO_DUPS2 + FASTQ_NO_DUPS3
     expected_pairs = list(_read_pairs([StringIO(fastq_no_dups)],
                                         paired_reads))
     #print 'filtered_pairs ->', filtered_pairs
