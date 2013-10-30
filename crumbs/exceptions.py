@@ -15,6 +15,7 @@
 
 # pylint: disable=W0232
 # pylint: disable=R0903
+# pylint: disable=C0111
 
 
 def error_quality_disagree(error_msg):
@@ -29,6 +30,10 @@ def error_quality_disagree(error_msg):
 
 class UnknownFormatError(Exception):
     'Raised when the format of a sequence file cannot be guessed'
+    pass
+
+
+class FileIsEmptyError(Exception):
     pass
 
 

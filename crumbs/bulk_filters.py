@@ -20,14 +20,13 @@ import sys
 from itertools import imap
 from tempfile import NamedTemporaryFile
 
-from crumbs.seq import get_str_seq, get_title, get_str_qualities
+from crumbs.seq import (get_str_seq, get_title, get_str_qualities,
+                        get_file_format)
 from crumbs.pairs import group_seqs_in_pairs
 from crumbs.seqio import read_seqs
-from crumbs.utils.tags import SEQITEM, GUESS_FORMAT
-from crumbs.utils.file_utils import flush_fhand
+from crumbs.utils.tags import SEQITEM
 from crumbs.iterutils import group_in_packets_fill_last
 from crumbs.seq import SeqItem, SeqWrapper
-from crumbs.exceptions import UnknownFormatError
 
 
 def _tabbed_pairs_equal(pair1, pair2):
@@ -35,7 +34,6 @@ def _tabbed_pairs_equal(pair1, pair2):
     pair2 = pair2.split('\t')
     if len(pair1) != len(pair2):
         return False
-
     seqs_in_pair1 = pair1[1::3]
     seqs_in_pair2 = pair2[1::3]
     for read1, read2 in zip(seqs_in_pair1, seqs_in_pair2):
@@ -47,27 +45,34 @@ def _tabbed_pairs_equal(pair1, pair2):
 def _seqitem_pairs_equal(pair1, pair2):
     if len(pair1) != len(pair2):
         return False
-    elif len(pair1) == 2:
+    else:
         for read1, read2 in zip(pair1, pair2):
             if not get_str_seq(read1) == get_str_seq(read2):
                 return False
         return True
-    else:
-        return get_str_seq(pair1) == get_str_seq(pair2)
+
 
 def _seq_to_tabbed_str(read):
-    title = '@' + get_title(read)
-    title = title.replace('\t', ' ')
-    sequence = get_str_seq(read)
-    quality = get_str_qualities(read)
-    return '\t'.join([title, sequence, quality])
+    if 'fastq' in get_file_format(read):
+        title = '@' + get_title(read)
+        title = title.replace('\t', ' ')
+        sequence = get_str_seq(read)
+        quality = get_str_qualities(read)
+        return '\t'.join([title, sequence, quality])
+    elif 'fasta' in get_file_format(read):
+        title = '>' + get_title(read)
+        title = title.replace('\t', ' ')
+        sequence = get_str_seq(read)
+        return '\t'.join([title, sequence])
+    else:
+        raise ValueError('Format not supported')
 
 
 def _tabbed_pair_to_seqs_seqitem(pair_line, file_format):
     pair_items = pair_line.rstrip().split('\t')
     seqs = []
     if 'fasta' in file_format:
-        for read_items in group_in_packets_fill_last(pair_items, 3):
+        for read_items in group_in_packets_fill_last(pair_items, 2):
             title = '>' + read_items[0][1:]
             lines = [title + '\n', read_items[1] + '\n']
             seqitem = SeqItem(title.split()[0][1:], lines)
@@ -92,25 +97,21 @@ def _pair_to_tabbed_str(pair):
     return '\t'.join(reads)
 
 
-def _read_pairs(in_fhands):
+def _read_pairs(in_fhands, paired_reads):
     seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQITEM])
-    seqs = list(seqs)
-    pairs = group_seqs_in_pairs(seqs)
+    if paired_reads:
+        pairs = group_seqs_in_pairs(seqs)
+    else:
+        pairs = ([seq] for seq in seqs)
     return pairs
 
 
-def _convert_fastq_to_tabbed_pairs(in_fhands, out_fhand):
+def _convert_fastq_to_tabbed_pairs(in_fhands, paired_reads):
     'It converts fastq files to one line per pair format'
-    pairs = _read_pairs(in_fhands)
+    pairs = _read_pairs(in_fhands, paired_reads)
     pairs_in_one_line = imap(_pair_to_tabbed_str, pairs)
     for pair in pairs_in_one_line:
-        try:
-            out_fhand.write(pair)
-        except IOError, error:
-            # The pipe could be already closed
-            if not 'Broken pipe' in str(error):
-                raise
-    flush_fhand(out_fhand)
+        yield pair
 
 
 CONVERT_FASTQ_TO_LINES_SCRIPT = '''
@@ -120,34 +121,22 @@ in_fpaths = argv[1:]
 in_fhands = [open(fpath) for fpath in in_fpaths]
 _convert_fastq_to_tabbed_pairs(in_fhands, out_fhand=stdout)
 '''
+UNIQUE_SEQITEM_SCRIPT = '''
+import sys
+from crumbs.bulk_filters import _unique_and_to_pairs
+from crumbs.seqio import write_seqs
+in_fhand = sys.stdin
+out_format = sys.argv[1]
+filtered_pairs = _unique_and_to_pairs(in_fhand, out_format)
+for pair in filtered_pairs:
+    write_seqs(pair, sys.stdout)
+sys.stdout.flush()
+'''
 
 
-def filter_duplicates(in_fpaths, in_format='fastq'):
-    '''It filters exact duplicated sequences even with different
-    qualities or names. The output is given in fastq format by default,
-    but allows also fasta format'''
-
-    if not in_fpaths:
-        raise ValueError('At least one input fpath is required')
-    for fpath in in_fpaths:
-        fhand = open(fpath)
-        if fhand.next() == '':
-            raise UnknownFormatError('The file is empty')
-        fhand.close()
-    file_format = in_format
-    to_lines_script = NamedTemporaryFile(prefix='fastq_to_lines.',
-                                         suffix='.py')
-    to_lines_script.write(CONVERT_FASTQ_TO_LINES_SCRIPT)
-    to_lines_script.flush()
-    to_lines_cmd = [sys.executable, to_lines_script.name]
-    to_lines_cmd.extend(in_fpaths)
-
-    to_lines = Popen(to_lines_cmd, stdout=PIPE)
-    sort = Popen(['sort', '-k', '2,5', '-T', '-u'],
-                 stdin=to_lines.stdout, stdout=PIPE)
-
+def _unique_and_to_pairs(in_fhand, file_format):
     prev_pair = None
-    for pair_line in sort.stdout:
+    for pair_line in in_fhand:
         if prev_pair == None:
             duplicated = False
         else:
@@ -157,6 +146,31 @@ def filter_duplicates(in_fpaths, in_format='fastq'):
                                                file_format=file_format)
         prev_pair = pair_line
 
-    to_lines_script.close()
-    #print to_lines.returncode
-    #print sort.returncode
+
+def filter_duplicates(in_fhands, out_fhand, paired_reads, out_format='fastq'):
+    '''It filters exact duplicated sequences even with different
+    qualities or names. The output is given in fastq format by default,
+    but allows also fasta format'''
+    if not in_fhands:
+        raise ValueError('At least one input fhand is required')
+    if paired_reads:
+        keys = '3,7'
+    else:
+        keys = '3'
+    sort = Popen(['sort', '-k', keys, '-T', '-u'],
+                 stdin=PIPE, stdout=PIPE)
+
+    uniq_and_to_fastq_script = NamedTemporaryFile()
+    uniq_and_to_fastq_script.write(UNIQUE_SEQITEM_SCRIPT)
+    uniq_and_to_fastq_script.flush()
+    cmd = [sys.executable, uniq_and_to_fastq_script.name, str(out_format)]
+    uniq_and_to_fastq = Popen(cmd, stdin=sort.stdout, stdout=out_fhand)
+
+    for line_pair in _convert_fastq_to_tabbed_pairs(in_fhands, paired_reads):
+        sort.stdin.write(line_pair)
+    sort.stdin.close()
+    sort.wait()
+    uniq_and_to_fastq.wait()
+    uniq_and_to_fastq_script.close()
+    assert not sort.returncode
+    assert not uniq_and_to_fastq.returncode

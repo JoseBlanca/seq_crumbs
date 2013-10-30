@@ -28,7 +28,8 @@ from crumbs.utils.optional_modules import (FastaIterator, QualPhredIterator,
 from crumbs.utils.data import (ambiguous_rna_letters, ambiguous_dna_letters,
                                extended_protein_letters)
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
-                               UnknownFormatError, IncompatibleFormatError)
+                               UnknownFormatError, IncompatibleFormatError,
+                               FileIsEmptyError)
 from crumbs.iterutils import group_in_packets, group_in_packets_fill_last
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
 from crumbs.utils.file_formats import (get_format, peek_chunk_from_file,
@@ -393,7 +394,10 @@ def read_seqs(fhands, out_format=None, prefered_seq_classes=None):
 
     if not prefered_seq_classes:
         prefered_seq_classes = [SEQITEM, SEQRECORD]
-    in_format = get_format(fhands[0])
+    try:
+        in_format = get_format(fhands[0])
+    except FileIsEmptyError:
+        return []
     if out_format not in (None, GUESS_FORMAT):
 
         if in_format != out_format:

@@ -22,6 +22,9 @@ split_matepairs
 filter_by_quality
     Filters the sequences according to its mean quality.
 
+filter_duplicates
+    Filter out identical sequences.
+
 filter_by_length
     Filters sequences according to a length threshold.
 

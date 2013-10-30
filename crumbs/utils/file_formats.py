@@ -21,7 +21,8 @@ import hashlib
 from crumbs.utils.optional_modules import FastqGeneralIterator
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import fhand_is_seekable, peek_chunk_from_file
-from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
+from crumbs.exceptions import (UnknownFormatError, UndecidedFastqVersionError,
+                               FileIsEmptyError)
 
 FILETYPE = 'file'
 STRINGIOTYPE = 'stringio'
@@ -178,7 +179,7 @@ def _guess_format(fhand, force_file_as_non_seek):
     chunk_size = 1024
     chunk = peek_chunk_from_file(fhand, chunk_size)
     if not chunk:
-        raise UnknownFormatError('The file is empty')
+        raise FileIsEmptyError('The file is empty')
     lines = chunk.splitlines()
     if chunk.startswith('>'):
         if lines[1].startswith('>'):

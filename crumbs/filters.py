@@ -104,33 +104,6 @@ class FilterByFeatureTypes(_BaseFilter):
         return True if f_in_seq else False
 
 
-class FilterDuplicates(object):
-    'It filters out duplicate secuences'
-    def __init__(self, reverse=False):
-        '''The initiator
-
-        feat_types is a list of types of features to use to filter'''
-        self.reverse = reverse
-        self._prev_pairs = set()
-
-    def __call__(self, filter_packet):
-        seqs_passed = []
-        filtered_out = filter_packet[SEQS_FILTERED_OUT][:]
-        for pair in filter_packet[SEQS_PASSED]:
-            str_pair = tuple(get_str_seq(seq) for seq in pair)
-            duplicated = True if str_pair in self._prev_pairs else False
-            self._prev_pairs.add(str_pair)
-
-            filter_pass = duplicated if self.reverse else not(duplicated)
-
-            if filter_pass:
-                seqs_passed.append(pair)
-            else:
-                filtered_out.append(pair)
-
-        return {SEQS_PASSED: seqs_passed, SEQS_FILTERED_OUT: filtered_out}
-
-
 class FilterByRpkm(_BaseFilter):
     def __init__(self, read_counts, min_rpkm, reverse=False,
                  failed_drags_pair=True):

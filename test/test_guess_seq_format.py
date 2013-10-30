@@ -21,7 +21,8 @@ from StringIO import StringIO
 
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.file_formats import get_format, _guess_format
-from crumbs.exceptions import UnknownFormatError, UndecidedFastqVersionError
+from crumbs.exceptions import (UnknownFormatError, FileIsEmptyError,
+                               UndecidedFastqVersionError)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -109,8 +110,8 @@ class GuessFormatTest(unittest.TestCase):
         fhand = StringIO()
         try:
             get_format(fhand)
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
+            self.fail('FileIsEmptyError expected')
+        except FileIsEmptyError:
             pass
 
     def test_fastq(self):
