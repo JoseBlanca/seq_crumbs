@@ -20,6 +20,7 @@ from crumbs.utils.bin_utils import (main, parse_filter_args, argparse,
                                     create_basic_parallel_argparse,
                                     parse_basic_parallel_args)
 from crumbs.bulk_filters import filter_duplicates
+from crumbs.settings import get_setting
 
 
 def create_filter_argparse(add_reverse=True, **kwargs):
@@ -29,6 +30,13 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     parser.add_argument('-e', '--filtered_file',
                         help='Filtered out sequences output file',
                         type=argparse.FileType('wt'))
+    parser.add_argument('-d', '--path_for_temp_files', dest='path',
+                        help='Directory to store temporary files for sorting',
+                        type=str)
+    _help = 'Sorting is done in packets with this number of sequences'
+    _help += ' to reduce memory requirements'
+    parser.add_argument('-m', '--max_seqs_packet',  dest='max_seqs_packet',
+                        help=_help, default=None, type=int)
     group = parser.add_argument_group('Pairing')
     group.add_argument('--paired_reads', action='store_true',
                         help='Filter considering interleaved pairs')
@@ -38,8 +46,9 @@ def create_filter_argparse(add_reverse=True, **kwargs):
 def parse_filter_args(parser, add_reverse=True):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_parallel_args(parser)
-    paired_reads = parsed_args.paired_reads
-    args['paired_reads'] = paired_reads
+    args['paired_reads'] = parsed_args.paired_reads
+    args['fpath'] = parsed_args.path
+    args['max_seqs_packet'] = parsed_args.max_seqs_packet
 
     return args, parsed_args
 
@@ -51,9 +60,12 @@ def run():
     args = parse_filter_args(parser)[0]
 
     in_fhands = args['in_fhands']
-    passed_fhand = args['out_fhand']
-    filter_duplicates(in_fhands, passed_fhand,
-                      args['paired_reads'], args['out_format'])
+    out_fhand = args['out_fhand']
+    fpath = args['fpath']
+    max_seqs_packet = args['max_seqs_packet']
+
+    filter_duplicates(in_fhands, out_fhand, args['paired_reads'],
+                      n_seqs_packet=max_seqs_packet, directory=fpath)
 
 if __name__ == '__main__':
     sys.exit(main(run))
