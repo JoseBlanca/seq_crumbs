@@ -16,7 +16,8 @@
 import unittest
 
 from crumbs.iterutils import (sample, sample_2, length, group_in_packets,
-                              rolling_window, group_in_packets_fill_last)
+                              rolling_window, group_in_packets_fill_last,
+                              sorted_unique_items)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -102,6 +103,27 @@ class IterutilsTest(unittest.TestCase):
             iterator = iter(serie)
             wins2 = [''.join(win) for win in rolling_window(iterator, 4, 2)]
             assert wins1 == wins2
+
+    def test_sorted_unique_items(self):
+        items = [1, 2, 3, 4, 4, 3, 2, 1]
+        unique_items = sorted_unique_items(iter(items))
+        assert list(unique_items) == [1, 2, 3, 4]
+        unique_items = sorted_unique_items(iter(items),
+                                           temp_dir='/home/carlos/devel/tmp')
+        assert list(unique_items) == [1, 2, 3, 4]
+        unique_items = sorted_unique_items(iter(items),
+                                           max_items_in_memory=3)
+        assert list(unique_items) == [1, 2, 3, 4]
+
+        items = iter([])
+        assert not list(unique_items)
+
+    def test_key(self):
+        items = [(1, 'a'), (1, 'b'), (2, 'a')]
+        unique_items = sorted_unique_items(iter(items), key=lambda x: x[0])
+        assert list(unique_items) == [(1, 'a'), (2, 'a')]
+        unique_items = sorted_unique_items(iter(items), key=lambda x: x[1])
+        assert list(unique_items) == [(1, 'a'), (1, 'b')]
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'IterutilsTest.test_group_in_packets']
