@@ -17,6 +17,7 @@ import random
 from itertools import izip_longest, islice
 import cPickle as pickle
 from tempfile import NamedTemporaryFile
+from multiprocessing import Pool as pool
 
 from toolz.itertoolz.core import merge_sorted
 
@@ -162,6 +163,7 @@ def _unpickle_items(fhand):
             str_item += line
     if str_item:
         yield pickle.loads(str_item)
+    fhand.close()
 
 
 def _unique(items, key=None):
@@ -183,10 +185,16 @@ def _unique(items, key=None):
         prev_item = item
 
 
+def pickle_unpickle(sorted_group, temp_dir):
+    group_fhand = _pickle_items(sorted_group, temp_dir=temp_dir)
+    return list(_unpickle_items(open(group_fhand.name)))
+
+
 def sorted_unique_items(items, key=None, max_items_in_memory=None,
                         temp_dir=None):
     '''It yields unique items from an item iterator according to a given key
-    It allows to modulate memory usage by sorting in different parts of a given size'''
+    It allows to modulate memory usage by sorting in different parts of a given
+     size'''
     if max_items_in_memory:
         grouped_items = group_in_packets(items, max_items_in_memory)
     else:
@@ -204,7 +212,43 @@ def sorted_unique_items(items, key=None, max_items_in_memory=None,
         else:
             sorted_groups.append(sorted_group)
         del sorted_group
+    if len(sorted_groups) > 1:
+        if key is None:
+            sorted_items = merge_sorted(*sorted_groups)
+        else:
+            sorted_items = merge_sorted(*sorted_groups, key=key)
+    else:
+        sorted_items = sorted_groups[0]
 
+    return _unique(sorted_items, key)
+
+
+def sorted_unique_items_new(items, key=None, max_items_in_memory=None,
+                        temp_dir=None):
+    '''It yields unique items from an item iterator according to a given key
+    It allows to modulate memory usage by sorting in different parts of a given
+     size'''
+    if max_items_in_memory:
+        grouped_items = group_in_packets(items, max_items_in_memory)
+    else:
+        grouped_items = [items]
+
+    # sort and write to disk all groups but the last one
+    write_to_disk = True if max_items_in_memory else False
+    sorted_groups = []
+    pool_workers = pool()
+    for group in grouped_items:
+        sorted_group = sorted(group, key=key)
+        if write_to_disk:
+            sorted_group_result = pool_workers.apply_async(pickle_unpickle,
+                                args=(sorted_group, temp_dir))
+            sorted_groups.append(iter(sorted_group_result.get()))
+        else:
+            sorted_groups.append(sorted_group)
+        del group
+        del sorted_group
+    pool_workers.close()
+    pool_workers.join()
     if len(sorted_groups) > 1:
         if key is None:
             sorted_items = merge_sorted(*sorted_groups)
