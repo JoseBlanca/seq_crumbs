@@ -12,6 +12,7 @@
 
 # You should have received a copy of the GNU General Public License
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
 from bisect import bisect
 
 
@@ -20,26 +21,26 @@ class OrderedSet(object):
     def __init__(self, ordered_set=None):
         if ordered_set is None:
             ordered_set = []
-        self.list = ordered_set
+        self._items = ordered_set
 
     def check_add(self, item):
-        index = bisect(self.list, item)
+        index = bisect(self._items, item)
         if index == 0:
-            self.list.insert(0, item)
+            self._items.insert(0, item)
             return True
         else:
-            present = True if item == self.list[index - 1] else False
+            present = True if item == self._items[index - 1] else False
             if present:
                 return False
             else:
-                self.list.insert(index, item)
+                self._items.insert(index, item)
                 return True
 
     def __contains__(self, item):
-        index = bisect(self.list, item)
+        index = bisect(self._items, item)
         if index == 0:
             return False
-        return True if item == self.list[index - 1] else False
+        return True if item == self._items[index - 1] else False
 
     def __len__(self):
-        return len(self.list)
+        return len(self._items)

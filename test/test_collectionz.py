@@ -26,11 +26,11 @@ class TestCollections(unittest.TestCase):
         for item in in_list:
             assert item in ordered_set
         assert ordered_set.check_add(7)
-        assert ordered_set.list == [1, 2, 3, 4, 5, 7, 8, 10]
+        assert ordered_set._items == [1, 2, 3, 4, 5, 7, 8, 10]
         assert not ordered_set.check_add(2)
-        assert ordered_set.list == [1, 2, 3, 4, 5, 7, 8, 10]
+        assert ordered_set._items == [1, 2, 3, 4, 5, 7, 8, 10]
         assert ordered_set.check_add(0)
-        assert ordered_set.list == [0, 1, 2, 3, 4, 5, 7, 8, 10]
+        assert ordered_set._items == [0, 1, 2, 3, 4, 5, 7, 8, 10]
         for item in not_in_list:
             assert item not in ordered_set
 
