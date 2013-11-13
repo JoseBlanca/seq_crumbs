@@ -17,6 +17,7 @@
 
 import sys
 import argparse
+import tempfile
 
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args,
@@ -26,28 +27,42 @@ from crumbs.pairs import match_pairs
 from crumbs.seqio import read_seqs
 
 
+
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It matches paired reads and splits orphaned reads in other'
     description += ' file'
     parser = create_basic_argparse(description=description)
+
     #orphan
     parser.add_argument('-p', '--orphan', dest='orphan', required=True,
                        help='Output orphan file (required)',
                        type=argparse.FileType('wt'))
-    hlp = 'Maximum number of reads in memory (default: None)'
-    parser.add_argument('-l', '--limit', dest='limit', help=hlp, type=int,
-                        default=None)
-    dir_help = 'Directory to save temporary files for sorting(default /tmp)'
-    parser.add_argument('-d', '--directory', dest='directory', help=dir_help,
-                        default=None)
     unor_help = 'Paired reads are unordered and not just interleaved'
-    parser.add_argument('-u', '--unordered', dest='unordered',
-                        help=unor_help, action='store_true', default=False)
+    parser.add_argument('-u', '--unordered', help=unor_help,
+                        action='store_true', default=False)
+
+    ordered_group = parser.add_argument_group('Ordered pairs')
     bufs_help = 'Buffer size for checking if reads are ordered. '
     bufs_help += 'Raises an error if not'
-    parser.add_argument('-bs', '--buffer_size', dest='buffer_size',
-                        help=bufs_help, default=0, type=int)
+    ordered_group.add_argument('--buffer_size', help=bufs_help,
+                               default=100000, type=int)
+
+    unordered_group = parser.add_argument_group('Unordered pairs')
+
+    lowmem_help = 'If the binary uses all memory and does not finish'
+    lowmem_help += ', use this option (default False)'
+    unordered_group.add_argument('--low_memory', action='store_true',
+                                 default=False, help=lowmem_help)
+
+    dir_help = 'Directory to save temporary files for sorting(default {})'
+    dir_help = dir_help.format(tempfile.gettempdir())
+    unordered_group.add_argument('--tempdir', dest='tempdir', help=dir_help,
+                                 default=None)
+    hlp = 'Maximum number of reads in memory (default: 1000000)'
+    unordered_group.add_argument('--limit', help=hlp, type=int,
+                                 default=1000000)
+
     return parser
 
 
@@ -58,9 +73,10 @@ def _parse_args(parser):
     comp_kind = get_requested_compression(parsed_args)
     args['orphan'] = compress_fhand(orphan, compression_kind=comp_kind)
     args['max_reads_memory'] = parsed_args.limit
-    args['directory'] = parsed_args.directory
+    args['tempdir'] = parsed_args.tempdir
     args['check_order_buffer_size'] = parsed_args.buffer_size
     args['unordered'] = parsed_args.unordered
+    args['low_memory'] = parsed_args.low_memory
 
     #if args['memory_limit'] == 0:
     #    args['memory_limit'] = None
