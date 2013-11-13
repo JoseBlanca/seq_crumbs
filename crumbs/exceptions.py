@@ -100,3 +100,8 @@ class InterleaveError(Exception):
 class OptionalRequirementError(Exception):
     'An optional module is not present'
     pass
+
+
+class ItemsNotSortedError(Exception):
+    'A list or generator of items is not sorted as expected'
+    pass
