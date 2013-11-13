@@ -14,6 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import tempfile
 
 from crumbs.iterutils import (sample, sample_2, length, group_in_packets,
                               rolling_window, group_in_packets_fill_last,
@@ -108,8 +109,7 @@ class IterutilsTest(unittest.TestCase):
         items = [1, 2, 3, 4, 4, 3, 2, 1]
         unique_items = sorted_items(iter(items))
         assert list(unique_items) == [1, 1, 2, 2, 3, 3, 4, 4]
-        unique_items = sorted_items(iter(items),
-                                           temp_dir='/home/carlos/devel/tmp')
+        unique_items = sorted_items(iter(items), tempdir=tempfile.tempdir)
         assert list(unique_items) == [1, 1, 2, 2, 3, 3, 4, 4]
         unique_items = sorted_items(iter(items),
                                     max_items_in_memory=3)
