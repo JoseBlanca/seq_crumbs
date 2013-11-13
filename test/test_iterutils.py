@@ -17,7 +17,7 @@ import unittest
 
 from crumbs.iterutils import (sample, sample_2, length, group_in_packets,
                               rolling_window, group_in_packets_fill_last,
-                              sorted_unique_items)
+                              sorted_items, unique)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -104,25 +104,35 @@ class IterutilsTest(unittest.TestCase):
             wins2 = [''.join(win) for win in rolling_window(iterator, 4, 2)]
             assert wins1 == wins2
 
-    def test_sorted_unique_items(self):
+    def test_sorted_items(self):
         items = [1, 2, 3, 4, 4, 3, 2, 1]
-        unique_items = sorted_unique_items(iter(items))
-        assert list(unique_items) == [1, 2, 3, 4]
-        unique_items = sorted_unique_items(iter(items),
+        unique_items = sorted_items(iter(items))
+        assert list(unique_items) == [1, 1, 2, 2, 3, 3, 4, 4]
+        unique_items = sorted_items(iter(items),
                                            temp_dir='/home/carlos/devel/tmp')
-        assert list(unique_items) == [1, 2, 3, 4]
-        unique_items = sorted_unique_items(iter(items),
-                                           max_items_in_memory=3)
-        assert list(unique_items) == [1, 2, 3, 4]
+        assert list(unique_items) == [1, 1, 2, 2, 3, 3, 4, 4]
+        unique_items = sorted_items(iter(items),
+                                    max_items_in_memory=3)
+        assert list(unique_items) == [1, 1, 2, 2, 3, 3, 4, 4]
 
         items = iter([])
         assert not list(unique_items)
 
+    def test_unique_items(self):
+        items = [1, 1, 2, 2, 3, 3, 4]
+        unique_items = unique(items)
+        assert list(unique_items) == [1, 2, 3, 4]
+
     def test_key(self):
         items = [(1, 'a'), (1, 'b'), (2, 'a')]
-        unique_items = sorted_unique_items(iter(items), key=lambda x: x[0])
+        _sorted_items = sorted_items(iter(items), key=lambda x: x[0])
+        assert list(_sorted_items) == [(1, 'a'), (1, 'b'), (2, 'a')]
+        unique_items = unique(_sorted_items, key=lambda x: x[0])
         assert list(unique_items) == [(1, 'a'), (2, 'a')]
-        unique_items = sorted_unique_items(iter(items), key=lambda x: x[1])
+
+        _sorted_items = sorted_items(iter(items), key=lambda x: x[1])
+        assert list(_sorted_items) == [(1, 'a'), (2, 'a'), (1, 'b')]
+        unique_items = unique(_sorted_items, key=lambda x: x[1])
         assert list(unique_items) == [(1, 'a'), (1, 'b')]
 
 if __name__ == '__main__':

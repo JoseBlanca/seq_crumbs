@@ -166,7 +166,7 @@ def _unpickle_items(fhand):
     fhand.close()
 
 
-def _unique(items, key=None):
+def unique(items, key=None):
     '''It yields the unique items.
 
     The items must be sorted. It only compares contiguous items.
@@ -185,11 +185,8 @@ def _unique(items, key=None):
         prev_item = item
 
 
-def sorted_unique_items(items, key=None, max_items_in_memory=None,
+def sorted_items(items, key=None, max_items_in_memory=None,
                         temp_dir=None):
-    '''It yields unique items from an item iterator according to a given key
-    It allows to modulate memory usage by sorting in different parts of a given
-     size'''
     if max_items_in_memory:
         grouped_items = group_in_packets(items, max_items_in_memory)
     else:
@@ -214,5 +211,4 @@ def sorted_unique_items(items, key=None, max_items_in_memory=None,
             sorted_items = merge_sorted(*sorted_groups, key=key)
     else:
         sorted_items = sorted_groups[0]
-
-    return _unique(sorted_items, key)
+    return sorted_items
