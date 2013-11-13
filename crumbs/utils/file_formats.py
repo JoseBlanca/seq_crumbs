@@ -56,7 +56,8 @@ def _get_some_qual_and_lengths(fhand, force_file_as_non_seek):
             if seqs_analyzed > seqs_to_peek:
                 break
     except ValueError:
-        raise UnknownFormatError('Malformed fastq')
+        msg = 'The file is Fastq, but the version is difficult to guess'
+        raise UndecidedFastqVersionError(msg)
     finally:
         fhand.seek(0)
     return lengths, None, chunk  # don't know if it's sanger
@@ -160,14 +161,6 @@ def set_format(fhand, file_format):
         msg = 'The given instance already setted its file format'
         raise RuntimeError(msg)
     FILEFORMAT_INVENTORY[id_] = file_format
-
-
-def xguess_format(fhand):
-    '''It guesses the format of the sequence file.
-
-    It does ignore the solexa fastq version.
-    '''
-    return _guess_format(fhand, force_file_as_non_seek=False)
 
 
 def _guess_format(fhand, force_file_as_non_seek):

@@ -137,8 +137,8 @@ class GuessFormatTest(unittest.TestCase):
         fhand = StringIO('@HWI-EAS209\n@')
         try:
             assert get_format(fhand) == 'fasta'
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
+            self.fail('UndecidedFastqVersionError expected')
+        except UndecidedFastqVersionError:
             pass
 
         # sanger
@@ -174,8 +174,8 @@ class GuessFormatTest(unittest.TestCase):
         fhand = StringIO('@HWI-EAS209\n@')
         try:
             assert _guess_format(fhand, True) == 'fasta'
-            self.fail('UnknownFormatError expected')
-        except UnknownFormatError:
+            self.fail('UndecidedFastqVersionError expected')
+        except UndecidedFastqVersionError:
             pass
 
         # sanger
