@@ -18,7 +18,7 @@ from itertools import izip_longest, islice, groupby
 import cPickle as pickle
 from tempfile import NamedTemporaryFile
 
-from toolz.itertoolz.core import merge_sorted
+from toolz.itertoolz.core import merge_sorted, first
 
 
 def sample(iterator, sample_size):
@@ -171,7 +171,7 @@ def unique(items, key=None):
     The items must be sorted. It only compares contiguous items.
     '''
 
-    return (list(groups[1])[0] for groups in groupby(items, key))
+    return (first(groups[1]) for groups in groupby(items, key))
 
 #     prev_item = None
 #     for item in items:
