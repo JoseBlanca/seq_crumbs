@@ -17,14 +17,17 @@ from itertools import izip_longest
 
 from crumbs.utils.optional_modules import _index
 from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
-                               InterleaveError, MalformedFile)
+                               InterleaveError, MalformedFile,
+                               ItemsNotSortedError)
 from crumbs.seqio import write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.seq import get_title, SeqWrapper
+from crumbs.seq import get_title, SeqWrapper, get_name
 from crumbs.utils.file_formats import get_format, remove_multiline
 from crumbs.utils.tags import FWD, REV, SEQRECORD
 from crumbs.utils.file_utils import flush_fhand
+from crumbs.iterutils import sorted_items
+from crumbs.collectionz import OrderedSet
 
 
 def _parse_pair_direction_and_name(seq):
@@ -77,7 +80,88 @@ def _index_seq_file(fpath, file_format=None):
     return file_index
 
 
-def _get_paired_and_orphan(index_):
+def _match_pairs_from_sorted_reads(sorted_reads):
+    prev_reads = []
+    prev_reads_name = None
+    prev_reads_directions = []
+    #{'read': None, 'name': None, 'direction': None}
+    for read in sorted_reads:
+        title = get_title(read)
+        try:
+            name, direction = _parse_pair_direction_and_name_from_title(title)
+        except PairDirectionError:
+            name, direction = None, None
+
+        if direction is not None and prev_reads_name is None:
+            prev_reads = [read]
+            prev_reads_name = name
+            prev_reads_directions = [direction]
+            continue
+        elif direction is None:
+            if prev_reads:
+                yield prev_reads
+                prev_reads = []
+                prev_reads_name = None
+                prev_reads_directions = []
+            yield [read]
+        elif name == prev_reads_name:
+            if direction == REV:
+                prev_reads.append(read)
+                prev_reads_directions.append(direction)
+            else:
+                prev_reads.insert(0, read)
+                prev_reads_directions.insert(0, direction)
+        else:
+            if prev_reads:
+                yield prev_reads
+            prev_reads = [read]
+            prev_reads_name = name
+            prev_reads_directions = [direction]
+    if prev_reads:
+        yield prev_reads
+
+
+def _get_paired_and_orphan(reads, ordered, max_reads_memory, temp_dir):
+    if ordered:
+        sorted_reads = reads
+    else:
+        def _key(seq):
+            return get_title(seq)
+        sorted_reads = sorted_items(reads, _key, max_reads_memory, temp_dir)
+    return _match_pairs_from_sorted_reads(sorted_reads)
+
+
+def match_pairs(reads, out_fhand, orphan_out_fhand, out_format, ordered=True,
+                check_order_buffer_size=0, max_reads_memory=None,
+                temp_dir=None):
+    '''It matches the seq pairs in an iterator and splits the orphan seqs.
+    It assumes that sequences are already sorted'''
+    counts = 0
+    check_order_buffer = OrderedSet()
+    for pair in _get_paired_and_orphan(reads, ordered, max_reads_memory,
+                                       temp_dir):
+        if len(pair) == 1:
+            write_seqs(pair, orphan_out_fhand, out_format)
+            try:
+                name = _parse_pair_direction_and_name(pair[0])[0]
+            except PairDirectionError:
+                name = get_name(pair[0])
+            if ordered and counts < check_order_buffer_size:
+                counts += 1
+                if not check_order_buffer.check_add(name):
+                    msg = 'Reads are not ordered by pairs.Use unordered option'
+                    raise ItemsNotSortedError(msg)
+            elif ordered and counts >= check_order_buffer_size:
+                if name in check_order_buffer:
+                    msg = 'Reads are not ordered by pairs.Use unordered option'
+                    raise ItemsNotSortedError(msg)
+        elif len(pair) == 2:
+            write_seqs(pair, out_fhand, out_format)
+    orphan_out_fhand.flush()
+    out_fhand.flush()
+
+
+def _get_paired_and_orphan_old(index_):
     'It guesses the paired and the orphan seqs'
     fwd_reads = {}
     rev_reads = {}
@@ -116,7 +200,7 @@ def _get_paired_and_orphan(index_):
     return paired_titles, orphan_titles
 
 
-def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
+def match_pairs_unordered_old(seq_fpath, out_fhand, orphan_out_fhand, out_format):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
     indx = _index_seq_file(seq_fpath)
     paired, orphans = _get_paired_and_orphan(indx)
@@ -130,7 +214,7 @@ def match_pairs_unordered(seq_fpath, out_fhand, orphan_out_fhand, out_format):
                orphan_out_fhand, out_format)
 
 
-def match_pairs(seqs, out_fhand, orphan_out_fhand, out_format,
+def match_pairs_old(seqs, out_fhand, orphan_out_fhand, out_format,
                 memory_limit=get_setting('DEFAULT_SEQS_IN_MEM_LIMIT')):
     'It matches the seq pairs in an iterator and splits the orphan seqs'
     buf_fwd = {'index': {}, 'items': []}
@@ -277,6 +361,5 @@ def group_seqs_in_pairs(seqs):
             paired_seqs = []
         paired_seqs.append(seq)
         prev_name = name
-    else:
-        if paired_seqs:
-            yield paired_seqs
+    if paired_seqs:
+        yield paired_seqs
