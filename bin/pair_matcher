@@ -22,9 +22,8 @@ from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args,
                                     get_requested_compression)
 from crumbs.utils.file_utils import compress_fhand
-from crumbs.pairs import match_pairs, match_pairs_unordered
+from crumbs.pairs import match_pairs
 from crumbs.seqio import read_seqs
-from crumbs.settings import get_setting
 
 
 def _setup_argparse():
@@ -36,12 +35,19 @@ def _setup_argparse():
     parser.add_argument('-p', '--orphan', dest='orphan', required=True,
                        help='Output orphan file (required)',
                        type=argparse.FileType('wt'))
-    hlp = 'Maximum number of reads in memory (default: %(default)s)'
+    hlp = 'Maximum number of reads in memory (default: None)'
     parser.add_argument('-l', '--limit', dest='limit', help=hlp, type=int,
-                        default=get_setting('DEFAULT_SEQS_IN_MEM_LIMIT'))
-    unor_help = 'paired reads are unordered and not just interleaved'
+                        default=None)
+    dir_help = 'Directory to save temporary files for sorting(default /tmp)'
+    parser.add_argument('-d', '--directory', dest='directory', help=dir_help,
+                        default=None)
+    unor_help = 'Paired reads are unordered and not just interleaved'
     parser.add_argument('-u', '--unordered', dest='unordered',
                         help=unor_help, action='store_true', default=False)
+    bufs_help = 'Buffer size for checking if reads are ordered. '
+    bufs_help += 'Raises an error if not'
+    parser.add_argument('-bs', '--buffer_size', dest='buffer_size',
+                        help=bufs_help, default=0, type=int)
     return parser
 
 
@@ -51,19 +57,23 @@ def _parse_args(parser):
     orphan = parsed_args.orphan
     comp_kind = get_requested_compression(parsed_args)
     args['orphan'] = compress_fhand(orphan, compression_kind=comp_kind)
-    args['memory_limit'] = parsed_args.limit
-    if args['memory_limit'] == 0:
-        args['memory_limit'] = None
+    args['max_reads_memory'] = parsed_args.limit
+    args['directory'] = parsed_args.directory
+    args['check_order_buffer_size'] = parsed_args.buffer_size
+    args['unordered'] = parsed_args.unordered
 
-    unordered = parsed_args.unordered
+    #if args['memory_limit'] == 0:
+    #    args['memory_limit'] = None
+
+    #unordered = parsed_args.unordered
     # Pair_matcher based in index incompatible with stdin and withm ore
     # than one input file
-    if unordered and (len(args['in_fhands']) > 1 or
-                      args['in_fhands'][0] == sys.stdin):
-        error_str = 'Unordered file option is not compatible with STDIN or '
-        error_str += 'with more than one input file'
-        parser.error(error_str)
-    args['unordered'] = unordered
+    #if unordered and (len(args['in_fhands']) > 1 or
+    #                  args['in_fhands'][0] == sys.stdin):
+    #    error_str = 'Unordered file option is not compatible with STDIN or '
+    #    error_str += 'with more than one input file'
+    #    parser.error(error_str)
+    #args['unordered'] = unordered
     return args
 
 
@@ -73,7 +83,13 @@ def run():
     args = _parse_args(parser)
 
     # read seqs
-    if args['unordered']:
+    seqs = read_seqs(args['in_fhands'])
+    match_pairs(seqs, out_fhand=args['out_fhand'],
+                orphan_out_fhand=args['orphan'], temp_dir=args['directory'],
+                out_format=args['out_format'], ordered=not args['unordered'],
+                check_order_buffer_size=args['check_order_buffer_size'],
+                max_reads_memory=args['max_reads_memory'])
+    '''if args['unordered']:
         match_pairs_unordered(args['in_fhands'][0].name,
                               out_fhand=args['out_fhand'],
                               orphan_out_fhand=args['orphan'],
@@ -83,7 +99,7 @@ def run():
         match_pairs(seqs, out_fhand=args['out_fhand'],
                     orphan_out_fhand=args['orphan'],
                     out_format=args['out_format'],
-                    memory_limit=args['memory_limit'])
+                    memory_limit=args['memory_limit'])'''
 
 if __name__ == '__main__':
     #sys.argv.append('-h')
