@@ -41,7 +41,7 @@ def _read_pairs(in_fhands, paired_reads):
     return pairs
 
 
-def _key(pair):
+def _get_pair_key(pair):
     key = []
     for read in pair:
         key.append(get_str_seq(read))
@@ -49,12 +49,12 @@ def _key(pair):
 
 
 def filter_duplicates(in_fhands, out_fhand, paired_reads,
-                      n_seqs_packet=None, directory=None):
+                      n_seqs_packet=None, tempdir=None):
     if not in_fhands:
         raise ValueError('At least one input fhand is required')
     pairs = _read_pairs(in_fhands, paired_reads)
-    _sorted_items = sorted_items(pairs, key=_key, temp_dir=directory,
-                                 max_items_in_memory=n_seqs_packet)
-    for pair in unique(_sorted_items, key=_key):
+    sorted_pairs = sorted_items(pairs, key=_get_pair_key, tempdir=tempdir,
+                                max_items_in_memory=n_seqs_packet)
+    for pair in unique(sorted_pairs, key=_get_pair_key):
         write_seqs(pair, out_fhand)
-    out_fhand.flush()
+

@@ -20,7 +20,7 @@ from crumbs.utils.bin_utils import (main, parse_filter_args, argparse,
                                     create_basic_parallel_argparse,
                                     parse_basic_parallel_args)
 from crumbs.bulk_filters import filter_duplicates
-from crumbs.settings import get_setting
+from crumbs.utils.file_utils import flush_fhand
 
 
 def create_filter_argparse(add_reverse=True, **kwargs):
@@ -30,9 +30,8 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     parser.add_argument('-e', '--filtered_file',
                         help='Filtered out sequences output file',
                         type=argparse.FileType('wt'))
-    parser.add_argument('-d', '--path_for_temp_files', dest='path',
-                        help='Directory to store temporary files for sorting',
-                        type=str)
+    parser.add_argument('-d', '--tempdir',
+                        help='Directory to store temporary files for sorting')
     _help = 'Sorting is done in packets with this number of sequences'
     _help += ' to reduce memory requirements'
     parser.add_argument('-m', '--max_seqs_packet',  dest='max_seqs_packet',
@@ -47,7 +46,7 @@ def parse_filter_args(parser, add_reverse=True):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_parallel_args(parser)
     args['paired_reads'] = parsed_args.paired_reads
-    args['fpath'] = parsed_args.path
+    args['tempdir'] = parsed_args.tempdir
     args['max_seqs_packet'] = parsed_args.max_seqs_packet
 
     return args, parsed_args
@@ -61,11 +60,12 @@ def run():
 
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
-    fpath = args['fpath']
+    tempdir = args['tempdir']
     max_seqs_packet = args['max_seqs_packet']
 
     filter_duplicates(in_fhands, out_fhand, args['paired_reads'],
-                      n_seqs_packet=max_seqs_packet, directory=fpath)
+                      n_seqs_packet=max_seqs_packet, tempdir=tempdir)
+    flush_fhand(out_fhand)
 
 if __name__ == '__main__':
     sys.exit(main(run))
