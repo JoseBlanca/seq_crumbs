@@ -85,25 +85,25 @@ class SeqMethodsTest(unittest.TestCase):
         seq = SeqItem(name='seq',
                       lines=['@seq\n', 'aaaa\n', '+\n', '!???\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq')
-        assert ''.join(get_str_qualities(seq)) == '!???'
+        assert get_str_qualities(seq) == '!???'
 
         # with fastq to fastq-illumina
         seq = SeqItem(name='seq',
                       lines=['@seq\n', 'aaaa\n', '+\n', '!???\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq')
-        assert ''.join(list(get_str_qualities(seq, ILLUMINA_QUALITY))) == '@^^^'
+        assert get_str_qualities(seq, ILLUMINA_QUALITY) == '@^^^'
 
         # with multiline fastq-illumina
         seq = SeqItem(name='seq', lines=['@seq\n', 'aaaaaaaa\n', '+\n',
                                          '@AAABBBB\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina')
-        assert ''.join(list(get_str_qualities(seq, ILLUMINA_QUALITY))) == '@AAABBBB'
+        assert get_str_qualities(seq, ILLUMINA_QUALITY) == '@AAABBBB'
 
         # with multiline fastq-illumina to fastq
         seq = SeqItem(name='seq', lines=['@seq\n', 'aaaaaaaa\n', '+\n',
                                          '@AAABBBB\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina')
-        assert ''.join(list(get_str_qualities(seq, 'fastq'))) == '!"""####'
+        assert get_str_qualities(seq, 'fastq') == '!"""####'
 
     def test_slice(self):
         # with fasta

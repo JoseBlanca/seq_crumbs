@@ -122,7 +122,7 @@ def get_str_seq(seq):
 def get_length(seq):
     seq_class = seq.kind
     if seq_class == SEQITEM:
-        length = len(seq.object.lines[1]) -1
+        length = len(seq.object.lines[1].strip())
     elif seq_class == SEQRECORD:
         length = len(seq.object)
     return length
@@ -173,7 +173,7 @@ def _int_quals_to_str_quals(int_quals, out_format):
     else:
         msg = 'Unknown or not supported quality format'
         raise ValueError(msg)
-    return (quals_map[int_quality] for int_quality in int_quals)
+    return ''.join([quals_map[int_quality] for int_quality in int_quals])
 
 
 def get_str_qualities(seq, out_format=None):
@@ -201,10 +201,10 @@ def get_str_qualities(seq, out_format=None):
             quals = seq.object.lines[3].rstrip()
         else:
             int_quals = get_int_qualities(seq)
-            quals = ''.join(_int_quals_to_str_quals(int_quals, out_format))
+            quals = _int_quals_to_str_quals(int_quals, out_format)
     elif seq_class == SEQRECORD:
         int_quals = get_int_qualities(seq)
-        quals = ''.join(_int_quals_to_str_quals(int_quals, out_format))
+        quals = _int_quals_to_str_quals(int_quals, out_format)
     return quals
 
 
