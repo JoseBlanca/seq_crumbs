@@ -35,7 +35,8 @@ from crumbs.utils.file_utils import rel_symlink, flush_fhand
 from crumbs.utils.file_formats import (get_format, peek_chunk_from_file,
                                        remove_multiline)
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
-                               SEQITEM, SEQRECORD, ORPHAN_SEQS)
+                               SEQITEM, SEQRECORD, ORPHAN_SEQS,
+    SANGER_FASTQ_FORMATS, ILLUMINA_FASTQ_FORMATS)
 from crumbs.settings import get_setting
 from crumbs.seq import SeqItem, get_str_seq, assing_kind_to_seqs
 
@@ -268,27 +269,8 @@ def guess_seq_type(fhand):
 
 def _get_name_from_lines(lines):
     'It returns the name and the chunk from a list of names'
-    name = lines[0].split()[0][1:]
+    name = lines[0].partition(' ')[0][1:].strip()
     return name
-
-
-def _itemize_fasta(fhand):
-    'It returns the fhand divided in chunks, one per seq'
-
-    lines = []
-    for line in fhand:
-        if not line or line.isspace():
-            continue
-        if line.startswith('>'):
-            if lines:
-                yield SeqItem(_get_name_from_lines(lines), lines)
-                lines = []
-        lines.append(line)
-        if len(lines) == 1 and not lines[0].startswith('>'):
-            raise RuntimeError('Not a valid fasta file')
-    else:
-        if lines:
-            yield SeqItem(_get_name_from_lines(lines), lines)
 
 
 def _get_name_from_chunk_fastq(lines):
@@ -309,11 +291,54 @@ def _line_is_not_empty(line):
     return False if line in ['\n', '\r\n'] else True
 
 
-def _itemize_fastq(fhand):
-    'It returns the fhand divided in chunks, one per seq'
-    # group_in_packets_fill_last is faster than group_in_packets
-    blobs = group_in_packets_fill_last(ifilter(_line_is_not_empty, fhand), 4)
-    return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
+def _itemize_fastx(fhand):  # this is a generator function
+    last_line = None  # this is a buffer keeping the last unprocessed line
+    is_empty = True
+    while True:  # mimic closure; is it a bad idea?
+        if not last_line:  # the first record or a record following a fastq
+            for line in fhand:  # search for the start of the next record
+                if line[0] in '@>':  # fasta/q header line
+                    last_line = line  # save this line
+                    break
+        if not last_line:
+            break
+        title = last_line
+        seq_lines = []
+        last_line = None
+        name = title[1:-1].partition(" ")[0]
+        for line in fhand:  # read the sequence
+            if line[0] in '@+>':
+                last_line = line
+                break
+            seq_lines.append(line[:-1])
+        if not last_line or last_line[0] != '+':  # this is a fasta record
+            yield SeqItem(name, [title, ''.join(seq_lines) + '\n'])
+            is_empty = False
+            if not last_line:
+                break
+        else:  # this is a fastq record
+            seq = ''.join(seq_lines)
+            length = 0
+            qual_lines = []
+            len_seq = len(seq)
+            for line in fhand:  # read the quality
+                qual_lines.append(line[:-1])
+                length += len(line) - 1
+                if length >= len_seq:  # have read enough quality
+                    if length != len_seq:
+                        msg = 'Malformed fastq file: seq and quality lines'
+                        msg += 'have different lengths'
+                        raise MalformedFile(msg)
+                    last_line = None
+                    is_empty = False
+                    yield SeqItem(name, [title, seq + '\n', '+\n',
+                                ''.join(qual_lines) + '\n'])
+                    break
+            if last_line:  # reach EOF before reading enough quality
+                msg = 'Malformed fastq file: quality line missing'
+                raise MalformedFile(msg)
+    if is_empty:
+        raise FileIsEmptyError('File is empty')
 
 
 def _read_seqitems(fhands):
@@ -321,19 +346,7 @@ def _read_seqitems(fhands):
     seq_iters = []
     for fhand in fhands:
         file_format = get_format(fhand)
-
-        if file_format == 'fasta':
-            seq_iter = _itemize_fasta(fhand)
-        elif 'multiline' not in file_format and 'fastq' in file_format:
-            try:
-                seq_iter = _itemize_fastq(fhand)
-            except ValueError as error:
-                if error_quality_disagree(error):
-                    raise MalformedFile(str(error))
-                raise
-        else:
-            msg = 'Format not supported by the itemizers: ' + file_format
-            raise NotImplementedError(msg)
+        seq_iter = _itemize_fastx(fhand)
         seq_iter = assing_kind_to_seqs(SEQITEM, seq_iter, file_format)
         seq_iters.append(seq_iter)
     return chain.from_iterable(seq_iters)
@@ -398,13 +411,13 @@ def read_seqs(fhands, out_format=None, prefered_seq_classes=None):
         in_format = get_format(fhands[0])
     except FileIsEmptyError:
         return []
-    if out_format not in (None, GUESS_FORMAT):
-
-        if in_format != out_format:
-            if SEQITEM in prefered_seq_classes:
-                # seqitems is incompatible with different input and output
-                # formats
-                prefered_seq_classes.pop(prefered_seq_classes.index(SEQITEM))
+    # seqitems is incompatible with different input and output formats
+    # or when in_format != a fasta or fastq
+    if ((out_format not in (None, GUESS_FORMAT) and in_format != out_format
+         and SEQITEM in prefered_seq_classes) or
+        (in_format not in ('fasta',) + SANGER_FASTQ_FORMATS +
+         ILLUMINA_FASTQ_FORMATS)):
+        prefered_seq_classes.pop(prefered_seq_classes.index(SEQITEM))
 
     if not prefered_seq_classes:
         msg = 'No valid seq class left or prefered'
