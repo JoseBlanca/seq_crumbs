@@ -23,7 +23,7 @@ from crumbs.seqio import write_seqs
 from crumbs.settings import get_setting
 from crumbs.third_party.index import FastqRandomAccess, index
 from crumbs.seq import get_title, SeqWrapper, get_name
-from crumbs.utils.file_formats import get_format, remove_multiline
+from crumbs.utils.file_formats import get_format
 from crumbs.utils.tags import FWD, REV, SEQRECORD
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.iterutils import sorted_items
@@ -59,8 +59,6 @@ def _index_seq_file(fpath, file_format=None):
     '''
     if file_format is None:
         file_format = get_format(open(fpath))
-
-    file_format = remove_multiline(file_format)
 
     # pylint: disable W0212
     # we monkey patch to be able to index using the whole tile line and not
@@ -121,25 +119,29 @@ def _match_pairs_from_sorted_reads(sorted_reads):
         yield prev_reads
 
 
-def _get_paired_and_orphan(reads, ordered, max_reads_memory, temp_dir):
+def _get_paired_and_orphan(reads, ordered, max_reads_memory, tempdir,
+                           low_memory):
     if ordered:
         sorted_reads = reads
     else:
         def _key(seq):
             return get_title(seq)
-        sorted_reads = sorted_items(reads, _key, max_reads_memory, temp_dir)
+        if not low_memory:
+            max_reads_memory = None
+        sorted_reads = sorted_items(reads, _key, max_reads_memory, tempdir)
     return _match_pairs_from_sorted_reads(sorted_reads)
 
 
-def match_pairs(reads, out_fhand, orphan_out_fhand, out_format, ordered=True,
-                check_order_buffer_size=0, max_reads_memory=None,
-                temp_dir=None):
+def match_pairs(reads, out_fhand, orphan_out_fhand, out_format,
+                max_reads_memory=get_setting('MAX_READS_IN_MEMORY'),
+                check_order_buffer_size=get_setting('CHECK_ORDER_BUFFER_SIZE'),
+                ordered=True, tempdir=None, low_memory=False):
     '''It matches the seq pairs in an iterator and splits the orphan seqs.
     It assumes that sequences are already sorted'''
     counts = 0
     check_order_buffer = OrderedSet()
     for pair in _get_paired_and_orphan(reads, ordered, max_reads_memory,
-                                       temp_dir):
+                                       tempdir, low_memory):
         if len(pair) == 1:
             write_seqs(pair, orphan_out_fhand, out_format)
             try:
@@ -159,133 +161,6 @@ def match_pairs(reads, out_fhand, orphan_out_fhand, out_format, ordered=True,
             write_seqs(pair, out_fhand, out_format)
     orphan_out_fhand.flush()
     out_fhand.flush()
-
-
-def _get_paired_and_orphan_old(index_):
-    'It guesses the paired and the orphan seqs'
-    fwd_reads = {}
-    rev_reads = {}
-
-    orphan_titles = []
-    for title in index_.iterkeys():
-        try:
-            name, direction = _parse_pair_direction_and_name_from_title(title)
-        except PairDirectionError:
-            orphan_titles.append(title)
-            continue
-
-        if direction in (FWD, REV):
-            reads_info = fwd_reads if direction == FWD else rev_reads
-            reads_info[name] = title
-        else:
-            raise RuntimeError('Unknown direction for read.')
-
-    fwd_names = set(fwd_reads.viewkeys())
-    rev_names = set(rev_reads.viewkeys())
-
-    paired = fwd_names.intersection(rev_names)
-
-    paired_titles = []
-    for paired_name in paired:
-        paired_titles.append(fwd_reads[paired_name])
-        paired_titles.append(rev_reads[paired_name])
-
-    fwd_orphans = fwd_names.difference(rev_names)
-    orphan_titles.extend(fwd_reads[orphan] for orphan in fwd_orphans)
-    del fwd_orphans
-
-    rev_orphans = rev_names.difference(fwd_names)
-    orphan_titles.extend(rev_reads[orphan] for orphan in rev_orphans)
-
-    return paired_titles, orphan_titles
-
-
-def match_pairs_unordered_old(seq_fpath, out_fhand, orphan_out_fhand, out_format):
-    'It matches the seq pairs in an iterator and splits the orphan seqs'
-    indx = _index_seq_file(seq_fpath)
-    paired, orphans = _get_paired_and_orphan(indx)
-
-    # write paired
-    write_seqs((SeqWrapper(SEQRECORD, indx[title], None) for title in paired),
-                out_fhand, out_format)
-
-    # orphans
-    write_seqs((SeqWrapper(SEQRECORD, indx[title], None) for title in orphans),
-               orphan_out_fhand, out_format)
-
-
-def match_pairs_old(seqs, out_fhand, orphan_out_fhand, out_format,
-                memory_limit=get_setting('DEFAULT_SEQS_IN_MEM_LIMIT')):
-    'It matches the seq pairs in an iterator and splits the orphan seqs'
-    buf_fwd = {'index': {}, 'items': []}
-    buf_rev = {'index': {}, 'items': []}
-    buf1, buf2 = buf_rev, buf_fwd  # for the all orphan case
-    for seq in seqs:
-        try:
-            seq_name, direction = _parse_pair_direction_and_name(seq)
-        except PairDirectionError:
-            write_seqs([seq], orphan_out_fhand, out_format)
-            continue
-
-        # buf1 -> buffer for the reads with the same orientation as the
-        # current one
-        # buf2 -> buffer for the reads with the reverse orientation as the
-        # current one
-
-        if direction == FWD:
-            buf1 = buf_fwd
-            buf2 = buf_rev
-        else:
-            buf1 = buf_rev
-            buf2 = buf_fwd
-
-        try:
-            matching_seq_index = buf2['index'][seq_name]
-        except KeyError:
-            matching_seq_index = None
-
-        if matching_seq_index is None:
-            # add to buff
-            buf1['items'].append(seq)
-            buf1['index'][seq_name] = len(buf1['items']) - 1
-            # check mem limit
-            sum_items = len(buf2['items'] + buf1['items'])
-            if memory_limit is not None and sum_items >= memory_limit:
-                error_msg = 'There are too many consecutive non matching seqs'
-                error_msg += ' in your input. We have reached the memory limit'
-                error_msg += '. Are you sure that the reads are sorted and '
-                error_msg += 'interleaved?. You could try with the unordered'
-                error_msg += ' algorith'
-                raise MaxNumReadsInMem(error_msg)
-        else:
-            # write seqs from buffer1
-            orphan_seqs = buf2['items'][:matching_seq_index]
-            matching_seq = buf2['items'][matching_seq_index]
-            write_seqs(orphan_seqs, orphan_out_fhand, out_format)
-            write_seqs([matching_seq, seq], out_fhand, out_format)
-            # fix buffer 1
-            if matching_seq_index != len(buf2['items']) - 1:
-                msg = 'The given files are not sorted (ordered) and '
-                msg = 'interleaved. You could try with the unordered algorithm'
-                raise MalformedFile(msg)
-            buf2 = {'index': {}, 'items': []}
-            # writes seqs from buffer 2 and fix buffer2
-            write_seqs(buf1['items'], orphan_out_fhand, out_format)
-            buf1 = {'index': {}, 'items': []}
-
-        if direction == FWD:
-            buf_fwd = buf1
-            buf_rev = buf2
-        else:
-            buf_rev = buf1
-            buf_fwd = buf2
-
-    else:
-        orphan_seqs = buf1['items'] + buf2['items']
-        write_seqs(orphan_seqs, orphan_out_fhand, out_format)
-
-    orphan_out_fhand.flush()
-    flush_fhand(out_fhand)
 
 
 def _check_name_and_direction_match(seq1, seq2):

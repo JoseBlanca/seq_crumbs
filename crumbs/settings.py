@@ -95,6 +95,10 @@ _TEMP_DIR = None
 # min_mapq to use as a filter for maped reads
 _DEFAULT_MIN_MAPQ = 0
 
+#buffer size and memory limit for match_pairs
+_MAX_READS_IN_MEMORY = 1000000
+_CHECK_ORDER_BUFFER_SIZE = 100000
+
 
 class _Settings(dict):
     '''A class that stores the seq_crumbs settings.'''

@@ -25,7 +25,7 @@ from crumbs.utils.bin_utils import (main, create_basic_argparse,
 from crumbs.utils.file_utils import compress_fhand
 from crumbs.pairs import match_pairs
 from crumbs.seqio import read_seqs
-
+from crumbs.settings import get_setting
 
 
 def _setup_argparse():
@@ -43,10 +43,12 @@ def _setup_argparse():
                         action='store_true', default=False)
 
     ordered_group = parser.add_argument_group('Ordered pairs')
-    bufs_help = 'Buffer size for checking if reads are ordered. '
-    bufs_help += 'Raises an error if not'
+    bufs_help = 'Buffer size for checking if reads are ordered (default: '
+    bufs_help += str(get_setting('CHECK_ORDER_BUFFER_SIZE'))
+    bufs_help += '). Raises an error if not'
     ordered_group.add_argument('--buffer_size', help=bufs_help,
-                               default=100000, type=int)
+                               default=get_setting('CHECK_ORDER_BUFFER_SIZE'),
+                               type=int)
 
     unordered_group = parser.add_argument_group('Unordered pairs')
 
@@ -59,9 +61,10 @@ def _setup_argparse():
     dir_help = dir_help.format(tempfile.gettempdir())
     unordered_group.add_argument('--tempdir', dest='tempdir', help=dir_help,
                                  default=None)
-    hlp = 'Maximum number of reads in memory (default: 1000000)'
+    hlp = 'Maximum number of reads in memory (default:'
+    hlp += str(get_setting('MAX_READS_IN_MEMORY')) + ')'
     unordered_group.add_argument('--limit', help=hlp, type=int,
-                                 default=1000000)
+                                 default=get_setting('MAX_READS_IN_MEMORY'))
 
     return parser
 
@@ -101,10 +104,11 @@ def run():
     # read seqs
     seqs = read_seqs(args['in_fhands'])
     match_pairs(seqs, out_fhand=args['out_fhand'],
-                orphan_out_fhand=args['orphan'], temp_dir=args['directory'],
+                orphan_out_fhand=args['orphan'], tempdir=args['tempdir'],
                 out_format=args['out_format'], ordered=not args['unordered'],
                 check_order_buffer_size=args['check_order_buffer_size'],
-                max_reads_memory=args['max_reads_memory'])
+                max_reads_memory=args['max_reads_memory'],
+                low_memory=args['low_memory'])
     '''if args['unordered']:
         match_pairs_unordered(args['in_fhands'][0].name,
                               out_fhand=args['out_fhand'],
