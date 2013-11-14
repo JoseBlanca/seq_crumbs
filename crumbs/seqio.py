@@ -304,7 +304,7 @@ def _itemize_fastx(fhand):  # this is a generator function
             if line[0] in '@+>':
                 last_line = line
                 break
-            seq_lines.append(line[:-1])
+            seq_lines.append(line.strip())
         if not last_line or last_line[0] != '+':  # this is a fasta record
             yield SeqItem(name, [title, ''.join(seq_lines) + '\n'])
             is_empty = False
@@ -316,7 +316,7 @@ def _itemize_fastx(fhand):  # this is a generator function
             qual_lines = []
             len_seq = len(seq)
             for line in fhand:  # read the quality
-                qual_lines.append(line[:-1])
+                qual_lines.append(line.strip())
                 length += len(line) - 1
                 if length >= len_seq:  # have read enough quality
                     if length != len_seq:
