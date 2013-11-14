@@ -76,22 +76,8 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
         fmt = 'fastq-illumina'
     else:
         fmt = None
-
-    # onle line fastq? All seq in just one line?
-    lines = [l for l in itertools.islice(chunk.splitlines(), 5)]
-    if len(lines) != 5:
-        one_line = ''
-    else:
-        if (not lines[0].startswith('@') or
-            not lines[2].startswith('+') or
-            not lines[4].startswith('@') or
-            len(lines[1]) != len(lines[3])):
-            one_line = '-multiline'
-        else:
-            one_line = ''
-
     if fmt:
-        return fmt + one_line
+        return fmt
 
     longest_expected_illumina = get_setting('LONGEST_EXPECTED_ILLUMINA_READ')
     n_long_seqs = [l for l in lengths if l > longest_expected_illumina]
@@ -106,7 +92,7 @@ def _guess_fastq_version(fhand, force_file_as_non_seek):
         msg %= longest_expected_illumina
         raise UndecidedFastqVersionError(msg)
     else:
-        return 'fastq-illumina' + one_line
+        return 'fastq-illumina'
 
 FILEFORMAT_INVENTORY = {}
 
@@ -190,10 +176,3 @@ def _guess_format(fhand, force_file_as_non_seek):
     elif chunk.startswith('ID'):
         return 'embl'
     raise UnknownFormatError('Sequence file of unknown format.')
-
-
-def remove_multiline(file_format):
-    'It removes the multiline from the format'
-    if file_format and file_format.endswith('-multiline'):
-        file_format = file_format[:-10]
-    return file_format

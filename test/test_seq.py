@@ -27,7 +27,7 @@ from crumbs.utils.tags import SEQITEM, ILLUMINA_QUALITY
 class SeqMethodsTest(unittest.TestCase):
     def test_len(self):
         # with fasta
-        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTGGTAC\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fasta')
         assert get_length(seq) == 8
 
@@ -39,7 +39,7 @@ class SeqMethodsTest(unittest.TestCase):
 
     def test_str_seq(self):
         # with fasta
-        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTGGTAC\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fasta')
         assert get_str_seq(seq) == 'ACTGGTAC'
 
@@ -49,11 +49,6 @@ class SeqMethodsTest(unittest.TestCase):
         seq = SeqWrapper(SEQITEM, seq, 'fastq')
         assert get_str_seq(seq) == 'aaaa'
 
-        # with fastq-multiline
-        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'tttt\n',
-                                         '+\n', '????\n', '????\n'])
-        seq = SeqWrapper(SEQITEM, seq, 'fastq-multiline')
-        assert get_str_seq(seq) == 'aaaatttt'
 
     def test_int_qualities(self):
         # with fasta
@@ -71,10 +66,9 @@ class SeqMethodsTest(unittest.TestCase):
         seq = SeqWrapper(SEQITEM, seq, 'fastq')
         assert list(get_int_qualities(seq)) == [0, 30, 30, 30]
 
-        # with multiline fastq
-        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
-                                         '@AAA\n', 'BBBB\n'])
-        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaaaaaa\n', '+\n',
+                                         '@AAABBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina')
         assert list(get_int_qualities(seq)) == [0, 1, 1, 1, 2, 2, 2, 2]
 
     def test_str_qualities(self):
@@ -100,20 +94,20 @@ class SeqMethodsTest(unittest.TestCase):
         assert ''.join(list(get_str_qualities(seq, ILLUMINA_QUALITY))) == '@^^^'
 
         # with multiline fastq-illumina
-        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
-                                         '@AAA\n', 'BBBB\n'])
-        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaaaaaa\n', '+\n',
+                                         '@AAABBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina')
         assert ''.join(list(get_str_qualities(seq, ILLUMINA_QUALITY))) == '@AAABBBB'
 
         # with multiline fastq-illumina to fastq
-        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
-                                         '@AAA\n', 'BBBB\n'])
-        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaaaaaa\n', '+\n',
+                                         '@AAABBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina')
         assert ''.join(list(get_str_qualities(seq, 'fastq'))) == '!"""####'
 
     def test_slice(self):
         # with fasta
-        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTG\n', 'GTAC\n'])
+        seq = SeqItem(name='s1', lines=['>s1\n', 'ACTGGTAC\n'])
         seq = SeqWrapper(SEQITEM, seq, 'fasta')
         expected_seq = SeqItem(name='s1', lines=['>s1\n', 'CTGG\n'])
         expected_seq = SeqWrapper(SEQITEM, expected_seq, 'fasta')
@@ -129,9 +123,9 @@ class SeqMethodsTest(unittest.TestCase):
         assert seq.object.lines == ['@seq\n', 'at\n', '+\n', '?!\n']
 
         # with multiline fastq
-        seq = SeqItem(name='seq', lines=['@seq\n', 'aaat\n', 'caaa\n', '+\n',
-                                         '@AAA\n', 'BBBB\n'])
-        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaatcaaa\n', '+\n',
+                                         '@AAABBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina')
         seq_ = slice_seq(seq, 1, 5)
         assert list(get_int_qualities(seq_)) == [1, 1, 1, 2]
         assert get_str_seq(seq_) == get_str_seq(seq)[1: 5]
@@ -163,9 +157,9 @@ class SeqMethodsTest(unittest.TestCase):
                                lines=['@seq\n', 'ACTG\n', '+\n', '!???\n'])
 
         # with multiline fastq
-        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaa\n', 'aaaa\n', '+\n',
-                                         '@AAA\n', 'BBBB\n'])
-        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina-multiline')
+        seq = SeqItem(name='seq', lines=['@seq\n', 'aaaaaaaa\n', '+\n',
+                                         '@AAABBBB\n'])
+        seq = SeqWrapper(SEQITEM, seq, 'fastq-illumina')
         seq2 = copy_seq(seq, seq='ACTGactg')
         assert seq2.object == SeqItem(name='seq',
                                       lines=['@seq\n', 'ACTGactg\n', '+\n',
@@ -186,5 +180,5 @@ class SeqMethodsTest(unittest.TestCase):
                               {})
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'ChangeCaseTest.test_bin']
+    #import sys;sys.argv = ['', 'SeqMethodsTest.test_int_qualities']
     unittest.main()

@@ -32,8 +32,8 @@ from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                FileIsEmptyError)
 from crumbs.iterutils import group_in_packets, group_in_packets_fill_last
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
-from crumbs.utils.file_formats import (get_format, peek_chunk_from_file,
-                                       remove_multiline)
+from crumbs.utils.file_formats import get_format, peek_chunk_from_file
+
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD, ORPHAN_SEQS,
     SANGER_FASTQ_FORMATS, ILLUMINA_FASTQ_FORMATS)
@@ -54,8 +54,6 @@ def _clean_seqrecord_stream(seqs):
 
 def _write_seqrecords(seqs, fhand=None, file_format='fastq'):
     'It writes a stream of sequences to a file'
-    file_format = remove_multiline(file_format)
-
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
     seqs = _clean_seqrecord_stream(seqs)
@@ -82,7 +80,6 @@ def _write_seqrecord_packets(fhand, seq_packets, file_format='fastq',
 
 def write_seq_packets(fhand, seq_packets, file_format='fastq', workers=None):
     'It writes to file a stream of seq lists'
-    file_format = remove_multiline(file_format)
     try:
         write_seqs(chain.from_iterable(seq_packets), fhand,
                    file_format=file_format)
@@ -96,8 +93,6 @@ def _write_filter_trim_packets(passed_fhand, diverted_fhand, packets,
                                file_format='fastq', workers=None,
                                seqs_diverted=SEQS_FILTERED_OUT):
     'It writes the filter stream into passed and filtered out sequence files'
-
-    file_format = remove_multiline(file_format)
 
     if diverted_fhand is None:
         seq_packets = (p[SEQS_PASSED] for p in packets)
@@ -179,7 +174,6 @@ def _read_seqrecords(fhands):
     seq_iters = []
     for fhand in fhands:
         fmt = get_format(fhand)
-        fmt = remove_multiline(fmt)
 
         if fmt in ('fasta', 'qual') or 'fastq' in fmt:
             title = title2ids
@@ -204,7 +198,7 @@ def seqio(in_fhands, out_fhand, out_format, copy_if_same_format=True):
     if out_format not in get_setting('SUPPORTED_OUTPUT_FORMATS'):
         raise IncompatibleFormatError("This output format is not supported")
 
-    in_formats = [remove_multiline(get_format(fhand)) for fhand in in_fhands]
+    in_formats = [get_format(fhand) for fhand in in_fhands]
 
     if len(in_fhands) == 1 and in_formats[0] == out_format:
         if copy_if_same_format:
@@ -355,7 +349,7 @@ def _read_seqitems(fhands):
 def _write_seqitems(items, fhand, file_format):
     'It writes one seq item (tuple of name and string)'
     for seq in items:
-        seqitems_fmt = remove_multiline(seq.file_format)
+        seqitems_fmt = seq.file_format
         if file_format and 'fastq' in seqitems_fmt and 'fasta' in file_format:
             seq_lines = seq.object.lines
             try:
@@ -383,7 +377,6 @@ def write_seqs(seqs, fhand=None, file_format=None):
     if fhand is None:
         fhand = NamedTemporaryFile(suffix='.' + file_format.replace('-', '_'))
 
-    file_format = remove_multiline(file_format)
     seqs, seqs2 = tee(seqs)
     try:
         seq = seqs2.next()

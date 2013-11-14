@@ -205,7 +205,6 @@ class MateSplitterTest(unittest.TestCase):
         result = ">seq1\nCATCAATGACATCACAAATGACATCAACAAACTCAAACTCACATACA\n"
         assert result == out_fhand.getvalue()
 
-
     @staticmethod
     def test_giuseppe_reads():
         'It splits some real reads'

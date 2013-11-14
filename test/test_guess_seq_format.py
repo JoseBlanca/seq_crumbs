@@ -132,7 +132,7 @@ class GuessFormatTest(unittest.TestCase):
         txt += 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\]][]\n'
 
         fhand = StringIO(txt + txt)
-        assert get_format(fhand) == 'fastq-illumina-multiline'
+        assert get_format(fhand) == 'fastq-illumina'
 
         fhand = StringIO('@HWI-EAS209\n@')
         try:
