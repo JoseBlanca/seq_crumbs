@@ -170,21 +170,20 @@ def unique(items, key=None):
 
     The items must be sorted. It only compares contiguous items.
     '''
+    prev_key = None
+    for item in items:
+        key_for_item = item if key is None else key(item)
+        if prev_key is None:
+            duplicated = False
+        else:
+            duplicated = key_for_item == prev_key
+        if not duplicated:
+            yield item
+        prev_key = key_for_item
 
-    return (first(groups[1]) for groups in groupby(items, key))
-
-#     prev_item = None
-#     for item in items:
-#         if prev_item == None:
-#             duplicated = False
-#         else:
-#             if key:
-#                 duplicated = key(item) == key(prev_item)
-#             else:
-#                 duplicated = item == prev_item
-#         if not duplicated:
-#             yield item
-#         prev_item = item
+    # An alternative implementation would be:
+    # return (first(groups[1]) for groups in groupby(items, key))
+    # But it is a little bit slower
 
 
 def sorted_items(items, key=None, max_items_in_memory=None, tempdir=None):
