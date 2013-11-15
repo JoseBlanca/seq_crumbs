@@ -134,6 +134,13 @@ class ReadWriteSeqRecordsTest(unittest.TestCase):
 
 class SimpleIOTest(unittest.TestCase):
     'It tests the simple input and output read'
+    def test_singleline_itemizer(self):
+        fhand = StringIO('@s1\nACTG\n+\n1234\n' * 1100)
+        seqs = list(_itemize_fastx(fhand))
+        names = [seq[0] for seq in seqs]
+        assert len(names) == 1100
+        assert len(set([seq[1][1] for seq in seqs])) == 1
+
     def test_fasta_itemizer(self):
         'It tests the fasta itemizer'
         fhand = StringIO('>s1\nACTG\n>s2 desc\nACTG\n')

@@ -29,7 +29,7 @@ from crumbs.utils.data import (ambiguous_rna_letters, ambiguous_dna_letters,
                                extended_protein_letters)
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError,
-                               FileIsEmptyError)
+                               FileIsEmptyError, IsSingleLineFastqError)
 from crumbs.iterutils import group_in_packets, group_in_packets_fill_last
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
 from crumbs.utils.file_formats import get_format, peek_chunk_from_file
@@ -285,9 +285,28 @@ def _line_is_not_empty(line):
     return False if line in ['\n', '\r\n'] else True
 
 
-def _itemize_fastx(fhand):  # this is a generator function
+def _itemize_fastq_singleline(fhand):
+    'It returns the fhand divided in chunks, one per seq'
+    # group_in_packets_fill_last is faster than group_in_packets
+    blobs = group_in_packets_fill_last(ifilter(_line_is_not_empty, fhand), 4)
+    return (SeqItem(_get_name_from_lines(lines), lines) for lines in blobs)
+
+
+def _itemize_fastx(fhand):
+    try:
+        for read in _itemize_fastx_multiline(fhand):
+            yield read
+    except IsSingleLineFastqError:
+        for read in _itemize_fastq_singleline(fhand):
+            yield read
+
+
+# adapted from https://github.com/lh3/readfq
+def _itemize_fastx_multiline(fhand):  # this is a generator function
     last_line = None  # this is a buffer keeping the last unprocessed line
     is_empty = True
+    n_single_line_seqs = 0
+    n_seqs_read = 0
     while True:  # mimic closure; is it a bad idea?
         if not last_line:  # the first record or a record following a fastq
             for line in fhand:  # search for the start of the next record
@@ -304,9 +323,10 @@ def _itemize_fastx(fhand):  # this is a generator function
             if line[0] in '@+>':
                 last_line = line
                 break
-            seq_lines.append(line.strip())
+            seq_lines.append(line.rstrip())
         if not last_line or last_line[0] != '+':  # this is a fasta record
             yield SeqItem(name, [title, ''.join(seq_lines) + '\n'])
+            n_seqs_read += 1
             is_empty = False
             if not last_line:
                 break
@@ -316,7 +336,7 @@ def _itemize_fastx(fhand):  # this is a generator function
             qual_lines = []
             len_seq = len(seq)
             for line in fhand:  # read the quality
-                qual_lines.append(line.strip())
+                qual_lines.append(line.rstrip())
                 length += len(line) - 1
                 if length >= len_seq:  # have read enough quality
                     if length != len_seq:
@@ -327,6 +347,12 @@ def _itemize_fastx(fhand):  # this is a generator function
                     is_empty = False
                     yield SeqItem(name, [title, seq + '\n', '+\n',
                                 ''.join(qual_lines) + '\n'])
+                    n_seqs_read += 1
+                    if len(qual_lines) == 1:
+                        n_single_line_seqs += 1
+                        if n_seqs_read == 1000:
+                            if n_single_line_seqs == n_seqs_read:
+                                raise IsSingleLineFastqError()
                     break
             if last_line:  # reach EOF before reading enough quality
                 msg = 'Malformed fastq file: quality line missing'

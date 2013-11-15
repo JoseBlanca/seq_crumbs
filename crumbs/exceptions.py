@@ -105,3 +105,8 @@ class OptionalRequirementError(Exception):
 class ItemsNotSortedError(Exception):
     'A list or generator of items is not sorted as expected'
     pass
+
+
+class IsSingleLineFastqError(Exception):
+    'File format is single line'
+    pass
