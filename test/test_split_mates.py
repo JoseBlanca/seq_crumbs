@@ -70,7 +70,7 @@ class MateSplitterTest(unittest.TestCase):
         assert get_name(seqs[0]) == 'seq'
 
         # segment at end
-        seqs = splitter._split_by_mate_linker(seq, ([(7, 11)], False))
+        seqs = splitter._split_by_mate_linker(seq, ([(7, 10)], False))
         assert  get_str_seq(seqs[0]) == 'aaatttc'
         assert get_name(seqs[0]) == 'seq'
 
@@ -353,5 +353,5 @@ class SplitMatesBinTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'MateSplitterTest.test_giuseppe_reads']
+    #import sys;sys.argv = ['', 'MateSplitterTest.test_split_mate']
     unittest.main()

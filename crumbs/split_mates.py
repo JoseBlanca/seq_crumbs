@@ -74,12 +74,16 @@ class MatePairSplitter(object):
         if len(segments) == 1:
             segment_start = segments[0][0]
             segment_end = segments[0][1]
+            seq_end = get_length(seq) - 1
             if segment_start == 0:
                 new_seq = slice_seq(seq, segment_end + 1, None)
                 return [new_seq]
-            elif segment_end == get_length(seq):
+            elif segment_end == seq_end:
                 new_seq = slice_seq(seq, None, segment_start)
                 return [new_seq]
+            elif segment_end > seq_end:
+                msg = 'The segment ends after the sequence has ended'
+                raise RuntimeError(msg)
             else:
                 new_seq1 = slice_seq(seq, None, segment_start)
                 new_seq2 = slice_seq(seq, segment_end + 1, None)
