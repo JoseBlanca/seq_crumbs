@@ -42,14 +42,6 @@ def _setup_argparse():
     parser.add_argument('-u', '--unordered', help=unor_help,
                         action='store_true', default=False)
 
-    ordered_group = parser.add_argument_group('Ordered pairs')
-    bufs_help = 'Buffer size for checking if reads are ordered (default: '
-    bufs_help += str(get_setting('CHECK_ORDER_BUFFER_SIZE'))
-    bufs_help += '). Raises an error if not'
-    ordered_group.add_argument('--buffer_size', help=bufs_help,
-                               default=get_setting('CHECK_ORDER_BUFFER_SIZE'),
-                               type=int)
-
     unordered_group = parser.add_argument_group('Unordered pairs')
 
     lowmem_help = 'If the binary uses all memory and does not finish'
@@ -77,22 +69,8 @@ def _parse_args(parser):
     args['orphan'] = compress_fhand(orphan, compression_kind=comp_kind)
     args['max_reads_memory'] = parsed_args.limit
     args['tempdir'] = parsed_args.tempdir
-    args['check_order_buffer_size'] = parsed_args.buffer_size
     args['unordered'] = parsed_args.unordered
     args['low_memory'] = parsed_args.low_memory
-
-    #if args['memory_limit'] == 0:
-    #    args['memory_limit'] = None
-
-    #unordered = parsed_args.unordered
-    # Pair_matcher based in index incompatible with stdin and withm ore
-    # than one input file
-    #if unordered and (len(args['in_fhands']) > 1 or
-    #                  args['in_fhands'][0] == sys.stdin):
-    #    error_str = 'Unordered file option is not compatible with STDIN or '
-    #    error_str += 'with more than one input file'
-    #    parser.error(error_str)
-    #args['unordered'] = unordered
     return args
 
 
@@ -106,20 +84,8 @@ def run():
     match_pairs(seqs, out_fhand=args['out_fhand'],
                 orphan_out_fhand=args['orphan'], tempdir=args['tempdir'],
                 out_format=args['out_format'], ordered=not args['unordered'],
-                check_order_buffer_size=args['check_order_buffer_size'],
                 max_reads_memory=args['max_reads_memory'],
                 low_memory=args['low_memory'])
-    '''if args['unordered']:
-        match_pairs_unordered(args['in_fhands'][0].name,
-                              out_fhand=args['out_fhand'],
-                              orphan_out_fhand=args['orphan'],
-                              out_format=args['out_format'])
-    else:
-        seqs = read_seqs(args['in_fhands'])
-        match_pairs(seqs, out_fhand=args['out_fhand'],
-                    orphan_out_fhand=args['orphan'],
-                    out_format=args['out_format'],
-                    memory_limit=args['memory_limit'])'''
 
 if __name__ == '__main__':
     #sys.argv.append('-h')
