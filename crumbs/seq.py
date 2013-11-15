@@ -113,19 +113,14 @@ def _get_seqitem_quals(seq):
 def get_str_seq(seq):
     seq_class = seq.kind
     if seq_class == SEQITEM:
-        seq = seq.object.lines[1].rstrip()
+        seq = seq.object.lines[1].strip()
     elif seq_class == SEQRECORD:
         seq = str(seq.object.seq)
-    return seq
+    return seq.strip()
 
 
 def get_length(seq):
-    seq_class = seq.kind
-    if seq_class == SEQITEM:
-        length = len(seq.object.lines[1].strip())
-    elif seq_class == SEQRECORD:
-        length = len(seq.object)
-    return length
+    return len(get_str_seq(seq))
 
 
 SANGER_QUALS = {chr(i): i - 33 for i in range(33, 127)}
