@@ -19,7 +19,7 @@ from crumbs.seq import get_str_seq
 from crumbs.pairs import group_seqs_in_pairs
 from crumbs.seqio import read_seqs, write_seqs
 from crumbs.utils.tags import SEQITEM
-from crumbs.iterutils import sorted_items, unique
+from crumbs.iterutils import sorted_items, unique, unique_unordered
 
 
 def _seqitem_pairs_equal(pair1, pair2):
@@ -45,7 +45,7 @@ def _get_pair_key(pair):
     key = []
     for read in pair:
         key.append(get_str_seq(read))
-    return key
+    return tuple(key)
 
 
 def filter_duplicates(in_fhands, out_fhand, paired_reads,
@@ -53,8 +53,11 @@ def filter_duplicates(in_fhands, out_fhand, paired_reads,
     if not in_fhands:
         raise ValueError('At least one input fhand is required')
     pairs = _read_pairs(in_fhands, paired_reads)
-    sorted_pairs = sorted_items(pairs, key=_get_pair_key, tempdir=tempdir,
+    if n_seqs_packet is None:
+        unique_pairs = unique_unordered(pairs, key=_get_pair_key)
+    else:
+        sorted_pairs = sorted_items(pairs, key=_get_pair_key, tempdir=tempdir,
                                 max_items_in_memory=n_seqs_packet)
-    for pair in unique(sorted_pairs, key=_get_pair_key):
+        unique_pairs = unique(sorted_pairs, key=_get_pair_key)
+    for pair in unique_pairs:
         write_seqs(pair, out_fhand)
-
