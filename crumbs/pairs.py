@@ -27,7 +27,7 @@ from crumbs.utils.file_formats import get_format
 from crumbs.utils.tags import FWD, REV, SEQRECORD
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.iterutils import sorted_items
-from crumbs.collectionz import OrderedSet
+from crumbs.collectionz import OrderedSet, KeyedSet
 
 
 def _parse_pair_direction_and_name(seq):
@@ -139,7 +139,7 @@ def match_pairs(reads, out_fhand, orphan_out_fhand, out_format,
     '''It matches the seq pairs in an iterator and splits the orphan seqs.
     It assumes that sequences are already sorted'''
     counts = 0
-    check_order_buffer = OrderedSet()
+    check_order_buffer = KeyedSet()
     for pair in _get_paired_and_orphan(reads, ordered, max_reads_memory,
                                        tempdir, low_memory):
         if len(pair) == 1:

@@ -15,7 +15,7 @@
 import unittest
 import os
 from cStringIO import StringIO
-from subprocess import check_output, CalledProcessError, call
+from subprocess import check_output, call
 from tempfile import NamedTemporaryFile
 
 from Bio.bgzf import BgzfReader
