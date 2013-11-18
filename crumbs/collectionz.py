@@ -44,3 +44,33 @@ class OrderedSet(object):
 
     def __len__(self):
         return len(self._items)
+
+
+class KeyedSet(object):
+
+    def __init__(self, items=None, key=None):
+        if items is None:
+            items = set()
+        elif key:
+            items = set(map(key, items))
+        else:
+            items = set(items)
+        self._items = items
+        self._len = len(self._items)
+        self._key = key
+
+    def check_add(self, item):
+        item_key = self._key(item) if self._key else item
+        self._items.add(item_key)
+        if len(self._items) > self._len:
+            self._len = len(self._items)
+            return True
+        else:
+            return False
+
+    def __contains__(self, item):
+        item_key = self._key(item) if self._key else item
+        return item_key in self._items
+
+    def __len__(self):
+        return len(self._items)
