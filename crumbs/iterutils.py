@@ -212,3 +212,16 @@ def sorted_items(items, key=None, max_items_in_memory=None, tempdir=None):
     else:
         sorted_items = sorted_groups[0]
     return sorted_items
+
+
+def unique_unordered(items, key=None):
+    '''It yields the unique items.'''
+    unique_keys = set()
+    prev_size = len(unique_keys)
+    for item in items:
+        key_for_item = item if key is None else key(item)
+        unique_keys.add(key_for_item)
+        current_size = len(unique_keys)
+        if current_size > prev_size:
+            yield item
+            prev_size = current_size

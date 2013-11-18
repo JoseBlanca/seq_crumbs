@@ -18,7 +18,7 @@ import tempfile
 
 from crumbs.iterutils import (sample, sample_2, length, group_in_packets,
                               rolling_window, group_in_packets_fill_last,
-                              sorted_items, unique)
+                              sorted_items, unique, unique_unordered)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -121,6 +121,11 @@ class IterutilsTest(unittest.TestCase):
     def test_unique_items(self):
         items = [1, 1, 2, 2, 3, 3, 4]
         unique_items = unique(items)
+        assert list(unique_items) == [1, 2, 3, 4]
+
+    def test_unique_unordered_items(self):
+        items = [1, 2, 3, 4, 4, 3, 2, 1]
+        unique_items = unique_unordered(items)
         assert list(unique_items) == [1, 2, 3, 4]
 
     def test_key(self):
