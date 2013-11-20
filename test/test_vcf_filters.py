@@ -7,7 +7,7 @@ from os.path import join, dirname
 import unittest
 import math
 from tempfile import NamedTemporaryFile
-from copy import deepcopy, copy
+from copy import deepcopy
 from subprocess import check_output
 
 from vcf import Reader
@@ -453,11 +453,29 @@ class FilterTest(unittest.TestCase):
 
 class BinaryTest(unittest.TestCase):
     def test_run_binary(self):
-        binary = join(dirname(__file__), '..', 'bin', 'run_vcf_filters.py')
+        binary = join(dirname(__file__), '..', 'bin', 'run_vcf_filters')
         assert 'usage' in check_output([binary, '-h'])
 
-        conf = join(TEST_DATA_DIR, 'filter_conf')
-        cmd = [binary, VCF_PATH, '-f', conf]
+        config = '''[1]
+    [[CloseToSnvFilter]]
+        distance = 60
+        max_maf = 0.7
+[2]
+    [[HighVariableRegionFilter]]
+        max_variability = 0.05
+        window = 5
+        ref_fpath = '{sample_fasta}'
+[3]
+    [[CapEnzymeFilter]]
+        all_enzymes = True
+        ref_fpath = '{sample_fasta}'
+'''
+        config = config.format(sample_fasta=REF_PATH)
+
+        config_fhand = NamedTemporaryFile(suffix='.config')
+        config_fhand.write(config)
+        config_fhand.flush()
+        cmd = [binary, VCF_PATH, '-f', config_fhand.name]
         result = check_output(cmd)
         assert 'cs60_0.70\t' in result
         assert 'CAP=SetI' in result
