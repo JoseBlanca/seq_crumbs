@@ -60,7 +60,19 @@ class Bowtie2Test(unittest.TestCase):
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         map_with_bowtie2(index_fpath, bam_fhand.name,
                          unpaired_fpaths=[reads_fpath])
+        directory.close()
 
+        #With paired_fpahts option
+        reference_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
+        forward_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
+        reverse_fpath = NamedTemporaryFile().name
+        paired_fpaths = [[forward_fpath], [reverse_fpath]]
+        directory = TemporaryDir()
+        index_fpath = get_or_create_bowtie2_index(reference_fpath,
+                                                  directory.name)
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
+        map_with_bowtie2(index_fpath, bam_fhand.name,
+                         paired_fpaths=paired_fpaths)
         directory.close()
 
 

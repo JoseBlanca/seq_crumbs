@@ -166,8 +166,8 @@ def map_with_bowtie2(index_fpath, bam_fpath, paired_fpaths=None,
     if unpaired_fpaths:
         cmd.extend(['-U', ','.join(unpaired_fpaths)])
     if paired_fpaths:
-        plus = [pairs[0] for pairs in paired_fpaths]
-        minus = [pairs[1] for pairs in paired_fpaths]
+        plus = [pairs for pairs in paired_fpaths[0]]
+        minus = [pairs for pairs in paired_fpaths[1]]
         cmd.extend(['-1', ','.join(plus), '-2', ','.join(minus)])
 
     if 'ID' in readgroup.keys():
