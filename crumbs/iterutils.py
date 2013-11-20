@@ -18,7 +18,7 @@ from itertools import izip_longest, islice, groupby
 import cPickle as pickle
 from tempfile import NamedTemporaryFile
 
-from toolz.itertoolz.core import merge_sorted, first
+from crumbs.utils.optional_modules import merge_sorted, first
 
 
 def sample(iterator, sample_size):
