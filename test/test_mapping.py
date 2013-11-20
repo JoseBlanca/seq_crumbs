@@ -21,7 +21,8 @@ from tempfile import NamedTemporaryFile
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.mapping import (get_or_create_bowtie2_index, _bowtie2_index_exists,
                             map_with_bowtie2, get_or_create_bwa_index,
-                            _bwa_index_exists, map_with_bwasw)
+                            _bwa_index_exists, map_with_bwasw,
+    map_process_to_bam)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.utils.bin_utils import get_binary_path
 
@@ -58,8 +59,8 @@ class Bowtie2Test(unittest.TestCase):
         index_fpath = get_or_create_bowtie2_index(reference_fpath,
                                                   directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        map_with_bowtie2(index_fpath, bam_fhand.name,
-                         unpaired_fpaths=[reads_fpath])
+        bowtie2 = map_with_bowtie2(index_fpath, unpaired_fpaths=[reads_fpath])
+        map_process_to_bam(bowtie2, bam_fhand.name)
         directory.close()
 
         #With paired_fpahts option
@@ -71,8 +72,8 @@ class Bowtie2Test(unittest.TestCase):
         index_fpath = get_or_create_bowtie2_index(reference_fpath,
                                                   directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        map_with_bowtie2(index_fpath, bam_fhand.name,
-                         paired_fpaths=paired_fpaths)
+        bowtie2 = map_with_bowtie2(index_fpath, paired_fpaths=paired_fpaths)
+        map_process_to_bam(bowtie2, bam_fhand.name)
         directory.close()
 
 

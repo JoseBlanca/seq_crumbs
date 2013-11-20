@@ -1,4 +1,3 @@
-# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
 # This file is part of seq_crumbs.
 # seq_crumbs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as
@@ -140,7 +139,7 @@ def get_or_create_bowtie2_index(fpath, directory=None):
     return index_fpath
 
 
-def map_with_bowtie2(index_fpath, bam_fpath, paired_fpaths=None,
+def map_with_bowtie2(index_fpath, paired_fpaths=None,
                      unpaired_fpaths=None, readgroup=None, threads=None,
                      log_fpath=None, preset='very-sensitive-local',
                      extra_params=None):
@@ -188,9 +187,18 @@ def map_with_bowtie2(index_fpath, bam_fpath, paired_fpaths=None,
 #    raw_input(' '.join(cmd))
     bowtie2 = popen(cmd, stderr=stderr, stdout=PIPE)
     # print bowtie2.stdout.read()
+    return bowtie2
+
+
+def map_process_to_bam(map_process, bam_fpath, log_fpath=None):
+    if log_fpath is None:
+        stderr = NamedTemporaryFile(suffix='.stderr')
+    else:
+        stderr = open(log_fpath, 'w')
+
     cmd = [get_binary_path('samtools'), 'view', '-h', '-b', '-S', '-', '-o',
            bam_fpath]
 
-    samtools = popen(cmd, stdin=bowtie2.stdout, stderr=stderr)
-    bowtie2.stdout.close()  # Allow p1 to receive a SIGPIPE if samtools exits.
+    samtools = popen(cmd, stdin=map_process.stdout, stderr=stderr)
+    map_process.stdout.close()  # Allow p1 to receive a SIGPIPE if samtools exits.
     samtools.communicate()
