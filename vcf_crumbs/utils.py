@@ -14,7 +14,7 @@
 # along with vcf_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import os.path
-from subprocess import check_call
+from subprocess import check_call, Popen, PIPE
 
 TEST_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '..', 'test', 'test_data'))
@@ -38,3 +38,14 @@ def uncompress_gzip(in_fhand, uncompressed_fhand):
     '''
     cmd = ['gzip', '-dc', in_fhand.name]
     check_call(cmd, stdout=uncompressed_fhand)
+
+
+def index_vcf_with_tabix(in_fpath):
+    cmd = ['tabix', '-p', 'vcf', in_fpath]
+    tabix = Popen(cmd, stdout=PIPE, stderr=PIPE)
+    stdout, stderr = tabix.communicate()
+    if tabix.returncode:
+        msg = 'Some problem indexing with tabix.\n'
+        msg += 'stdout: ' + stdout
+        msg += 'stderr: ' + stderr
+        raise RuntimeError(msg)
