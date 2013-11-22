@@ -7,7 +7,7 @@ from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
                                   get_snpcaller_name, VARSCAN, GATK,
                                   calculate_maf)
 
-from vcf_crumbs.utils.path_utils import TEST_DATA_DIR
+from vcf_crumbs.utils import TEST_DATA_DIR
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')

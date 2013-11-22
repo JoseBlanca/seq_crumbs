@@ -1,8 +1,4 @@
-'''
-Created on 2013 eka 7
 
-@author: peio
-'''
 from os.path import join, dirname
 import unittest
 import math
@@ -18,7 +14,7 @@ from vcf_crumbs.vcf_filters import (calculate_maf, CloseToSnvFilter,
                                     CapEnzymeFilter, count_alleles,
                                     IsNotVariableFilter, ChangeAminoFilter,
                                     ChangeAminoSeverityFilter)
-from vcf_crumbs.utils.path_utils import TEST_DATA_DIR
+from vcf_crumbs.utils import TEST_DATA_DIR
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -437,16 +433,17 @@ class FilterTest(unittest.TestCase):
             print "***************"
             print snp.REF
             print type(snp.ALT[0])
-            print snp.alleles
+            print('snv type: ' + snp.var_subtype)
+            print('alleles: ' + ','.join([unicode(al) for al in snp.alleles]))
             print 'info', snp.INFO
             for call in snp.samples:
                 if call.gt_bases is None:
                     continue
-                print call.gt_alleles
-                print call.gt_nums.split('/')
+                print('call alleles: ' + ','.join(call.gt_alleles))
                 print call.data
                 print call.site
             print 'pos', snp.POS
+            print('start: ' + str(snp.start))
             print 'end', snp.end
             print snp.is_snp
 

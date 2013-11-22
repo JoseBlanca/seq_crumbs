@@ -85,8 +85,8 @@ class ProteinChangeTest(unittest.TestCase):
             pass
         assert seq_coord.to_seq2_slice(43, 46) == (42, 45)
 
-        seq1 = 'ATCTAGGCTGCTACGATTAGCTGACGATGTTATCGTAGATCTAGCTGATCATCTAGCTGATCG'
-        seq2 = 'AGGCTCTACGATTAGCTGATCGATGTTATC'
+        seq1 = 'ATCTAGGCTGCTACGATTAGCTGACGATGTTATCGTAGATCTAGCTGATCATCTAGCTGATC'
+        seq2 = 'GAGGCTCTACGATTAGCTGATCGATGTTATC'
         seq1 = SeqRecord(id='seq1', seq=Seq(seq1))
         seq2 = SeqRecord(id='seq2', seq=Seq(seq2))
         seq_coord = SeqCoords(seq1, seq2)
@@ -94,8 +94,8 @@ class ProteinChangeTest(unittest.TestCase):
         assert seq_coord.coord_system['seq2'] == [(0, 4), (5, 18), (20, 29)]
         assert seq_coord.to_seq1_slice(22, 29) == (26, 33)
         #reverse alignment
-        seq1 = 'ATCTAGGCTGCTACGATTAGCTGACGATGTTATCGTAGATCTAGCTGATCATCTAGCTGATCG'
-        seq2 = 'GATAACATCGATCAGCTAATCGTAGAGCCT'
+        seq1 = 'ATCTAGGCTGCTACGATTAGCTGACGATGTTATCGTAGATCTAGCTGATCATCTAGCTGATC'
+        seq2 = 'GGATAACATCGATCAGCTAATCGTAGAGCCT'
         seq1 = SeqRecord(id='seq1', seq=Seq(seq1))
         seq2 = SeqRecord(id='seq2', seq=Seq(seq2))
         seq_coord = SeqCoords(seq1, seq2)
