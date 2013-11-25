@@ -1,9 +1,11 @@
 
 import unittest
 from os.path import join as pjoin
+from os.path import dirname
 from io import StringIO
 from os import remove
 from tempfile import NamedTemporaryFile
+from subprocess import check_output
 
 from vcf import Reader
 
@@ -172,6 +174,18 @@ ref 10 . A C 10 PASS .
         except IlluminaWriter.NotEnoughAdjacentSequenceError:
             pass
 
+    def test_run_binary(self):
+        binary = pjoin(dirname(__file__), '..', 'bin',
+                       'write_snps_for_illumina')
+        assert 'usage' in check_output([binary, '-h'])
+
+        reference = pjoin(TEST_DATA_DIR, 'sample_ref.fasta')
+        vcf = pjoin(TEST_DATA_DIR, 'sample.vcf.gz')
+
+        cmd = [binary, '-r', reference, '-m', '0', vcf]
+        stdout = check_output(cmd)
+        assert 'GAAAT[A/C]AA' in stdout
+        
 if __name__ == "__main__":
 #     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']
     unittest.main()

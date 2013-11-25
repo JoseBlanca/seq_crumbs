@@ -155,3 +155,9 @@ class IlluminaWriter(object):
         out_fhand.write(snv_segment)
         out_fhand.write(second_segment)
         out_fhand.write(u'\n')
+
+    def flush(self):
+        self._out_fhand.flush()
+
+    def close(self):
+        self._out_fhand.close()

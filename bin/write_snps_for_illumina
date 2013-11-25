@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+import sys
+import argparse
+
+from vcf import Reader
+
+from vcf_crumbs.writers import IlluminaWriter
+
+
+def _setup_argparse():
+    description = 'It writes the snps in Illumina format'
+    parser = argparse.ArgumentParser(description=description)
+    in_help = 'Indexed vcf file'
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rt'))
+    in_help = 'Fasta reference file'
+    parser.add_argument('-r', '--reference', help=in_help,
+                        type=argparse.FileType('rt'))
+    hlp = 'output tabbed file (default STDOUT)'
+    parser.add_argument('-o', '--output', help=hlp,
+                        type=argparse.FileType('wt'))
+
+    msg = 'Adjacent sequence required (default: 60)'
+    parser.add_argument('-l', '--len', help=msg, type=int, default=60)
+
+    msg = 'Minimum adjacent sequence required (default: same as length)'
+    parser.add_argument('-m', '--min_len', help=msg, type=int)
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    args = {}
+    args['in_fhand'] = parsed_args.input
+
+    if parsed_args.output is not None:
+        args['out_fhand'] = parsed_args.output
+    else:
+        args['out_fhand'] = sys.stdout
+
+    args['reference_fhand'] = parsed_args.reference
+    if args['reference_fhand'] is None:
+        msg = 'A fasta reference file is required'
+        parser.error(msg)
+
+    args['len'] = parsed_args.len
+
+    args['min_len'] = parsed_args.min_len
+    if args['min_len'] is None:
+        args['min_len'] = args['len']
+    return args
+
+
+def main():
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    reader = Reader(args['in_fhand'])
+    writer = IlluminaWriter(args['reference_fhand'].name, args['out_fhand'],
+                            vcf_fpath=args['in_fhand'].name,
+                            length=args['len'], min_length=args['min_len'])
+
+    for snp in reader:
+        writer.write(snp)
+    writer.close()
+if __name__ == '__main__':
+    main()
