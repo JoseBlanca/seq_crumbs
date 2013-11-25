@@ -130,6 +130,47 @@ ref 10 . A C 10 PASS .
         iupac_seq = _replace_snvs_with_iupac(seq, [snp], seq_offset=1)
         assert iupac_seq == 'AC^TGA'
 
+    def test_errors(self):
+        # 01234
+        # 1234567890
+        # CCTGATTT-A
+        # TAACGA
+        #   -  C -A
+        vcf = '''##fileformat=VCFv4.1
+#CHROM POS ID REF ALT QUAL FILTER INFO
+ref 1 . C T 10 PASS .
+ref 2 . CT CA,C 10 PASS .
+ref 3 . T A 10 PASS .
+ref 4 . G C 10 PASS .
+ref 5 . A G 10 PASS .
+ref 6 . T A,C 10 PASS .
+ref 7 . TT T 10 PASS .
+ref 8 . T TA 10 PASS .
+ref 10 . A C 10 PASS .
+'''
+
+        vcf = vcf.replace(' ', '\t')
+        vcf_fhand = NamedTemporaryFile(suffix='.vcf')
+        vcf_fhand.write(vcf)
+        vcf_fhand.flush()
+        vcf_compressed = NamedTemporaryFile(suffix='.vcf.gz')
+        compress_with_bgzip(vcf_fhand, vcf_compressed)
+        index_vcf_with_tabix(vcf_compressed.name)
+
+        ref_fhand = NamedTemporaryFile(suffix='.fasta')
+        ref_fhand.write('>ref\nACTGATTTA\n')
+        ref_fhand.flush()
+
+        out_fhand = StringIO()
+        writer = IlluminaWriter(ref_fhand.name, out_fhand,
+                                vcf_fpath=vcf_compressed.name)
+        snps = Reader(filename=vcf_compressed.name)
+        snp = snps.next()
+        try:
+            writer.write(snp)
+            self.fail('NotEnoughAdjacentSequenceError expected')
+        except IlluminaWriter.NotEnoughAdjacentSequenceError:
+            pass
 
 if __name__ == "__main__":
 #     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']

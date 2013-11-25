@@ -64,6 +64,8 @@ class IlluminaWriter(object):
 
     # TODO add extra error classes
     # TODO include the error classes inside this class to easy access
+    class NotEnoughAdjacentSequenceError(Exception):
+        pass
 
     def __init__(self,  ref_fpath, out_fhand, length=60, vcf_fpath=None,
                  min_length=None):
@@ -114,7 +116,7 @@ class IlluminaWriter(object):
         if len(first_segment) < min_len:
             msg = "Not enough sequence in 3'. ID: %s, POS: %d, CHROM: %s"
             msg %= (snv.ID, snv.POS, snv.CHROM)
-            raise RuntimeError(msg)
+            raise self.NotEnoughAdjacentSequenceError(msg)
 
         if self._snvs:
             real_start = snv_start - len(first_segment)
@@ -128,7 +130,7 @@ class IlluminaWriter(object):
         if len(second_segment) < min_len:
             msg = "Not enough sequence in 5'. ID: %s, POS: %d, CHROM: %s"
             msg %= (snv.ID, snv.POS, snv.CHROM)
-            raise RuntimeError(msg)
+            raise self.NotEnoughAdjacentSequenceError(msg)
 
         if self._snvs:
             real_end = snv_end + len(second_segment)
