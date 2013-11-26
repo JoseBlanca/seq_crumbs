@@ -18,14 +18,15 @@
 import sys
 from crumbs.utils.bin_utils import (main, parse_filter_args, argparse,
                                     create_basic_parallel_argparse,
-                                    parse_basic_parallel_args)
+                                    parse_basic_parallel_args,
+    create_basic_argparse, parse_basic_args)
 from crumbs.bulk_filters import filter_duplicates
 from crumbs.utils.file_utils import flush_fhand
 
 
 def create_filter_argparse(add_reverse=True, **kwargs):
     'It returns a cmd parser for the filter executables'
-    parser = create_basic_parallel_argparse(**kwargs)
+    parser = create_basic_argparse(**kwargs)
     parser = argparse.ArgumentParser(parents=[parser], add_help=False)
     parser.add_argument('-e', '--filtered_file',
                         help='Filtered out sequences output file',
@@ -44,7 +45,7 @@ def create_filter_argparse(add_reverse=True, **kwargs):
 
 def parse_filter_args(parser, add_reverse=True):
     'It parses the command line and it returns a dict with the arguments.'
-    args, parsed_args = parse_basic_parallel_args(parser)
+    args, parsed_args = parse_basic_args(parser)
     args['paired_reads'] = parsed_args.paired_reads
     args['tempdir'] = parsed_args.tempdir
     args['max_seqs_packet'] = parsed_args.max_seqs_packet
