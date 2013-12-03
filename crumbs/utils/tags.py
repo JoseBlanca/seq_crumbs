@@ -60,3 +60,7 @@ SANGER_QUALITY = 'fastq'
 ILLUMINA_QUALITY = 'fastq-illumina'
 SANGER_FASTQ_FORMATS = ('fastq-sanger', 'fastq')
 ILLUMINA_FASTQ_FORMATS = ('fastq-illumina',)
+
+CHIMERA = 'chimera'
+MAPPED = 'mapped'
+UNKNOWN = 'unknown'

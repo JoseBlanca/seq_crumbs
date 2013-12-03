@@ -1,4 +1,3 @@
-# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
 # This file is part of seq_crumbs.
 # seq_crumbs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as
@@ -22,7 +21,7 @@ import unittest
 
 from string import ascii_lowercase
 from random import choice
-from subprocess import check_output, call, CalledProcessError
+from subprocess import check_output, call, CalledProcessError, PIPE
 import os.path
 from tempfile import NamedTemporaryFile
 
@@ -33,7 +32,8 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
                             seq_to_filterpackets, FilterByRpkm, FilterByBam,
-                            FilterBowtie2Match, FilterByFeatureTypes)
+                            FilterBowtie2Match, FilterByFeatureTypes,
+    classify_mapped_reads, filter_chimeras)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -41,7 +41,7 @@ from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.seq import get_name, get_str_seq, SeqWrapper
 from crumbs.mapping import get_or_create_bowtie2_index
-from crumbs.seqio import read_seq_packets
+from crumbs.seqio import read_seq_packets, read_seqs
 
 
 _seqs_to_names = lambda seqs: [get_name(s) for pair in seqs for s in pair]
@@ -561,7 +561,280 @@ class FilterByFeatureTypeTest(unittest.TestCase):
         assert len(seqs[SEQS_FILTERED_OUT]) == 1
         assert len(seqs[SEQS_PASSED]) == 1
 
+GENOME = '''>reference1\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTGTGG
+ACTTTCTATAATATTACTCAGAATTGGCAGTTACTCAGATTAAATTCGATCGTTGTATCGATTGCAGAACATCGTTG
+AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGTTATCGGAAGGGCAACTTCGTCTCTCCAA
+TCAGCTACCGAATTGGGACCTCTACGGGAGTATGGAACGATTGACACTGCTTTCGTCGAATGCAGATCCACGTCACC
+TTGCAGCGTAGATGTAATACGGGCTAGCCGGGGATGCCGACGATTAAACACGCTGTCATAGTAGCGTCTGGTGTCTA
+TGGACTCACTGGTACGGCCGTCCCCCTGCTGCTTATCATCAGGCGACGATAGTCAGCTCCGCGAACATCATTTCACC
+GCAGATAACGTTTCGGGCAGCATTTGCGTGTAACGTAGGGGTGTGTGAGCCGCAATAAGTTCAGCATCAATACCATC
+GAGGCCGATTTAGGTACCGTACGTGCCTTAACATTCGACAAGCGGTAAAAACAGTGTTATTCTACTGTTGTGACCGG
+GGTCAAGCGAGAGAATTAAGCCTATCTGGAGAGCGGTACCAACAGGGAAACACCGACTCAAGGGAGTACTGGAGCCT
+TCGGTTTTCATCTTCCGGTACTTTTTTGGCCTATGTTACTCTCTACCTTGCCTGTATATAGGACTCACCTTAATGCA
+TAGATATCATAGCAAAAGGAGTGCCCGCCAACATTAATTGATGTGTGAAGATTGCATATGAAAGAGTTCTGGAAACA
+AGAGTGTGTAGGCTGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGAGTATACCGCCAATATCCCAGTGCT
+AAAAGCGTGACGGACGCCATTCCTTACAAGGAAAGGCTTTATTGTACGTGGGGCATCATAGAATTTTGAGCTCCTGG
+CAACGTGACTAACCATCGCGGGGAAAATAAGTATTATCTACATGTTACTAGTCTAACGACTACCGCTAACTATGAAA
+CTACATATGAGGAATAAATAATCTGGGTATGTACTCGGAGTCTACGTAAGCGCGCTTAAATTACCATAAGACGAGTC
+TCTGGTCTTCTGAGATATTGGAGTACTCCCATTCATTACAGCTATCGTCGTCTGGCTGTCCGGAATATAGAAGTCAC
+CCAAGTCGTGTGAGAGAAACGTAACAGATTACGCCGCGTTAGCCTACGTAAGACGCCACTGAGACTCGTACTTGCGT
+GAGAATAGTACTTAACGTCACCGCATGAAAGGTCCAAGAGCTGCGGATCGGTCCCCTTACGGCTGCTCCAATTAGAC
+TAATTAGGGGATCCTGCAGAGACCGACATGCGAAAGGAGTGACTATCACCGTCAATGGCGTGCCCTTGTAATGCTGT
+TTGGAAGATGAGTCCAGGTTCGATGCCGCCGGCCACCACAACGGACTAGTATATTTTGCGCATAAATTACGTGTCCT
+TGCTGACGCTGCATAGGTTACGACTCTATTATATGCCCTCTTGGTGTCCACCTAACGCGGGCTAGTCTTAATACAGT
+TAGGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGGTTATCGTGATACGTTAAATTTCAGG
+ACATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACGCCCCTCGAAGGTACCTTTGCCAGACTG
+GGCTACAGGACACCCAGTCTCCCGGGAGTCTTTTCCAAGGTGTGCTCCTGATCGCCGTGTTAATCTGCACGGGCTAG
+AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGA
+TCCCGGGAGTCTTTTCCAAGGTGTGC
+>reference2
+TAGTCTTTATCCGGCCCTTGCTCAAGGGTATGTTAAAACGGCAAGAGCTGCCTGAGCGCGATGTCTTTATCACGAGT
+CCTTCACAAGGTAACCCGGTAATTACGTCTTCGACCTATTACGGATGCAAAGCATCACTAATCAGGCATCGCGTTAA
+TTCCCTGGTTCACCTAGTCTTCGTTACACCGCGAACCAGTGTGTGAGCGATAATGTCGCTGATCCCTAGATGGAATG
+CCGTTTTATTAACGTGTCGCACTAAGTTAGGGTGCTGTACCGTTAAGGGGCAACGGAGCATAACAGGCACGCAGATC
+TAGTATTGTTTAAATACTCTGCCCAGCTCTATTCTGCGAACCAGAACTAAGGTGCTTGTCTAAATGTTTGAAGGAGT
+CAAAGACGACCTCTGAGGCAGTCTGCAGTAAACCCTATCTGGAGCCTCTGATTACCTTACTCGTCTAGAACGGAAAA
+CGTAAGGACGGCGCAGGAGAACTAATTGAGATACATCTGGTCCGTGCCCGCACCATGAGAGCTACTATAGCGGGCCG
+AGCGGTTCAGGAAGACCCCTCGATAAGTTGGTTCCTCTCCCTGACACCGAACCCAATGAGCGCGGGGCCATCTTACC
+AGTCGAGGCTAGTCGCTCTCCCTACAGCCAATTCCATTGCTGACCATCTTTGTATGCGAATGGGCTGGTCGGATTAC
+ATAAGCCACCCCTTCCTGACGTTCAGCTTAGCCGACATGTCACTAACTGGGAAGCTTCTTGTGAAAAAAAATCGGGG
+TTTAGAAATTAACGTGACAATTCGATCAGATTGGAGTTGGAGACGCTTGCCTGGACATACCTTCCACAAGTGGTTTC
+CCGTACATGAGAGTAATGGCGCACTGATTGTGCTAGGGCCACAGTAGCGGAGATGATTAAGCAGCGACGTTGGATGG
+GACGAACGCAACGATATGAATGAGGGGGGGAAGATCATTGTTAGTACTCATCAGCCCGACATGGGATCCCAGCGCCC
+AGGGCCAAAAATCGGCATCGAGTGCCCGCTATATGATTTGATCGTTGGGTATAGTTATATACCGGGTCAAAACTGCC
+TCTTATTAGATTGGATATATTGCCGCTGCATAGATCCAAAGGTGGCCGAGCGCTCGATATCCTGAACGTGGCCGCAG
+GCACTGATTGTGCTAGGGCCACAGTAGCGGAGATGATTAAGCAGCGACGCACTGATTGTGCTAGGGCCACAGTAGCG
+GAGATGATTAAGCAGCGACGCACTGATTGTGCTAGGGCCACAGTAGCGGAGATGATTAAGCAGCGACGCACTGATTG
+TGCTAGGGCCACAGTAGCGGAGATGATTAAGCAGCGAC'''
+
+
+class FilterByMappingType(unittest.TestCase):
+    def test_classify_paired_reads(self):
+        reference_seq = GENOME
+        #Typic non chimeric
+        query1 = '>seq1 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
+
+        #typic chimeric
+        query3 = '>seq2 f\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTG'
+        query3 += 'GGTAGACTGAGGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGA\n'
+        query4 = '>seq2 r\nTTAAGGCACGTACGGTACCTAAATCGGCCTGATGGTATTGATGCTGAACTT'
+        query4 += 'ATTGCGGCTCACACACCCCTACGTTACACGCAAATGCTGCCCGAAACGTTAT\n'
+
+        #PE-like chimera. 5' end does not map
+        query5 = '>seq3 f\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        query5 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTG\n'
+        query6 = '>seq3 r\nTTAAGGCACGTACGGTACCTAAATCGGCCTGATGGTATTGATGCTGAACTT'
+        query6 += 'ATTGCGGCTCACACACCCCTACGTTACACGCAAATGCTGCCCGAAACGTTAT\n'
+
+        #Non chimeric fragmented read
+        query7 = '>seq4 f\nCAAATCATCACCAGACCATGTCCGATCCCGGGAGTCTTTTCCAAGGTGTGC'
+        query7 += 'TCTTTATCCGGCCCTTGCTCAAGGGTATGTTAAAACGGCAAGAGCTGCCTGAGCGCG\n'
+        query8 = '>seq4 r\nTGTTCTGCAATCGATACAACGATCGAATTTAATCTGAGTAACTGCCAATTC'
+        query8 += 'TGAGTAATATTATAGAAAGT\n'
+
+        #Chimeric fragmented reads
+        query9 = '>seq5 f\nTTTATCCGGCCCTTGCTCAAGGGTATGTTAAAACGGCAAGAGCTGC'
+        #first fragment not detected but still detected as chimeric
+        query9 += 'CTGAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTGTGG\n'
+        query10 = '>seq5 r\nACTTATTGCGGCTCACACACCCCTACGTTACACGCAAATGCTGCCCGAAA'
+        query10 += 'CGTTATCTGCGGTGAAATGATGTTCGCGGAGCTGACTATCGTCGCCTGATGATAAG\n'
+
+        query11 = '>seq6 f\nACGCACTGATTGTGCTAGGGCCACAGTAGCGGAGATGATTAAGCAGCGAC'
+        query11 += 'AACTACAAATCATCACCAGACCATGTCCGATCCCGGGAGTCTTTTCCAAGGTGTGC\n'
+        query12 = '>seq6 r\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        query12 += 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n'
+
+        #Unknown, 3' end does not map, impossible to know if it is chimeric
+        query13 = '>seq7 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query13 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query14 = '>seq7 r\nATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACGCC'
+        query14 += 'CCTCGAAGGTACCTTTGCCAGACTGGGCTACAGGACACCCAGTCTCCCGGGAGTCT\n'
+
+        #Unknown, chimeric sequences with wrong direction
+        query15 = '>seq8 f\nTAGGGCCGTCGCCGCATCCACGTTATCGGAAGGGCAACTTCGTCTCTCCA'
+        query15 += 'ATCAGCTACCGAATTGGGACCTCTACGGGAGTATGGAACGATTGA\n'
+        query16 = '>seq8 r\nAGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query16 += 'GATGATTTGTAGTTCGAGAAGGCCTCAGTCTACCGCGCCGTGGGTGCCCGATCCCT\n'
+
+        #Unknown, chimeric sequences with wrong direction
+        query17 = '>seq9 f\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCT'
+        query17 += 'GTGGACTTTCTATAATATTACTCAGAATTGGCAGTTACTCAGATTAAATTCG\n'
+        query18 = '>seq9 r\nGCACACCTTGGAAAAGACTCCCGGGATCGGACATGGTCTGGTGATGATTT'
+        query18 += 'GTAGTTCGAGAAGGCCTCAGTCTACCGCGCCGTGGGTGCCCGATCCCTCCTCTAGC\n'
+
+        forward = query1 + query3 + query5 + query7 + query9 + query11
+        forward += query13 + query15 + query17
+        reverse = query2 + query4 + query6 + query8 + query10 + query12
+        reverse += query14 + query16 + query18
+
+        f_fhand = NamedTemporaryFile()
+        f_fhand.write(forward)
+        f_fhand.flush()
+        r_fhand = NamedTemporaryFile()
+        r_fhand.write(reverse)
+        r_fhand.flush()
+        paired_fpaths = [[f_fhand.name], [r_fhand.name]]
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        #Removes only chimeric reads. Non chimeric mate remains
+        result = classify_mapped_reads(ref_fhand.name,
+                                       paired_fpaths=paired_fpaths,
+                                       paired_result=False)
+        mapped = ['seq1.f', 'seq1.r', 'seq2.r', 'seq4.r']
+        mapped.extend(['seq7.r', 'seq4.f'])
+        mapped = [[seq] for seq in mapped]
+        non_contiguous = ['seq2.f', 'seq3.f', 'seq5.f', 'seq6.f']
+        non_contiguous = [[seq] for seq in non_contiguous]
+        unknown = [['seq6.r'], ['seq7.f'], ['seq8.r'], ['seq3.r'], ['seq5.r'],
+                   ['seq8.f'], ['seq9.f'], ['seq9.r']]
+        expected = {'mapped': mapped, 'chimera': non_contiguous,
+                    'unknown': unknown}
+        for pair in result:
+            try:
+                names = [get_name(read) for read in pair[0]]
+                assert names in expected[pair[1]]
+            except AssertionError:
+                str_names = ' '.join(names)
+                msg = str_names + ' not expected to be '
+                msg += pair[1]
+                raise AssertionError(msg)
+
+        #Kind is given per pair of mates
+        result = classify_mapped_reads(ref_fhand.name,
+                                       paired_fpaths=paired_fpaths)
+        mapped = [['seq1.f', 'seq1.r'], ['seq4.f', 'seq4.r']]
+        non_contiguous = [['seq2.f', 'seq2.r'], ['seq3.f', 'seq3.r'],
+                          ['seq5.f', 'seq5.r'], ['seq6.f', 'seq6.r']]
+        unknown = [['seq7.f', 'seq7.r'], ['seq8.f', 'seq8.r'],
+                   ['seq9.f', 'seq9.r']]
+        expected = {'mapped': mapped, 'chimera': non_contiguous,
+                    'unknown': unknown}
+        for pair in result:
+            try:
+                names = [get_name(read) for read in pair[0]]
+                assert names in expected[pair[1]]
+            except AssertionError:
+                str_names = ' '.join(names)
+                msg = str_names + ' not expected to be '
+                msg += pair[1]
+                raise AssertionError(msg)
+
+    def test_filter_chimeras(self):
+        reference_seq = GENOME
+
+        #Typic non chimeric
+        query1 = '>seq1 1:Y:18:ATCACG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTA'
+        query1 += 'CATTGAACTT\n'
+        query2 = '>seq1 2:Y:18:ATCACG\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAG'
+        query2 += 'GGTTGTAACG\n'
+
+        #typic chimeric
+        query3 = '>seq2 1:Y:18:ATCACG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGT'
+        query3 += 'CTGCGATCCCTG'
+        query3 += 'GGTAGACTGAGGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGA\n'
+        query4 = '>seq2 2:Y:18:ATCACG\nTTAAGGCACGTACGGTACCTAAATCGGCCTGATGGTATT'
+        query4 += 'GATGCTGAACTT'
+        query4 += 'ATTGCGGCTCACACACCCCTACGTTACACGCAAATGCTGCCCGAAACGTTAT\n'
+
+        #Unknown, 3' end does not map, impossible to know if it is chimeric
+        query13 = '>seq7 1:Y:18:ATCACG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCT'
+        query13 += 'ACATTGAACTT'
+        query13 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query14 = '>seq7 2:Y:18:ATCACG\nATCATTGCATAAGTAACACTCAACCAACAGTGCTACAG'
+        query14 += 'GGTTGTAACGCC'
+        query14 += 'CCTCGAAGGTACCTTTGCCAGACTGGGCTACAGGACACCCAGTCTCCCGGGAGTCT\n'
+
+        query = query1 + query2 + query3 + query4 + query13 + query14
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        chimeras_fhand = NamedTemporaryFile()
+        unknown_fhand = NamedTemporaryFile()
+        filter_chimeras(ref_fhand.name, out_fhand, chimeras_fhand, [in_fhand],
+                        unknown_fhand)
+        result = read_seqs([out_fhand])
+        chimeric = read_seqs([chimeras_fhand])
+        unknown = read_seqs([unknown_fhand])
+        for seq in result:
+            assert get_name(seq) in ['seq1.f', 'seq1.r']
+        for seq in chimeric:
+            assert get_name(seq) in ['seq2.f', 'seq2.r']
+        for seq in unknown:
+            assert get_name(seq) in ['seq7.f', 'seq7.r']
+
+    def test_filter_chimeras_bin(self):
+        'It uses the filter_chimeras binary'
+        filter_chimeras_bin = os.path.join(BIN_DIR, 'filter_chimeras')
+        assert 'usage' in check_output([filter_chimeras_bin, '-h'])
+
+        reference_seq = GENOME
+
+        #Typic non chimeric
+        query1 = '>seq1 1:Y:18:ATCACG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTA'
+        query1 += 'CATTGAACTT\n'
+        query2 = '>seq1 2:Y:18:ATCACG\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAG'
+        query2 += 'GGTTGTAACG\n'
+
+        #typic chimeric
+        query3 = '>seq2 1:Y:18:ATCACG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGT'
+        query3 += 'CTGCGATCCCTG'
+        query3 += 'GGTAGACTGAGGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGA\n'
+        query4 = '>seq2 2:Y:18:ATCACG\nTTAAGGCACGTACGGTACCTAAATCGGCCTGATGGTATT'
+        query4 += 'GATGCTGAACTT'
+        query4 += 'ATTGCGGCTCACACACCCCTACGTTACACGCAAATGCTGCCCGAAACGTTAT\n'
+
+        #Unknown, 3' end does not map, impossible to know if it is chimeric
+        query13 = '>seq7 1:Y:18:ATCACG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCT'
+        query13 += 'ACATTGAACTT'
+        query13 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query14 = '>seq7 2:Y:18:ATCACG\nATCATTGCATAAGTAACACTCAACCAACAGTGCTACAG'
+        query14 += 'GGTTGTAACGCC'
+        query14 += 'CCTCGAAGGTACCTTTGCCAGACTGGGCTACAGGACACCCAGTCTCCCGGGAGTCT\n'
+
+        query = query1 + query2 + query3 + query4 + query13 + query14
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+        chimeras_fhand = NamedTemporaryFile()
+        unknown_fhand = NamedTemporaryFile()
+        cmd = [filter_chimeras_bin, in_fhand.name, '-a', ref_fhand.name]
+        cmd.extend(['-c', chimeras_fhand.name, '-e', unknown_fhand.name])
+        result = check_output(cmd)
+        chimeric = open(chimeras_fhand.name)
+        unknown = open(unknown_fhand.name)
+        assert '>seq1.f\n' in result
+        assert '>seq1.r\n' in result
+        assert '>seq2.f\n' in chimeric
+        assert '>seq2.r\n' in chimeric
+        assert '>seq7.f\n' in unknown
+        assert '>seq7.r\n' in unknown
+
+        #Input given to stdin
+        chimeras_fhand = NamedTemporaryFile()
+        unknown_fhand = NamedTemporaryFile()
+        cmd = [filter_chimeras_bin, '-a', ref_fhand.name]
+        cmd.extend(['-c', chimeras_fhand.name, '-e', unknown_fhand.name])
+        result = check_output(cmd, stdin=in_fhand)
+        chimeric = open(chimeras_fhand.name)
+        unknown = open(unknown_fhand.name)
+        assert '>seq1.f\n' in result
+        assert '>seq1.r\n' in result
+        assert '>seq2.f\n' in chimeric
+        assert '>seq2.r\n' in chimeric
+        assert '>seq7.f\n' in unknown
+        assert '>seq7.r\n' in unknown
+
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'FilterBowtie2Test.test_filter_by_bowtie2']
+    import sys;sys.argv = ['', 'FilterByMappingType']
     unittest.main()
