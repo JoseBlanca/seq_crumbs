@@ -1,10 +1,5 @@
-'''
-Created on 2013 eka 7
+from __future__ import division
 
-@author: peio
-
-Filters return True if the record is filtered and False if not
-'''
 import json
 from os.path import join
 from vcf import Reader
@@ -195,15 +190,19 @@ class HighVariableRegionFilter(BaseFilter):
         seq_len = self._lengths[chrom]
         if not self.window:
             start = 0
-            end = seq_len
+            end = seq_len - 1
         else:
             w2 = self.window / 2
-            start = pos - w2 if pos - w2 > 0 else 0
-            end = pos + self.window
+            start = int(pos - w2)
+            if start < 0:
+                start = 0
+            end = int(pos + w2)
+            if end > seq_len - 1:
+                end = seq_len - 1
 
         num_snvs = len(list(self.hg_reader.fetch(chrom, start, end)))
 
-        freq = num_snvs / float(seq_len)
+        freq = num_snvs / seq_len
 
         if freq > self.max_variability:
             record.add_filter(self.name)

@@ -122,6 +122,38 @@ class FilterTest(unittest.TestCase):
         desc = 'The region has more than 0.5 snvs per 100 bases'
         assert desc in filter_.description
 
+        records = Reader(filename=VCF_PATH)
+
+        records = Reader(filename=VCF_PATH)
+        filter_ = HighVariableRegionFilter(max_variability=0.003,
+                                           vcf_fpath=VCF_PATH,
+                                           ref_fpath=REF_PATH)
+        rec1 = filter_(rec1)
+        assert filter_.name in rec1.FILTER
+
+        filter_ = HighVariableRegionFilter(max_variability=0.004,
+                                           vcf_fpath=VCF_PATH,
+                                           ref_fpath=REF_PATH)
+        rec1 = filter_(rec1)
+        assert not filter_.name in rec1.FILTER
+
+        filter_ = HighVariableRegionFilter(max_variability=0.003,
+                                           window=10,
+                                           vcf_fpath=VCF_PATH,
+                                           ref_fpath=REF_PATH)
+
+        rec1 = filter_(rec1)
+        assert not filter_.name in rec1.FILTER
+
+        filter_ = HighVariableRegionFilter(max_variability=0.003,
+                                           window=100,
+                                           vcf_fpath=VCF_PATH,
+                                           ref_fpath=REF_PATH)
+
+        rec1 = filter_(rec1)
+        assert filter_.name in rec1.FILTER
+
+
     def test_close_to_limit_filter(self):
         records = Reader(filename=VCF_PATH)
         rec1 = records.next()
@@ -479,5 +511,5 @@ class BinaryTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-#     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']
+    #import sys;sys.argv = ['', 'FilterTest.test_high_variable_region_filter']
     unittest.main()
