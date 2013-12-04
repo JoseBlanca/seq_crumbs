@@ -191,6 +191,7 @@ class HighVariableRegionFilter(BaseFilter):
         if not self.window:
             start = 0
             end = seq_len - 1
+            window_len = seq_len
         else:
             w2 = self.window / 2
             start = int(pos - w2)
@@ -199,10 +200,11 @@ class HighVariableRegionFilter(BaseFilter):
             end = int(pos + w2)
             if end > seq_len - 1:
                 end = seq_len - 1
+            window_len = self.window
 
         num_snvs = len(list(self.hg_reader.fetch(chrom, start, end)))
 
-        freq = num_snvs / seq_len
+        freq = num_snvs / window_len
 
         if freq > self.max_variability:
             record.add_filter(self.name)

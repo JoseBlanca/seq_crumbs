@@ -141,9 +141,8 @@ class FilterTest(unittest.TestCase):
                                            window=10,
                                            vcf_fpath=VCF_PATH,
                                            ref_fpath=REF_PATH)
-
         rec1 = filter_(rec1)
-        assert not filter_.name in rec1.FILTER
+        assert filter_.name in rec1.FILTER
 
         filter_ = HighVariableRegionFilter(max_variability=0.003,
                                            window=100,
@@ -152,7 +151,6 @@ class FilterTest(unittest.TestCase):
 
         rec1 = filter_(rec1)
         assert filter_.name in rec1.FILTER
-
 
     def test_close_to_limit_filter(self):
         records = Reader(filename=VCF_PATH)
@@ -492,7 +490,6 @@ class BinaryTest(unittest.TestCase):
 [2]
     [[HighVariableRegionFilter]]
         max_variability = 0.05
-        window = 5
         ref_fpath = '{sample_fasta}'
 [3]
     [[CapEnzymeFilter]]
