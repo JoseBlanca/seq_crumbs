@@ -15,7 +15,7 @@
 import unittest
 import os
 from cStringIO import StringIO
-from subprocess import check_output, CalledProcessError, call
+from subprocess import check_output, call
 from tempfile import NamedTemporaryFile
 
 from Bio.bgzf import BgzfReader
@@ -33,8 +33,7 @@ from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.seq import get_str_seq
 from crumbs.seqio import read_seqs, assing_kind_to_seqs
 from crumbs.exceptions import (InterleaveError, PairDirectionError,
-                               MalformedFile, ItemsNotSortedError)
-from crumbs.seqio import write_seqs
+                               ItemsNotSortedError)
 from crumbs.seq import SeqWrapper, SeqItem
 from crumbs.utils.file_formats import set_format
 
@@ -165,9 +164,6 @@ CCCFFFFFGHH
         match_pairs(seqs, out_fhand, orphan_out_fhand, out_format='fasta')
         assert orphan_out_fhand.getvalue() == '>seq1\nACT\n>seq2\nACT\n'
 
-        #seq_fhand = NamedTemporaryFile(suffix='.fasta')
-        #write_seqs(seqs, seq_fhand, file_format='fasta')
-        #seq_fhand.flush()
         out_fhand = StringIO()
         orphan_out_fhand = StringIO()
         match_pairs(seqs, out_fhand, orphan_out_fhand, ordered=False,
@@ -348,18 +344,6 @@ class PairMatcherbinTest(unittest.TestCase):
 
         orp = open(orphan_fhand.name).read()
         assert '@seq8:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in orp
-
-        '''in_fpath = os.path.join(TEST_DATA_DIR, 'pairend5.sfastq')
-        out_fhand = NamedTemporaryFile()
-        orphan_fhand = NamedTemporaryFile()
-        stderr = NamedTemporaryFile()
-        try:
-            check_output([pair_matcher_bin, '-o', out_fhand.name,
-                          '-p', orphan_fhand.name, in_fpath, '-l', '1'],
-                         stderr=stderr)
-            self.fail('error expected')
-        except CalledProcessError:
-            assert 'There are too many consecutive' in open(stderr.name).read()'''
 
         # compressed output
         in_fpath = os.path.join(TEST_DATA_DIR, 'pairend5.sfastq')
