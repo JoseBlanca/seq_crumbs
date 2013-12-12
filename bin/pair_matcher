@@ -27,7 +27,6 @@ from crumbs.pairs import match_pairs
 from crumbs.seqio import read_seqs
 
 
-
 def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It matches paired reads and splits orphaned reads in other'
@@ -101,7 +100,7 @@ def run():
     # read seqs
     seqs = read_seqs(args['in_fhands'])
     match_pairs(seqs, out_fhand=args['out_fhand'],
-                orphan_out_fhand=args['orphan'], temp_dir=args['directory'],
+                orphan_out_fhand=args['orphan'], temp_dir=args['tempdir'],
                 out_format=args['out_format'], ordered=not args['unordered'],
                 check_order_buffer_size=args['check_order_buffer_size'],
                 max_reads_memory=args['max_reads_memory'])
