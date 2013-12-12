@@ -19,9 +19,10 @@ import cPickle as pickle
 from tempfile import NamedTemporaryFile
 
 from crumbs.utils.optional_modules import merge_sorted, first
+from crumbs.exceptions import SampleSizeError
 
 
-def sample(iterator, sample_size):
+def sample(iterator, sample_size, keep_order=False):
     'It makes a sample from the given iterator'
     # This implementation holds the sampled items in memory
     # Example of the algorithm seen in:
@@ -32,27 +33,35 @@ def sample(iterator, sample_size):
     # subfolders/
 
     sample_ = []
+    too_big_sample = True
     for index, elem in enumerate(iterator):
         if len(sample_) < sample_size:
             sample_.append(elem)
         else:
+            too_big_sample = False
             if random.randint(0, index) < sample_size:
-                # Ned Bactchelder proposed an algorithm with random order
-                # sample_[random.randint(0, sample_size - 1)] = elem
-                # we prefer to keep the order, so we always add at the end
-                sample_.pop(random.randint(0, sample_size - 1))
-                sample_.append(elem)
+                if keep_order:
+                    # Ned Bactchelder proposed an algorithm with random order
+                    # we prefer to keep the order, so we always add at the end
+                    sample_.pop(random.randint(0, sample_size - 1))
+                    sample_.append(elem)
+                else:
+                    sample_[random.randint(0, sample_size - 1)] = elem
+    if too_big_sample:
+        raise SampleSizeError('Sample larger than population')
     return sample_
 
 
-def sample_2(iterator, iter_length, sample_size):
+def sample_low_mem(iterator, iter_length, sample_size):
     'It makes a sample from the given iterator'
     # This implementation will use less memory when the number of sampled items
     # is quite high.
     # It requires to know the number of items beforehand
 
-    if not 0 <= sample_size <= iter_length:
-        raise ValueError("sample larger than population")
+    if sample_size <= 0:
+        raise SampleSizeError('No items to sample')
+    elif sample_size > iter_length:
+        raise SampleSizeError('Sample larger than population')
 
     if sample_size > iter_length / 2:
         num_items_to_select = iter_length - sample_size

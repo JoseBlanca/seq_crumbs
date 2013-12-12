@@ -16,9 +16,10 @@
 import unittest
 import tempfile
 
-from crumbs.iterutils import (sample, sample_2, length, group_in_packets,
+from crumbs.iterutils import (sample, sample_low_mem, length, group_in_packets,
                               rolling_window, group_in_packets_fill_last,
                               sorted_items, unique)
+from crumbs.exceptions import SampleSizeError
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -43,18 +44,41 @@ class IterutilsTest(unittest.TestCase):
 
         num_sampled_items = 10
         for num_sampled_items in (10, 90):
-            sampled_items = list(sample(items, num_sampled_items))
+            sampled_items = list(sample(items, num_sampled_items,
+                                        keep_order=True))
             self.check_sampled_items(items, sampled_items, num_sampled_items)
+            assert sampled_items == list(sorted(sampled_items))
 
-    def test_sample_2(self):
+        # order not kept
+        sampled_items = list(sample(range(1000), 5))
+        self.check_sampled_items(range(1000), sampled_items, 5)
+        # The following test could fail randomly from time to tme
+        assert sampled_items != list(sorted(sampled_items))
+
+    def test_sample_low_mem(self):
         'We can sample an iterator'
         length_ = 100
         items = range(length_)
 
         num_sampled_items = 10
         for num_sampled_items in (10, 90):
-            sampled_items = list(sample_2(items, length_, num_sampled_items))
+            sampled_items = list(sample_low_mem(items, length_,
+                                                num_sampled_items))
             self.check_sampled_items(items, sampled_items, num_sampled_items)
+
+    def test_sample_too_much(self):
+        items = range(10)
+        try:
+            list(sample_low_mem(items, 10, 20))
+            self.fail('Sample size error expected')
+        except SampleSizeError:
+            pass
+
+        try:
+            print list(sample(items, 20))
+            self.fail('Sample size error expected')
+        except SampleSizeError:
+            pass
 
     def test_length(self):
         'We can count an iterator'

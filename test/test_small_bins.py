@@ -187,7 +187,6 @@ class SampleSeqTest(unittest.TestCase):
     'It tests the seq sample binary'
 
     def test_sample_seq(self):
-        'It tests the seq head'
         sample_seq = os.path.join(BIN_DIR, 'sample_seqs')
         assert 'usage' in check_output([sample_seq, '-h'])
 
@@ -202,6 +201,14 @@ class SampleSeqTest(unittest.TestCase):
         # random sample
         result = check_output([sample_seq, '-n', '2', fasta_fhand.name])
         assert count_seqs(read_seqs([StringIO(result)]))['num_seqs'] == 2
+
+        # random sample
+        try:
+            stderr = NamedTemporaryFile()
+            check_output([sample_seq, '-n', '10', fasta_fhand.name],
+                         stderr=stderr)
+        except CalledProcessError:
+            assert 'larger' in open(stderr.name).read()
 
         # random sample with stdin
         result = check_output([sample_seq, '-n', '2'],
