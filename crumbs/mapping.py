@@ -21,6 +21,14 @@ from crumbs.utils.bin_utils import (check_process_finishes, get_binary_path,
                                     popen, get_num_threads)
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import TemporaryDir
+import subprocess
+import pysam
+from crumbs.utils.file_formats import get_format
+from crumbs.seq import SeqItem, SeqWrapper, get_str_seq, get_name
+from crumbs.utils.tags import SEQITEM
+from crumbs.exceptions import IncompatibleFormatError
+from crumbs.iterutils import sorted_items
+from crumbs.seqio import read_seqs
 
 
 def _bwa_index_exists(index_path):
@@ -41,6 +49,7 @@ def _create_bwa_index(index_fpath):
 def get_or_create_bwa_index(fpath, directory=None):
     'It creates the bwa index for the given reference'
 
+    fpath = os.path.abspath(fpath)
     if directory is not None:
         index_fpath = os.path.join(directory, os.path.basename(fpath))
     else:
@@ -65,9 +74,8 @@ def get_or_create_bwa_index(fpath, directory=None):
     return index_fpath
 
 
-def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
-                    paired_fpaths=None, readgroup=None, threads=None,
-                    log_fpath=None, extra_params=None):
+def map_with_bwamem(index_fpath, unpaired_fpath=None, paired_fpaths=None,
+                   threads=None, log_fpath=None, extra_params=None):
     'It maps with bwa ws algorithm'
     if paired_fpaths is None and unpaired_fpath is None:
         raise RuntimeError('At least one file to map is required')
@@ -75,14 +83,11 @@ def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
         msg = 'Bwa can not map unpaired and unpaired reads together'
         raise RuntimeError(msg)
 
-    if readgroup is None:
-        readgroup = {}
-
     if extra_params is None:
         extra_params = []
 
     binary = get_binary_path('bwa')
-    cmd = [binary, 'bwasw', '-t', str(get_num_threads(threads)), index_fpath]
+    cmd = [binary, 'mem', '-t', str(get_num_threads(threads)), index_fpath]
     cmd.extend(extra_params)
 
     if paired_fpaths is not None:
@@ -96,28 +101,7 @@ def map_with_bwasw(index_fpath, bam_fpath, unpaired_fpath=None,
         stderr = open(log_fpath, 'w')
     #raw_input(' '.join(cmd))
     bwa = popen(cmd, stderr=stderr, stdout=PIPE)
-
-    # add readgroup using picard
-    picard_tools = get_setting("PICARD_TOOLS_DIR")
-    if readgroup:
-        cmd = ['java', '-jar',
-           os.path.join(picard_tools, 'AddOrReplaceReadGroups.jar'),
-           'INPUT=/dev/stdin', 'OUTPUT={0}'.format(bam_fpath),
-           'RGID={0}'.format(readgroup['ID']),
-           'RGLB={0}'.format(readgroup['LB']),
-           'RGPL={0}'.format(readgroup['PL']),
-           'RGSM={0}'.format(readgroup['SM']),
-           'RGPU={0}'.format(readgroup['PU']),
-           'VALIDATION_STRINGENCY=LENIENT']
-    else:
-        cmd = [get_binary_path('samtools'), 'view', '-h', '-b', '-S', '-',
-               '-o', bam_fpath]
-
-    samtools = popen(cmd, stdin=bwa.stdout, stderr=stderr)
-    bwa.stdout.close()  # Allow p1 to receive a SIGPIPE if samtools exits.
-    samtools.communicate()
-    if bwa.returncode or samtools.returncode:
-        raise RuntimeError(open(stderr.name).read())
+    return bwa
 
 
 def _bowtie2_index_exists(index_path):
@@ -202,3 +186,66 @@ def map_process_to_bam(map_process, bam_fpath, log_fpath=None):
     samtools = popen(cmd, stdin=map_process.stdout, stderr=stderr)
     map_process.stdout.close()  # Allow p1 to receive a SIGPIPE if samtools exits.
     samtools.communicate()
+
+
+def sort_mapped_reads(map_process, out_fpath, key='coordinate',
+                      tempdir='/tmp'):
+    picard_tools = get_setting("PICARD_TOOLS_DIR")
+    fpath = os.path.join(picard_tools, 'SortSam.jar')
+    cmd = ['java', '-jar', fpath, 'I=/dev/stdin',
+           'O=' + out_fpath, 'SO=' + key, 'TMP_DIR=' + tempdir,
+           'VALIDATION_STRINGENCY=LENIENT']
+    sort = subprocess.Popen(cmd, stdin=map_process.stdout, stderr=PIPE)
+    stderr = sort.stderr
+    sort.wait()
+    if sort.returncode:
+        msg = 'Something happened running picard sort:\n'
+        msg += stderr.read()
+        raise RuntimeError(msg)
+    assert sort.returncode == 0
+
+
+def alignedread_to_seqitem(aligned_read, file_format):
+    name = aligned_read.qname
+    seq = aligned_read.seq + '\n'
+    quality = aligned_read.qual
+    if 'fasta' in file_format:
+        lines = ['>' + name + '\n', seq]
+    elif 'fastq' in file_format:
+        lines = ['@' + name + '\n', seq, '+\n', quality + '\n']
+    else:
+        raise IncompatibleFormatError('Not supported format: ' + file_format)
+    return SeqWrapper(SEQITEM, SeqItem(name, lines), file_format)
+
+
+def sort_by_position_in_ref(in_fhands, ref_fpath, directory=None,
+                            tempdir=None):
+    in_fpaths = [fhand.name for fhand in in_fhands]
+    file_format = get_format(in_fhands[0])
+    extra_params = ['-f'] if 'fasta' in file_format else []
+    index_fpath = get_or_create_bowtie2_index(ref_fpath, directory)
+    bowtie2 = map_with_bowtie2(index_fpath, unpaired_fpaths=in_fpaths,
+                               extra_params=extra_params)
+    out_fhand = NamedTemporaryFile()
+    sort_mapped_reads(bowtie2, out_fhand.name, tempdir=tempdir)
+    samfile = pysam.Samfile(out_fhand.name)
+    for aligned_read in samfile:
+        yield alignedread_to_seqitem(aligned_read, file_format)
+
+
+def sort_fastx_files(in_fhands, key, ref_fpath=None, directory=None,
+                     max_items_in_memory=None, tempdir='/tmp'):
+    if key == 'seq':
+        reads = read_seqs(in_fhands)
+        return sorted_items(reads, key=get_str_seq, tempdir=tempdir,
+                            max_items_in_memory=max_items_in_memory)
+    elif key == 'coordinate':
+        return sort_by_position_in_ref(in_fhands, ref_fpath,
+                                       directory=directory,
+                                       tempdir=tempdir)
+    elif key == 'name':
+        reads = read_seqs(in_fhands)
+        return sorted_items(reads, key=get_name, tempdir=tempdir,
+                            max_items_in_memory=max_items_in_memory)
+    else:
+        raise ValueError('Non-supported sorting key')

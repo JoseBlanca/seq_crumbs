@@ -19,12 +19,16 @@ import os.path
 from tempfile import NamedTemporaryFile
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
+from test.test_filters import GENOME
 from crumbs.mapping import (get_or_create_bowtie2_index, _bowtie2_index_exists,
                             map_with_bowtie2, get_or_create_bwa_index,
-                            _bwa_index_exists, map_with_bwasw,
-    map_process_to_bam)
+                            _bwa_index_exists, map_with_bwamem,
+                            map_process_to_bam, sort_fastx_files)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.utils.bin_utils import get_binary_path
+from test.test_filters import GENOME
+from crumbs.seq import get_name
+import pysam
 
 
 # pylint: disable=R0201
@@ -76,6 +80,68 @@ class Bowtie2Test(unittest.TestCase):
         map_process_to_bam(bowtie2, bam_fhand.name)
         directory.close()
 
+    def test_rev_compl_fragmented_reads(self):
+        reference_seq = GENOME
+
+        #with unpaired_reads
+        query_f = '>seq1\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTG'
+        query_f += 'AGGACACCCAGTCTCCCGGGAGTCTTTTCCAAGGTGTGCTCCTGATCGCCGTGTTA\n'
+
+        query_r = '>seq2\nTAACACGGCGATCAGGAGCACACCTTGGAAAAGACTCCCGGGAGACTGGGTG'
+        query_r += 'TCCTCAGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+
+        query = query_f + query_r
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        index_fpath = get_or_create_bowtie2_index(ref_fhand.name)
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
+        bowtie2 = map_with_bowtie2(index_fpath, extra_params=['-a', '-f'],
+                                   unpaired_fpaths=[in_fhand.name])
+        map_process_to_bam(bowtie2, bam_fhand.name)
+        samfile = pysam.Samfile(bam_fhand.name)
+        #for aligned_read in samfile:
+        #    print aligned_read
+
+        #with paired_reads.
+        #f is reversed r is direct
+        query1 = '>seq10 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query1 += '\n'
+        query2 = '>seq10 r\nATGTAATACGGGCTAGCCGGGGATGCCGACGATTAAACACGCTGTCATA'
+        query2 += 'GTAGCGTCTTCCTAGGGTTTTCCCCATGGAATCGGTTATCGTGATACGTTAAATTT\n'
+        #f is direct, r is reversed
+        query3 = '>seq11 f\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC'
+        query3 += '\n'
+        query4 = '>seq11 r\nAAATTTAACGTATCACGATAACCGATTCCATGGGGAAAACCCTAGGAAG'
+        query4 += 'ACGCTACTATGACAGCGTGTTTAATCGTCGGCATCCCCGGCTAGCCCGTATTACAT\n'
+
+        query_f = query1 + query3
+        query_r = query2 + query4
+
+        f_fhand = NamedTemporaryFile()
+        f_fhand.write(query_f)
+        f_fhand.flush()
+        r_fhand = NamedTemporaryFile()
+        r_fhand.write(query_r)
+        r_fhand.flush()
+        paired_fpaths = [[f_fhand.name], [r_fhand.name]]
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        index_fpath = get_or_create_bowtie2_index(ref_fhand.name)
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
+        bowtie2 = map_with_bowtie2(index_fpath, extra_params=['-a', '-f'],
+                                   paired_fpaths=paired_fpaths)
+        map_process_to_bam(bowtie2, bam_fhand.name)
+        samfile = pysam.Samfile(bam_fhand.name)
+        #for aligned_read in samfile:
+        #    print aligned_read
+
 
 class Bwa2Test(unittest.TestCase):
     def test_get_or_create_index(self):
@@ -102,12 +168,109 @@ class Bwa2Test(unittest.TestCase):
         directory = TemporaryDir()
         index_fpath = get_or_create_bwa_index(reference_fpath, directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        map_with_bwasw(index_fpath, bam_fhand.name, unpaired_fpath=reads_fpath)
+        bwa = map_with_bwamem(index_fpath, unpaired_fpath=reads_fpath)
+        map_process_to_bam(bwa, bam_fhand.name)
         out = subprocess.check_output([get_binary_path('samtools'), 'view',
                                        bam_fhand.name])
         assert  'TTCTGATTCAATCTACTTCAAAGTTGGCTTTATCAATAAG' in out
 
         directory.close()
+
+    def test_rev_compl_fragmented_reads(self):
+        reference_seq = GENOME
+
+        #with paired_reads.
+        #f is reversed r is direct
+        query1 = '>seq10 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query1 += '\n'
+        query2 = '>seq10 r\nATGTAATACGGGCTAGCCGGGGATGCCGACGATTAAACACGCTGTCATA'
+        query2 += 'GTAGCGTCTTCCTAGGGTTTTCCCCATGGAATCGGTTATCGTGATACGTTAAATTT\n'
+        #f is direct, r is reversed
+        query3 = '>seq11 f\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC'
+        query3 += '\n'
+        query4 = '>seq11 r\nAAATTTAACGTATCACGATAACCGATTCCATGGGGAAAACCCTAGGAAG'
+        query4 += 'ACGCTACTATGACAGCGTGTTTAATCGTCGGCATCCCCGGCTAGCCCGTATTACAT\n'
+
+        #f is fragmented in two reference sequences. r mapps completely
+        query7 = '>seq4 f\nCAAATCATCACCAGACCATGTCCGATCCCGGGAGTCTTTTCCAAGGTGTGC'
+        query7 += 'TCTTTATCCGGCCCTTGCTCAAGGGTATGTTAAAACGGCAAGAGCTGCCTGAGCGCG\n'
+        query8 = '>seq4 r\nTGTTCTGCAATCGATACAACGATCGAATTTAATCTGAGTAACTGCCAATTC'
+        query8 += 'TGAGTAATATTATAGAAAGT\n'
+
+        query_f = query1 + query3 + query7
+        query_r = query2 + query4 + query8
+
+        f_fhand = NamedTemporaryFile()
+        f_fhand.write(query_f)
+        f_fhand.flush()
+        r_fhand = NamedTemporaryFile()
+        r_fhand.write(query_r)
+        r_fhand.flush()
+        paired_fpaths = [f_fhand.name, r_fhand.name]
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        index_fpath = get_or_create_bwa_index(ref_fhand.name)
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
+        bwa = map_with_bwamem(index_fpath, paired_fpaths=paired_fpaths)
+        map_process_to_bam(bwa, bam_fhand.name)
+        samfile = pysam.Samfile(bam_fhand.name)
+        #for aligned_read in samfile:
+        #    print aligned_read
+
+
+class SortSeqsFileTest(unittest.TestCase):
+    def test_sort_by_position_in_ref(self):
+        reference = GENOME
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference)
+        ref_fhand.flush()
+
+        #with fasta format
+        query1 = '>seq1\nGAGAATTAAGCCTATCTGGAGAGCGGTACCAACAGGGAAACACCGACTCA\n'
+        query2 = '>seq2\nTAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGTTATCGGAAGGGC\n'
+        query3 = '>seq3\nTACGGCCGTCCCCCTGCTGCTTATCATCAGGCGACGATAGTCAGCTCCGC\n'
+        query4 = '>seq4\nTGCAGAGACCGACATGCGAAAGGAGTGACTATCACCGTCAATGGCGTGCC\n'
+        query5 = '>seq5\nAATAAATAATCTGGGTATGTACTCGGAGTCTACGTAAGCGCGCTTAAATT\n'
+        query6 = '>seq6\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query = query6 + query1 + query2 + query3 + query4 + query5
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+
+        sorted_names = []
+        for seq in sort_fastx_files([in_fhand], 'coordinate', ref_fhand.name):
+            sorted_names.append(get_name(seq))
+        expected_names = ['seq2', 'seq3', 'seq1', 'seq5', 'seq4', 'seq6']
+        assert sorted_names == expected_names
+
+        #with fastq format
+        query1 += '+\n??????????????????????????????????????????????????\n'
+        query2 += '+\n??????????????????????????????????????????????????\n'
+        query3 += '+\n??????????????????????????????????????????????????\n'
+        query4 += '+\n??????????????????????????????????????????????????\n'
+        query5 += '+\n??????????????????????????????????????????????????\n'
+        query6 += '+\n??????????????????????????????????????????????????\n'
+        query = query6 + query1 + query2 + query3 + query4 + query5
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+
+        sorted_names = []
+        for seq in sort_fastx_files([in_fhand], 'coordinate', ref_fhand.name):
+            sorted_names.append(get_name(seq))
+        expected_names = ['seq2', 'seq3', 'seq1', 'seq5', 'seq4', 'seq6']
+        assert sorted_names == expected_names
+
+        #sort by sequence
+        sorted_names = []
+        for seq in sort_fastx_files([in_fhand], key='seq', directory=None,
+                     max_items_in_memory=None, tempdir=None):
+            sorted_names.append(get_name(seq))
+        expected_names = ['seq6', 'seq5', 'seq1', 'seq2', 'seq3', 'seq4']
+        assert sorted_names == expected_names
+
 if __name__ == '__main__':
     # import sys;sys.argv = ['', 'BlastTest.test_blastdb']
     unittest.main()
