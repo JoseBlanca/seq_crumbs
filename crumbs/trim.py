@@ -29,7 +29,7 @@ from crumbs.utils.tags import SEQRECORD
 from crumbs.iterutils import rolling_window
 from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqs
-from crumbs.pairs import group_seqs_in_pairs
+from crumbs.pairs import group_pairs_by_name, group_pairs
 
 # pylint: disable=R0903
 
@@ -39,9 +39,9 @@ def seq_to_trim_packets(seq_packets, group_paired_reads=False):
 
     for packet in seq_packets:
         if group_paired_reads:
-            packet = list(group_seqs_in_pairs(packet))
+            packet = list(group_pairs_by_name(packet))
         else:
-            packet = [[seq] for seq in packet]
+            packet = list(group_pairs(packet, n_seqs_in_pair=1))
         yield {SEQS_PASSED: packet, ORPHAN_SEQS: []}
 
 

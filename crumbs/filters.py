@@ -34,7 +34,7 @@ from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
 from crumbs.mapping import  get_or_create_bowtie2_index, map_with_bowtie2
 from crumbs.seqio import write_seqs
-from crumbs.pairs import group_seqs_in_pairs
+from crumbs.pairs import group_pairs, group_pairs_by_name
 
 
 def seq_to_filterpackets(seq_packets, group_paired_reads=False):
@@ -42,9 +42,9 @@ def seq_to_filterpackets(seq_packets, group_paired_reads=False):
 
     for packet in seq_packets:
         if group_paired_reads:
-            packet = list(group_seqs_in_pairs(packet))
+            packet = list(group_pairs_by_name(packet))
         else:
-            packet = [[seq] for seq in packet]
+            packet = list(group_pairs(packet, n_seqs_in_pair=1))
         yield {SEQS_PASSED: packet, SEQS_FILTERED_OUT: []}
 
 

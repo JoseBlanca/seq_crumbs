@@ -16,7 +16,7 @@
 # pylint: disable=C0111
 
 from crumbs.seq import get_str_seq
-from crumbs.pairs import group_seqs_in_pairs
+from crumbs.pairs import group_pairs_by_name, group_pairs
 from crumbs.seqio import read_seqs, write_seqs
 from crumbs.utils.tags import SEQITEM
 from crumbs.iterutils import sorted_items, unique
@@ -35,9 +35,9 @@ def _seqitem_pairs_equal(pair1, pair2):
 def _read_pairs(in_fhands, paired_reads):
     seqs = read_seqs(in_fhands, prefered_seq_classes=[SEQITEM])
     if paired_reads:
-        pairs = group_seqs_in_pairs(seqs)
+        pairs = group_pairs_by_name(seqs)
     else:
-        pairs = ([seq] for seq in seqs)
+        pairs = group_pairs(seqs, n_seqs_in_pair=1)
     return pairs
 
 

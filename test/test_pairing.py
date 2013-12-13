@@ -23,7 +23,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
-                          _index_seq_file, group_seqs_in_pairs,
+                          group_pairs, group_pairs_by_name,
                           _parse_pair_direction_and_name_from_title,
                           _parse_pair_direction_and_name)
 from crumbs.iterutils import flat_zip_longest
@@ -462,7 +462,7 @@ class InterleaveBinTest(unittest.TestCase):
         ret_code = call([interleave_bin, '-o', out_fhand.name, in_fpath1,
                          in_fpath2], stderr=stderr)
         assert int(ret_code)
-        assert 'from the two files do not match' in open(stderr.name).read()
+        assert 'read names from a pair do not matc' in open(stderr.name).read()
         check_output([interleave_bin, '-o', out_fhand.name, '-s', in_fpath1,
                       in_fpath2])
         result = open(out_fhand.name).read()
@@ -482,42 +482,127 @@ class InterleaveBinTest(unittest.TestCase):
         assert 'from seq_crumbs version:' in open(stderr.name).read()
 
 
-class IndexedPairMatcher(unittest.TestCase):
-    'pair matching using biopythonindex'
-
-    @staticmethod
-    def test_index_seqfile():
-        'Tets index seqfile'
-        in_fpath1 = os.path.join(TEST_DATA_DIR, 'pairend1.sfastq')
-        in_fpath2 = os.path.join(TEST_DATA_DIR, 'pairend2.sfastq')
-        fhand = NamedTemporaryFile()
-        fhand.write(open(in_fpath1).read())
-        fhand.write(open(in_fpath2).read())
-        fhand.flush()
-        index_ = _index_seq_file(fhand.name)
-        keys = index_.keys()
-        assert 'seq2:136:FC706VJ:2:2104:15343:197393 2:Y:18:ATCACG' in keys
+def _build_some_paired_seqs():
+    seq1 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.f\n', 'A\n']), 'fasta')
+    seq2 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.r\n', 'C\n']), 'fasta')
+    seq3 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.f\n', 'T\n']), 'fasta')
+    seq4 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.r\n', 'G\n']), 'fasta')
+    seqs = seq1, seq2, seq3, seq4
+    return seqs
 
 
 class PairGrouperTest(unittest.TestCase):
-    @staticmethod
-    def test_pair_grouper():
-        seq1 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.f\n', 'A\n']), 'fasta')
-        seq2 = SeqWrapper(SEQITEM, SeqItem('s1', ['>s1.r\n', 'C\n']), 'fasta')
-        seq3 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.f\n', 'T\n']), 'fasta')
-        seq4 = SeqWrapper(SEQITEM, SeqItem('s2', ['>s2.r\n', 'G\n']), 'fasta')
-        seqs = seq1, seq2, seq3, seq4
-        paired_seqs = list(group_seqs_in_pairs(seqs))
+
+    def test_pair_grouper(self):
+        seqs = _build_some_paired_seqs()
+        paired_seqs = list(group_pairs(seqs))
+
         assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C']
         assert [get_str_seq(s) for s in paired_seqs[1]] == ['T', 'G']
         assert len(paired_seqs) == 2
 
+        seqs = _build_some_paired_seqs()
+        paired_seqs = list(group_pairs(seqs, n_seqs_in_pair=1,
+                           check_name_matches=True))
+        assert [get_str_seq(s) for pair in paired_seqs for s in pair] == ['A',
+                                                                 'C', 'T', 'G']
+
+    def test_name_check(self):
+        seqs = _build_some_paired_seqs()
+        try:
+            list(group_pairs(seqs, n_seqs_in_pair=4))
+            self.fail('InterleaveError expected')
+        except InterleaveError:
+            pass
+
+        seqs = _build_some_paired_seqs()
+        paired_seqs = list(group_pairs(seqs, n_seqs_in_pair=4,
+                           check_name_matches=False))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C', 'T', 'G']
+
+    def test_n_seqs_check(self):
+        seqs = _build_some_paired_seqs()
+        seqs = seqs[:-1]
+        try:
+            list(group_pairs(seqs, n_seqs_in_pair=2))
+            self.fail('InterleaveError expected')
+        except InterleaveError:
+            pass
+
+        paired_seqs = list(group_pairs(seqs, n_seqs_in_pair=2,
+                           check_all_same_n_seqs=False))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['T']
+
     @staticmethod
     def test_empty_iter():
-        paired_seqs = list(group_seqs_in_pairs([]))
+        paired_seqs = list(group_pairs([]))
         assert not paired_seqs
 
 
+class PairNameGrouperTest(unittest.TestCase):
+
+    def test_pair_grouper(self):
+        seqs = _build_some_paired_seqs()
+        paired_seqs = list(group_pairs_by_name(seqs))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['T', 'G']
+        assert len(paired_seqs) == 2
+
+        seqs = seqs[0], seqs[2], seqs[1], seqs[3]
+        paired_seqs = list(group_pairs_by_name(seqs))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['T']
+        assert [get_str_seq(s) for s in paired_seqs[2]] == ['C']
+        assert [get_str_seq(s) for s in paired_seqs[3]] == ['G']
+        assert len(paired_seqs) == 4
+
+        seqs = _build_some_paired_seqs()
+        seqs = seqs[:-1]
+        paired_seqs = list(group_pairs_by_name(seqs))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['T']
+
+        seqs = _build_some_paired_seqs()
+        seqs = seqs[:-1]
+        try:
+            paired_seqs = list(group_pairs_by_name(seqs,
+                                                   all_pairs_same_n_seqs=True))
+            self.fail('InterleaveError expected')
+        except InterleaveError:
+            pass
+
+    def test_no_name(self):
+        seqs = _build_some_paired_seqs()
+        seq = SeqWrapper(SEQITEM, SeqItem('s', ['>s\n', 'N\n']), 'fasta')
+
+        seqs = seqs[0], seqs[1], seqs[2], seq, seqs[3]
+        paired_seqs = list(group_pairs_by_name(seqs))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A', 'C']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['T']
+        assert [get_str_seq(s) for s in paired_seqs[2]] == ['N']
+        assert [get_str_seq(s) for s in paired_seqs[3]] == ['G']
+
+        seqs = _build_some_paired_seqs()
+        seqs = seqs[0], seq, seqs[1], seqs[2], seqs[3]
+        paired_seqs = list(group_pairs_by_name(seqs))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['A']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['N']
+        assert [get_str_seq(s) for s in paired_seqs[2]] == ['C']
+        assert [get_str_seq(s) for s in paired_seqs[3]] == ['T', 'G']
+
+        seqs = _build_some_paired_seqs()
+        seqs = seq, seqs[0], seqs[1], seqs[2], seqs[3]
+        paired_seqs = list(group_pairs_by_name(seqs))
+        assert [get_str_seq(s) for s in paired_seqs[0]] == ['N']
+        assert [get_str_seq(s) for s in paired_seqs[1]] == ['A', 'C']
+        assert [get_str_seq(s) for s in paired_seqs[2]] == ['T', 'G']
+
+    @staticmethod
+    def test_empty_iter():
+        paired_seqs = list(group_pairs_by_name([]))
+        assert not paired_seqs
+
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'PairMatcherTest.test_mate_pair_unorderer_checker']
+    #import sys;sys.argv = ['', 'PairGrouperTest']
     unittest.main()

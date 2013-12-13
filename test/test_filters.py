@@ -54,7 +54,7 @@ class PacketConversionTest(unittest.TestCase):
         'It converts seq packets into filter packets'
         seqpackets = [['ACT'], ['CTG', 'TTT']]
         filter_packets = list(seq_to_filterpackets(iter(seqpackets)))
-        expected = [[['ACT']], [['CTG'], ['TTT']]]
+        expected = [[('ACT',)], [('CTG',), ('TTT',)]]
         assert [p[SEQS_PASSED] for p in filter_packets] == expected
         assert [p[SEQS_FILTERED_OUT] for p in filter_packets] == [[], []]
 

@@ -93,7 +93,7 @@ class PairDirectionError(Exception):
 
 
 class InterleaveError(Exception):
-    'Error in the alteranation of forward and reverse reads'
+    'Error in the alternation of forward and reverse reads'
     pass
 
 
