@@ -22,9 +22,6 @@ from crumbs.utils.bin_utils import (main, parse_filter_args, argparse,
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.settings import get_setting
 from crumbs.filters import  filter_chimeras
-from crumbs.pairs import deinterleave_pairs
-from tempfile import NamedTemporaryFile
-from crumbs.seqio import read_seqs
 
 
 def create_filter_argparse(add_reverse=True, **kwargs):
@@ -78,6 +75,8 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     help6 += '(default:' + str(settings['MAX_CLIPPING']) + ')'
     settings_group.add_argument('--max_clipping', default=None,
                           help=help6, type=float)
+    help7 = 'Minimum seed length for mapping (default:19)'
+    settings_group.add_argument('--min_seed_len', default=None, help=help7)
     return parser
 
 
@@ -90,6 +89,7 @@ def parse_filter_args(parser, add_reverse=True):
     args['in_format'] = parsed_args.in_format
     args['reference'] = parsed_args.reference_seq
     args['paired_result'] = not parsed_args.unpaired_result
+    args['min_seed_len'] = parsed_args.min_seed_len
 
     settings = get_setting('CHIMERAS_SETTINGS')
     setting_args = {}
@@ -128,10 +128,11 @@ def run():
         unknown_fhand = open(unknown_fpath, 'w')
     else:
         unknown_fhand = open('unknown_pairs', 'w')
+    min_seed_len = args['min_seed_len']
 
     filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                     unknown_fhand, settings=settings, unpaired=unpaired,
-                    paired_result=paired_result)
+                    paired_result=paired_result, min_seed_len=min_seed_len)
     flush_fhand(out_fhand)
 
 if __name__ == '__main__':

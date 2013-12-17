@@ -27,15 +27,16 @@ except ImportError:
     pass
 
 from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
-                               SEQRECORD, CHIMERA, MAPPED, UNKNOWN)
+                               SEQRECORD, CHIMERA, NON_CHIMERIC, UNKNOWN)
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.seq import get_name, get_file_format, get_str_seq, get_length
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
-from crumbs.statistics import calculate_dust_score
+from crumbs.statistics import calculate_dust_score, IntCounter, draw_histogram
 from crumbs.settings import get_setting
 from crumbs.mapping import (get_or_create_bowtie2_index, map_with_bowtie2,
                             map_process_to_bam, sort_mapped_reads,
+                            get_or_create_bwa_index, map_with_bwamem,
                             alignedread_to_seqitem)
 from crumbs.seqio import write_seqs, read_seqs
 from crumbs.pairs import group_seqs_in_pairs, deinterleave_pairs
@@ -380,6 +381,9 @@ def _split_mates(alignments_group):
         elif alignment_read.is_read2:
             alignment_read.qname += '.r'
             reverse.append(alignment_read)
+        elif alignment_read.is_unmapped:
+            print 'aaaa'
+            print alignment_read
     return [forward, reverse]
 
 
@@ -455,14 +459,15 @@ def _find_secondary_fragment(alignments_group, max_coincidences,
     return None
 
 
-def _find_distances_with_mate(alignment_reads):
-    'It calculates the distances between two alignments of the same sequence'
-    'with the position to which the mate maps'
+def _find_distances_with_mate(alignment_reads, mate_alignments):
+    '''It calculates the distances between two alignments of the same sequence
+    with the position to which the mate maps. It assumes that it is a typical
+    chimera'''
     alignment_reads.sort(key=lambda x: x.pos)
-    distance1 = abs(alignment_reads[0].pnext - alignment_reads[0].aend)
-    #it should be compared to the end of the mate
-    distance2 = abs(alignment_reads[1].pos - alignment_reads[0].pnext)
-    return [distance1, distance2]
+    primary_mate = _get_primary_alignment(mate_alignments)
+    distance1 = abs(primary_mate.pos - alignment_reads[0].aend)
+    distance2 = abs(alignment_reads[1].pos - primary_mate.aend)
+    return sorted([distance1, distance2])
 
 
 def _guess_kind_fragments_at_ends(fragments, samfile, limit):
@@ -476,7 +481,7 @@ def _guess_kind_fragments_at_ends(fragments, samfile, limit):
     else:
         if ((not fragments[1].is_reverse and fragments[1].pos < limit) or (
         fragments[1].is_reverse and fragments[1].aend > lengths[1] - limit)):
-            return MAPPED
+            return NON_CHIMERIC
         else:
             return CHIMERA
 
@@ -499,119 +504,156 @@ def _get_mate(i, mates_alignments):
         return mates_alignments[0]
 
 
-def _get_distances_to_mate(alignment_read, mate, max_mapq_difference):
+def _find_distance(aligned_reads):
+    'It returns distance between two aligned_reads in the reference seq'
+    aligned_reads.sort(key=lambda x: x.pos)
+    return aligned_reads[1].pos - aligned_reads[0].aend
+
+
+def _get_distances_to_mate(alignment_read, mate_alignments,
+                           max_mapq_difference):
     '''It returns the distances and alignment between an aligned_read and all
     the alignments of the mate. It is < 0 depending on positions in referece'''
-    distances = []
-    primary_mate = _get_primary_alignment(mate)
-    for alignment_mate in mate:
-        if alignment_mate.rname == alignment_read.rname:
-            if primary_mate.mapq - alignment_mate.mapq <= max_mapq_difference:
-                if alignment_mate.pos < alignment_read.pos:
-                    distance = alignment_read.pos - alignment_mate.aend
-                else:
-                    distance = alignment_read.aend - alignment_mate.pos
-                distances.append([alignment_mate, abs(distance)])
-    return distances
+    primary_mate = _get_primary_alignment(mate_alignments)
+    for alignment_mate in mate_alignments:
+        if primary_mate.mapq - alignment_mate.mapq <= max_mapq_difference:
+            if alignment_read.rname == alignment_mate.rname:
+                distance = _find_distance([alignment_mate, alignment_read])
+                yield [alignment_mate, abs(distance)]
+
+
+def _mapped_read_is_chimeric(alignment_read, mate_alignments,
+                          max_mapq_difference, max_pe_len):
+    for alignment_mate, distance in _get_distances_to_mate(alignment_read,
+                                                        mate_alignments,
+                                                        max_mapq_difference):
+        if distance < max_pe_len and _mates_are_innies([alignment_read,
+                                                       alignment_mate]):
+            return True
+    return False
+
+
+def _mates_are_outies(mates):
+    mates.sort(key=lambda x: x.pos)
+    return mates[0].is_reverse and (not mates[1].is_reverse)
+
+
+def _mates_are_innies(mates):
+    mates.sort(key=lambda x: x.pos)
+    return (not mates[0].is_reverse) and mates[1].is_reverse
+
+
+def _alignments_in_same_ref(alignments):
+    prev_ref = None
+    for alignment in alignments:
+        if prev_ref is None:
+            prev_ref = alignment.rname
+        elif alignment.rname != prev_ref:
+            return False
+    return True
+
+
+def _read_is_typical_chimera(fragments, max_pe_len, min_mp_len, mate):
+    positions = [fragment.pos for fragment in fragments]
+    if (fragments[0].is_reverse == fragments[1].is_reverse and
+        bisect(positions, fragments[0].pnext) == 1 and
+        fragments[0].is_reverse != fragments[0].mate_is_reverse):
+        len_pe, len_mp = sorted(_find_distances_with_mate(fragments, mate))
+        return len_pe < max_pe_len and len_mp > min_mp_len
+    return False
 
 
 def classify_mapped_reads(ref_fpath, paired_fpaths=None,
                      unpaired_fpaths=None, directory=None,
                      settings=get_setting('CHIMERAS_SETTINGS'),
-                     file_format=None, paired_result=True):
-    fhand = open(paired_fpaths[0][0]) if paired_fpaths else open(unpaired_fpaths[0])
+                     file_format=None, paired_result=True,
+                     min_seed_len=None):
+    fhand = open(paired_fpaths[0]) if paired_fpaths else open(unpaired_fpaths[0])
     if file_format is not None:
         set_format(fhand, file_format)
     else:
         file_format = get_format(fhand)
-    extra_params = ['-a']
-    if 'fasta' in file_format:
-        extra_params.append('-f')
-    index_fpath = get_or_create_bowtie2_index(ref_fpath, directory)
-    bowtie2 = map_with_bowtie2(index_fpath, paired_fpaths,
-                     unpaired_fpaths, extra_params=extra_params)
+    index_fpath = get_or_create_bwa_index(ref_fpath, directory)
+    extra_params = ['-a', '-M']
+    if min_seed_len is not None:
+        extra_params.extend(['-k', min_seed_len])
+    bwa = map_with_bwamem(index_fpath, paired_fpaths=paired_fpaths,
+                         unpaired_fpath=unpaired_fpaths,
+                         extra_params=extra_params)
     bam_fhand = NamedTemporaryFile(dir='/home/carlos/tmp')
-    sort_mapped_reads(bowtie2, bam_fhand.name, key='queryname')
+    sort_mapped_reads(bwa, bam_fhand.name, key='queryname')
     bamfile = pysam.Samfile(bam_fhand.name)
+    bamfile = pysam.Samfile(ref_fpath)
 
     #settings. Include in function properties with default values
     max_coincidences = settings['MAX_COINCIDENCES']
     max_mapq_difference = settings['MAX_MAPQ_DIFFERENCE']
     limit = settings['MAX_DISTANCE_TO_END']
-    #max_difference = settings['MAX_DISTANCE_CHIMERIC_MATE']
-    #max_n_cigar = settings['MAX_N_CIGAR']
     max_clipping = settings['MAX_CLIPPING']
-    #min_coincidences_prop = settings['MIN_COINCIDENCES_PROPORTION']
     max_pe_len = settings['MAX_PE_LEN']
     min_mp_len = settings['MIN_MP_LEN']
 
+    #parameters for statistics
     len_mp_non_chimeric = 0
     n_non_chimeric_mates = 0
     len_pe_sum = 0
     len_mp_sum = 0
     typic_chimeras = 0
     pe_like_chimeras = 0
-
+    #It tries to find out the kind of each pair of sequences
     for grouped_mates in _group_alignments_by_reads(bamfile):
         mates_alignments = _split_mates(grouped_mates)
         i = 0
         pair = []
         for alignments_group in mates_alignments:
             i += 1
+            mate = _get_mate(i, mates_alignments)
+            primary_mate = _get_primary_alignment(mate)
             primary_alignment = _get_primary_alignment(alignments_group)
             if _read_is_totally_mapped(alignments_group, max_clipping):
-                if  not primary_alignment.mate_is_unmapped:
-                    mate = _get_mate(i, mates_alignments)
-                    if primary_alignment.rnext == primary_alignment.rname:
+                if  primary_alignment.mate_is_unmapped:
+                    kind = UNKNOWN
+                else:
+                    if primary_alignment.rname != primary_alignment.rnext:
+                        kind = NON_CHIMERIC
+                    else:
                         #we take teh alignment from the mate that is furthest
                         #to the primary alignment. No sure it is right
-                        alignment_mate, distance = sorted(
-                            _get_distances_to_mate(primary_alignment, mate,
-                                                   max_mapq_difference),
-                            reverse=True, key=lambda x: x[1])[0]
-                        sorted_mates = sorted([alignment_mate,
-                                               primary_alignment],
-                                              key=lambda x: x.pos)
-                        if (sorted_mates[0].is_reverse and not
-                            sorted_mates[1].is_reverse and distance > min_mp_len):
+                        #si el primario esta completamente mapeado
+                        #calcular todas las distancias y de los que tienen
+                        #ver si hay alguno con la distancia y orientacion
+                        mates = [primary_mate, primary_alignment]
+                        distance = _find_distance(mates)
+                        if _mapped_read_is_chimeric(primary_alignment, mate,
+                                                    max_mapq_difference,
+                                                    max_pe_len):
+                            kind = CHIMERA
+                        elif _mates_are_outies(mates) and distance > min_mp_len:
                             len_mp_non_chimeric += abs(distance)
                             n_non_chimeric_mates += 1
-                            kind = MAPPED
-                        elif (not sorted_mates[0].is_reverse and
-                              sorted_mates[1].is_reverse):
-                            if distance < max_pe_len:
-                                kind = CHIMERA
-                            else:
-                                kind = UNKNOWN
+                            kind = NON_CHIMERIC
+                            #Theoretically we would detect that it is chimeric
+                            #when analyzing the other mate unless it is detected
+                            #as totally mapping by mistake - check only with primary
+                            #alignment of the other mate
                         else:
-                            #we do not expect this kind of sequences but
-                            #it is good to take them into account
                             kind = UNKNOWN
-                    else:
-                        kind = MAPPED
-                else:
-                    kind = MAPPED
             else:
                 fragment = _find_secondary_fragment(alignments_group,
                                                     max_coincidences,
-                                                    max_mapq_difference)
+                                                    max_mapq_difference=100)
+                #For fragmented reads. likely to be chimeric
                 if fragment is not None:
                     fragments = [primary_alignment, fragment]
-                    positions = [primary_alignment.pos, fragment.pos]
-                    if fragment.rname == primary_alignment.rname:
-                        if (fragment.is_reverse == primary_alignment.is_reverse and
-                            bisect(positions, primary_alignment.pnext) == 1 and
-                            fragment.is_reverse != primary_alignment.mate_is_reverse):
-                            len_pe, len_mp = sorted(_find_distances_with_mate(fragments))
-                            if len_pe < max_pe_len and len_mp > min_mp_len:
-                                len_pe_sum += len_pe
-                                len_mp_sum += len_mp
-                                typic_chimeras += 1
-                                kind = CHIMERA
-                            else:
-                                kind = UNKNOWN
-                        else:
-                            kind = UNKNOWN
+                    if _alignments_in_same_ref(fragments):
+                        if _read_is_typical_chimera(fragments, max_pe_len,
+                                                    min_mp_len, mate):
+                            len_pe, len_mp = _find_distances_with_mate(fragments, mate)
+                            len_pe_sum += len_pe
+                            len_mp_sum += len_mp
+                            typic_chimeras += 1
+                            #typic chimera
+                        kind = CHIMERA
                     else:
                         if (_alignment_at_ends_of_reference(fragments[0],
                                                             limit, bamfile)
@@ -625,38 +667,23 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
                     #Find PE-like chimeras in partially mapping reads
                     if primary_alignment.is_unmapped:
                         kind = UNKNOWN
-                    elif _3end_mapped(primary_alignment, max_clipping):
+                    elif not _3end_mapped(primary_alignment, max_clipping):
+                        kind = UNKNOWN
+                    else:
                         if primary_alignment.rname == primary_alignment.rnext:
-                            distance = primary_alignment.pos - primary_alignment.pnext
-                            if abs(distance) < max_pe_len:
+                            #usar lo de antes para las distancias
+                            if _mapped_read_is_chimeric(primary_alignment,
+                                                    mate, max_mapq_difference,
+                                                    max_pe_len):
                                 pe_like_chimeras += 1
                                 kind = CHIMERA
-                            elif abs(distance) > min_mp_len:
-                                #can we consider these sequences as non chimeric?
-                                if distance > 0:
-                                    if (primary_alignment.is_reverse == True and
-                                        primary_alignment.mate_is_reverse == False):
-                                        len_mp_non_chimeric += abs(distance)
-                                        n_non_chimeric_mates += 1
-                                        kind = MAPPED
-                                    else:
-                                        kind = UNKNOWN
-                                else:
-                                    if (primary_alignment.is_reverse == False and
-                                        primary_alignment.mate_is_reverse == True):
-                                        len_mp_non_chimeric += abs(distance)
-                                        n_non_chimeric_mates += 1
-                                        kind = MAPPED
-                                    else:
-                                        kind = UNKNOWN
                             else:
                                 kind = UNKNOWN
                         else:
                             kind = UNKNOWN
-                    else:
-                        kind = UNKNOWN
-            read = [alignedread_to_seqitem(alignments_group[0], file_format),
-                    kind]
+            #read = [alignedread_to_seqitem(alignments_group[0], file_format),
+            #        kind]
+            read = [alignments_group, kind]
             if paired_result == False:
                 yield [read[0]], read[1]
             else:
@@ -669,7 +696,7 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
             elif UNKNOWN in kinds:
                 yield [reads, UNKNOWN]
             else:
-                yield [reads, MAPPED]
+                yield [reads, NON_CHIMERIC]
     try:
         mean_mp_non_chimeric = len_mp_non_chimeric / float(n_non_chimeric_mates)
         mean_pe_len = len_pe_sum / float(typic_chimeras)
@@ -685,7 +712,8 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
 
 def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                     unknown_fhand, unpaired=False, paired_result=True,
-                    settings=get_setting('CHIMERAS_SETTINGS')):
+                    settings=get_setting('CHIMERAS_SETTINGS'),
+                    min_seed_len=None):
     file_format = get_format(in_fhands[0])
     if unpaired:
         unpaired_fpaths = [fhand.name for fhand in in_fhands]
@@ -695,7 +723,7 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
         r_fhand = NamedTemporaryFile()
         seqs = read_seqs(in_fhands)
         deinterleave_pairs(seqs, f_fhand, r_fhand, file_format)
-        paired_fpaths = [[f_fhand.name], [r_fhand.name]]
+        paired_fpaths = [f_fhand.name, r_fhand.name]
         unpaired_fpaths = None
 
     total = 0
@@ -706,8 +734,9 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                                            paired_fpaths=paired_fpaths,
                                            settings=settings,
                                            file_format=file_format,
-                                           paired_result=paired_result):
-        if kind is MAPPED:
+                                           paired_result=paired_result,
+                                           min_seed_len=min_seed_len):
+        if kind is NON_CHIMERIC:
             write_seqs(pair, out_fhand)
         elif kind is CHIMERA and chimeras_fhand is not None:
             write_seqs(pair, chimeras_fhand)
@@ -721,3 +750,104 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
     print 'Chimeric pairs filtered: ', chimeric, '\t', chimeric / float(total)
     print 'Unknown pairs found: ', unknown, '\t', unknown / float(total)
     print 'Non-chimeric pairs: ', mapped, '\t', mapped / float(total)
+
+
+def classify_mapped_reads_new(bam_fpath, n=None):
+    bamfile = pysam.Samfile(bam_fpath)
+    type1 = 0
+    type2a = []
+    type2b = []
+    type3a = []
+    type3b = []
+    type4 = []
+    type5 = []
+    type6 = 0
+    others = 0
+    h = 0
+
+    #It tries to find out the kind of each pair of sequences
+    for grouped_mates in _group_alignments_by_reads(bamfile):
+        if n is not None and h == n:
+            break
+        h += 1
+        mates_alignments = _split_mates(grouped_mates)
+        i = 0
+        pair = []
+        for alignments_group in mates_alignments:
+            i += 1
+            mate = _get_mate(i, mates_alignments)
+            primary_mate = _get_primary_alignment(mate)
+            primary_alignment = _get_primary_alignment(alignments_group)
+            mates = [primary_alignment, primary_mate]
+            if _read_is_totally_mapped(alignments_group, 0.05):
+                if  primary_alignment.mate_is_unmapped:
+                    kind = '1'
+                else:
+                    if primary_alignment.rname != primary_alignment.rnext:
+                        kind = '6'
+                    else:
+                        if _mates_are_outies(mates):
+                            kind = '3a'
+                        elif _mates_are_innies(mates):
+                            kind = '2a'
+                        else:
+                            kind = '5'
+            else:
+                fragment = _find_secondary_fragment(alignments_group, 5, 100)
+                if fragment is not None:
+                    fragments = [primary_alignment, fragment]
+                    if (_alignments_in_same_ref([fragments[0], primary_mate])
+                        or _alignments_in_same_ref([fragments[1], primary_mate])):
+                        kind = '4'
+                    else:
+                        kind = 'other'
+                else:
+                    if primary_alignment.is_unmapped:
+                        kind = '1'
+                    else:
+                        if primary_alignment.rname == primary_alignment.rnext:
+                            if _mates_are_outies(mates):
+                                kind = '3b'
+                            elif _mates_are_innies(mates):
+                                kind = '2b'
+                            else:
+                                kind = '5'
+                        else:
+                            kind = '6'
+            pair.append(kind)
+        if '1' in pair:
+            type1 += 1
+        elif '6' in pair:
+            type6 += 1
+        elif 'other' in pair:
+            others += 1
+        else:
+            distance = _find_distance(mates)
+            if '4' in pair:
+                type4.append(distance)
+            elif '2b' in pair:
+                type2b.append(distance)
+            elif '3b' in pair:
+                type3b.append(distance)
+            elif '2a' in pair:
+                type2a.append(distance)
+            elif '3a' in pair:
+                type3a.append(distance)
+            elif '5' in pair:
+                type5.append(distance)
+    stats1 = {'1': type1, '6': type6, 'other': others}
+    stats2 = {'4': type4, '2b': type2b, '3b': type3b, '2a': type2a,
+              '3a': type3a, '5': type5}
+    for key in stats1.keys():
+        print key.ljust(5), stats1[key]
+    for key in stats2.keys():
+        print key, len(stats2[key])
+        if '2' in key:
+            counter = IntCounter(iter(stats2[key]))
+            distribution = counter.calculate_distribution(remove_outliers=True)
+            counts = distribution['counts']
+            bin_limits = distribution['bin_limits']
+            print draw_histogram(bin_limits, counts)
+
+
+

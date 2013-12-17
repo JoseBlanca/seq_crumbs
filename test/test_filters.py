@@ -21,7 +21,7 @@ import unittest
 
 from string import ascii_lowercase
 from random import choice
-from subprocess import check_output, call, CalledProcessError, PIPE
+from subprocess import check_output, call, CalledProcessError
 import os.path
 from tempfile import NamedTemporaryFile
 
@@ -33,7 +33,7 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterDustComplexity,
                             seq_to_filterpackets, FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
-    classify_mapped_reads, filter_chimeras)
+                            classify_mapped_reads, filter_chimeras)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -627,15 +627,15 @@ class FilterByMappingType(unittest.TestCase):
         query6 = '>seq3 r\nTTAAGGCACGTACGGTACCTAAATCGGCCTGATGGTATTGATGCTGAACTT'
         query6 += 'ATTGCGGCTCACACACCCCTACGTTACACGCAAATGCTGCCCGAAACGTTAT\n'
 
-        #Non chimeric fragmented read
+        #Non chimeric read fragmented into two different sequences
         query7 = '>seq4 f\nCAAATCATCACCAGACCATGTCCGATCCCGGGAGTCTTTTCCAAGGTGTGC'
+        #first part of f sequence not detected -> unknown instead of mapped
         query7 += 'TCTTTATCCGGCCCTTGCTCAAGGGTATGTTAAAACGGCAAGAGCTGCCTGAGCGCG\n'
         query8 = '>seq4 r\nTGTTCTGCAATCGATACAACGATCGAATTTAATCTGAGTAACTGCCAATTC'
         query8 += 'TGAGTAATATTATAGAAAGT\n'
 
-        #Chimeric fragmented reads
+        #Chimeric reads mapping different reference sequence
         query9 = '>seq5 f\nTTTATCCGGCCCTTGCTCAAGGGTATGTTAAAACGGCAAGAGCTGC'
-        #first fragment not detected but still detected as chimeric
         query9 += 'CTGAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTGTGG\n'
         query10 = '>seq5 r\nACTTATTGCGGCTCACACACCCCTACGTTACACGCAAATGCTGCCCGAAA'
         query10 += 'CGTTATCTGCGGTGAAATGATGTTCGCGGAGCTGACTATCGTCGCCTGATGATAAG\n'
@@ -651,22 +651,34 @@ class FilterByMappingType(unittest.TestCase):
         query14 = '>seq7 r\nATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACGCC'
         query14 += 'CCTCGAAGGTACCTTTGCCAGACTGGGCTACAGGACACCCAGTCTCCCGGGAGTCT\n'
 
-        #Unknown, chimeric sequences with wrong direction
+        #chimeric sequences with wrong direction
         query15 = '>seq8 f\nTAGGGCCGTCGCCGCATCCACGTTATCGGAAGGGCAACTTCGTCTCTCCA'
         query15 += 'ATCAGCTACCGAATTGGGACCTCTACGGGAGTATGGAACGATTGA\n'
         query16 = '>seq8 r\nAGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
         query16 += 'GATGATTTGTAGTTCGAGAAGGCCTCAGTCTACCGCGCCGTGGGTGCCCGATCCCT\n'
 
-        #Unknown, chimeric sequences with wrong direction
-        query17 = '>seq9 f\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCT'
-        query17 += 'GTGGACTTTCTATAATATTACTCAGAATTGGCAGTTACTCAGATTAAATTCG\n'
-        query18 = '>seq9 r\nGCACACCTTGGAAAAGACTCCCGGGATCGGACATGGTCTGGTGATGATTT'
-        query18 += 'GTAGTTCGAGAAGGCCTCAGTCTACCGCGCCGTGGGTGCCCGATCCCTCCTCTAGC\n'
+        #chimeric sequences with wrong direction
+        query18 = '>seq9 r\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCT'
+        query18 += 'GTGGACTTTCTATAATATTACTCAGAATTGGCAGTTACTCAGATTAAATTCG\n'
+        query17 = '>seq9 f\nGCACACCTTGGAAAAGACTCCCGGGATCGGACATGGTCTGGTGATGATTT'
+        query17 += 'GTAGTTCGAGAAGGCCTCAGTCTACCGCGCCGTGGGTGCCCGATCCCTCCTCTAGC\n'
+
+        #Unknown, wrong relative positions <== =    =>
+        query19 = '>seq10 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query19 += '\n'
+        query20 = '>seq10 r\nATGTAATACGGGCTAGCCGGGGATGCCGACGATTAAACACGCTGTCATA'
+        query20 += 'GTAGCGTCTTCCTAGGGTTTTCCCCATGGAATCGGTTATCGTGATACGTTAAATTT\n'
+
+        #Unknown, wrong relative positions ==> <=    =
+        query21 = '>seq11 f\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC'
+        query21 += '\n'
+        query22 = '>seq11 r\nAAATTTAACGTATCACGATAACCGATTCCATGGGGAAAACCCTAGGAAG'
+        query22 += 'ACGCTACTATGACAGCGTGTTTAATCGTCGGCATCCCCGGCTAGCCCGTATTACAT\n'
 
         forward = query1 + query3 + query5 + query7 + query9 + query11
-        forward += query13 + query15 + query17
+        forward += query13 + query15 + query17 + query19 + query21
         reverse = query2 + query4 + query6 + query8 + query10 + query12
-        reverse += query14 + query16 + query18
+        reverse += query14 + query16 + query18 + query20 + query22
 
         f_fhand = NamedTemporaryFile()
         f_fhand.write(forward)
@@ -674,12 +686,12 @@ class FilterByMappingType(unittest.TestCase):
         r_fhand = NamedTemporaryFile()
         r_fhand.write(reverse)
         r_fhand.flush()
-        paired_fpaths = [[f_fhand.name], [r_fhand.name]]
+        paired_fpaths = [f_fhand.name, r_fhand.name]
         ref_fhand = NamedTemporaryFile()
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
 
-        #Removes only chimeric reads. Non chimeric mate remains
+        '''#Removes only chimeric reads. Non chimeric mate remains
         result = classify_mapped_reads(ref_fhand.name,
                                        paired_fpaths=paired_fpaths,
                                        paired_result=False)
@@ -700,17 +712,19 @@ class FilterByMappingType(unittest.TestCase):
                 str_names = ' '.join(names)
                 msg = str_names + ' not expected to be '
                 msg += pair[1]
-                raise AssertionError(msg)
+                raise AssertionError(msg)'''
 
         #Kind is given per pair of mates
         result = classify_mapped_reads(ref_fhand.name,
                                        paired_fpaths=paired_fpaths)
         mapped = [['seq1.f', 'seq1.r'], ['seq4.f', 'seq4.r']]
         non_contiguous = [['seq2.f', 'seq2.r'], ['seq3.f', 'seq3.r'],
-                          ['seq5.f', 'seq5.r'], ['seq6.f', 'seq6.r']]
-        unknown = [['seq7.f', 'seq7.r'], ['seq8.f', 'seq8.r'],
-                   ['seq9.f', 'seq9.r']]
-        expected = {'mapped': mapped, 'chimera': non_contiguous,
+                          ['seq5.f', 'seq5.r'], ['seq6.f', 'seq6.r'],
+                          ['seq10.f', 'seq10.r'], ['seq11.f', 'seq11.r'],
+                          ['seq8.f', 'seq8.r']]
+        unknown = [['seq7.f', 'seq7.r'],
+                   ['seq9.f', 'seq9.r'], ['seq4.f', 'seq4.r']]
+        expected = {'non_chimeric': mapped, 'chimera': non_contiguous,
                     'unknown': unknown}
         for pair in result:
             try:
@@ -836,5 +850,5 @@ class FilterByMappingType(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'FilterByMappingType']
+    #import sys;sys.argv = ['', 'FilterByMappingType']
     unittest.main()

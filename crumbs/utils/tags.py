@@ -62,5 +62,5 @@ SANGER_FASTQ_FORMATS = ('fastq-sanger', 'fastq')
 ILLUMINA_FASTQ_FORMATS = ('fastq-illumina',)
 
 CHIMERA = 'chimera'
-MAPPED = 'mapped'
+NON_CHIMERIC = 'non_chimeric'
 UNKNOWN = 'unknown'
