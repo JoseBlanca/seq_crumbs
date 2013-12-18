@@ -42,6 +42,12 @@ def _setup_argparse():
     parser.add_argument('-u', '--unordered', help=unor_help,
                         action='store_true', default=False)
 
+    ordered_group = parser.add_argument_group('Ordered pairs')
+    bufs_help = 'Buffer size for checking if reads are ordered. '
+    bufs_help += 'Raises an error if not'
+    ordered_group.add_argument('--buffer_size', help=bufs_help,
+                               default=100000, type=int)
+
     unordered_group = parser.add_argument_group('Unordered pairs')
 
     lowmem_help = 'If the binary uses all memory and does not finish'
@@ -53,11 +59,9 @@ def _setup_argparse():
     dir_help = dir_help.format(tempfile.gettempdir())
     unordered_group.add_argument('--tempdir', dest='tempdir', help=dir_help,
                                  default=None)
-    hlp = 'Maximum number of reads in memory (default:'
-    hlp += str(get_setting('MAX_READS_IN_MEMORY')) + ')'
+    hlp = 'Maximum number of reads in memory (default: 1000000)'
     unordered_group.add_argument('--limit', help=hlp, type=int,
-                                 default=get_setting('MAX_READS_IN_MEMORY'))
-
+                                 default=1000000)
     return parser
 
 
@@ -69,8 +73,10 @@ def _parse_args(parser):
     args['orphan'] = compress_fhand(orphan, compression_kind=comp_kind)
     args['max_reads_memory'] = parsed_args.limit
     args['tempdir'] = parsed_args.tempdir
+    args['check_order_buffer_size'] = parsed_args.buffer_size
     args['unordered'] = parsed_args.unordered
     args['low_memory'] = parsed_args.low_memory
+
     return args
 
 
@@ -82,10 +88,10 @@ def run():
     # read seqs
     seqs = read_seqs(args['in_fhands'])
     match_pairs(seqs, out_fhand=args['out_fhand'],
-                orphan_out_fhand=args['orphan'], tempdir=args['tempdir'],
+                orphan_out_fhand=args['orphan'], temp_dir=args['tempdir'],
                 out_format=args['out_format'], ordered=not args['unordered'],
-                max_reads_memory=args['max_reads_memory'],
-                low_memory=args['low_memory'])
+                check_order_buffer_size=args['check_order_buffer_size'],
+                max_reads_memory=args['max_reads_memory'])
 
 if __name__ == '__main__':
     #sys.argv.append('-h')

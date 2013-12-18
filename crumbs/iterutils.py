@@ -17,12 +17,67 @@ import random
 from itertools import izip_longest, islice, groupby
 import cPickle as pickle
 from tempfile import NamedTemporaryFile
+import sqlite3
 
-from toolz.itertoolz.core import merge_sorted, first
+from crumbs.utils.optional_modules import merge_sorted, first
+from crumbs.exceptions import SampleSizeError
 
 
-def sample(iterator, sample_size):
-    'It makes a sample from the given iterator'
+class _ListLikeDb(object):
+    def __init__(self):
+        self._db_fhand = NamedTemporaryFile(suffix='.sqlite.db')
+        self._conn = sqlite3.connect(self._db_fhand.name)
+        create = 'CREATE TABLE items(idx INTEGER PRIMARY KEY, item BLOB);'
+        self._conn.execute(create)
+        self._conn.commit()
+        self._last_item_returned = None
+
+    def __len__(self):
+        conn = self._conn
+        cursor = conn.execute('SELECT COUNT(*) FROM items;')
+        return cursor.fetchone()[0]
+
+    def append(self, item):
+        conn = self._conn
+        insert = "INSERT INTO items(item) VALUES (?)"
+        conn.execute(insert, (pickle.dumps(item),))
+        conn.commit()
+
+    def __setitem__(self, key, item):
+        update = "UPDATE items SET item=? WHERE idx=?"
+        conn = self._conn
+        conn.execute(update, (pickle.dumps(item), key))
+        conn.commit()
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self._last_item_returned is None:
+            idx = 1
+        else:
+            idx = self._last_item_returned + 1
+        select = 'SELECT item FROM items WHERE idx=?'
+        conn = self._conn
+        cursor = conn.execute(select, (idx, ))
+        item = cursor.fetchone()
+        if item is None:
+            raise StopIteration()
+
+        item = str(item[0])
+
+        item = pickle.loads(str(item))
+        self._last_item_returned = idx
+        return item
+
+
+def sample(iterator, sample_size, in_disk=False):
+    '''It makes a sample from the given iterator.
+
+    It does not keep the order.
+    Since it does not know before hand the size of the iterator it has to
+    keep a buffer as large as the sample size in memory (default) or in disk.
+    '''
     # This implementation holds the sampled items in memory
     # Example of the algorithm seen in:
     # http://nedbatchelder.com/blog/201208/selecting_randomly_from_an_unknown_
@@ -31,28 +86,33 @@ def sample(iterator, sample_size):
     # http://stackoverflow.com/questions/12128948/python-random-lines-from-
     # subfolders/
 
-    sample_ = []
+    if in_disk:
+        sample_ = _ListLikeDb()
+    else:
+        sample_ = []
+    too_big_sample = True
     for index, elem in enumerate(iterator):
         if len(sample_) < sample_size:
             sample_.append(elem)
         else:
+            too_big_sample = False
             if random.randint(0, index) < sample_size:
-                # Ned Bactchelder proposed an algorithm with random order
-                # sample_[random.randint(0, sample_size - 1)] = elem
-                # we prefer to keep the order, so we always add at the end
-                sample_.pop(random.randint(0, sample_size - 1))
-                sample_.append(elem)
-    return sample_
+                sample_[random.randint(0, sample_size - 1)] = elem
+    if too_big_sample:
+        raise SampleSizeError('Sample larger than population')
+    return iter(sample_)
 
 
-def sample_2(iterator, iter_length, sample_size):
+def sample_low_mem(iterator, iter_length, sample_size):
     'It makes a sample from the given iterator'
     # This implementation will use less memory when the number of sampled items
     # is quite high.
     # It requires to know the number of items beforehand
 
-    if not 0 <= sample_size <= iter_length:
-        raise ValueError("sample larger than population")
+    if sample_size <= 0:
+        raise SampleSizeError('No items to sample')
+    elif sample_size > iter_length:
+        raise SampleSizeError('Sample larger than population')
 
     if sample_size > iter_length / 2:
         num_items_to_select = iter_length - sample_size
@@ -180,7 +240,6 @@ def unique(items, key=None):
         if not duplicated:
             yield item
         prev_key = key_for_item
-
     # An alternative implementation would be:
     # return (first(groups[1]) for groups in groupby(items, key))
     # But it is a little bit slower

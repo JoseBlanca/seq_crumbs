@@ -13,21 +13,18 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from itertools import izip_longest
+from itertools import izip_longest, chain
 
-from crumbs.utils.optional_modules import _index
-from crumbs.exceptions import (MaxNumReadsInMem, PairDirectionError,
-                               InterleaveError, MalformedFile,
+from toolz import first
+
+from crumbs.exceptions import (PairDirectionError, InterleaveError,
                                ItemsNotSortedError)
 from crumbs.seqio import write_seqs
-from crumbs.settings import get_setting
-from crumbs.third_party.index import FastqRandomAccess, index
-from crumbs.seq import get_title, SeqWrapper, get_name
-from crumbs.utils.file_formats import get_format
-from crumbs.utils.tags import FWD, REV, SEQRECORD
+from crumbs.seq import get_title, get_name
+from crumbs.utils.tags import FWD, REV
 from crumbs.utils.file_utils import flush_fhand
-from crumbs.iterutils import sorted_items
-from crumbs.collectionz import OrderedSet, KeyedSet
+from crumbs.iterutils import sorted_items, group_in_packets_fill_last
+from crumbs.collectionz import KeyedSet
 
 
 def _parse_pair_direction_and_name(seq):
@@ -36,7 +33,7 @@ def _parse_pair_direction_and_name(seq):
 
 
 def _parse_pair_direction_and_name_from_title(title):
-    'It gueses the direction from the title line'
+    'It guesses the direction from the title line'
     reg_exps = ['(.+)[/|\\\\](\d+)', '(.+)\s(\d+):.+', '(.+)\.(\w)\s?']
     for reg_exp in reg_exps:
         match = re.match(reg_exp, title)
@@ -52,96 +49,24 @@ def _parse_pair_direction_and_name_from_title(title):
     raise PairDirectionError('Unable to detect the direction of the seq')
 
 
-def _index_seq_file(fpath, file_format=None):
-    '''It indexes a seq file using Biopython index.
-
-    It uses the title line line as the key and not just the id.
-    '''
-    if file_format is None:
-        file_format = get_format(open(fpath))
-
-    # pylint: disable W0212
-    # we monkey patch to be able to index using the whole tile line and not
-    # only the id. We need it because in a pair end file sequences with the
-    # same id could be found
-    accessor = _index._FormatToRandomAccess
-    old_accessor = accessor.copy()
-    accessor['fastq'] = FastqRandomAccess
-    accessor['astq-sanger'] = FastqRandomAccess
-    accessor['fastq-solexa'] = FastqRandomAccess
-    accessor['fastq-illumina'] = FastqRandomAccess
-
-    file_index = index(fpath, format=file_format)
-
-    _index._FormatToRandomAccess = old_accessor
-
-    return file_index
-
-
-def _match_pairs_from_sorted_reads(sorted_reads):
-    prev_reads = []
-    prev_reads_name = None
-    prev_reads_directions = []
-    #{'read': None, 'name': None, 'direction': None}
-    for read in sorted_reads:
-        title = get_title(read)
-        try:
-            name, direction = _parse_pair_direction_and_name_from_title(title)
-        except PairDirectionError:
-            name, direction = None, None
-
-        if direction is not None and prev_reads_name is None:
-            prev_reads = [read]
-            prev_reads_name = name
-            prev_reads_directions = [direction]
-            continue
-        elif direction is None:
-            if prev_reads:
-                yield prev_reads
-                prev_reads = []
-                prev_reads_name = None
-                prev_reads_directions = []
-            yield [read]
-        elif name == prev_reads_name:
-            if direction == REV:
-                prev_reads.append(read)
-                prev_reads_directions.append(direction)
-            else:
-                prev_reads.insert(0, read)
-                prev_reads_directions.insert(0, direction)
-        else:
-            if prev_reads:
-                yield prev_reads
-            prev_reads = [read]
-            prev_reads_name = name
-            prev_reads_directions = [direction]
-    if prev_reads:
-        yield prev_reads
-
-
-def _get_paired_and_orphan(reads, ordered, max_reads_memory, tempdir,
-                           low_memory):
+def _get_paired_and_orphan(reads, ordered, max_reads_memory, temp_dir):
     if ordered:
         sorted_reads = reads
     else:
         def _key(seq):
             return get_title(seq)
-        if not low_memory:
-            max_reads_memory = None
-        sorted_reads = sorted_items(reads, _key, max_reads_memory, tempdir)
-    return _match_pairs_from_sorted_reads(sorted_reads)
+        sorted_reads = sorted_items(reads, _key, max_reads_memory, temp_dir)
+    return group_pairs_by_name(sorted_reads)
 
 
-def match_pairs(reads, out_fhand, orphan_out_fhand, out_format,
-                max_reads_memory=get_setting('MAX_READS_IN_MEMORY'),
-                check_order_buffer_size=get_setting('CHECK_ORDER_BUFFER_SIZE'),
-                ordered=True, tempdir=None, low_memory=False):
-    '''It matches the seq pairs in an iterator and splits the orphan seqs.
-    It assumes that sequences are already sorted'''
+def match_pairs(reads, out_fhand, orphan_out_fhand, out_format, ordered=True,
+                check_order_buffer_size=0, max_reads_memory=None,
+                temp_dir=None):
+    '''It matches the seq pairs in an iterator and splits the orphan seqs.'''
     counts = 0
     check_order_buffer = KeyedSet()
     for pair in _get_paired_and_orphan(reads, ordered, max_reads_memory,
-                                       tempdir, low_memory):
+                                       temp_dir):
         if len(pair) == 1:
             write_seqs(pair, orphan_out_fhand, out_format)
             try:
@@ -159,22 +84,26 @@ def match_pairs(reads, out_fhand, orphan_out_fhand, out_format,
                     raise ItemsNotSortedError(msg)
         elif len(pair) == 2:
             write_seqs(pair, out_fhand, out_format)
-    orphan_out_fhand.flush()
-    out_fhand.flush()
+    flush_fhand(orphan_out_fhand)
+    flush_fhand(out_fhand)
 
 
-def _check_name_and_direction_match(seq1, seq2):
-    'It fails if the names do not match or if the direction are equal'
-    name1, direction1 = _parse_pair_direction_and_name(seq1)
-    name2, direction2 = _parse_pair_direction_and_name(seq2)
-    if name1 != name2:
-        msg = 'The reads from the two files do not match: {}, {}'
-        msg = msg.format(name1, name2)
+def _check_name_and_direction_match(*seqs):
+    'It fails if the names do not match or if the directions are equal'
+    n_seqs = len(seqs)
+    names = set()
+    directions = set()
+    for seq in seqs:
+        name, direction = _parse_pair_direction_and_name(seq)
+        names.add(name)
+        directions.add(direction)
+
+    if len(names) > 1:
+        msg = 'The read names from a pair do not match: %s'
+        msg %= ','.join(names)
         raise InterleaveError(msg)
-    if direction1 == direction2:
-        msg = 'Two paired reads have the same direction: {}, {}'
-        msg = msg.format(name1 + ' ' + direction1,
-                         name2 + ' ' + direction2)
+    if len(directions) != n_seqs:
+        msg = 'A pair has repeated directions: ' + first(names)
         raise InterleaveError(msg)
 
 
@@ -201,40 +130,84 @@ def deinterleave_pairs(seqs, out_fhand1, out_fhand2, out_format):
 
     It will fail if forward and reverse reads are not alternating.
     '''
-    while True:
-        try:
-            seq1 = seqs.next()
-        except StopIteration:
-            seq1 = None
-        try:
-            seq2 = seqs.next()
-        except StopIteration:
-            seq2 = None
-        if seq1 is None:
-            break  # we have consumed the input iterator completely
-        if seq2 is None:
-            msg = 'The file had an odd number of sequences'
-            raise InterleaveError(msg)
-        _check_name_and_direction_match(seq1, seq2)
-        write_seqs([seq1], out_fhand1, out_format)
-        write_seqs([seq2], out_fhand2, out_format)
+    for pair in group_pairs(seqs, n_seqs_in_pair=2):
+        write_seqs((pair[0],), out_fhand1, out_format)
+        write_seqs((pair[1],), out_fhand2, out_format)
     out_fhand1.flush()
     out_fhand2.flush()
 
 
-def group_seqs_in_pairs(seqs):
-    '''It generates lists of paired reads.
+def group_pairs_by_name(seqs, all_pairs_same_n_seqs=False):
+    paired_seqs = []
+    prev_name = None
+    n_seqs_per_pair = None
+    for seq in iter(seqs):
+        try:
+            name = _parse_pair_direction_and_name(seq)[0]
+        except PairDirectionError:
+            name = None
+        if name is None or (paired_seqs and name != prev_name):
+            if all_pairs_same_n_seqs:
+                if n_seqs_per_pair is None:
+                    n_seqs_per_pair = len(paired_seqs)
+                elif n_seqs_per_pair != len(paired_seqs):
+                    msg = 'Pair had different number of reads: '
+                    msg += prev_name
+                    raise InterleaveError(msg)
+            if paired_seqs:
+                yield paired_seqs
+                paired_seqs = []
+        paired_seqs.append(seq)
+        prev_name = name
+    if paired_seqs:
+        if all_pairs_same_n_seqs and n_seqs_per_pair is not None:
+            if n_seqs_per_pair != len(paired_seqs):
+                msg = 'Pair had different number of reads: '
+                msg += prev_name
+                raise InterleaveError(msg)
+        yield paired_seqs
 
-    The paired reads should be interleaved.
-    '''
+
+def _get_first_pair_by_name(seqs):
     paired_seqs = []
     prev_name = None
     for seq in iter(seqs):
         name = _parse_pair_direction_and_name(seq)[0]
-        if prev_name and name != prev_name:
-            yield paired_seqs
-            paired_seqs = []
-        paired_seqs.append(seq)
-        prev_name = name
-    if paired_seqs:
-        yield paired_seqs
+        if prev_name is None:
+            prev_name = name
+        if name != prev_name:
+            return paired_seqs, seq
+        else:
+            paired_seqs.append(seq)
+    return None, None
+
+
+def group_pairs(seqs, n_seqs_in_pair=None, check_all_same_n_seqs=True,
+                check_name_matches=True):
+
+    seqs = iter(seqs)
+    if n_seqs_in_pair is None:
+        first_pair, next_read = _get_first_pair_by_name(seqs)
+        if first_pair is None:
+            n_seqs_in_pair = None
+        else:
+            yield first_pair
+            n_seqs_in_pair = len(first_pair)
+            seqs = chain([next_read], seqs)
+
+    if n_seqs_in_pair == 1:
+        # No need to check anything, a pair cannot have less than one read
+        # or more than one name
+        check_all_same_n_seqs = False
+        check_name_matches = False
+
+    if n_seqs_in_pair:
+        pairs = group_in_packets_fill_last(seqs, packet_size=n_seqs_in_pair)
+        for pair in pairs:
+            pair = filter(lambda seq: seq is not None, pair)
+            if check_all_same_n_seqs and n_seqs_in_pair != len(pair):
+                msg = 'The last pair has fewer reads'
+                raise InterleaveError(msg)
+            if check_name_matches:
+                _check_name_and_direction_match(*pair)
+            yield pair

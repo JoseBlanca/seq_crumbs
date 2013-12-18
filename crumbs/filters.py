@@ -39,7 +39,7 @@ from crumbs.mapping import (get_or_create_bowtie2_index, map_with_bowtie2,
                             get_or_create_bwa_index, map_with_bwamem,
                             alignedread_to_seqitem)
 from crumbs.seqio import write_seqs, read_seqs
-from crumbs.pairs import group_seqs_in_pairs, deinterleave_pairs
+from crumbs.pairs import group_pairs, group_pairs_by_name, deinterleave_pairs
 
 
 def seq_to_filterpackets(seq_packets, group_paired_reads=False):
@@ -47,9 +47,9 @@ def seq_to_filterpackets(seq_packets, group_paired_reads=False):
 
     for packet in seq_packets:
         if group_paired_reads:
-            packet = list(group_seqs_in_pairs(packet))
+            packet = list(group_pairs_by_name(packet))
         else:
-            packet = [[seq] for seq in packet]
+            packet = list(group_pairs(packet, n_seqs_in_pair=1))
         yield {SEQS_PASSED: packet, SEQS_FILTERED_OUT: []}
 
 
@@ -583,7 +583,6 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
     bam_fhand = NamedTemporaryFile(dir='/home/carlos/tmp')
     sort_mapped_reads(bwa, bam_fhand.name, key='queryname')
     bamfile = pysam.Samfile(bam_fhand.name)
-    bamfile = pysam.Samfile(ref_fpath)
 
     #settings. Include in function properties with default values
     max_coincidences = settings['MAX_COINCIDENCES']
@@ -617,11 +616,6 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
                     if primary_alignment.rname != primary_alignment.rnext:
                         kind = NON_CHIMERIC
                     else:
-                        #we take teh alignment from the mate that is furthest
-                        #to the primary alignment. No sure it is right
-                        #si el primario esta completamente mapeado
-                        #calcular todas las distancias y de los que tienen
-                        #ver si hay alguno con la distancia y orientacion
                         mates = [primary_mate, primary_alignment]
                         distance = _find_distance(mates)
                         if _mapped_read_is_chimeric(primary_alignment, mate,
@@ -632,10 +626,6 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
                             len_mp_non_chimeric += abs(distance)
                             n_non_chimeric_mates += 1
                             kind = NON_CHIMERIC
-                            #Theoretically we would detect that it is chimeric
-                            #when analyzing the other mate unless it is detected
-                            #as totally mapping by mistake - check only with primary
-                            #alignment of the other mate
                         else:
                             kind = UNKNOWN
             else:
@@ -671,7 +661,6 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
                         kind = UNKNOWN
                     else:
                         if primary_alignment.rname == primary_alignment.rnext:
-                            #usar lo de antes para las distancias
                             if _mapped_read_is_chimeric(primary_alignment,
                                                     mate, max_mapq_difference,
                                                     max_pe_len):
@@ -681,9 +670,9 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
                                 kind = UNKNOWN
                         else:
                             kind = UNKNOWN
-            #read = [alignedread_to_seqitem(alignments_group[0], file_format),
-            #        kind]
-            read = [alignments_group, kind]
+            read = [alignedread_to_seqitem(alignments_group[0], file_format),
+                    kind]
+            #read = [alignments_group, kind]
             if paired_result == False:
                 yield [read[0]], read[1]
             else:

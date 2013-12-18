@@ -22,7 +22,6 @@ from crumbs.utils.file_utils import flush_fhand
 from crumbs.utils.bin_utils import (main, create_basic_argparse,
                                     parse_basic_args)
 from crumbs.seqio import write_seqs, read_seqs
-from crumbs.exceptions import SampleSizeError
 
 
 def _setup_argparse():
@@ -51,12 +50,8 @@ def sample_seqs():
     in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
     num_seqs = args['num_seqs']
-    try:
-        seqs = read_seqs(in_fhands)
-        seqs = sample(seqs, num_seqs)
-    except ValueError as error:
-        if str(error) == "sample larger than population":
-            raise SampleSizeError("sample larger than population")
+    seqs = read_seqs(in_fhands)
+    seqs = sample(seqs, num_seqs)
     write_seqs(seqs, out_fhand, args['out_format'])
     flush_fhand(out_fhand)
 
