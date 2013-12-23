@@ -29,7 +29,8 @@ except ImportError:
 from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
                                SEQRECORD, CHIMERA, NON_CHIMERIC, UNKNOWN)
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
-from crumbs.seq import get_name, get_file_format, get_str_seq, get_length
+from crumbs.seq import get_name, get_file_format, get_str_seq, get_length,\
+    SeqItem
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster
 from crumbs.statistics import calculate_dust_score, IntCounter, draw_histogram
@@ -414,7 +415,7 @@ def _count_cigar_char(cigar, numbers):
     return counts
 
 
-def _alignment_at_ends_of_reference(alignment_read, limit, samfile):
+def _find_distances_to_ends(alignment_read, samfile):
     lengths = _get_ref_lengths(samfile)
     start = alignment_read.pos
     end = alignment_read.aend
@@ -423,7 +424,12 @@ def _alignment_at_ends_of_reference(alignment_read, limit, samfile):
     if alignment_read.is_reverse:
         start = alignment_read.aend
         end = alignment_read.pos
-    if start > limit and end < length - limit:
+    return [start, length - end]
+
+
+def _alignment_at_ends_of_reference(alignment_read, limit, samfile):
+    dist1, dist2 = _find_distances_to_ends(alignment_read, samfile)
+    if dist1 > limit and dist2 > limit:
         return False
     else:
         return True
@@ -440,19 +446,26 @@ def _read_is_totally_mapped(alignments_group, max_clipping):
     return False
 
 
+def _alignments_overlap(alignments, max_coincidences, max_mapq_difference):
+    mapping_positions1 = _get_mapping_positions(alignments[0])
+    mapping_positions2 = _get_mapping_positions(alignments[1])
+    coincidences = mapping_positions1.intersection(mapping_positions2)
+    n_coincidences = len(coincidences)
+    difference = alignments[0].mapq - alignments[1].mapq
+    if difference < max_mapq_difference:
+        if n_coincidences <= max_coincidences:
+            return False
+
+
 def _find_secondary_fragment(alignments_group, max_coincidences,
-                        max_mapq_difference):
+                             max_mapq_difference):
     if len(alignments_group) == 1:
         return None
     primary_alignment = _pop_primary_alignment(alignments_group)
-    primary_mapping_positions = _get_mapping_positions(primary_alignment)
     for alignment_read in alignments_group:
-        mapping_positions = _get_mapping_positions(alignment_read)
-        coincidences = mapping_positions.intersection(primary_mapping_positions)
-        n_coincidences = len(coincidences)
-        difference = primary_alignment.mapq - alignment_read.mapq
-        if difference < max_mapq_difference:
-            if n_coincidences <= max_coincidences:
+        alignments = [alignment_read, primary_alignment]
+        if not _alignments_overlap(alignments, max_coincidences,
+                                   max_mapq_difference):
                 alignments_group.append(primary_alignment)
                 return alignment_read
     alignments_group.append(primary_alignment)
@@ -489,12 +502,21 @@ def _guess_kind_fragments_at_ends(fragments, samfile, limit):
 def _3end_mapped(alignment_read, max_clipping):
     #check differences between aend and qend, as well as alen, qlen, rlen, tlen
     #should we use a different max_clipping for this?
-    length = alignment_read.qend - alignment_read.qstart
-    max_clipping_positions = max_clipping * length
+    if alignment_read.is_unmapped:
+        return False
+    alignment_length = alignment_read.qend - alignment_read.qstart
+
+    max_clipping_positions = max_clipping * alignment_length
+    '''print 'position', alignment_read.pos
+    print 'qstart: ', alignment_read.qstart
+    print 'qend: ', alignment_read.qend
+    print 'length: ', alignment_read.qlen
+    print 'reverse', alignment_read.is_reverse'''
     if alignment_read.is_reverse:
+
         return alignment_read.qstart < max_clipping_positions
     else:
-        return alignment_read.qend > alignment_read.aend - max_clipping_positions
+        return alignment_read.qend > alignment_read.qlen - max_clipping_positions
 
 
 def _get_mate(i, mates_alignments):
@@ -563,11 +585,9 @@ def _read_is_typical_chimera(fragments, max_pe_len, min_mp_len, mate):
     return False
 
 
-def classify_mapped_reads(ref_fpath, paired_fpaths=None,
+def _sorted_mapped_reads(ref_fpath, paired_fpaths=None,
                      unpaired_fpaths=None, directory=None,
-                     settings=get_setting('CHIMERAS_SETTINGS'),
-                     file_format=None, paired_result=True,
-                     min_seed_len=None):
+                     file_format=None, min_seed_len=None):
     fhand = open(paired_fpaths[0]) if paired_fpaths else open(unpaired_fpaths[0])
     if file_format is not None:
         set_format(fhand, file_format)
@@ -583,7 +603,11 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
     bam_fhand = NamedTemporaryFile(dir='/home/carlos/tmp')
     sort_mapped_reads(bwa, bam_fhand.name, key='queryname')
     bamfile = pysam.Samfile(bam_fhand.name)
+    return bamfile
 
+
+def classify_mapped_reads(bamfile, settings=get_setting('CHIMERAS_SETTINGS'),
+                          paired_result=True, file_format='fastq'):
     #settings. Include in function properties with default values
     max_coincidences = settings['MAX_COINCIDENCES']
     max_mapq_difference = settings['MAX_MAPQ_DIFFERENCE']
@@ -702,7 +726,7 @@ def classify_mapped_reads(ref_fpath, paired_fpaths=None,
 def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                     unknown_fhand, unpaired=False, paired_result=True,
                     settings=get_setting('CHIMERAS_SETTINGS'),
-                    min_seed_len=None):
+                    min_seed_len=None, directory=None):
     file_format = get_format(in_fhands[0])
     if unpaired:
         unpaired_fpaths = [fhand.name for fhand in in_fhands]
@@ -714,17 +738,15 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
         deinterleave_pairs(seqs, f_fhand, r_fhand, file_format)
         paired_fpaths = [f_fhand.name, r_fhand.name]
         unpaired_fpaths = None
+    bamfile = _sorted_mapped_reads(ref_fpath, paired_fpaths, unpaired_fpaths,
+                                   directory, file_format, min_seed_len)
 
     total = 0
     chimeric = 0
     unknown = 0
-    for pair, kind in classify_mapped_reads(ref_fpath=ref_fpath,
-                                           unpaired_fpaths=unpaired_fpaths,
-                                           paired_fpaths=paired_fpaths,
-                                           settings=settings,
-                                           file_format=file_format,
+    for pair, kind in classify_mapped_reads(bamfile, settings=settings,
                                            paired_result=paired_result,
-                                           min_seed_len=min_seed_len):
+                                           file_format=file_format):
         if kind is NON_CHIMERIC:
             write_seqs(pair, out_fhand)
         elif kind is CHIMERA and chimeras_fhand is not None:
@@ -741,7 +763,162 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
     print 'Non-chimeric pairs: ', mapped, '\t', mapped / float(total)
 
 
-def classify_mapped_reads_new(bam_fpath, n=None):
+def _get_totally_mapped_alignments(reads, max_clipping):
+    for aligned_read in reads:
+        if _read_is_totally_mapped([aligned_read], max_clipping):
+            yield aligned_read
+
+
+def _get_possible_fragments(aligned_reads, max_coincidences,
+                            max_mapq_difference):
+    possible_fragments = []
+    for aligned_read1 in aligned_reads:
+        if aligned_read1.is_unmapped:
+            break
+        for aligned_read2 in aligned_reads:
+            alignments = [aligned_read1, aligned_read2]
+            if _alignments_overlap(alignments, max_coincidences,
+                                   max_mapq_difference):
+                possible_fragments.append(alignments)
+    return possible_fragments
+
+
+def _find_5end_fragment(fragments, max_clipping):
+    for fragment in fragments:
+        length = fragment.qend - fragment.qstart
+        max_clipping_positions = max_clipping * length
+        if fragment.is_reverse:
+            if fragment.qend > fragment.aend - max_clipping_positions:
+                return fragment
+        else:
+            if fragment.qstart < max_clipping_positions:
+                return fragment
+
+
+def _mates_are_not_chimeric(mates, max_clipping, mate_length_range, samfile,
+                            max_coincidences, max_mapq_difference, limit):
+    for aligned_read1 in _get_totally_mapped_alignments(mates[0],
+                                                        max_clipping):
+        distances_to_end1 = _find_distances_to_ends(aligned_read1, samfile)
+        for aligned_read2 in _get_totally_mapped_alignments(mates[1],
+                                                        max_clipping):
+            if aligned_read1.rname == aligned_read2.rname:
+                aligned_reads = [aligned_read1, aligned_read2]
+                distance = _find_distance(aligned_reads)
+                if (_mates_are_outies(aligned_reads) and
+                    distance > mate_length_range[0] and
+                    distance < mate_length_range[1]):
+                    return True
+            else:
+                distances_to_end2 = _find_distances_to_ends(aligned_read2,
+                                                            samfile)
+                if aligned_read1.is_reverse:
+                    distances_sum = distances_to_end1[1]
+                    if aligned_read2.is_reverse:
+                        distances_sum += distances_to_end2[1]
+                    else:
+                        distances_sum += distances_to_end2[0]
+                else:
+                    distances_sum = distances_to_end1[0]
+                    if aligned_read2.is_reverse:
+                        distances_sum += distances_to_end2[1]
+                    else:
+                        distances_sum += distances_to_end2[0]
+                if distances_sum < mate_length_range[1]:
+                    return True
+    i = 2
+    for read in mates:
+        i -= 1
+        possible_fragments = _get_possible_fragments(read, max_coincidences,
+                                                     max_mapq_difference)
+        for fragments in possible_fragments:
+            if not _alignments_in_same_ref(fragments):
+                if (_alignment_at_ends_of_reference(fragments[0], limit,
+                                                    samfile)
+                    and _alignment_at_ends_of_reference(fragments[1], limit,
+                                                        samfile)):
+                    kind = _guess_kind_fragments_at_ends(fragments, samfile,
+                                                         limit)
+                    if kind == NON_CHIMERIC:
+                        start_fragment = _find_5end_fragment(fragments,
+                                                            max_clipping)
+                        for aligned_read in mates[i - 1]:
+                            pair = [start_fragment, aligned_read]
+                            if _alignments_in_same_ref(pair):
+                                distance = _find_distance(pair)
+                                if (_mates_are_outies(aligned_reads) and
+                                    distance > mate_length_range[0] and
+                                    distance < mate_length_range[1]):
+                                    return True
+    return False
+
+
+def _mates_are_chimeric(mates, samfile, max_clipping, max_insert_size):
+    for aligned_read1 in mates[0]:
+        if _3end_mapped(aligned_read1, max_clipping):
+            distances_to_end1 = _find_distances_to_ends(aligned_read1, samfile)
+            for aligned_read2 in mates[1]:
+                if _3end_mapped(aligned_read2, max_clipping):
+                    if aligned_read1.rname == aligned_read2.rname:
+                        aligned_reads = [aligned_read1, aligned_read2]
+                        distance = _find_distance(aligned_reads)
+                        if (_mates_are_innies(aligned_reads) and
+                            distance < max_insert_size):
+                            return True
+                    else:
+                        distances_to_end2 = _find_distances_to_ends(aligned_read2,
+                                                                    samfile)
+                        if aligned_read1.is_reverse:
+                            distances_sum = distances_to_end1[0]
+                            if aligned_read2.is_reverse:
+                                distances_sum += distances_to_end2[0]
+                            else:
+                                distances_sum += distances_to_end2[1]
+                        else:
+                            distances_sum = distances_to_end1[1]
+                            if aligned_read2.is_reverse:
+                                distances_sum += distances_to_end2[0]
+                            else:
+                                distances_sum += distances_to_end2[1]
+                        if distances_sum < max_insert_size:
+                            return True
+    return False
+
+
+def classify_mapped_reads_new(bamfile,
+                              settings=get_setting('CHIMERAS_SETTINGS'),
+                              file_format='fastq',
+                              mate_length_range=[2000, 4000],
+                              out_format=SEQITEM):
+    #settings. Include in function properties with default values
+    max_coincidences = settings['MAX_COINCIDENCES']
+    max_mapq_difference = settings['MAX_MAPQ_DIFFERENCE']
+    limit = settings['MAX_DISTANCE_TO_END']
+    max_clipping = settings['MAX_CLIPPING']
+    max_pe_len = settings['MAX_PE_LEN']
+    min_mp_len = settings['MIN_MP_LEN']
+
+    #It tries to find out the kind of each pair of sequences
+    for grouped_mates in _group_alignments_by_reads(bamfile):
+        mates_alignments = _split_mates(grouped_mates)
+        if _mates_are_not_chimeric(mates_alignments, max_clipping,
+                                   mate_length_range, bamfile,
+                                   max_coincidences, max_mapq_difference,
+                                   limit):
+            kind = NON_CHIMERIC
+        elif _mates_are_chimeric(mates_alignments, bamfile, max_clipping,
+                                 max_pe_len):
+            kind = CHIMERA
+        else:
+            kind = UNKNOWN
+        if out_format == SEQITEM:
+            pair = [alignedread_to_seqitem(read[0], file_format) for read in mates_alignments]
+        elif out_format == 'aligned_read':
+            pair = mates_alignments
+        yield [pair, kind]
+
+
+def show_distances_distributions(bam_fpath, n=None, kind_of_interest=None):
     bamfile = pysam.Samfile(bam_fpath)
     type1 = 0
     type2a = []
@@ -830,13 +1007,12 @@ def classify_mapped_reads_new(bam_fpath, n=None):
     for key in stats1.keys():
         print key.ljust(5), stats1[key]
     for key in stats2.keys():
-        print key, len(stats2[key])
-        if '2' in key:
+        print key.ljust(5), len(stats2[key])
+    for key in stats2.keys():
+        if key in kind_of_interest:
+            print key, 'distance distribution'
             counter = IntCounter(iter(stats2[key]))
             distribution = counter.calculate_distribution(remove_outliers=True)
             counts = distribution['counts']
             bin_limits = distribution['bin_limits']
             print draw_histogram(bin_limits, counts)
-
-
-
