@@ -34,7 +34,8 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterDustComplexity, seq_to_filterpackets,
                             FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
-                            classify_mapped_reads, filter_chimeras)
+                            classify_mapped_reads, filter_chimeras,
+    _sorted_mapped_reads)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -736,32 +737,10 @@ class FilterByMappingType(unittest.TestCase):
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
 
-        '''#Removes only chimeric reads. Non chimeric mate remains
-        result = classify_mapped_reads(ref_fhand.name,
-                                       paired_fpaths=paired_fpaths,
-                                       paired_result=False)
-        mapped = ['seq1.f', 'seq1.r', 'seq2.r', 'seq4.r']
-        mapped.extend(['seq7.r', 'seq4.f'])
-        mapped = [[seq] for seq in mapped]
-        non_contiguous = ['seq2.f', 'seq3.f', 'seq5.f', 'seq6.f']
-        non_contiguous = [[seq] for seq in non_contiguous]
-        unknown = [['seq6.r'], ['seq7.f'], ['seq8.r'], ['seq3.r'], ['seq5.r'],
-                   ['seq8.f'], ['seq9.f'], ['seq9.r']]
-        expected = {'mapped': mapped, 'chimera': non_contiguous,
-                    'unknown': unknown}
-        for pair in result:
-            try:
-                names = [get_name(read) for read in pair[0]]
-                assert names in expected[pair[1]]
-            except AssertionError:
-                str_names = ' '.join(names)
-                msg = str_names + ' not expected to be '
-                msg += pair[1]
-                raise AssertionError(msg)'''
-
         #Kind is given per pair of mates
-        result = classify_mapped_reads(ref_fhand.name,
+        bamfile = _sorted_mapped_reads(ref_fhand.name,
                                        paired_fpaths=paired_fpaths)
+        result = classify_mapped_reads(bamfile, file_format='fasta')
         mapped = [['seq1.f', 'seq1.r'], ['seq4.f', 'seq4.r']]
         non_contiguous = [['seq2.f', 'seq2.r'], ['seq3.f', 'seq3.r'],
                           ['seq5.f', 'seq5.r'], ['seq6.f', 'seq6.r'],
