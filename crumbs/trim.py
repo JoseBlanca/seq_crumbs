@@ -321,7 +321,3 @@ class TrimWithBlastShort(_BaseTrim):
         if segments is not None:
             _add_trim_segments(segments[0], seq, kind=VECTOR)
         return seq
-
-
-# can not put in seqio due to cross imports
-

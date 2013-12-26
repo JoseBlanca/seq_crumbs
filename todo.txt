@@ -1,8 +1,13 @@
 TODO
 -----
-Improve duplicate performance. Maybe looking at in a dict with the first chunk
-of the sequence instead on an full dict. Implement it in a class with a dict
-like interface.
+
+Take a look at kraken: http://www.ebi.ac.uk/research/enright/software/kraken
+Reaper + Tally + Minion
+Reaper is a program for demultiplexing, trimming and filtering short read sequencing data. It can handle barcodes, trim adapter sequences, strip low quality bases and low complexity sequence, and has many more features. It is fast (written in C) and uses very little memory (one read at-a-time).
+Tally removes redundancy from sequence files by collapsing identicle reads to a single entry while recording the number of instances of each. It can also tally paired-end data or re-pair independently processed paired-end files.
+Minion is a small utility program to infer or test the presence of 3' adapter sequence in sequencing data.
+
+Nextera preprocessing: http://pathogenomics.bham.ac.uk/blog/2013/04/adaptor-trim-or-die-experiences-with-nextera-libraries/
 
 Why  write_trim_packets duplicates write_filter_packets?
 

@@ -30,8 +30,9 @@ from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
-                            FilterBlastMatch, FilterDustComplexity,
-                            seq_to_filterpackets, FilterByRpkm, FilterByBam,
+                            FilterBlastMatch, FilterBlastShort,
+                            FilterDustComplexity, seq_to_filterpackets,
+                            FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
                             classify_mapped_reads, filter_chimeras)
 from crumbs.utils.bin_utils import BIN_DIR
@@ -395,6 +396,50 @@ class BlastMatchFilterTest(unittest.TestCase):
                                seq_fhand.name])
 
         assert 'CATGAACACACACAT' in result
+
+
+class BlastShortFilterTest(unittest.TestCase):
+    'It tests the filtering by blast-short match'
+    @staticmethod
+    def test_blastmatch_filter():
+        'it test filter by blast'
+        seq = 'CCAAAGTACGGTCTCCCAAGCGGTCTCTTACCGGACACCGTCACCGATTTCACCCTCT'
+        oligo = 'GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT'
+        seq_oligo = seq + oligo
+        oligo = SeqRecord(Seq(oligo))
+        oligo = SeqWrapper(SEQRECORD, oligo, None)
+
+        seq = SeqRecord(Seq(seq), id='seq')
+        seq = SeqWrapper(object=seq, kind=SEQRECORD, file_format=None)
+
+        seq_oligo = SeqRecord(Seq(seq_oligo), id='seq_oligo')
+        seq_oligo = SeqWrapper(object=seq_oligo, kind=SEQRECORD,
+                               file_format=None)
+
+        seqs = {SEQS_PASSED: [[seq], [seq_oligo]], SEQS_FILTERED_OUT: []}
+
+        filter_ = FilterBlastShort([oligo])
+        filt_packet = filter_(seqs)
+        passed = [get_name(pair[0]) for pair in filt_packet[SEQS_PASSED]]
+        fail = [get_name(pair[0]) for pair in filt_packet[SEQS_FILTERED_OUT]]
+        assert passed == ['seq']
+        assert fail == ['seq_oligo']
+
+    def test_filter_blast_bin(self):
+        filter_bin = os.path.join(BIN_DIR, 'filter_by_blast_short')
+        # With fastq
+        seq = 'CCAAAGTACGGTCTCCCAAGCGGTCTCTTACCGGACACCGTCACCGATTTCACCCTCT'
+        oligo = 'GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT'
+        seq_oligo = seq + oligo
+
+        fastq = '@seq_oligo\n' + seq_oligo + '\n+\n' + 'a' * len(seq_oligo)
+        fastq += '\n@seq\n' + seq + '\n+\n' + 'a' * len(seq) + '\n'
+        seq_fhand = _make_fhand(fastq)
+
+        result = check_output([filter_bin, '-l', oligo, seq_fhand.name])
+
+        assert '@seq' in result
+        assert 'oligo' not in result
 
 
 class ComplexityFilterTest(unittest.TestCase):
@@ -850,5 +895,5 @@ class FilterByMappingType(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterByMappingType']
+    #import sys;sys.argv = ['', 'BlastShortFilterTest']
     unittest.main()

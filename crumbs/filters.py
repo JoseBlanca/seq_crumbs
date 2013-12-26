@@ -31,7 +31,7 @@ from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.seq import get_name, get_file_format, get_str_seq, get_length
 from crumbs.exceptions import WrongFormatError
-from crumbs.blast import Blaster
+from crumbs.blast import Blaster, BlasterForFewSubjects
 from crumbs.statistics import calculate_dust_score, IntCounter, draw_histogram
 from crumbs.settings import get_setting
 from crumbs.mapping import (get_or_create_bowtie2_index, map_with_bowtie2,
@@ -233,6 +233,35 @@ class FilterByQuality(_BaseFilter):
         else:
             qual = sum(quals) / len(quals)
         return True if qual >= self.threshold else False
+
+
+class FilterBlastShort(_BaseFilter):
+    'It filters a seq if there is a match against the given oligos'
+    def __init__(self, oligos, failed_drags_pair=True, reverse=False):
+        self.oligos = oligos
+        super(FilterBlastShort, self).__init__(reverse=reverse,
+                                          failed_drags_pair=failed_drags_pair)
+
+    def _setup_checks(self, filterpacket):
+        seqs = [s for seqs in filterpacket[SEQS_PASSED]for s in seqs]
+
+        # we create a blastdb for these reads and then we use the oligos
+        # as the blast query
+        db_fhand = write_seqs(seqs, file_format='fasta')
+        db_fhand.flush()
+        params = {'task': 'blastn-short', 'expect': '0.0001'}
+        filters = [{'kind': 'score_threshold', 'score_key': 'identity',
+                    'min_score': 87},
+                   {'kind': 'min_length', 'min_num_residues': 13,
+                    'length_in_query': False}]
+        self._matcher = BlasterForFewSubjects(db_fhand.name, self.oligos,
+                                             program='blastn', filters=filters,
+                                             params=params,
+                                             elongate_for_global=False)
+
+    def _do_check(self, seq):
+        segments = self._matcher.get_matched_segments_for_read(get_name(seq))
+        return True if segments is None else False
 
 
 class FilterBlastMatch(_BaseFilter):
