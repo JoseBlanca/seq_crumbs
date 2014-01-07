@@ -62,14 +62,15 @@ def calculate_maf(snp, snpcaller):
 def get_data_from_vcf(vcf_path):
     reader = Reader(filename=vcf_path)
     snpcaller = get_snpcaller_name(reader)
+    typecode = 'I'
     data = {'snps_per_chromo': Counter(),
             'maf_per_snp': [],
-            'call_data': {HOM_REF: {'x': array('B'), 'y': array('B'),
-                                    'value': array('B')},
-                          HET: {'x': array('B'), 'y': array('B'),
-                                'value': array('B')},
-                          HOM_ALT: {'x': array('B'), 'y': array('B'),
-                                    'value': array('B')}
+            'call_data': {HOM_REF: {'x': array(typecode), 'y': array(typecode),
+                                    'value': array(typecode)},
+                          HET: {'x': array(typecode), 'y': array(typecode),
+                                'value': array(typecode)},
+                          HOM_ALT: {'x': array(typecode), 'y': array(typecode),
+                                    'value': array(typecode)}
                          }
            }
 
@@ -78,7 +79,9 @@ def get_data_from_vcf(vcf_path):
     call_datas = data['call_data']
     for snp in reader:
         chrom_counts[snp.CHROM] += 1
-        mafs.append(calculate_maf(snp, snpcaller))
+        maf = calculate_maf(snp, snpcaller)
+        if maf is not None:
+            mafs.append(maf)
         #sample_data
         for call in snp.samples:
             if call.called:
