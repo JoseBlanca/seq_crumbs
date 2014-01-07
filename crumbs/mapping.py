@@ -205,14 +205,42 @@ def sort_mapped_reads(map_process, out_fpath, key='coordinate',
     assert sort.returncode == 0
 
 
+#this should probably be placed somewhere else
+def _reverse(sequence):
+    reverse_seq = ''
+    l = len(sequence)
+    for n in range(l):
+        reverse_seq += sequence[l - n - 1]
+    return reverse_seq
+
+
+def _complementary(sequence):
+    complement = ''
+    for letter in sequence:
+        if letter == 'A':
+            complement += 'T'
+        elif letter == 'T':
+            complement += 'A'
+        elif letter == 'G':
+            complement += 'C'
+        elif letter == 'C':
+            complement += 'G'
+        else:
+            print 'Unexpected sequence'
+    return complement
+
+
 def alignedread_to_seqitem(aligned_read, file_format):
     name = aligned_read.qname
-    seq = aligned_read.seq + '\n'
-    quality = aligned_read.qual
+    seq = aligned_read.seq
+    quality = aligned_read.qua
+    if aligned_read.is_reverse:
+        seq = _reverse(_complementary(seq))
+        quality = _reverse(_complementary(seq))
     if 'fasta' in file_format:
-        lines = ['>' + name + '\n', seq]
+        lines = ['>' + name + '\n', seq + '\n']
     elif 'fastq' in file_format:
-        lines = ['@' + name + '\n', seq, '+\n', quality + '\n']
+        lines = ['@' + name + '\n', seq + '\n', '+\n', quality + '\n']
     else:
         raise IncompatibleFormatError('Not supported format: ' + file_format)
     return SeqWrapper(SEQITEM, SeqItem(name, lines), file_format)
