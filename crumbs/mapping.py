@@ -226,7 +226,7 @@ def _complementary(sequence):
         elif letter == 'C':
             complement += 'G'
         else:
-            raise ValueError('Unexpected character: ' + letter)
+            complement += letter
     return complement
 
 
@@ -248,7 +248,7 @@ def alignedread_to_seqitem(aligned_read, file_format):
 
 
 def sort_by_position_in_ref(in_fhands, ref_fpath, directory=None,
-                            tempdir=None):
+                            tempdir='/tmp'):
     in_fpaths = [fhand.name for fhand in in_fhands]
     file_format = get_format(in_fhands[0])
     extra_params = ['-f'] if 'fasta' in file_format else []
