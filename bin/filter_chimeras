@@ -32,16 +32,13 @@ def create_filter_argparse(add_reverse=True, **kwargs):
                         help='File for chimeric sequences')
     parser.add_argument('-e', '--unknown', default=None,
                         help='File for not clear_sequences')
-    r_help = 'Results are given by single reads (default:FALSE)'
-    parser.add_argument('-r', '--unpaired_result', default=False, help=r_help)
-
-    input_options = parser.add_argument_group('Input options')
-    input_options.add_argument('-u', '--unpaired_reads', default=False,
-                               help='sequences are paired',
-                               action='store_true')
-    input_options.add_argument('-a', '--reference_seq',
-                               help='fpath with reference sequence')
-
+    parser.add_argument('-r', '--reference_seq', default=None,
+                        help='fpath with reference sequence')
+    parser.add_argument('-s', '--insert_size', default=3000, type=int,
+                        help='Insert size of mate pair library (default:3000)')
+    parser.add_argument('-b', '--bamfile', default=False,
+                        help='Input is bamfile (uncompatible with -r)',
+                        action='store_true')
     settings = get_setting('CHIMERAS_SETTINGS')
     settings_group = parser.add_argument_group('Settings')
 
@@ -65,10 +62,9 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     help4 += '(default:' + str(settings['MAX_PE_LEN']) + ')'
     settings_group.add_argument('--max_pe_len', default=None,
                           help=help4, type=int)
-    help5 = 'Min distance between two mates expected. It may change depending'
-    help5 += 'on the size of the library'
-    help5 += '(default:' + str(settings['MIN_MP_LEN']) + ')'
-    settings_group.add_argument('--min_mp_len', default=None, help=help5,
+    help5 = 'Max variation allowed from the mean size of mate pair library'
+    help5 += '(default:' + str(settings['MATE_DISTANCE_VARIATION']) + ')'
+    settings_group.add_argument('--max_dist_var', default=None, help=help5,
                                 type=int)
     help6 = 'Proportion of mapping positions required to consider a read '
     help6 += 'as fully mapped'
@@ -85,11 +81,11 @@ def parse_filter_args(parser, add_reverse=True):
     args, parsed_args = parse_basic_args(parser)
     args['chimeras_fpath'] = parsed_args.chimeras
     args['unknown_fpath'] = parsed_args.unknown
-    args['unpaired'] = parsed_args.unpaired_reads
     args['in_format'] = parsed_args.in_format
     args['reference'] = parsed_args.reference_seq
-    args['paired_result'] = not parsed_args.unpaired_result
     args['min_seed_len'] = parsed_args.min_seed_len
+    args['insert_size'] = parsed_args.insert_size
+    args['bamfile'] = parsed_args.bamfile
 
     settings = get_setting('CHIMERAS_SETTINGS')
     setting_args = {}
@@ -98,7 +94,7 @@ def parse_filter_args(parser, add_reverse=True):
     setting_args['MAX_DISTANCE_TO_END'] = parsed_args.max_distance_to_end
     setting_args['MAX_CLIPPING'] = parsed_args.max_clipping
     setting_args['MAX_PE_LEN'] = parsed_args.max_pe_len
-    setting_args['MIN_MP_LEN'] = parsed_args.min_mp_len
+    setting_args['MATE_DISTANCE_VARIATION'] = parsed_args.max_dist_var
     for key in setting_args.keys():
         if setting_args[key] is not None:
             settings[key] = setting_args[key]
@@ -113,13 +109,14 @@ def run():
     parser = create_filter_argparse(description=description)
     args = parse_filter_args(parser)[0]
     ref_fpath = args['reference']
-    unpaired = args['unpaired']
-    paired_result = args['paired_result']
     chimeras_fpath = args['chimeras_fpath']
     out_fhand = args['out_fhand']
     unknown_fpath = args['unknown_fpath']
     settings = args['settings']
     in_fhands = args['in_fhands']
+    mate_distance = args['insert_size']
+    if args['bamfile'] and ref_fpath:
+        raise ValueError('bamfile and ref_fpath options are not compatible')
     if chimeras_fpath is not None:
         chimeras_fhand = open(chimeras_fpath, 'w')
     else:
@@ -131,8 +128,9 @@ def run():
     min_seed_len = args['min_seed_len']
 
     filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
-                    unknown_fhand, settings=settings, unpaired=unpaired,
-                    paired_result=paired_result, min_seed_len=min_seed_len)
+                    unknown_fhand, settings=settings,
+                    min_seed_len=min_seed_len, mate_distance=mate_distance,
+                    bamfile=args['bamfile'])
     flush_fhand(out_fhand)
 
 if __name__ == '__main__':

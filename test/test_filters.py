@@ -35,7 +35,7 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
                             classify_mapped_reads, filter_chimeras,
-    _sorted_mapped_reads)
+    _sorted_mapped_reads, trim_chimeric_region)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -654,6 +654,43 @@ GAGATGATTAAGCAGCGACGCACTGATTGTGCTAGGGCCACAGTAGCGGAGATGATTAAGCAGCGACGCACTGATTG
 TGCTAGGGCCACAGTAGCGGAGATGATTAAGCAGCGAC'''
 
 
+class TrimChimericRegions(unittest.TestCase):
+    def test_trim_chimeric_region(self):
+        reference_seq = GENOME
+        query1 = '>seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query1 += '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query2 = '>seq2 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
+        query2 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query3 = '>seq1 f\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        query3 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTG\n'
+        query4 = '>seq1 r\nATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACGCC'
+        forward = query1 + query3
+        reverse = query2 + query4
+        f_fhand = NamedTemporaryFile()
+        f_fhand.write(forward)
+        f_fhand.flush()
+        r_fhand = NamedTemporaryFile()
+        r_fhand.write(reverse)
+        r_fhand.flush()
+        paired_fpaths = [f_fhand.name, r_fhand.name]
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        bamfile = _sorted_mapped_reads(ref_fhand.name,
+                                       paired_fpaths=paired_fpaths)
+        expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
+                         'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG',
+                         query3.split('\n')[1], query4.split('\n')[1]]
+        counts = 0
+        for seq in trim_chimeric_region(bamfile, 0.95):
+            assert get_str_seq(seq) in expected_seqs
+            counts += 1
+        assert counts != 0
+
+
 class FilterByMappingType(unittest.TestCase):
     def test_classify_paired_reads(self):
         reference_seq = GENOME
@@ -737,7 +774,6 @@ class FilterByMappingType(unittest.TestCase):
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
 
-        #Kind is given per pair of mates
         bamfile = _sorted_mapped_reads(ref_fhand.name,
                                        paired_fpaths=paired_fpaths)
         result = classify_mapped_reads(bamfile, file_format='fasta')
@@ -845,8 +881,9 @@ class FilterByMappingType(unittest.TestCase):
         ref_fhand.flush()
         chimeras_fhand = NamedTemporaryFile()
         unknown_fhand = NamedTemporaryFile()
-        cmd = [filter_chimeras_bin, in_fhand.name, '-a', ref_fhand.name]
-        cmd.extend(['-c', chimeras_fhand.name, '-e', unknown_fhand.name])
+        cmd = [filter_chimeras_bin, in_fhand.name, '-r', ref_fhand.name]
+        cmd.extend(['-c', chimeras_fhand.name, '-e', unknown_fhand.name,
+                    '-s', '3000'])
         result = check_output(cmd)
         chimeric = open(chimeras_fhand.name)
         unknown = open(unknown_fhand.name)
@@ -874,5 +911,5 @@ class FilterByMappingType(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'BlastShortFilterTest']
+    #import sys;sys.argv = ['', 'FilterByMappingType']
     unittest.main()

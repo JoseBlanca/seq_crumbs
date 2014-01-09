@@ -30,7 +30,7 @@ from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
                                SEQRECORD, CHIMERA, NON_CHIMERIC, UNKNOWN)
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
 from crumbs.seq import get_name, get_file_format, get_str_seq, get_length,\
-    SeqItem
+    SeqItem, SeqWrapper
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster, BlasterForFewSubjects
 from crumbs.statistics import calculate_dust_score, IntCounter, draw_histogram
@@ -38,7 +38,7 @@ from crumbs.settings import get_setting
 from crumbs.mapping import (get_or_create_bowtie2_index, map_with_bowtie2,
                             map_process_to_bam, sort_mapped_reads,
                             get_or_create_bwa_index, map_with_bwamem,
-                            alignedread_to_seqitem)
+                            alignedread_to_seqitem, _reverse, _complementary)
 from crumbs.seqio import write_seqs, read_seqs
 from crumbs.pairs import group_pairs, group_pairs_by_name, deinterleave_pairs
 
@@ -386,6 +386,7 @@ def _get_mapping_positions(alignment):
 
 def _group_alignments_by_reads(sorted_alignments):
     prev_name = None
+    group = None
     for alignment in sorted_alignments:
         name = alignment.qname
         if prev_name is None:
@@ -406,14 +407,11 @@ def _split_mates(alignments_group):
     reverse = []
     for alignment_read in alignments_group:
         if alignment_read.is_read1:
-            alignment_read.qname += '.f'
+            alignment_read.qname += ' 1:N:0:GATCAG'
             forward.append(alignment_read)
         elif alignment_read.is_read2:
-            alignment_read.qname += '.r'
+            alignment_read.qname += ' 2:N:0:GATCAG'
             reverse.append(alignment_read)
-        elif alignment_read.is_unmapped:
-            print 'aaaa'
-            print alignment_read
     return [forward, reverse]
 
 
@@ -528,24 +526,45 @@ def _guess_kind_fragments_at_ends(fragments, samfile, limit):
             return CHIMERA
 
 
+#when having hard clipping qend, qstart and qlen are always 0, so we need
+#different ways to calculate them using cigar information
+def _get_qstart(aligned_read):
+    positions = 0
+    for element in aligned_read.cigar:
+        if element[0] == 0:
+            return positions
+        positions += element[1]
+
+
+def _get_qend(aligned_read):
+    qstart = _get_qstart(aligned_read)
+    end = qstart + aligned_read.alen
+    for element in aligned_read.cigar:
+        if element[0] == 1:
+            end += element[1]
+    return end
+
+
+def _get_qlen(aligned_read):
+    positions = 0
+    for element in aligned_read.cigar:
+        positions += element[1]
+    return positions
+
+
 def _3end_mapped(alignment_read, max_clipping):
     #check differences between aend and qend, as well as alen, qlen, rlen, tlen
     #should we use a different max_clipping for this?
     if alignment_read.is_unmapped:
         return False
-    alignment_length = alignment_read.qend - alignment_read.qstart
-
-    max_clipping_positions = max_clipping * alignment_length
-    '''print 'position', alignment_read.pos
-    print 'qstart: ', alignment_read.qstart
-    print 'qend: ', alignment_read.qend
-    print 'length: ', alignment_read.qlen
-    print 'reverse', alignment_read.is_reverse'''
+    max_clipping_positions = max_clipping * alignment_read.alen
+    alignment_qstart = _get_qstart(alignment_read)
+    alignment_qend = _get_qend(alignment_read)
+    alignment_qlen = _get_qlen(alignment_read)
     if alignment_read.is_reverse:
-
-        return alignment_read.qstart < max_clipping_positions
+        return alignment_qstart < max_clipping_positions
     else:
-        return alignment_read.qend > alignment_read.qlen - max_clipping_positions
+        return alignment_qend > alignment_qlen - max_clipping_positions
 
 
 def _get_mate(i, mates_alignments):
@@ -635,7 +654,7 @@ def _sorted_mapped_reads(ref_fpath, paired_fpaths=None,
     return bamfile
 
 
-def classify_mapped_reads(bamfile, settings=get_setting('CHIMERAS_SETTINGS'),
+def classify_mapped_reads_old(bamfile, settings=get_setting('CHIMERAS_SETTINGS'),
                           paired_result=True, file_format='fastq'):
     #settings. Include in function properties with default values
     max_coincidences = settings['MAX_COINCIDENCES']
@@ -752,46 +771,6 @@ def classify_mapped_reads(bamfile, settings=get_setting('CHIMERAS_SETTINGS'),
         print 'typic chimeras or non_chimeric_mates not found'
 
 
-def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
-                    unknown_fhand, unpaired=False, paired_result=True,
-                    settings=get_setting('CHIMERAS_SETTINGS'),
-                    min_seed_len=None, directory=None):
-    file_format = get_format(in_fhands[0])
-    if unpaired:
-        unpaired_fpaths = [fhand.name for fhand in in_fhands]
-        paired_fpaths = None
-    else:
-        f_fhand = NamedTemporaryFile()
-        r_fhand = NamedTemporaryFile()
-        seqs = read_seqs(in_fhands)
-        deinterleave_pairs(seqs, f_fhand, r_fhand, file_format)
-        paired_fpaths = [f_fhand.name, r_fhand.name]
-        unpaired_fpaths = None
-    bamfile = _sorted_mapped_reads(ref_fpath, paired_fpaths, unpaired_fpaths,
-                                   directory, file_format, min_seed_len)
-
-    total = 0
-    chimeric = 0
-    unknown = 0
-    for pair, kind in classify_mapped_reads(bamfile, settings=settings,
-                                           paired_result=paired_result,
-                                           file_format=file_format):
-        if kind is NON_CHIMERIC:
-            write_seqs(pair, out_fhand)
-        elif kind is CHIMERA and chimeras_fhand is not None:
-            write_seqs(pair, chimeras_fhand)
-            chimeric += 1
-        elif kind is UNKNOWN and unknown_fhand is not None:
-            write_seqs(pair, unknown_fhand)
-            unknown += 1
-        total += 1
-    mapped = total - chimeric - unknown
-    print 'Total pairs analyzed: ', total
-    print 'Chimeric pairs filtered: ', chimeric, '\t', chimeric / float(total)
-    print 'Unknown pairs found: ', unknown, '\t', unknown / float(total)
-    print 'Non-chimeric pairs: ', mapped, '\t', mapped / float(total)
-
-
 def _get_totally_mapped_alignments(reads, max_clipping):
     for aligned_read in reads:
         if _read_is_totally_mapped([aligned_read], max_clipping):
@@ -800,28 +779,32 @@ def _get_totally_mapped_alignments(reads, max_clipping):
 
 def _get_possible_fragments(aligned_reads, max_coincidences,
                             max_mapq_difference):
-    possible_fragments = []
     for aligned_read1 in aligned_reads:
         if aligned_read1.is_unmapped:
             break
         for aligned_read2 in aligned_reads:
             alignments = [aligned_read1, aligned_read2]
-            if _alignments_overlap(alignments, max_coincidences,
+            if not _alignments_overlap(alignments, max_coincidences,
                                    max_mapq_difference):
-                possible_fragments.append(alignments)
-    return possible_fragments
+                yield alignments
+
+
+def _5end_mapped(aligned_read, max_clipping):
+    if aligned_read.is_unmapped:
+        return False
+    aligned_read_qend = _get_qend(aligned_read)
+    aligned_read_qstart = _get_qstart(aligned_read)
+    max_clipping_positions = max_clipping * aligned_read.alen
+    if aligned_read.is_reverse:
+        return aligned_read_qend > _get_qlen(aligned_read) - max_clipping_positions
+    else:
+        return aligned_read_qstart < max_clipping_positions
 
 
 def _find_5end_fragment(fragments, max_clipping):
     for fragment in fragments:
-        length = fragment.qend - fragment.qstart
-        max_clipping_positions = max_clipping * length
-        if fragment.is_reverse:
-            if fragment.qend > fragment.aend - max_clipping_positions:
-                return fragment
-        else:
-            if fragment.qstart < max_clipping_positions:
-                return fragment
+        if _5end_mapped(fragment, max_clipping):
+            return fragment
 
 
 def _mates_are_not_chimeric(mates, max_clipping, mate_length_range, samfile,
@@ -871,11 +854,13 @@ def _mates_are_not_chimeric(mates, max_clipping, mate_length_range, samfile,
                     if kind == NON_CHIMERIC:
                         start_fragment = _find_5end_fragment(fragments,
                                                             max_clipping)
+                        if start_fragment is None:
+                            return False
                         for aligned_read in mates[i - 1]:
                             pair = [start_fragment, aligned_read]
                             if _alignments_in_same_ref(pair):
                                 distance = _find_distance(pair)
-                                if (_mates_are_outies(aligned_reads) and
+                                if (_mates_are_outies(pair) and
                                     distance > mate_length_range[0] and
                                     distance < mate_length_range[1]):
                                     return True
@@ -914,26 +899,29 @@ def _mates_are_chimeric(mates, samfile, max_clipping, max_insert_size):
     return False
 
 
-def classify_mapped_reads_new(bamfile,
-                              settings=get_setting('CHIMERAS_SETTINGS'),
-                              file_format='fastq',
-                              mate_length_range=[2000, 4000],
-                              out_format=SEQITEM):
+def classify_mapped_reads(bamfile, settings=get_setting('CHIMERAS_SETTINGS'),
+                          file_format='fastq', mate_distance=3000,
+                          out_format=SEQITEM):
     #settings. Include in function properties with default values
     max_coincidences = settings['MAX_COINCIDENCES']
     max_mapq_difference = settings['MAX_MAPQ_DIFFERENCE']
-    limit = settings['MAX_DISTANCE_TO_END']
+    max_distance_to_end = settings['MAX_DISTANCE_TO_END']
     max_clipping = settings['MAX_CLIPPING']
     max_pe_len = settings['MAX_PE_LEN']
-    min_mp_len = settings['MIN_MP_LEN']
+    variation = settings['MATE_DISTANCE_VARIATION']
+    mate_length_range = [mate_distance - variation, mate_distance + variation]
 
     #It tries to find out the kind of each pair of sequences
+    n_pairs = 0
+    comparisons = 0
     for grouped_mates in _group_alignments_by_reads(bamfile):
+        n_pairs += 1
         mates_alignments = _split_mates(grouped_mates)
+        comparisons += len(mates_alignments[0]) * len(mates_alignments[1])
         if _mates_are_not_chimeric(mates_alignments, max_clipping,
                                    mate_length_range, bamfile,
                                    max_coincidences, max_mapq_difference,
-                                   limit):
+                                   max_distance_to_end):
             kind = NON_CHIMERIC
         elif _mates_are_chimeric(mates_alignments, bamfile, max_clipping,
                                  max_pe_len):
@@ -945,6 +933,48 @@ def classify_mapped_reads_new(bamfile,
         elif out_format == 'aligned_read':
             pair = mates_alignments
         yield [pair, kind]
+    print 'Total pairs: ', n_pairs
+    print 'comparisons per pair: ', comparisons / n_pairs
+
+
+def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
+                    unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
+                    min_seed_len=None, mate_distance=3000,
+                    out_format=SEQITEM, directory=None, bamfile=False):
+    file_format = get_format(in_fhands[0])
+    if bamfile:
+        bamfile = pysam.Samfile(in_fhands[0].name)
+    else:
+        f_fhand = NamedTemporaryFile()
+        r_fhand = NamedTemporaryFile()
+        seqs = read_seqs(in_fhands)
+        deinterleave_pairs(seqs, f_fhand, r_fhand, file_format)
+        paired_fpaths = [f_fhand.name, r_fhand.name]
+        unpaired_fpaths = None
+        bamfile = _sorted_mapped_reads(ref_fpath, paired_fpaths,
+                                       unpaired_fpaths, directory, file_format,
+                                       min_seed_len)
+    total = 0
+    chimeric = 0
+    unknown = 0
+    for pair, kind in classify_mapped_reads(bamfile, settings=settings,
+                                           file_format=file_format,
+                                           mate_distance=mate_distance,
+                                           out_format=out_format):
+        if kind is NON_CHIMERIC:
+            write_seqs(pair, out_fhand)
+        elif kind is CHIMERA and chimeras_fhand is not None:
+            write_seqs(pair, chimeras_fhand)
+            chimeric += 1
+        elif kind is UNKNOWN and unknown_fhand is not None:
+            write_seqs(pair, unknown_fhand)
+            unknown += 1
+        total += 1
+    mapped = total - chimeric - unknown
+    print 'Total pairs analyzed: ', total
+    print 'Chimeric pairs filtered: ', chimeric, '\t', chimeric / float(total)
+    print 'Unknown pairs found: ', unknown, '\t', unknown / float(total)
+    print 'Non-chimeric pairs: ', mapped, '\t', mapped / float(total)
 
 
 def show_distances_distributions(bam_fpath, n=None, kind_of_interest=None):
@@ -1045,3 +1075,39 @@ def show_distances_distributions(bam_fpath, n=None, kind_of_interest=None):
             counts = distribution['counts']
             bin_limits = distribution['bin_limits']
             print draw_histogram(bin_limits, counts)
+
+
+def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
+    longest_5end = None
+    length = 0
+    for aligned_read in aligned_reads:
+        if (_5end_mapped(aligned_read, max_clipping)
+            and aligned_read.alen > length):
+            longest_5end = aligned_read
+    return longest_5end
+
+
+def trim_chimeric_region(bamfile, max_clipping):
+    for grouped_mates in _group_alignments_by_reads(bamfile):
+        for aligned_reads in _split_mates(grouped_mates):
+            primary_alignment = _get_primary_alignment(aligned_reads)
+            _5end = _get_longest_5end_alinged_read(aligned_reads, max_clipping)
+            if _5end is not None:
+                qstart = _get_qstart(_5end)
+                qend = _get_qend(_5end)
+                name = _5end.qname
+                seq = primary_alignment.seq[qstart: qend]
+                quals = primary_alignment.qual
+                if _5end.is_reverse:
+                    seq = _reverse(_complementary(seq))
+                if quals is None:
+                    lines = ['>' + name + '\n', seq + '\n']
+                    file_format = 'fasta'
+                else:
+                    quals = quals[qstart: qend]
+                    if _5end.is_reverse:
+                        quals = _reverse(quals)
+                    lines = ['@' + name + '\n', seq + '\n',
+                             '+\n', quals + '\n']
+                    file_format = 'fastq'
+                yield SeqWrapper(SEQITEM, SeqItem(name, lines), file_format)
