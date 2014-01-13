@@ -155,7 +155,7 @@ def _guess_format(fhand, force_file_as_non_seek):
     This function is just for testing forcing the fhand as non-seekable.
     It does ignore the solexa fastq version.
     '''
-    chunk_size = 1024
+    chunk_size = 2048
     chunk = peek_chunk_from_file(fhand, chunk_size)
     if not chunk:
         raise FileIsEmptyError('The file is empty')
