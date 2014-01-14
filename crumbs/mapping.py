@@ -74,14 +74,11 @@ def get_or_create_bwa_index(fpath, directory=None):
     return index_fpath
 
 
-def map_with_bwamem(index_fpath, unpaired_fpath=None, paired_fpaths=None,
+def map_with_bwamem(index_fpath, in_fpaths, paired_reads=True,
                    threads=None, log_fpath=None, extra_params=None):
     'It maps with bwa ws algorithm'
-    if paired_fpaths is None and unpaired_fpath is None:
+    if in_fpaths is None:
         raise RuntimeError('At least one file to map is required')
-    elif paired_fpaths is not None and unpaired_fpath is not None:
-        msg = 'Bwa can not map unpaired and unpaired reads together'
-        raise RuntimeError(msg)
 
     if extra_params is None:
         extra_params = []
@@ -89,11 +86,7 @@ def map_with_bwamem(index_fpath, unpaired_fpath=None, paired_fpaths=None,
     binary = get_binary_path('bwa')
     cmd = [binary, 'mem', '-t', str(get_num_threads(threads)), index_fpath]
     cmd.extend(extra_params)
-
-    if paired_fpaths is not None:
-        cmd.extend(paired_fpaths)
-    if unpaired_fpath is not None:
-        cmd.append(unpaired_fpath)
+    cmd.extend(in_fpaths)
 
     if log_fpath is None:
         stderr = NamedTemporaryFile(suffix='.stderr')
@@ -230,35 +223,37 @@ def _complementary(sequence):
     return complement
 
 
-def alignedread_to_seqitem(aligned_read, file_format):
+def alignedread_to_seqitem(aligned_read):
     name = aligned_read.qname
     seq = aligned_read.seq
-    quality = aligned_read.qual
+    quals = aligned_read.qual
     if aligned_read.is_reverse:
         seq = _reverse(_complementary(seq))
-    if 'fasta' in file_format:
+    if quals is None:
         lines = ['>' + name + '\n', seq + '\n']
-    elif 'fastq' in file_format:
-        if aligned_read.is_reverse:
-            quality = _reverse(_complementary(quality))
-        lines = ['@' + name + '\n', seq + '\n', '+\n', quality + '\n']
+        file_format = 'fasta'
     else:
-        raise IncompatibleFormatError('Not supported format: ' + file_format)
+        if aligned_read.is_reverse:
+            quals = _reverse(quals)
+        lines = ['@' + name + '\n', seq + '\n',
+                 '+\n', quals + '\n']
+        file_format = 'fastq'
     return SeqWrapper(SEQITEM, SeqItem(name, lines), file_format)
 
 
 def sort_by_position_in_ref(in_fhands, ref_fpath, directory=None,
                             tempdir='/tmp'):
+    #changed to bwa mem from bowtie, test doesn't work well, check it out
     in_fpaths = [fhand.name for fhand in in_fhands]
     file_format = get_format(in_fhands[0])
-    extra_params = ['-f'] if 'fasta' in file_format else []
-    index_fpath = get_or_create_bowtie2_index(ref_fpath, directory)
-    bowtie2 = map_with_bowtie2(index_fpath, unpaired_fpaths=in_fpaths,
-                               extra_params=extra_params)
+    index_fpath = get_or_create_bwa_index(ref_fpath)
+    bwa_process = map_with_bwamem(index_fpath, in_fpaths=in_fpaths,
+                                  extra_params=['-p', '-M'])
     out_fhand = NamedTemporaryFile()
-    sort_mapped_reads(bowtie2, out_fhand.name, tempdir=tempdir)
+    sort_mapped_reads(bwa_process, out_fhand.name, tempdir=tempdir)
     samfile = pysam.Samfile(out_fhand.name)
     for aligned_read in samfile:
+        print aligned_read
         yield alignedread_to_seqitem(aligned_read, file_format)
 
 
