@@ -29,6 +29,7 @@ from crumbs.utils.tags import SEQITEM
 from crumbs.exceptions import IncompatibleFormatError
 from crumbs.iterutils import sorted_items
 from crumbs.seqio import read_seqs
+import tempfile
 
 
 def _bwa_index_exists(index_path):
@@ -168,20 +169,37 @@ def map_with_bowtie2(index_fpath, paired_fpaths=None,
     else:
         stderr = open(log_fpath, 'w')
 
-#    raw_input(' '.join(cmd))
     bowtie2 = popen(cmd, stderr=stderr, stdout=PIPE)
     # print bowtie2.stdout.read()
     return bowtie2
 
 
-def map_process_to_bam(map_process, bam_fpath, log_fpath=None):
+def map_process_to_bam(map_process, bam_fpath, readgroup=None, log_fpath=None,
+                       tempdir=None):
+    ''' It receives a mapping process that has a sam file in stdout and
+    calling another external process convert the sam file into a bam file.
+    Optionally you can fill the readgroup field
+    '''
     if log_fpath is None:
         stderr = NamedTemporaryFile(suffix='.stderr')
     else:
         stderr = open(log_fpath, 'w')
-
-    cmd = [get_binary_path('samtools'), 'view', '-h', '-b', '-S', '-', '-o',
-           bam_fpath]
+    if readgroup is None:
+        cmd = [get_binary_path('samtools'), 'view', '-h', '-b', '-S', '-',
+               '-o', bam_fpath]
+    else:
+        if tempdir is None:
+            tempdir = tempfile.gettempdir()
+        picard_tools = get_setting("PICARD_TOOLS_DIR")
+        fpath = os.path.join(picard_tools, 'AddOrReplaceReadGroups.jar')
+        cmd = ['java', '-jar', fpath, 'I=/dev/stdin', 'O={}'.format(bam_fpath),
+               'RGID={0}'.format(readgroup['ID']),
+               'RGLB={0}'.format(readgroup['LB']),
+               'RGPL={0}'.format(readgroup['PL']),
+               'RGSM={0}'.format(readgroup['SM']),
+               'RGPU={0}'.format(readgroup['PU']),
+               'TMP_DIR=' + tempdir,
+               'VALIDATION_STRINGENCY=LENIENT']
 
     samtools = popen(cmd, stdin=map_process.stdout, stderr=stderr)
     map_process.stdout.close()  # Allow p1 to receive a SIGPIPE if samtools exits.
