@@ -161,8 +161,9 @@ class IterutilsTest(unittest.TestCase):
 
     def test_key(self):
         items = [(1, 'a'), (1, 'b'), (2, 'a')]
-        _sorted_items = sorted_items(iter(items), key=lambda x: x[0])
-        assert list(_sorted_items) == [(1, 'a'), (1, 'b'), (2, 'a')]
+        _sorted_items = list(sorted_items(iter(items), key=lambda x: x[0],
+                                     max_items_in_memory=1))
+        assert _sorted_items == [(1, 'a'), (1, 'b'), (2, 'a')]
         unique_items = unique(_sorted_items, key=lambda x: x[0])
         assert list(unique_items) == [(1, 'a'), (2, 'a')]
 
