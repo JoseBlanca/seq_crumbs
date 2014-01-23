@@ -74,14 +74,16 @@ def get_or_create_bwa_index(fpath, directory=None):
     return index_fpath
 
 
-def map_with_bwamem(index_fpath, in_fpaths, paired_reads=True,
+def map_with_bwamem(index_fpath, in_fpaths, interleaved=True,
                    threads=None, log_fpath=None, extra_params=None):
-    'It maps with bwa ws algorithm'
+    'It maps with bwa mem algorithm'
     if in_fpaths is None:
         raise RuntimeError('At least one file to map is required')
 
     if extra_params is None:
         extra_params = []
+    if interleaved:
+        extra_params.append('-p')
 
     binary = get_binary_path('bwa')
     cmd = [binary, 'mem', '-t', str(get_num_threads(threads)), index_fpath]
@@ -245,16 +247,19 @@ def sort_by_position_in_ref(in_fhands, ref_fpath, directory=None,
                             tempdir='/tmp'):
     #changed to bwa mem from bowtie, test doesn't work well, check it out
     in_fpaths = [fhand.name for fhand in in_fhands]
-    file_format = get_format(in_fhands[0])
-    index_fpath = get_or_create_bwa_index(ref_fpath)
-    bwa_process = map_with_bwamem(index_fpath, in_fpaths=in_fpaths,
-                                  extra_params=['-p', '-M'])
+    file_format = get_format(open(in_fpaths[0]))
+    extra_params = ['--very-fast']
+    if 'fasta' in file_format:
+        extra_params.append('-f')
+    index_fpath = get_or_create_bowtie2_index(ref_fpath, directory)
+    bowtie2_process = map_with_bowtie2(index_fpath, paired_fpaths=None,
+                                   unpaired_fpaths=in_fpaths,
+                                   extra_params=extra_params)
     out_fhand = NamedTemporaryFile()
-    sort_mapped_reads(bwa_process, out_fhand.name, tempdir=tempdir)
+    sort_mapped_reads(bowtie2_process, out_fhand.name, tempdir=tempdir)
     samfile = pysam.Samfile(out_fhand.name)
     for aligned_read in samfile:
-        print aligned_read
-        yield alignedread_to_seqitem(aligned_read, file_format)
+        yield alignedread_to_seqitem(aligned_read)
 
 
 def sort_fastx_files(in_fhands, key, ref_fpath=None, directory=None,

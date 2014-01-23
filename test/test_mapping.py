@@ -168,7 +168,7 @@ class Bwa2Test(unittest.TestCase):
         directory = TemporaryDir()
         index_fpath = get_or_create_bwa_index(reference_fpath, directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        bwa = map_with_bwamem(index_fpath, unpaired_fpath=reads_fpath)
+        bwa = map_with_bwamem(index_fpath, in_fpaths=[reads_fpath])
         map_process_to_bam(bwa, bam_fhand.name)
         out = subprocess.check_output([get_binary_path('samtools'), 'view',
                                        bam_fhand.name])
@@ -213,7 +213,7 @@ class Bwa2Test(unittest.TestCase):
 
         index_fpath = get_or_create_bwa_index(ref_fhand.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        bwa = map_with_bwamem(index_fpath, paired_fpaths=paired_fpaths)
+        bwa = map_with_bwamem(index_fpath, in_fpaths=paired_fpaths)
         map_process_to_bam(bwa, bam_fhand.name)
         samfile = pysam.Samfile(bam_fhand.name)
         #for aligned_read in samfile:
@@ -244,6 +244,7 @@ class SortSeqsFileTest(unittest.TestCase):
             sorted_names.append(get_name(seq))
         expected_names = ['seq2', 'seq3', 'seq1', 'seq5', 'seq4', 'seq6']
         assert sorted_names == expected_names
+        #it fails because bwa somehow gives a position to an unmapped seq
 
         #with fastq format
         query1 += '+\n??????????????????????????????????????????????????\n'
