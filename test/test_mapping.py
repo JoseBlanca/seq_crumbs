@@ -19,7 +19,6 @@ import os.path
 from tempfile import NamedTemporaryFile
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from test.test_filters import GENOME
 from crumbs.mapping import (get_or_create_bowtie2_index, _bowtie2_index_exists,
                             map_with_bowtie2, get_or_create_bwa_index,
                             _bwa_index_exists, map_with_bwamem,
@@ -272,6 +271,24 @@ class SortSeqsFileTest(unittest.TestCase):
         expected_names = ['seq6', 'seq5', 'seq1', 'seq2', 'seq3', 'seq4']
         assert sorted_names == expected_names
 
+    def test_add_rg_to_bam(self):
+        reference_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
+        reads_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
+        directory = TemporaryDir()
+        index_fpath = get_or_create_bwa_index(reference_fpath, directory.name)
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
+        bwa = map_with_bwamem(index_fpath, unpaired_fpath=reads_fpath)
+        lib_name = 'aa'
+        readgroup = {'ID': lib_name, 'PL': 'illumina', 'LB': lib_name,
+                     'SM': '{0}_illumina_pe'.format(lib_name), 'PU': '0'}
+        map_process_to_bam(bwa, bam_fhand.name, readgroup)
+        out = subprocess.check_output([get_binary_path('samtools'), 'view',
+                                       '-h', bam_fhand.name])
+
+        assert 'ID:aa' in out
+        assert  'TTCTGATTCAATCTACTTCAAAGTTGGCTTTATCAATAAG' in out
+
+        directory.close()
 if __name__ == '__main__':
-    # import sys;sys.argv = ['', 'BlastTest.test_blastdb']
+    #import sys;sys.argv = ['', 'SortSeqsFileTest.test_add_rg_to_bam']
     unittest.main()
