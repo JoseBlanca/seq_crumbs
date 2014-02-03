@@ -75,21 +75,28 @@ def get_or_create_bwa_index(fpath, directory=None):
     return index_fpath
 
 
-def map_with_bwamem(index_fpath, in_fpaths, interleaved=True,
+def map_with_bwamem(index_fpath, unpaired_fpath=None, paired_fpaths=None,
                    threads=None, log_fpath=None, extra_params=None):
     'It maps with bwa mem algorithm'
-    if in_fpaths is None:
+    if unpaired_fpath is None and paired_fpaths is None:
         raise RuntimeError('At least one file to map is required')
+    elif paired_fpaths is not None and unpaired_fpath is not None:
+        msg = 'Bwa can not map unpaired and unpaired reads together'
+        raise RuntimeError(msg)
 
     if extra_params is None:
         extra_params = []
-    if interleaved:
+    if paired_fpaths is not None and len(paired_fpaths[0]) == 1:
         extra_params.append('-p')
 
     binary = get_binary_path('bwa')
     cmd = [binary, 'mem', '-t', str(get_num_threads(threads)), index_fpath]
     cmd.extend(extra_params)
-    cmd.extend(in_fpaths)
+    if paired_fpaths is not None:
+        for paired_fpath in paired_fpaths:
+            cmd.extend(paired_fpath)
+    if unpaired_fpath is not None:
+        cmd.append(unpaired_fpath)
 
     if log_fpath is None:
         stderr = NamedTemporaryFile(suffix='.stderr')

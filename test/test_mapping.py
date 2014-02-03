@@ -167,7 +167,7 @@ class Bwa2Test(unittest.TestCase):
         directory = TemporaryDir()
         index_fpath = get_or_create_bwa_index(reference_fpath, directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        bwa = map_with_bwamem(index_fpath, in_fpaths=[reads_fpath])
+        bwa = map_with_bwamem(index_fpath, unpaired_fpath=reads_fpath)
         map_process_to_bam(bwa, bam_fhand.name)
         out = subprocess.check_output([get_binary_path('samtools'), 'view',
                                        bam_fhand.name])
@@ -205,14 +205,14 @@ class Bwa2Test(unittest.TestCase):
         r_fhand = NamedTemporaryFile()
         r_fhand.write(query_r)
         r_fhand.flush()
-        paired_fpaths = [f_fhand.name, r_fhand.name]
+        paired_fpaths = [[f_fhand.name, r_fhand.name]]
         ref_fhand = NamedTemporaryFile()
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
 
         index_fpath = get_or_create_bwa_index(ref_fhand.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        bwa = map_with_bwamem(index_fpath, in_fpaths=paired_fpaths)
+        bwa = map_with_bwamem(index_fpath, paired_fpaths=paired_fpaths)
         map_process_to_bam(bwa, bam_fhand.name)
         samfile = pysam.Samfile(bam_fhand.name)
         #for aligned_read in samfile:
@@ -290,5 +290,5 @@ class SortSeqsFileTest(unittest.TestCase):
 
         directory.close()
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SortSeqsFileTest.test_add_rg_to_bam']
+#     import sys;sys.argv = ['', 'Bwa2Test']
     unittest.main()
