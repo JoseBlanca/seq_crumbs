@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+# Copyright 2013 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from crumbs.utils.bin_utils import (main, argparse, create_basic_argparse,
+                                    parse_basic_args)
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.filters import  trim_chimeras
+from crumbs.settings import get_setting
+
+
+def create_filter_argparse(add_reverse=True, **kwargs):
+    'It returns a cmd parser for the filter executables'
+    parser = create_basic_argparse(**kwargs)
+    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
+    parser.add_argument('-i', '--interleaved', default=False,
+                        help='input sequences are paired and interleaved',
+                        action='store_true')
+    parser.add_argument('-r', '--reference_seq', default=None,
+                        help='fpath with reference sequence')
+    parser.add_argument('--tempdir', default='/tmp',
+                        help='Path for temporary files (default /tmp)')
+    help1 = 'Max clipping positions percentage allowed to consider that 5 end'
+    help1 += 'is mapped'
+    parser.add_argument('--max_clipping',
+                        default=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
+                        help=help1)
+    return parser
+
+
+def parse_filter_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['reference'] = parsed_args.reference_seq
+    args['bamfile'] = parsed_args.bamfile
+    args['tempdir'] = parsed_args.tempdir
+    args['max_clipping'] = parsed_args.max_clipping
+    args['interleaved'] = parsed_args.interleaved
+
+    return args, parsed_args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It trims chimeric regions from illumina mate pairs seqs'
+    parser = create_filter_argparse(description=description)
+    args = parse_filter_args(parser)[0]
+    ref_fpath = args['reference']
+    out_fhand = args['out_fhand']
+    in_fpaths = [fhand.name for fhand in args['in_fhands']]
+    max_clipping = args['max_clipping']
+    tempdir = args['tempdir']
+    interleaved = args['interleaved']
+    trim_chimeras(in_fpaths, out_fhand, ref_fpath,
+                  max_clipping=max_clipping, tempdir=tempdir,
+                  interleaved=interleaved)
+    flush_fhand(out_fhand)
+
+if __name__ == '__main__':
+    sys.exit(main(run))

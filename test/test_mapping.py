@@ -205,7 +205,7 @@ class Bwa2Test(unittest.TestCase):
         r_fhand = NamedTemporaryFile()
         r_fhand.write(query_r)
         r_fhand.flush()
-        paired_fpaths = [f_fhand.name, r_fhand.name]
+        paired_fpaths = [[f_fhand.name, r_fhand.name]]
         ref_fhand = NamedTemporaryFile()
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
@@ -243,6 +243,7 @@ class SortSeqsFileTest(unittest.TestCase):
             sorted_names.append(get_name(seq))
         expected_names = ['seq2', 'seq3', 'seq1', 'seq5', 'seq4', 'seq6']
         assert sorted_names == expected_names
+        #it fails because bwa somehow gives a position to an unmapped seq
 
         #with fastq format
         query1 += '+\n??????????????????????????????????????????????????\n'
@@ -289,5 +290,5 @@ class SortSeqsFileTest(unittest.TestCase):
 
         directory.close()
 if __name__ == '__main__':
-    #import sys;sys.argv = ['', 'SortSeqsFileTest.test_add_rg_to_bam']
+#     import sys;sys.argv = ['', 'Bwa2Test']
     unittest.main()
