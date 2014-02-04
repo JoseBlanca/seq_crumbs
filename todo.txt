@@ -13,6 +13,8 @@ Why  write_trim_packets duplicates write_filter_packets?
 
 Write the manual
 
+Add a binary to remove Ns
+
 Add filter to remove Illumina pair end chimeras
 
 Add a binary named seq_crumbs that list of the crumbs available.
