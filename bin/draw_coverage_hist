@@ -28,12 +28,12 @@ from bam_crumbs.plot import draw_scatter, draw_histogram
 
 def _setup_argparse():
     'It returns the argument parser'
-    description = 'Calculate clamd in a bam file'
+    description = 'Draw coverage histogram'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('input', help='BAM or SAM file to process',
                         type=argparse.FileType('rt'), nargs='*')
     parser.add_argument('-o', '--outfile', dest='outfile',
-                help='Output file. Use it if you want to mantain input file',
+                help='Output file. File to write the graph',
                 type=argparse.FileType('wt'))
     parser.add_argument('-m', '--xlim_left', default=0, type=int,
                         help='Limit of the x axes in the left')
