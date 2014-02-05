@@ -278,14 +278,16 @@ def get_reference_counts(bam_fpath):
                'unmapped_reads': int(unmapped_reads)}
 
 
-def get_genome_coverage(bam_fpath):
-    cmd = [get_binary_path('bedtools'), 'genomecov', '-ibam', bam_fpath]
-    cover_process = Popen(cmd, stdout=PIPE)
+def get_genome_coverage(bam_fhands):
     coverage_hist = IntCounter()
-    for line in cover_process.stdout:
-        if line.startswith('genome'):
-            cov, value = line.split('\t')[1: 3]
-            coverage_hist[int(cov)] = int(value)
+    for bam_fhand in bam_fhands:
+        bam_fpath = bam_fhand.name
+        cmd = [get_binary_path('bedtools'), 'genomecov', '-ibam', bam_fpath]
+        cover_process = Popen(cmd, stdout=PIPE)
+        for line in cover_process.stdout:
+            if line.startswith('genome'):
+                cov, value = line.split('\t')[1: 3]
+                coverage_hist[int(cov)] += int(value)
     return coverage_hist
 
 

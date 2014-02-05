@@ -33,10 +33,10 @@ def _get_format_from_fname(fname):
     return os.path.splitext(fname)[1][1:]
 
 
-def draw_histogram(values, fhand, bins=10, **kwargs):
+def draw_histogram(values, fhand, bins=10, range_=None, **kwargs):
     'It draws a histogram of a pandas Series into a file'
     canvas, axes = _get_canvas_and_axes()
-    axes.hist(values, bins=bins)
+    axes.hist(values, bins=bins, range=range_)
     for key, value in kwargs.items():
         getattr(axes, 'set_{}'.format(key))(value)
 
@@ -47,6 +47,9 @@ def draw_histogram(values, fhand, bins=10, **kwargs):
 def draw_scatter(groups, fhand, plot_lines=False, **kwargs):
     # groups is a list of x,y and genotype values
     canvas, axes = _get_canvas_and_axes()
+    for key, value in kwargs.items():
+        getattr(axes, 'set_{}'.format(key))(value)
+
     for index, group in enumerate(groups):
         x_vals = group['x']
         y_vals = group['y']
@@ -72,7 +75,6 @@ def draw_scatter(groups, fhand, plot_lines=False, **kwargs):
             sct_kwargs['s'] = MARKER_SIZE2
             axes.scatter(x_vals, y_vals, **sct_kwargs)
 
-    for key, value in kwargs.items():
-        getattr(axes, 'set_{}'.format(key))(value)
+
     canvas.print_figure(fhand, format=_get_format_from_fname(fhand.name))
     fhand.flush()

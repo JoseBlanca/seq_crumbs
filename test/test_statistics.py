@@ -101,12 +101,8 @@ class GenomeCoverageTest(unittest.TestCase):
 
     def test_genome_cover(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
-        scatter_group = get_genome_coverage(bam_fpath)
-        assert scatter_group.items() ==  [(0, 2400), (9, 144), (6, 3)]
-#         assert scatter_group.items() == [(0, 2400), (9, 144), (6, 3)]
-#         assert scatter_group['x'] == array('h', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-#         assert scatter_group['y'] == array('h', [2400, 0, 0, 0, 0, 0, 3, 0, 0,
-#                                                  144])
+        scatter_group = get_genome_coverage([open(bam_fpath)])
+        assert scatter_group.items() == [(0, 2400), (9, 144), (6, 3)]
 
 
 if __name__ == "__main__":

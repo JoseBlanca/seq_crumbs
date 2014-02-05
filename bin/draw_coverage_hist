@@ -19,10 +19,11 @@
 
 import argparse
 import sys
+from array import array
 
 from crumbs.utils.bin_utils import main, build_version_msg
 from bam_crumbs.statistics import get_genome_coverage, counter_to_scatter_group
-from bam_crumbs.plot import draw_scatter
+from bam_crumbs.plot import draw_scatter, draw_histogram
 
 
 def _setup_argparse():
@@ -30,7 +31,7 @@ def _setup_argparse():
     description = 'Calculate clamd in a bam file'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('input', help='BAM or SAM file to process',
-                        type=argparse.FileType('rt'))
+                        type=argparse.FileType('rt'), nargs='*')
     parser.add_argument('-o', '--outfile', dest='outfile',
                 help='Output file. Use it if you want to mantain input file',
                 type=argparse.FileType('wt'))
@@ -47,13 +48,25 @@ def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
 
     parsed_args = parser.parse_args()
-    in_fhand = parsed_args.input
+    in_fhands = parsed_args.input
     out_fhand = getattr(parsed_args, 'outfile')
-    if parsed_args.xlim_rigth is None:
-        xlim = parsed_args.xlim_left
-    else:
-        xlim = (parsed_args.xlim_left,  parsed_args.xlim_rigth)
-    return {'in_fhand': in_fhand, 'out_fhand': out_fhand, 'xlim': xlim}
+    xlim = (parsed_args.xlim_left,  parsed_args.xlim_rigth)
+    return {'in_fhands': in_fhands, 'out_fhand': out_fhand, 'xlim': xlim}
+
+
+def filter_scatter_groups(group, xlim=None):
+    if xlim is None:
+        return group
+    left, rigth = xlim
+    if rigth is None:
+        rigth = max(group['x'])
+    filtered_group = {'x': array('l'), 'y': array('l')}
+    for x, y in zip(group['x'], group['y']):
+        if x < left or x > rigth:
+            continue
+        filtered_group['x'].append(x)
+        filtered_group['y'].append(y)
+    return filtered_group
 
 
 def run():
@@ -61,20 +74,27 @@ def run():
     parser = _setup_argparse()
     args = _parse_args(parser)
 
-    in_fhand = args['in_fhand']
+    in_fhands = args['in_fhands']
     out_fhand = args['out_fhand']
 
-    coverage_counter = get_genome_coverage(in_fhand.name)
+    coverage_counter = get_genome_coverage(in_fhands)
     stdout = 'Minimum coverage value: {}\n'.format(coverage_counter.min)
     stdout += 'Maximum coverage value: {}\n'.format(coverage_counter.max)
     stdout += 'Median value: {}\n'.format(coverage_counter.median)
     sys.stdout.write(stdout)
 
-    scatter_group = counter_to_scatter_group(coverage_counter)
+    xlim = args['xlim']
+    if xlim is not None:
+        x_left, x_rigth = xlim
+        if x_rigth is None:
+            x_rigth = coverage_counter.max + 1
+        xlim = (x_left, x_rigth)
 
     kwargs = {'title': 'Histogram of the coverage', 'xlabel': 'Coverage',
-              'ylabel': 'Num. Bases with this coverage', 'xlim': args['xlim']}
-    draw_scatter([scatter_group], out_fhand, plot_lines=True, **kwargs)
+              'ylabel': 'Num. Bases with this coverage'}
+
+    coverages = [cov for cov in coverage_counter.elements()]
+    draw_histogram(coverages, out_fhand, bins=100, range_=xlim, **kwargs)
 
 
 if __name__ == '__main__':
