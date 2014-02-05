@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+'''
+Created on 2014 ots 5
+
+@author: peio
+'''
+
+import argparse
+import sys
+
+import pysam
+from crumbs.utils.bin_utils import main, build_version_msg
+
+from bam_crumbs.statistics import ReadStats
+from bam_crumbs.plot import draw_histogram
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Draw mapq histogram'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', help='BAM or SAM file to process',
+                        type=argparse.FileType('rt'), nargs='*')
+    parser.add_argument('-o', '--outfile', dest='outfile', default=sys.stdout,
+                        help='Output file. Use it if you want to mantain input file',
+                        type=argparse.FileType('wt'))
+
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+
+    parsed_args = parser.parse_args()
+    bam_fhands = parsed_args.input
+    out_fhand = getattr(parsed_args, 'outfile')
+
+    return {'bam_fhands': bam_fhands, 'out_fhand': out_fhand}
+
+
+def run():
+    'It makes the actual job'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+    bams = [pysam.Samfile(bam_fhand.name) for bam_fhand in args['bam_fhands']]
+    read_stats = ReadStats(bams)
+    mapq_counter = read_stats.mapqs
+
+    mapqs = [i for i in mapq_counter.elements()]
+
+    kwargs = {'title': 'Mapq distribution',
+              'xlabel': 'mapq', 'ylabel': 'num_seqs'}
+    draw_histogram(mapqs, args['out_fhand'], bins=mapq_counter.max, **kwargs)
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(run))
+
+
+
+
