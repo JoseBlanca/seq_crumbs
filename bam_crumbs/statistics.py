@@ -213,8 +213,9 @@ class ReadStats(object):
         mapqs = self._mapqs
         flag_counts = [0] * len(SAM_FLAG_BINARIES)
         for bam in self._bams:
-            for read in bam.fetch():
-                mapqs[read.mapq] += 1
+            for read in bam:
+                if not read.is_unmapped:
+                    mapqs[read.mapq] += 1
                 for flag_index in _flag_to_binary(read.flag):
                     flag_counts[flag_index] += 1
 

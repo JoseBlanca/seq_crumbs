@@ -94,5 +94,5 @@ class CalmdTest(unittest.TestCase):
         assert open(calmd_fhand.name).read()
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'CalmdTest']
+    #import sys;sys.argv = ['', 'CalmdTest']
     unittest.main()
