@@ -20,6 +20,7 @@ TEST_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '..', 'test', 'test_data'))
 
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
+BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bin'))
 
 
 def compress_with_bgzip(in_fhand, compressed_fhand):

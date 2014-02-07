@@ -59,10 +59,13 @@ def main():
     draw_histogram(densities.values(), density_fhand, bins=100, **kwargs)
 
     #mafs
-    maf_fhand = open(os.path.join(out_dir, 'distrib_maf_per_snv.png'), 'w')
-    kwargs = {'title': 'Maf distribution', 'xlim': (0.5, 1),
-              'xlabel': 'Maf', 'ylabel': 'Num. Snvs'}
-    draw_histogram(data['maf_per_snp'], maf_fhand, bins=20, **kwargs)
+    samples = list(data['samples']) + ['all']
+    for sample in samples:
+        maf_fhand = open(os.path.join(out_dir, 'distrib_maf_per_snv_{}.png'.format(sample)), 'w')
+        kwargs = {'title': 'Maf distribution for sample {}'.format(sample),
+                  'xlim': (0.5, 1), 'xlabel': 'Maf', 'ylabel': 'Num. Snvs'}
+        mafs = [maf[sample] for maf in data['maf_per_snp'] if sample in maf]
+        draw_histogram(mafs, maf_fhand, bins=20, **kwargs)
 
     # call_scatter
     scatter_fhand = open(os.path.join(out_dir, 'call_scatter.png'), 'w')

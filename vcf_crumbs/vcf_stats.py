@@ -43,7 +43,7 @@ def _get_call_data(call, snpcaller):
     return gt, gq, dp, rd, ad
 
 
-def calculate_maf(snp, snpcaller):
+def calculate_maf_old(snp, snpcaller):
     total_ad = 0
     total_rd = 0
     for call in snp.samples:
@@ -59,11 +59,31 @@ def calculate_maf(snp, snpcaller):
     return maf
 
 
+def calculate_maf(snp, snpcaller):
+    total_ad = 0
+    total_rd = 0
+    mafs = {}
+    for call in snp.samples:
+        if call.called:
+            rd, ad = _get_call_data(call, snpcaller)[3:]
+            mafs[call.sample] = max([rd, ad]) / sum([rd, ad])
+            total_ad += ad
+            total_rd += rd
+    values = [total_ad, total_rd]
+    total = sum(values)
+    if not total:
+        return None
+    maf = max(values) / total
+    mafs['all'] = maf
+    return mafs
+
+
 def get_data_from_vcf(vcf_path):
     reader = Reader(filename=vcf_path)
     snpcaller = get_snpcaller_name(reader)
     typecode = 'I'
-    data = {'snps_per_chromo': Counter(),
+    data = {'samples': set(),
+            'snps_per_chromo': Counter(),
             'maf_per_snp': [],
             'call_data': {HOM_REF: {'x': array(typecode), 'y': array(typecode),
                                     'value': array(typecode)},
@@ -77,6 +97,7 @@ def get_data_from_vcf(vcf_path):
     chrom_counts = data['snps_per_chromo']
     mafs = data['maf_per_snp']
     call_datas = data['call_data']
+    samples = data['samples']
     for snp in reader:
         chrom_counts[snp.CHROM] += 1
         maf = calculate_maf(snp, snpcaller)
@@ -84,6 +105,7 @@ def get_data_from_vcf(vcf_path):
             mafs.append(maf)
         #sample_data
         for call in snp.samples:
+            samples.add(call.sample)
             if call.called:
                 gt, gq, dp, rd, ad = _get_call_data(call, snpcaller)
                 call_datas[call.gt_type]['x'].append(rd)

@@ -1,13 +1,16 @@
 import unittest
 from os.path import join
-
+import sys
 
 from vcf import Reader
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
                                   get_snpcaller_name, VARSCAN, GATK,
                                   calculate_maf)
 
-from vcf_crumbs.utils import TEST_DATA_DIR
+from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
+from subprocess import check_call, CalledProcessError
+from tempfile import NamedTemporaryFile
+from crumbs.utils.file_utils import TemporaryDir
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
@@ -23,7 +26,7 @@ class SnvStatTests(unittest.TestCase):
 
     def test_get_data(self):
         data = get_data_from_vcf(VARSCAN_VCF_PATH)
-        #print data
+        assert data['samples'] == set(['upv196', 'pepo', 'mu16'])
 
     def test_calc_densities(self):
         data = get_data_from_vcf(VARSCAN_VCF_PATH)
@@ -36,12 +39,33 @@ class SnvStatTests(unittest.TestCase):
         reader = Reader(filename=VARSCAN_VCF_PATH)
         snp = reader.next()
         maf = calculate_maf(snp, snpcaller=VARSCAN)
-        assert 0.52 < maf < 0.53
+        assert 0.52 < maf['all'] < 0.53
+        assert maf['upv196'] == 1
+
         #gatk
         reader = Reader(filename=GATK_VCF_PATH)
         snp = reader.next()
         maf = calculate_maf(snp, snpcaller=GATK)
-        assert 0.7 < maf < 0.72
+        assert 0.7 < maf['all'] < 0.72
+        assert 0.7 < maf['hib_amarillo'] < 0.72
+
+
+class StatBinTests(unittest.TestCase):
+
+    def test_draw_snv_stats_bin(self):
+        binary = join(BIN_DIR, 'draw_snv_stats')
+        tempdir = TemporaryDir()
+        cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, VARSCAN_VCF_PATH]
+        stderr = NamedTemporaryFile()
+        stdout = NamedTemporaryFile()
+        try:
+            check_call(cmd, stderr=stderr, stdout=stdout)
+        except CalledProcessError:
+            sys.stderr.write(open(stderr.name).read())
+            sys.stdout.write(open(stdout.name).read())
+        finally:
+            tempdir.close()
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
