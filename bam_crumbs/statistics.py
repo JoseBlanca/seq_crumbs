@@ -1,10 +1,13 @@
 from __future__ import division
 
+import os.path
 from subprocess import Popen, PIPE
 from operator import itemgetter
 from itertools import izip
 from array import array
 from numpy import histogram, zeros, median, sum as np_sum
+
+import pysam
 
 from crumbs.statistics import (draw_histogram, IntCounter, LABELS,
                                BestItemsKeeper)
@@ -299,4 +302,44 @@ def counter_to_scatter_group(coverage_hist):
         scatter_group['y'].append(coverage_hist[integer])
 
     return scatter_group
+
+
+def get_bam_readgroups(bam):
+    header = bam.header
+    if 'RG' not in header:
+        return None
+    readgroups = []
+    for rg in header['RG']:
+        readgroups.append(rg)
+    return readgroups
+
+
+def get_rg_from_alignedread(read):
+    rgid = [value for key, value in read.tags if key == 'RG']
+    return None if not rgid else rgid[0]
+
+
+def mapped_count_by_rg(bam_fpaths):
+    counter_by_rg = {}
+    for bam_fpath in bam_fpaths:
+        bam = pysam.Samfile(bam_fpath, 'rb')
+        readgroups = get_bam_readgroups(bam)
+        if readgroups is None:
+            bam_basename = os.path.splitext(os.path.basename(bam_fpath))[0]
+            readgroups = [bam_basename]
+        else:
+            readgroups = [rg['ID'] for rg in readgroups]
+        for readgroup in readgroups:
+            counter_by_rg[readgroup] = IntCounter({'unmapped': 0,
+                                                   'mapped': 0})
+
+        for read in bam:
+            rg = get_rg_from_alignedread(read)
+            if rg is None:
+                rg = bam_basename
+            if read.is_unmapped:
+                counter_by_rg[rg]['unmapped'] += 1
+            else:
+                counter_by_rg[rg]['mapped'] += 1
+    return counter_by_rg
 

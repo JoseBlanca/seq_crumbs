@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+'''
+Created on 2014 ots 11
+
+@author: peio
+'''
+import sys
+import argparse
+from bam_crumbs.statistics import mapped_count_by_rg
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Calculate statistics of the given files'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', help='BAM or SAM file to process',
+                        nargs='*')
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest='outfile',
+                        help='Sequence output file (default STDOUT)',
+                        type=argparse.FileType('wt'))
+
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+    in_fpaths = parsed_args.input
+    out_fhand = getattr(parsed_args, 'outfile')
+    return in_fpaths, out_fhand
+
+
+def main():
+    parser = _setup_argparse()
+    in_fpaths, out_fhand = _parse_args(parser)
+    counts = mapped_count_by_rg(in_fpaths)
+    out_fhand.write('Readgroup\tMapped\tUnmapped\n')
+    for rg, map_counts in counts.items():
+        out_fhand.write('{}\t{}\t{}\n'.format(rg, map_counts['mapped'],
+                                              map_counts['unmapped']))
+
+if __name__ == '__main__':
+    main()

@@ -12,7 +12,8 @@ from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
                                    CoverageCounter, _flag_to_binary,
                                    get_reference_counts,
                                    get_reference_counts_dict,
-    get_genome_coverage)
+                                   get_genome_coverage, get_bam_readgroups,
+                                   mapped_count_by_rg)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -95,6 +96,31 @@ class StatsTest(unittest.TestCase):
         assert  None in counts.keys()
         assert  'reference2' in counts.keys()
         assert  'reference2' in counts.keys()
+
+    def test_get_readgroup(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        readgroups = get_bam_readgroups(pysam.Samfile(bam_fpath))
+        assert readgroups == [{'LB': 'group1', 'ID': 'group1+454',
+                               'PL': '454', 'SM': 'group1+454'},
+                              {'LB': 'group2', 'ID': 'group2+454',
+                               'PL': '454', 'SM': 'group2+454'}]
+
+    def test_mapped_counts(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        map_counts = mapped_count_by_rg([bam_fpath])
+        assert map_counts['group1+454']['mapped'] == 9
+
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'sample_no_rg.bam')
+        map_counts = mapped_count_by_rg([bam_fpath])
+        assert map_counts['sample_no_rg']['mapped'] == 1
+
+    def test_bin_mapped_counts(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+
+        bin_ = os.path.join(BIN_DIR, 'count_mapped_by_rg')
+        cmd = [bin_, bam_fpath]
+        output = check_output(cmd)
+        assert "group2+454" in  output
 
 
 class GenomeCoverageTest(unittest.TestCase):
