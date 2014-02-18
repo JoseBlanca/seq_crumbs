@@ -498,7 +498,7 @@ def _mates_are_innies(mates):
 
 
 def _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved=True,
-                         directory='/tmp', min_seed_len=None):
+                         directory='/tmp', min_seed_len=None, threads=None):
     index_fpath = get_or_create_bwa_index(ref_fpath, directory)
     extra_params = ['-a', '-M']
     if min_seed_len is not None:
@@ -516,7 +516,7 @@ def _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved=True,
         in_fpaths = paired_fpaths
 
     bwa = map_with_bwamem(index_fpath, paired_fpaths=in_fpaths,
-                         extra_params=extra_params)
+                         extra_params=extra_params, threads=threads)
     bam_fhand = NamedTemporaryFile(dir=directory)
     sort_mapped_reads(bwa, bam_fhand.name, key='queryname', tempdir=directory)
     bamfile = pysam.Samfile(bam_fhand.name)
@@ -651,7 +651,7 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                     unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
                     min_seed_len=None, mate_distance=3000,
                     out_format=SEQITEM, directory='/tmp', bamfile=False,
-                    interleaved=True):
+                    interleaved=True, threads=None):
     '''It maps sequences from input files, sorts them and writes to output
     files according to its classification'''
     if bamfile:
@@ -659,7 +659,7 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
     else:
         in_fpaths = [fhand.name for fhand in in_fhands]
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
-                                       directory, min_seed_len)
+                                       directory, min_seed_len, threads)
     total = 0
     chimeric = 0
     unknown = 0

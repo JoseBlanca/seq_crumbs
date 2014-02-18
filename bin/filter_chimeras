@@ -40,6 +40,8 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     help1 = 'Input sequences are not interleaved(default: interleaved)'
     parser.add_argument('--paired_fpaths', default=False,
                         help=help1, action='store_true')
+    parser.add_argument('--threads', default=None, type=int,
+                        help='number of threads for mapping (1)')
     settings = get_setting('CHIMERAS_SETTINGS')
     settings_group = parser.add_argument_group('Settings')
 
@@ -70,6 +72,7 @@ def parse_filter_args(parser):
     args['insert_size'] = parsed_args.insert_size
     args['tempdir'] = parsed_args.tempdir
     args['interleaved'] = not parsed_args.paired_fpaths
+    args['threads'] = parsed_args.threads
 
     settings = get_setting('CHIMERAS_SETTINGS')
     setting_args = {}
@@ -98,6 +101,7 @@ def run():
     mate_distance = args['insert_size']
     tempdir = args['tempdir']
     interleaved = args['interleaved']
+    threads = args['threads']
     in_fhand_name = in_fhands[0].name.split('/')
     if chimeras_fpath is not None:
         chimeras_fhand = open(chimeras_fpath, 'w')
@@ -114,7 +118,7 @@ def run():
     filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                     unknown_fhand, settings=settings,
                     mate_distance=mate_distance, directory=tempdir,
-                    interleaved=interleaved)
+                    interleaved=interleaved, threads=threads)
     flush_fhand(out_fhand)
     flush_fhand(chimeras_fhand)
     flush_fhand(unknown_fhand)
