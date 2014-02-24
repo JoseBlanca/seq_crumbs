@@ -4,6 +4,8 @@ Created on 2014 ots 11
 
 @author: peio
 '''
+from __future__ import division
+
 import sys
 import argparse
 from bam_crumbs.statistics import mapped_count_by_rg
