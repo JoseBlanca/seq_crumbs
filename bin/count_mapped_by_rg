@@ -34,10 +34,23 @@ def main():
     parser = _setup_argparse()
     in_fpaths, out_fhand = _parse_args(parser)
     counts = mapped_count_by_rg(in_fpaths)
-    out_fhand.write('Readgroup\tMapped\tUnmapped\n')
+    out_fhand.write('Readgroup\tMapped\tUnmapped\t% mapped\n')
+    total_mapped = 0
+    total_unmapped = 0
     for rg, map_counts in counts.items():
-        out_fhand.write('{}\t{}\t{}\n'.format(rg, map_counts['mapped'],
-                                              map_counts['unmapped']))
+        mapped = map_counts['mapped']
+        unmapped = map_counts['unmapped']
+        num_reads = mapped + unmapped
+        total_mapped += mapped
+        total_unmapped += unmapped
+
+        out_fhand.write('{}\t{}\t{}\t{:.2%}\n'.format(rg, mapped, unmapped,
+                                                      mapped / num_reads))
+    out_fhand.write('--------------------------\n')
+    out_fhand.write('Total:\t{}\t{}\t{:.2%}\n'.format(total_mapped,
+                                                      total_unmapped,
+                               total_mapped / (total_mapped + total_unmapped)))
+
 
 if __name__ == '__main__':
     main()
