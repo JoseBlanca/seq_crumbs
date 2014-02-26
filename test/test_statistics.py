@@ -2,7 +2,6 @@
 import os.path
 import unittest
 from subprocess import check_output
-from array import array
 
 import pysam
 
@@ -113,6 +112,12 @@ class StatsTest(unittest.TestCase):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'sample_no_rg.bam')
         map_counts = mapped_count_by_rg([bam_fpath])
         assert map_counts['sample_no_rg']['mapped'] == 1
+        assert 'bigger_mapqx' not in map_counts['sample_no_rg']
+        map_counts = mapped_count_by_rg([bam_fpath], mapqx=20)
+        assert map_counts['sample_no_rg']['bigger_mapqx'] == 1
+
+        map_counts = mapped_count_by_rg([bam_fpath], mapqx=50)
+        assert map_counts['sample_no_rg']['bigger_mapqx'] == 0
 
     def test_bin_mapped_counts(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')

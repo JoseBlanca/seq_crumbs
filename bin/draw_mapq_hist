@@ -12,7 +12,7 @@ import pysam
 from crumbs.utils.bin_utils import main, build_version_msg
 
 from bam_crumbs.statistics import ReadStats
-from bam_crumbs.plot import draw_histogram
+from crumbs.statistics import draw_histogram, draw_histogram_matlib
 
 
 def _setup_argparse():
@@ -21,9 +21,11 @@ def _setup_argparse():
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('input', help='BAM or SAM file to process',
                         type=argparse.FileType('rt'), nargs='*')
-    parser.add_argument('-o', '--outfile', dest='outfile', default=sys.stdout,
-                        help='Output file. Use it if you want to mantain input file',
+    parser.add_argument('-o', '--outfile', dest='outfile', required=True,
+                        help='Output file',
                         type=argparse.FileType('wt'))
+    parser.add_argument('-t', '--ascii_output', action='store_true',
+                        help='Output an ascci ghrap')
 
     parser.add_argument('--version', action='version',
                         version=build_version_msg())
@@ -35,29 +37,38 @@ def _parse_args(parser):
 
     parsed_args = parser.parse_args()
     bam_fhands = parsed_args.input
+    ascii_output = parsed_args.ascii_output
     out_fhand = getattr(parsed_args, 'outfile')
 
-    return {'bam_fhands': bam_fhands, 'out_fhand': out_fhand}
+    return {'bam_fhands': bam_fhands, 'out_fhand': out_fhand,
+            'ascii_output': ascii_output}
 
 
 def run():
     'It makes the actual job'
     parser = _setup_argparse()
     args = _parse_args(parser)
+    out_fhand = args['out_fhand']
     bams = [pysam.Samfile(bam_fhand.name) for bam_fhand in args['bam_fhands']]
     read_stats = ReadStats(bams)
     mapq_counter = read_stats.mapqs
 
-    mapqs = [i for i in mapq_counter.elements()]
+    distrib = mapq_counter.calculate_distribution()
 
-    kwargs = {'title': 'Mapq distribution',
-              'xlabel': 'mapq', 'ylabel': 'num_seqs'}
-    draw_histogram(mapqs, args['out_fhand'], bins=mapq_counter.max, **kwargs)
+    if not args['ascii_output']:
+        draw_histogram_matlib(distrib['counts'],
+                              bin_edges=distrib['bin_limits'], fhand=out_fhand,
+                              title='Mapq distribution',
+                              ylabel="Num. Seqs",
+                              xlabel="Mapq")
+    else:
+        out_fhand.write('\n')
+        out_fhand.write('Distribution of coverages\n')
+        out_fhand.write('-------------------------\n')
+        out_fhand.write(draw_histogram(distrib['bin_limits'],
+                                       distrib['counts']))
+
 
 if __name__ == '__main__':
     # sys.argv.append('-h')
     sys.exit(main(run))
-
-
-
-

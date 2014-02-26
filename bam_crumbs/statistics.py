@@ -319,7 +319,8 @@ def get_rg_from_alignedread(read):
     return None if not rgid else rgid[0]
 
 
-def mapped_count_by_rg(bam_fpaths):
+def mapped_count_by_rg(bam_fpaths, mapqx=None):
+    do_mapqx = True if mapqx is not None else False
     counter_by_rg = {}
     for bam_fpath in bam_fpaths:
         bam = pysam.Samfile(bam_fpath, 'rb')
@@ -330,13 +331,17 @@ def mapped_count_by_rg(bam_fpaths):
         else:
             readgroups = [rg['ID'] for rg in readgroups]
         for readgroup in readgroups:
-            counter_by_rg[readgroup] = IntCounter({'unmapped': 0,
-                                                   'mapped': 0})
+            counter = IntCounter({'unmapped': 0, 'mapped': 0})
+            if do_mapqx:
+                counter['bigger_mapqx'] = 0
+            counter_by_rg[readgroup] = counter
 
         for read in bam:
             rg = get_rg_from_alignedread(read)
             if rg is None:
                 rg = bam_basename
+            if do_mapqx and read.mapq >= mapqx:
+                counter_by_rg[rg]['bigger_mapqx'] += 1
             if read.is_unmapped:
                 counter_by_rg[rg]['unmapped'] += 1
             else:
