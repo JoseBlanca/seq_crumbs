@@ -40,7 +40,7 @@ def _setup_argparse():
                         help='Output file. File to write the graph',
                         type=argparse.FileType('wt'))
     parser.add_argument('-t', '--ascii_output', action='store_true',
-                        help='Output an ascci ghrap')
+                        help='Output an ascci graph')
     parser.add_argument('-m', '--xlim_left', type=int,
                         help='Limit of the x axes in the left')
     parser.add_argument('-M', '--xlim_rigth', type=int,
@@ -84,11 +84,11 @@ def run():
         for coverage_limit in COVERAGE_RANGE:
             if cov >= coverage_limit:
                 limit_count[coverage_limit] += count
-    sys.stdout.write('Percentaje of positions with the given coverage:\n')
+    sys.stdout.write('Positions with the given coverage: count and %\n')
     for limit in sorted(limit_count.keys()):
-        sys.stdout.write("{}\t{:.2%}\n".format(limit,
-                                              limit_count[limit] /
-                                              total_base_length))
+        sys.stdout.write("{}\t{}\t{:.2%}\n".format(limit, limit_count[limit],
+                                                   limit_count[limit] /
+                                                   total_base_length))
     distrib = coverage_counter.calculate_distribution(min_=args['xlim_left'],
                                                       max_=args['xlim_rigth'])
 
