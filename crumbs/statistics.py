@@ -19,7 +19,15 @@ from __future__ import division
 from collections import Counter
 import operator
 import re
+from os.path import splitext
 
+try:
+    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+    from matplotlib.figure import Figure
+except ImportError:
+    pass
+
+from crumbs.exceptions import OptionalRequirementError
 from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
@@ -824,3 +832,69 @@ class BestItemsKeeper(object):
 
     def __str__(self):
         return str(self._best_items)
+
+
+def _guess_output_for_matplotlib(fhand):
+    'Given an fhand it guesses if we need png or svg'
+    output = None
+    if fhand is not None:
+        output = splitext(fhand.name)[-1].strip('.')
+    if not output:
+        output = 'png'
+    return output
+
+
+def draw_histogram_matlib(values, bin_edges, title=None, xlabel= None,
+                          ylabel=None, fhand=None):
+    'It draws an histogram and if the fhand is given it saves it'
+
+    plot_format = _guess_output_for_matplotlib(fhand)
+    try:
+        fig = Figure()
+        canvas = FigureCanvas(fig)
+    except NameError:
+        msg = 'Matplotlib module is required to draw graphical histograms'
+        raise OptionalRequirementError(msg)
+
+    axes = fig.add_subplot(111)
+    if xlabel:
+        axes.set_xlabel(xlabel)
+    if ylabel:
+        axes.set_ylabel(ylabel)
+    if title:
+        axes.set_title(title)
+
+    xvalues = range(len(values))
+
+    axes.bar(xvalues, values)
+
+    #the x axis label
+    xticks_pos = [value + 0.5 for value in xvalues]
+
+    left_val = None
+    right_val = None
+    xticks_labels = []
+    for value in bin_edges:
+        right_val = value
+        if left_val:
+            xticks_label = (left_val + right_val) / 2.0
+            if xticks_label >= 10:
+                fmt = '%d'
+            elif xticks_label >= 0.1 and xticks_label < 10:
+                fmt = '%.1f'
+            elif xticks_label < 0.1:
+                fmt = '%.1e'
+            xticks_label = fmt % xticks_label
+            xticks_labels.append(xticks_label)
+        left_val = right_val
+
+    #we don't want to clutter the plot
+    num_of_xlables = 15
+    step = int(len(values) / float(num_of_xlables))
+    xticks_pos = xticks_pos[::step]
+    xticks_labels = xticks_labels[::step]
+    axes.set_xticks(xticks_pos)
+    axes.set_xticklabels(xticks_labels)
+
+    canvas.print_figure(fhand, format=plot_format)
+    fhand.flush()
