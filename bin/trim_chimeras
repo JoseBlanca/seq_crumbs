@@ -48,7 +48,6 @@ def parse_filter_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_args(parser)
     args['reference'] = parsed_args.reference_seq
-    args['bamfile'] = parsed_args.bamfile
     args['tempdir'] = parsed_args.tempdir
     args['max_clipping'] = parsed_args.max_clipping
     args['interleaved'] = parsed_args.interleaved
