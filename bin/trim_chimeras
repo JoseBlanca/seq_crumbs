@@ -39,6 +39,8 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     parser.add_argument('--max_clipping',
                         default=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
                         help=help1)
+    parser.add_argument('--threads', default=None, type=int,
+                        help='number of threads for mapping (1)')
     return parser
 
 
@@ -50,6 +52,7 @@ def parse_filter_args(parser):
     args['tempdir'] = parsed_args.tempdir
     args['max_clipping'] = parsed_args.max_clipping
     args['interleaved'] = parsed_args.interleaved
+    args['threads'] = parsed_args.threads
 
     return args, parsed_args
 
@@ -65,9 +68,10 @@ def run():
     max_clipping = args['max_clipping']
     tempdir = args['tempdir']
     interleaved = args['interleaved']
+    threads = args['threads']
     trim_chimeras(in_fpaths, out_fhand, ref_fpath,
                   max_clipping=max_clipping, tempdir=tempdir,
-                  interleaved=interleaved)
+                  interleaved=interleaved, threads=threads)
     flush_fhand(out_fhand)
 
 if __name__ == '__main__':

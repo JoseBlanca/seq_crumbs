@@ -726,12 +726,12 @@ def trim_chimeric_region(bamfile, max_clipping):
 
 def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None,
                 max_clipping=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
-                  tempdir='/tmp', interleaved=True):
+                  tempdir='/tmp', interleaved=True, threads=None):
     if ref_fpath is None:
         bamfile = pysam.Samfile(in_fpaths[0])
     else:
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
-                                   interleaved=interleaved)
+                                   interleaved=interleaved, threads=threads)
     trimmed_seqs = trim_chimeric_region(bamfile, max_clipping)
     write_seqs(trimmed_seqs, out_fhand)
 
