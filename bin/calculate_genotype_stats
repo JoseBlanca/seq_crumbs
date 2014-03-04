@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+'''
+Calculate genotyping related statistics by sample
+'''
+import sys
+import argparse
+import vcf
+from crumbs.statistics import IntCounter
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'Filter the snvs in an indexed vcf'
+    parser = argparse.ArgumentParser(description=description)
+    in_help = 'Indexed vcf file'
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rt'))
+
+    parser.add_argument('-o', '--output',
+                        help='output tabbed file (default STDOUT)',
+                        type=argparse.FileType('wt'))
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    args = {}
+    args['in_fhand'] = parsed_args.input
+    if parsed_args.output is not None:
+        args['out_fhand'] = parsed_args.output
+    else:
+        args['out_fhand'] = sys.stdout
+    return args
+
+
+def main():
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+    reader = vcf.Reader(args['in_fhand'])
+
+    geno_stats_by_sample = IntCounter()
+    called_stats = IntCounter()
+    for record in reader:
+        called_stats[record.num_called] += 1
+        for call in record.samples:
+            if call.called:
+                geno_stats_by_sample[call.sample] += 1
+    out_fhand = args['out_fhand']
+    out_fhand.write('Num snps involved per sample:\n')
+    for sample in sorted(geno_stats_by_sample.keys()):
+        out_fhand.write('{}\t{}\n'.format(sample,
+                                          geno_stats_by_sample[sample]))
+
+    out_fhand.write('Num snps per samples called to build it:\n')
+    for num_samples, num_snvs in called_stats.items():
+        out_fhand.write('{}\t{}\n'.format(num_samples, num_snvs))
+
+
+if __name__ == '__main__':
+    main()

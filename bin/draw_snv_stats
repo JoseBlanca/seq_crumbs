@@ -7,11 +7,11 @@ Created on 2013 urr 3
 
 import argparse
 import os
-
-from vcf_crumbs.vcf_stats import calc_density_per_chrom, get_data_from_vcf, HET,\
-    HOM_ALT, HOM_REF
-from bam_crumbs.plot import draw_histogram, draw_scatter
 import sys
+
+from bam_crumbs.plot import draw_histogram, draw_scatter
+from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
+                                  HET, HOM_ALT, HOM_REF)
 
 
 def _setup_argparse():
@@ -61,7 +61,8 @@ def main():
     #mafs
     samples = list(data['samples']) + ['all']
     for sample in samples:
-        maf_fhand = open(os.path.join(out_dir, 'distrib_maf_per_snv_{}.png'.format(sample)), 'w')
+        maf_fhand = open(os.path.join(out_dir,
+                             'distrib_maf_per_snv_{}.png'.format(sample)), 'w')
         kwargs = {'title': 'Maf distribution for sample {}'.format(sample),
                   'xlim': (0.5, 1), 'xlabel': 'Maf', 'ylabel': 'Num. Snvs'}
         mafs = [maf[sample] for maf in data['maf_per_snp'] if sample in maf]
@@ -74,9 +75,12 @@ def main():
               'xlabel': 'Reference_allele count', 'xlim': 0, 'ylim': 0}
 
     draw_scatter(data['call_data'].values(), scatter_fhand, **kwargs)
+
     sys.stdout.write('Num hete: {}\n'.format(len(data['call_data'][HET]['x'])))
-    sys.stdout.write('Num_hom_ref: {}\n'.format(len(data['call_data'][HOM_REF]['x'])))
-    sys.stdout.write('Num_hom_alt: {}\n'.format(len(data['call_data'][HOM_ALT]['x'])))
+    sys.stdout.write('Num_hom_ref: {}\n'.format(
+                                        len(data['call_data'][HOM_REF]['x'])))
+    sys.stdout.write('Num_hom_alt: {}\n'.format(
+                                        len(data['call_data'][HOM_ALT]['x'])))
 
 if __name__ == '__main__':
     main()
