@@ -13,6 +13,7 @@ from crumbs.seqio import read_seqs
 
 VARSCAN = 'VarScan'
 GATK = 'gatk'
+FREEBAYES = 'freebayes'
 
 # taken from pyvcf
 HOM_REF = 0
@@ -22,17 +23,21 @@ HOM_ALT = 2
 
 def get_snpcaller_name(reader):
     metadata = reader.metadata
-    if 'source' in metadata and 'VarScan2' in metadata['source']:
-        return VARSCAN
+    if 'source' in metadata:
+        if 'VarScan2' in metadata['source']:
+            return VARSCAN
+        elif 'freebayes' in metadata['source'][0].lower():
+            return FREEBAYES
     if 'UnifiedGenotyper' in metadata:
         return GATK
+
     return None
 
 
 def _get_call_data(call, snpcaller):
     data = call.data
     gt = data.GT
-    gq = data.GQ
+    gq = int(data.GQ)
     dp = data.DP
     if snpcaller == GATK:
         rd = data.AD[0]
@@ -40,6 +45,12 @@ def _get_call_data(call, snpcaller):
     elif snpcaller == VARSCAN:
         rd = data.RD
         ad = data.AD
+    elif snpcaller == FREEBAYES:
+        rd = data.RO
+        ad = data.AO
+        if isinstance(ad, list):
+            print ad
+            ad = sum(ad)
     return gt, gq, dp, rd, ad
 
 
