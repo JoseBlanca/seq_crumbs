@@ -49,7 +49,6 @@ def _get_call_data(call, snpcaller):
         rd = data.RO
         ad = data.AO
         if isinstance(ad, list):
-            print ad
             ad = sum(ad)
     return gt, gq, dp, rd, ad
 
