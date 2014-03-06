@@ -8,6 +8,7 @@ from configobj import ConfigObj
 
 from vcf import Reader, Writer
 from vcf.parser import _Filter, _Info
+from vcf_crumbs.vcf_stats import get_snpcaller_name
 
 FILTERS_USING_VCF = ('CloseToSnvFilter', 'HighVariableRegionFilter')
 
@@ -59,7 +60,10 @@ def _parse_filters_conf(fpath, snv_in_fpath):
 
 def _manage_mappers(reader, filters_in_conf):
     mappers_to_use = []
+    snp_caller = get_snpcaller_name(reader)
     for mapper in filters_in_conf:
+        # we add the snp caller to the mapper
+        mapper.vcf_variant = snp_caller
         if mapper.name in reader.filters:
             new_conf = mapper.conf
             conf_in_vcf = reader.filters[mapper.name].desc.split('::')[1]
@@ -72,7 +76,7 @@ def _manage_mappers(reader, filters_in_conf):
         else:
             mappers_to_use.append(mapper)
 
-    # se anyaden la metadata de FILTERS e INFO al reader
+    # se anyaden la metadata de FILTERS e INFO al reader. Tambien se
     for mapper in mappers_to_use:
         reader.filters[mapper.name] = _Filter(mapper.name,
                                                mapper.description)

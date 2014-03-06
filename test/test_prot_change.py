@@ -91,8 +91,8 @@ class ProteinChangeTest(unittest.TestCase):
         seq2 = SeqRecord(id='seq2', seq=Seq(seq2))
         seq_coord = SeqCoords(seq1, seq2)
         assert seq_coord.coord_system['seq1'] == [(4, 8), (10, 23), (24, 33)]
-        assert seq_coord.coord_system['seq2'] == [(0, 4), (5, 18), (20, 29)]
-        assert seq_coord.to_seq1_slice(22, 29) == (26, 33)
+        assert seq_coord.coord_system['seq2'] == [(1, 5), (6, 19), (21, 30)]
+        assert seq_coord.to_seq1_slice(23, 30) == (26, 33)
         #reverse alignment
         seq1 = 'ATCTAGGCTGCTACGATTAGCTGACGATGTTATCGTAGATCTAGCTGATCATCTAGCTGATC'
         seq2 = 'GGATAACATCGATCAGCTAATCGTAGAGCCT'

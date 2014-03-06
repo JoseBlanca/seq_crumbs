@@ -9,6 +9,7 @@ from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
 from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
+from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK
 
 COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
@@ -24,8 +25,8 @@ def _calculate_maf_for_counts(counts):
     return freqs[-1] if freqs else None
 
 
-def calculate_maf(record):
-    counts = count_alleles(record)['all']
+def calculate_maf(record, vcf_variant):
+    counts = count_alleles(record, vcf_variant=vcf_variant)['all']
     return _calculate_maf_for_counts(counts)
 
 
@@ -39,7 +40,7 @@ def aggregate_allele_counts(allele_counts):
     return {'all': all_counts}
 
 
-def count_alleles(record, sample_names=None):
+def count_alleles(record, sample_names=None, vcf_variant=None):
     if sample_names is None:
         choosen_samples = record.samples
     else:
@@ -63,12 +64,22 @@ def count_alleles(record, sample_names=None):
             allele = alleles[genotype]
             if allele not in counts:
                 counts[call.sample][allele] = 0
-            if hasattr(call.data, 'RD'):
-                #VARSCAN
+            if vcf_variant == VARSCAN:
                 allele_counts = call.data.RD if genotype == 0 else call.data.AD
-            else:
+
+            elif vcf_variant == FREEBAYES:
+                if genotype == 0:
+                    acs = call.data.RO
+                else:
+                    ao = call.data.AO
+                    acs = ao[genotype - 1] if isinstance(ao, list) else ao
+                allele_counts = acs
+            elif vcf_variant == GATK:
                 #GATK
                 allele_counts = call.data.AD[index]
+            else:
+                msg = 'This snp_caller is not supported: {}'
+                raise NotImplementedError(msg.format(vcf_variant))
             counts[call.sample][allele] += allele_counts
         if not counts[call.sample]:
             del counts[call.sample]
@@ -86,6 +97,7 @@ def _str_alleles(record):
 
 
 class BaseFilter(object):
+
     def __call__(self, record):
         raise NotImplementedError()
 
@@ -141,7 +153,8 @@ class CloseToSnvFilter(BaseFilter):
                 if snv_type == snv.var_type:
                     passed_snvs += 1
             elif maf is not None  and snv_type is None:
-                calculated_maf = calculate_maf(snv)
+                calculated_maf = calculate_maf(snv,
+                                               vcf_variant=self.vcf_variant)
                 if calculated_maf and calculated_maf < maf:
                     passed_snvs += 1
             else:
@@ -258,7 +271,8 @@ class MafLimitFilter(BaseFilter):
 
     def __call__(self, record):
         self._clean_filter(record)
-        allele_counts = count_alleles(record, sample_names=self.samples)
+        allele_counts = count_alleles(record, sample_names=self.samples,
+                                      vcf_variant=self.vcf_variant)
         all_counts = aggregate_allele_counts(allele_counts)
         maf = _calculate_maf_for_counts(all_counts['all'])
         if max and maf > self.max_maf:
@@ -408,7 +422,8 @@ class IsVariableFilter(BaseFilter):
         is_variable = variable_in_samples(record, self.samples, self.in_union,
                                           self.max_maf, self.in_all_groups,
                                           self.reference_free, self.min_reads,
-                                          self.min_reads_per_allele)
+                                          self.min_reads_per_allele,
+                                          vcf_variant=self.vcf_variant)
         if not is_variable:
             record.add_filter(self.name)
         return record
@@ -445,7 +460,8 @@ class IsNotVariableFilter(BaseFilter):
         is_invariable = invariant_in_samples(record, self.samples,
                                     in_union=self.in_union, maf=self.max_maf,
                                     reference_free=self.reference_free,
-                                    min_reads=self.min_reads)
+                                    min_reads=self.min_reads,
+                                    vcf_variant=self.vcf_variant)
         if not is_invariable:
             record.add_filter(self.name)
         return record
@@ -464,9 +480,9 @@ class IsNotVariableFilter(BaseFilter):
 
 def invariant_in_samples(record, samples, in_union=True,
                            in_all_groups=True, reference_free=True, maf=None,
-                           min_reads=None):
+                           min_reads=None, vcf_variant=None):
     'it check if the given snv is invariant form the given groups'
-    allele_counts = count_alleles(record, samples)
+    allele_counts = count_alleles(record, samples, vcf_variant=vcf_variant)
 
     if not allele_counts:
         return False if reference_free else True
@@ -493,8 +509,8 @@ def invariant_in_samples(record, samples, in_union=True,
 
 def variable_in_samples(record, samples, in_union=True, maf=None,
                         in_all_groups=True, reference_free=True,
-                        min_reads=6, min_reads_per_allele=3):
-    allele_counts = count_alleles(record, samples)
+                        min_reads=6, min_reads_per_allele=3, vcf_variant=None):
+    allele_counts = count_alleles(record, samples, vcf_variant=vcf_variant)
 
     if in_union:
         allele_counts = aggregate_allele_counts(allele_counts)

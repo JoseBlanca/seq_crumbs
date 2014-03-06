@@ -42,21 +42,21 @@ class SnvStatTests(unittest.TestCase):
         #varscan
         reader = Reader(filename=VARSCAN_VCF_PATH)
         snp = reader.next()
-        maf = calculate_maf(snp, snpcaller=VARSCAN)
+        maf = calculate_maf(snp, vcf_variant=VARSCAN)
         assert 0.52 < maf['all'] < 0.53
         assert maf['upv196'] == 1
 
         #gatk
         reader = Reader(filename=GATK_VCF_PATH)
         snp = reader.next()
-        maf = calculate_maf(snp, snpcaller=GATK)
+        maf = calculate_maf(snp, vcf_variant=GATK)
         assert 0.7 < maf['all'] < 0.72
         assert 0.7 < maf['hib_amarillo'] < 0.72
 
         #freebayes
         reader = Reader(filename=FREEBAYES_VCF_PATH)
         snp = reader.next()
-        maf = calculate_maf(snp, snpcaller=FREEBAYES)
+        maf = calculate_maf(snp, vcf_variant=FREEBAYES)
         assert maf == {'all': 1.0, 'pep': 1.0}
 
 

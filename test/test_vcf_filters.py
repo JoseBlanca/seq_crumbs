@@ -15,6 +15,7 @@ from vcf_crumbs.vcf_filters import (calculate_maf, CloseToSnvFilter,
                                     IsNotVariableFilter, ChangeAminoFilter,
                                     ChangeAminoSeverityFilter)
 from vcf_crumbs.utils import TEST_DATA_DIR
+from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -22,6 +23,7 @@ VCF_INDEL_PATH = join(TEST_DATA_DIR, 'sample_indel.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
 VARI_VCF_PATH = join(TEST_DATA_DIR, 'vari_filter.vcf')
 GATK_VCF_PATH = join(TEST_DATA_DIR, 'gatk_sample.vcf.gz')
+FREEBAYES_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz')
 
 
 def floats_are_equal(num1, num2):
@@ -41,24 +43,31 @@ class AnnotateRecordTests(unittest.TestCase):
     def test_mac_calcule(self):
         records = Reader(filename=VCF_PATH)
         rec1 = records.next()
-        assert floats_are_equal(calculate_maf(rec1), 0.526315789474)
+        assert floats_are_equal(calculate_maf(rec1, vcf_variant=VARSCAN),
+                                0.526315789474)
 
     def test_calculate_alleles(self):
         records = Reader(filename=VCF_PATH)
         rec1 = records.next()
-        counts = count_alleles(rec1, sample_names=['pepo', 'mu16'])['mu16']
+        counts = count_alleles(rec1, sample_names=['pepo', 'mu16'],
+                               vcf_variant=VARSCAN)['mu16']
         assert counts == {'A': 10}
-        counts = count_alleles(rec1)['all']
+        counts = count_alleles(rec1, vcf_variant=VARSCAN)['all']
         assert counts == {'A': 10, 'C': 9}
 
         records = Reader(filename=GATK_VCF_PATH)
         rec1 = records.next()
-        counts = count_alleles(rec1)
+        counts = count_alleles(rec1, vcf_variant=GATK)
         assert counts == {'all': {'T': 5, 'G': 2}}
         for record in Reader(filename=GATK_VCF_PATH):
             if record.CHROM == 'CAUC00157_TC01' and record.POS == 198:
-                counts = count_alleles(record)
+                counts = count_alleles(record, vcf_variant=GATK)
                 assert counts == {'all': {'C': 10, 'G': 41}}
+
+        for record in Reader(filename=FREEBAYES_VCF_PATH):
+            if record.CHROM == 'CUUC60606_TC01' and record.POS == 341:
+                counts = count_alleles(record, vcf_variant=FREEBAYES)
+                assert counts == {'all': {'TT': 2, 'TCT': 20, 'CT': 15}}
 
 
 class FakeClass(object):
@@ -79,6 +88,7 @@ class FilterTest(unittest.TestCase):
         rec1 = records.next()
         filter_ = CloseToSnvFilter(distance=60, max_maf=None,
                                    vcf_fpath=VCF_PATH)
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(rec1)
         assert filter_.name in rec1.FILTER
 
@@ -86,7 +96,7 @@ class FilterTest(unittest.TestCase):
         rec1 = records.next()
         filter_ = CloseToSnvFilter(distance=60, max_maf=0.5,
                                    vcf_fpath=VCF_PATH)
-
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(rec1)
         assert not filter_.name in rec1.FILTER
 
@@ -94,6 +104,7 @@ class FilterTest(unittest.TestCase):
         rec1 = records.next()
         filter_ = CloseToSnvFilter(distance=60, max_maf=0.6,
                                    vcf_fpath=VCF_PATH)
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(rec1)
         assert filter_.name in rec1.FILTER
         assert filter_.name == 'cs60_0.60'
@@ -171,10 +182,12 @@ class FilterTest(unittest.TestCase):
         records = Reader(filename=VCF_PATH)
         rec1 = records.next()
         filter_ = MafLimitFilter(max_maf=0.7)
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(rec1)
         assert not filter_.name in rec1.FILTER
 
         filter_ = MafLimitFilter(max_maf=0.5)
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(rec1)
         assert filter_.name in rec1.FILTER
 
@@ -223,12 +236,14 @@ class FilterTest(unittest.TestCase):
         record = records.next()
         filter_ = IsVariableFilter(max_maf=0.7, samples=['mu16', 'upv196'],
                                     filter_id=1)
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(deepcopy(record))
         assert not filter_.name in rec1.FILTER
 
         # in union False
         filter_ = IsVariableFilter(max_maf=0.7, samples=['mu16', 'upv196'],
                                    in_union=False, filter_id=1)
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(deepcopy(record))
         assert filter_.name in rec1.FILTER
 
@@ -236,6 +251,7 @@ class FilterTest(unittest.TestCase):
         filter_ = IsVariableFilter(max_maf=0.7, samples=['mu16', 'upv196'],
                                    in_union=False, in_all_groups=False,
                                    filter_id=1)
+        filter_.vcf_variant = VARSCAN
         rec1 = filter_(deepcopy(record))
         assert filter_.name in rec1.FILTER
 
@@ -245,6 +261,7 @@ class FilterTest(unittest.TestCase):
                              in_all_groups=True, reference_free=True,
                              min_reads=None, min_reads_per_allele=1,
                              filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert not f.name in rec1.FILTER
 
@@ -252,6 +269,7 @@ class FilterTest(unittest.TestCase):
                              in_all_groups=True, reference_free=True,
                              min_reads=None, min_reads_per_allele=1,
                              filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert not f.name in rec1.FILTER
 
@@ -259,6 +277,7 @@ class FilterTest(unittest.TestCase):
                              in_all_groups=True, reference_free=True,
                              min_reads=None, min_reads_per_allele=2,
                              filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
@@ -266,6 +285,7 @@ class FilterTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
@@ -273,6 +293,7 @@ class FilterTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
@@ -280,6 +301,7 @@ class FilterTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert not f.name in rec1.FILTER
 
@@ -287,6 +309,7 @@ class FilterTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=False, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
@@ -294,6 +317,7 @@ class FilterTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=False, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert not f.name in rec1.FILTER
 
@@ -301,7 +325,7 @@ class FilterTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
-
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
@@ -315,42 +339,49 @@ class FilterTest(unittest.TestCase):
         record = records.next()
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'], in_union=True,
                                 reference_free=True, max_maf=None, min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'], in_union=True,
                                 reference_free=False, max_maf=None,
                                 min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'], in_union=False,
                                 reference_free=False, max_maf=None,
                                 min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg2', 'rg4'],
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name not in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg3', 'rg4'],
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg3', 'rg4'],
                                 in_union=False, reference_free=True,
                                 max_maf=None, min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name not in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg5'],
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
@@ -358,12 +389,14 @@ class FilterTest(unittest.TestCase):
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'],
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name not in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg2', 'rg4'],
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
@@ -372,24 +405,28 @@ class FilterTest(unittest.TestCase):
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'],
                                 in_union=True, reference_free=True,
                                 max_maf=0.95, min_reads=50)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'],
                                 in_union=True, reference_free=True,
                                 max_maf=0.6, min_reads=50)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name not in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'],
                                 in_union=True, reference_free=True,
                                 max_maf=0.95, min_reads=200)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name not in rec1.FILTER
 
         f = IsNotVariableFilter(filter_id=1, samples=['rg1'],
                                 in_union=True, reference_free=True,
                                 max_maf=0.6, min_reads=200)
+        f.vcf_variant = VARSCAN
         rec1 = f(deepcopy(record))
         assert f.name not in rec1.FILTER
 
@@ -508,5 +545,5 @@ class BinaryTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterTest.test_high_variable_region_filter']
+    #import sys;sys.argv = ['', 'AnnotateRecordTests']
     unittest.main()
