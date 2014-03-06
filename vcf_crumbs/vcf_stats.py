@@ -30,35 +30,36 @@ def get_snpcaller_name(reader):
             return FREEBAYES
     if 'UnifiedGenotyper' in metadata:
         return GATK
+    raise NotImplementedError('Can not get snp caller of the vcf file')
 
-    return None
 
-
-def _get_call_data(call, snpcaller):
+def _get_call_data(call, vcf_variant):
     data = call.data
     gt = data.GT
     gq = int(data.GQ)
     dp = data.DP
-    if snpcaller == GATK:
+    if vcf_variant == GATK:
         rd = data.AD[0]
         ad = sum(data.AD[1:])
-    elif snpcaller == VARSCAN:
+    elif vcf_variant == VARSCAN:
         rd = data.RD
         ad = data.AD
-    elif snpcaller == FREEBAYES:
+    elif vcf_variant == FREEBAYES:
         rd = data.RO
         ad = data.AO
         if isinstance(ad, list):
             ad = sum(ad)
+    else:
+        raise NotImplementedError('Not using one of the supported snp callers')
     return gt, gq, dp, rd, ad
 
 
-def calculate_maf_old(snp, snpcaller):
+def calculate_maf_old(snp, vcf_variant):
     total_ad = 0
     total_rd = 0
     for call in snp.samples:
         if call.called:
-            rd, ad = _get_call_data(call, snpcaller)[3:]
+            rd, ad = _get_call_data(call, vcf_variant)[3:]
             total_ad += ad
             total_rd += rd
     values = [total_ad, total_rd]
@@ -69,13 +70,13 @@ def calculate_maf_old(snp, snpcaller):
     return maf
 
 
-def calculate_maf(snp, snpcaller):
+def calculate_maf(snp, vcf_variant):
     total_ad = 0
     total_rd = 0
     mafs = {}
     for call in snp.samples:
         if call.called:
-            rd, ad = _get_call_data(call, snpcaller)[3:]
+            rd, ad = _get_call_data(call, vcf_variant)[3:]
             if rd + ad == 0:
                 #freebayes writes some call data aldo it has no read counts for 
                 # this sample. We have to pass those
@@ -94,7 +95,7 @@ def calculate_maf(snp, snpcaller):
 
 def get_data_from_vcf(vcf_path):
     reader = Reader(filename=vcf_path)
-    snpcaller = get_snpcaller_name(reader)
+    vcf_variant = get_snpcaller_name(reader)
     typecode = 'I'
     data = {'samples': set(),
             'snps_per_chromo': Counter(),
@@ -114,14 +115,14 @@ def get_data_from_vcf(vcf_path):
     samples = data['samples']
     for snp in reader:
         chrom_counts[snp.CHROM] += 1
-        maf = calculate_maf(snp, snpcaller)
+        maf = calculate_maf(snp, vcf_variant=vcf_variant)
         if maf is not None:
             mafs.append(maf)
         #sample_data
         for call in snp.samples:
             samples.add(call.sample)
             if call.called:
-                gt, gq, dp, rd, ad = _get_call_data(call, snpcaller)
+                gt, gq, dp, rd, ad = _get_call_data(call, vcf_variant)
                 call_datas[call.gt_type]['x'].append(rd)
                 call_datas[call.gt_type]['y'].append(ad)
                 call_datas[call.gt_type]['value'].append(gq)
