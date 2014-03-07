@@ -24,6 +24,7 @@ REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
 VARI_VCF_PATH = join(TEST_DATA_DIR, 'vari_filter.vcf')
 GATK_VCF_PATH = join(TEST_DATA_DIR, 'gatk_sample.vcf.gz')
 FREEBAYES_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz')
+FREEBAYES2_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample2.vcf.gz')
 
 
 def floats_are_equal(num1, num2):
@@ -434,6 +435,16 @@ class FilterTest(unittest.TestCase):
         desc = 'It is variable, or no data, in the samples : rg1. '
         desc += 'All together: True'
         assert desc in f.description
+
+        #freebayes
+        records = Reader(filename=FREEBAYES2_VCF_PATH)
+        record = records.next()
+        f = IsNotVariableFilter(filter_id=1, samples=['sample01_gbs'],
+                                in_union=True, reference_free=True,
+                                max_maf=0.6, min_reads=3)
+        f.vcf_variant = FREEBAYES
+        f(record)
+        assert f.name in record.FILTER
 
     def test_amino_change_filter(self):
         seq_ref = """>SEUC00016_TC01
