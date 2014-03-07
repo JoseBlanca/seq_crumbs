@@ -77,6 +77,10 @@ def calculate_maf(snp, vcf_variant):
     for call in snp.samples:
         if call.called:
             rd, ad = _get_call_data(call, vcf_variant)[3:]
+            if rd + ad == 0:
+                #freebayes writes some call data aldo it has no read counts for 
+                # this sample. We have to pass those
+                continue
             mafs[call.sample] = max([rd, ad]) / sum([rd, ad])
             total_ad += ad
             total_rd += rd
