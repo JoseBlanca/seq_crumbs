@@ -250,9 +250,9 @@ def _complementary(sequence):
     return complement
 
 
-def alignedread_to_seqitem(aligned_read):
+def alignedread_to_seqitem(aligned_read, start_pos=0, end_pos=None):
     name = aligned_read.qname
-    seq = aligned_read.seq
+    seq = aligned_read.seq[start_pos: end_pos]
     quals = aligned_read.qual
     if aligned_read.is_reverse:
         seq = _reverse(_complementary(seq))
@@ -260,10 +260,10 @@ def alignedread_to_seqitem(aligned_read):
         lines = ['>' + name + '\n', seq + '\n']
         file_format = 'fasta'
     else:
+        quals = quals[start_pos: end_pos]
         if aligned_read.is_reverse:
             quals = _reverse(quals)
-        lines = ['@' + name + '\n', seq + '\n',
-                 '+\n', quals + '\n']
+        lines = ['@' + name + '\n', seq + '\n', '+\n', quals + '\n']
         file_format = 'fastq'
     return SeqWrapper(SEQITEM, SeqItem(name, lines), file_format)
 
