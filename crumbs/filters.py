@@ -707,7 +707,8 @@ def trim_chimeric_region(bamfile, max_clipping):
                     yield alignedread_to_seqitem(primary_alignment, qstart,
                                                  qend)
                 else:
-                    yield alignedread_to_seqitem(primary_alignment)
+                    qstart = _get_qstart(primary_alignment)
+                    yield alignedread_to_seqitem(primary_alignment, 0, qstart)
 
 
 def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None,
