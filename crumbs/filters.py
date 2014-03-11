@@ -444,6 +444,8 @@ def _read_is_totally_mapped(alignments_group, max_clipping):
 #different ways to calculate them using cigar information
 def _get_qstart(aligned_read):
     positions = 0
+    if aligned_read.cigar is None:
+        return None
     for element in aligned_read.cigar:
         if element[0] == 0:
             return positions
