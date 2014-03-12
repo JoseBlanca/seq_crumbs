@@ -36,7 +36,7 @@ def get_snpcaller_name(reader):
 def _get_call_data(call, vcf_variant):
     data = call.data
     gt = data.GT
-    gq = int(data.GQ)
+    gq = data.GQ
     dp = data.DP
     if vcf_variant == GATK:
         rd = data.AD[0]
@@ -49,6 +49,7 @@ def _get_call_data(call, vcf_variant):
         ad = data.AO
         if isinstance(ad, list):
             ad = sum(ad)
+
     else:
         raise NotImplementedError('Not using one of the supported snp callers')
     return gt, gq, dp, rd, ad
@@ -78,7 +79,7 @@ def calculate_maf(snp, vcf_variant):
         if call.called:
             rd, ad = _get_call_data(call, vcf_variant)[3:]
             if rd + ad == 0:
-                #freebayes writes some call data aldo it has no read counts for 
+                #freebayes writes some call data aldo it has no read counts for
                 # this sample. We have to pass those
                 continue
             mafs[call.sample] = max([rd, ad]) / sum([rd, ad])
@@ -97,15 +98,16 @@ def get_data_from_vcf(vcf_path):
     reader = Reader(filename=vcf_path)
     vcf_variant = get_snpcaller_name(reader)
     typecode = 'I'
+    value_typecode = 'f'
     data = {'samples': set(),
             'snps_per_chromo': Counter(),
             'maf_per_snp': [],
             'call_data': {HOM_REF: {'x': array(typecode), 'y': array(typecode),
-                                    'value': array(typecode)},
+                                    'value': array(value_typecode)},
                           HET: {'x': array(typecode), 'y': array(typecode),
-                                'value': array(typecode)},
+                                'value': array(value_typecode)},
                           HOM_ALT: {'x': array(typecode), 'y': array(typecode),
-                                    'value': array(typecode)}
+                                    'value': array(value_typecode)}
                          }
            }
 

@@ -73,7 +73,6 @@ def main():
     kwargs = {'title': 'Ref/alt allele count scatter',
               'ylabel': 'Alternative allele count',
               'xlabel': 'Reference_allele count', 'xlim': 0, 'ylim': 0}
-
     draw_scatter(data['call_data'].values(), scatter_fhand, **kwargs)
 
     sys.stdout.write('Num hete: {}\n'.format(len(data['call_data'][HET]['x'])))

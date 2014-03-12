@@ -33,6 +33,9 @@ class SnvStatTests(unittest.TestCase):
         assert data['samples'] == set(['upv196', 'pepo', 'mu16'])
 
     def test_calc_densities(self):
+        data = get_data_from_vcf(FREEBAYES_VCF_PATH)
+        assert 'snps_per_chromo' in data
+
         data = get_data_from_vcf(VARSCAN_VCF_PATH)
         densities = calc_density_per_chrom(data['snps_per_chromo'],
                                            open(REF_PATH))
@@ -80,6 +83,7 @@ class StatBinTests(unittest.TestCase):
         cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, FREEBAYES_VCF_PATH]
         stderr = NamedTemporaryFile()
         stdout = NamedTemporaryFile()
+        print " ".join(cmd)
         try:
             check_call(cmd, stderr=stderr, stdout=stdout)
         except CalledProcessError:
@@ -89,5 +93,5 @@ class StatBinTests(unittest.TestCase):
             tempdir.close()
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'SnvStatTests.test_calc_maf']
+    #import sys;sys.argv = ['', 'SnvStatTests.test_calc_densities']
     unittest.main()
