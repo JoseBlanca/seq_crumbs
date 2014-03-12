@@ -47,7 +47,9 @@ def _get_call_data(call, vcf_variant):
     elif vcf_variant == FREEBAYES:
         rd = data.RO
         ad = data.AO
-        if isinstance(ad, list):
+        if isinstance(ad, list): 
+            # mergin vcfs we can have None values in AD list
+            ad = [a for a in ad if a is not None]
             ad = sum(ad)
 
     else:
