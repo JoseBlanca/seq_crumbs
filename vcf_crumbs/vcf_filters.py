@@ -15,6 +15,8 @@ COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
                   'HaeIII', 'KpnI', 'ScaI', 'HinfI', 'DraI', 'ApaI', 'BstEII',
                   'ZraI', 'BanI', 'Asp718I']
+MIN_READS = 6
+MIN_READS_PER_ALLELE = 3
 
 
 def _calculate_maf_for_counts(counts):
@@ -64,9 +66,9 @@ def count_alleles(record, sample_names=None, vcf_variant=None):
             allele = alleles[genotype]
             if allele not in counts:
                 counts[call.sample][allele] = 0
+
             if vcf_variant == VARSCAN:
                 allele_counts = call.data.RD if genotype == 0 else call.data.AD
-
             elif vcf_variant == FREEBAYES:
                 if genotype == 0:
                     acs = call.data.RO
@@ -80,7 +82,11 @@ def count_alleles(record, sample_names=None, vcf_variant=None):
             else:
                 msg = 'This snp_caller is not supported: {}'
                 raise NotImplementedError(msg.format(vcf_variant))
-            counts[call.sample][allele] += allele_counts
+            try:
+                counts[call.sample][allele] += allele_counts
+            except TypeError:
+                #print allele_counts
+                raise
         if not counts[call.sample]:
             del counts[call.sample]
     if not sample_names:
@@ -399,10 +405,9 @@ class KindFilter(BaseFilter):
 class IsVariableFilter(BaseFilter):
     'Variable in readgroup'
 
-    def __init__(self, filter_id, samples, max_maf=None, min_reads=6,
-                 min_reads_per_allele=3, in_union=True, in_all_groups=True,
-                 reference_free=True
-                 ):
+    def __init__(self, filter_id, samples, max_maf=None, min_reads=MIN_READS,
+                 min_reads_per_allele=MIN_READS_PER_ALLELE, in_union=True,
+                 in_all_groups=True, reference_free=True):
         self.max_maf = max_maf
         self.samples = samples
         self.min_reads = min_reads
@@ -443,11 +448,12 @@ class IsVariableFilter(BaseFilter):
 class IsNotVariableFilter(BaseFilter):
     'Variable in readgroup'
 
-    def __init__(self, filter_id, samples, max_maf=None, min_reads=6,
-                 in_union=True, reference_free=True):
+    def __init__(self, filter_id, samples, max_maf=None, min_reads=MIN_READS,
+                 in_union=True, reference_free=True, min_reads_per_allele=MIN_READS_PER_ALLELE):
         self.max_maf = max_maf
         self.samples = samples
         self.min_reads = min_reads
+        self.min_reads_per_allele = min_reads_per_allele
         self.in_union = in_union
         self.reference_free = reference_free
         self.filter_id = filter_id
@@ -461,7 +467,8 @@ class IsNotVariableFilter(BaseFilter):
                                     in_union=self.in_union, maf=self.max_maf,
                                     reference_free=self.reference_free,
                                     min_reads=self.min_reads,
-                                    vcf_variant=self.vcf_variant)
+                                    vcf_variant=self.vcf_variant,
+                                    min_reads_per_allele=self.min_reads_per_allele)
         if not is_invariable:
             record.add_filter(self.name)
         return record
@@ -480,7 +487,8 @@ class IsNotVariableFilter(BaseFilter):
 
 def invariant_in_samples(record, samples, in_union=True,
                            in_all_groups=True, reference_free=True, maf=None,
-                           min_reads=None, vcf_variant=None):
+                           min_reads=None, vcf_variant=None,
+                           min_reads_per_allele=None):
     'it check if the given snv is invariant form the given groups'
     allele_counts = count_alleles(record, samples, vcf_variant=vcf_variant)
 
@@ -498,7 +506,7 @@ def invariant_in_samples(record, samples, in_union=True,
                                                  reference_free=reference_free,
                                                  maf=maf,
                                                  min_reads=min_reads,
-                                                 min_reads_per_allele=1)
+                                     min_reads_per_allele=min_reads_per_allele)
         invariable_in_samples.append(invariable_in_sample)
 
     if in_all_groups:
@@ -510,7 +518,8 @@ def invariant_in_samples(record, samples, in_union=True,
 def variable_in_samples(record, samples, in_union=True, maf=None,
                         in_all_groups=True, reference_free=True,
                         min_reads=6, min_reads_per_allele=3, vcf_variant=None):
-    allele_counts = count_alleles(record, samples, vcf_variant=vcf_variant)
+    allele_counts = count_alleles(record, sample_names=samples,
+                                  vcf_variant=vcf_variant)
 
     if in_union:
         allele_counts = aggregate_allele_counts(allele_counts)

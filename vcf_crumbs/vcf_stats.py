@@ -9,6 +9,7 @@ from  vcf import Reader
 
 from crumbs.seq import get_name, get_length
 from crumbs.seqio import read_seqs
+from crumbs.statistics import IntCounter
 
 
 VARSCAN = 'VarScan'
@@ -33,7 +34,7 @@ def get_snpcaller_name(reader):
     raise NotImplementedError('Can not get snp caller of the vcf file')
 
 
-def _get_call_data(call, vcf_variant):
+def get_call_data(call, vcf_variant):
     data = call.data
     gt = data.GT
     gq = data.GQ
@@ -47,7 +48,7 @@ def _get_call_data(call, vcf_variant):
     elif vcf_variant == FREEBAYES:
         rd = data.RO
         ad = data.AO
-        if isinstance(ad, list): 
+        if isinstance(ad, list):
             # mergin vcfs we can have None values in AD list
             ad = [a for a in ad if a is not None]
             ad = sum(ad)
@@ -57,29 +58,13 @@ def _get_call_data(call, vcf_variant):
     return gt, gq, dp, rd, ad
 
 
-def calculate_maf_old(snp, vcf_variant):
-    total_ad = 0
-    total_rd = 0
-    for call in snp.samples:
-        if call.called:
-            rd, ad = _get_call_data(call, vcf_variant)[3:]
-            total_ad += ad
-            total_rd += rd
-    values = [total_ad, total_rd]
-    total = sum(values)
-    if not total:
-        return None
-    maf = max(values) / total
-    return maf
-
-
 def calculate_maf(snp, vcf_variant):
     total_ad = 0
     total_rd = 0
     mafs = {}
     for call in snp.samples:
         if call.called:
-            rd, ad = _get_call_data(call, vcf_variant)[3:]
+            rd, ad = get_call_data(call, vcf_variant)[3:]
             if rd + ad == 0:
                 #freebayes writes some call data aldo it has no read counts for
                 # this sample. We have to pass those
@@ -96,7 +81,7 @@ def calculate_maf(snp, vcf_variant):
     return mafs
 
 
-def get_data_from_vcf(vcf_path):
+def get_data_from_vcf(vcf_path, gq_threshold=0):
     reader = Reader(filename=vcf_path)
     vcf_variant = get_snpcaller_name(reader)
     typecode = 'I'
@@ -104,6 +89,9 @@ def get_data_from_vcf(vcf_path):
     data = {'samples': set(),
             'snps_per_chromo': Counter(),
             'maf_per_snp': [],
+            'variable_gt_per_snp': array('f'),
+            'het_by_sample': {},
+            'genotype_qualities': array('f'),
             'call_data': {HOM_REF: {'x': array(typecode), 'y': array(typecode),
                                     'value': array(value_typecode)},
                           HET: {'x': array(typecode), 'y': array(typecode),
@@ -117,19 +105,43 @@ def get_data_from_vcf(vcf_path):
     mafs = data['maf_per_snp']
     call_datas = data['call_data']
     samples = data['samples']
+    het_by_sample = data['het_by_sample']
+    gqs = data['genotype_qualities']
     for snp in reader:
         chrom_counts[snp.CHROM] += 1
         maf = calculate_maf(snp, vcf_variant=vcf_variant)
         if maf is not None:
             mafs.append(maf)
         #sample_data
+        num_diff_to_ref_gts = 0
+        num_called = 0
         for call in snp.samples:
-            samples.add(call.sample)
+            sample_name = call.sample
+            if sample_name not in het_by_sample:
+                het_by_sample[sample_name] = IntCounter({'num_gt': 0,
+                                                         'num_het': 0})
+            samples.add(sample_name)
             if call.called:
-                gt, gq, dp, rd, ad = _get_call_data(call, vcf_variant)
+                gt, gq, dp, rd, ad = get_call_data(call, vcf_variant)
                 call_datas[call.gt_type]['x'].append(rd)
                 call_datas[call.gt_type]['y'].append(ad)
                 call_datas[call.gt_type]['value'].append(gq)
+                het_by_sample[sample_name]['num_gt'] += 1
+                gqs.append(gq)
+                if (call.is_het and gq >= gq_threshold):
+                    het_by_sample[sample_name]['num_het'] += 1
+
+                if (gq >= gq_threshold and call.gt_type == 2):
+                    num_diff_to_ref_gts += 1
+                if gq >= gq_threshold:
+                    num_called +=1
+
+        if snp.num_called:
+            if num_called != 0:
+                perc_variable = (num_diff_to_ref_gts / num_called) * 100
+                if perc_variable == 0.0:
+                    print snp, snp.samples, num_diff_to_ref_gts,  snp.num_called
+                data['variable_gt_per_snp'].append(perc_variable)
 
     return data
 

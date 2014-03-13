@@ -11,11 +11,13 @@ from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
 from subprocess import check_call, CalledProcessError
 from tempfile import NamedTemporaryFile
 from crumbs.utils.file_utils import TemporaryDir
+from crumbs.statistics import IntCounter
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
 GATK_VCF_PATH = join(TEST_DATA_DIR, 'gatk_sample.vcf.gz')
 FREEBAYES_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz')
+FREEBAYES_MULTI_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_multisample.vcf.gz')
 
 
 class SnvStatTests(unittest.TestCase):
@@ -29,8 +31,20 @@ class SnvStatTests(unittest.TestCase):
                                                                 FREEBAYES
 
     def test_get_data(self):
-        data = get_data_from_vcf(VARSCAN_VCF_PATH)
+        data = get_data_from_vcf(VARSCAN_VCF_PATH, gq_threshold=0)
         assert data['samples'] == set(['upv196', 'pepo', 'mu16'])
+        assert data['het_by_sample'] == \
+                        {'upv196': IntCounter({'num_gt': 90, 'num_het': 19}),
+                         'pepo': IntCounter({'num_gt': 29, 'num_het': 8}),
+                         'mu16': IntCounter({'num_gt': 107, 'num_het': 26})}
+
+        data = get_data_from_vcf(VARSCAN_VCF_PATH, gq_threshold=25)
+        assert data['het_by_sample'] == \
+                        {'upv196': IntCounter({'num_gt': 90, 'num_het': 7}),
+                         'pepo': IntCounter({'num_gt': 29, 'num_het': 4}),
+                         'mu16': IntCounter({'num_gt': 107, 'num_het': 18})}
+
+        print data['variable_gt_per_snp']
 
     def test_calc_densities(self):
         data = get_data_from_vcf(FREEBAYES_VCF_PATH)
@@ -83,7 +97,6 @@ class StatBinTests(unittest.TestCase):
         cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, FREEBAYES_VCF_PATH]
         stderr = NamedTemporaryFile()
         stdout = NamedTemporaryFile()
-        print " ".join(cmd)
         try:
             check_call(cmd, stderr=stderr, stdout=stdout)
         except CalledProcessError:
@@ -91,6 +104,7 @@ class StatBinTests(unittest.TestCase):
             sys.stdout.write(open(stdout.name).read())
         finally:
             tempdir.close()
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'SnvStatTests.test_calc_densities']
