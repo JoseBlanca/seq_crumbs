@@ -21,6 +21,12 @@ HOM_REF = 0
 HET = 1
 HOM_ALT = 2
 
+DP = 'deep'
+ACS = 'alt_counts'
+RC = 'ref_count'
+GQ = 'genotype_quality'
+GT = 'genotype'
+
 
 def get_snpcaller_name(reader):
     metadata = reader.metadata
@@ -37,25 +43,32 @@ def get_snpcaller_name(reader):
 def get_call_data(call, vcf_variant):
     data = call.data
     gt = data.GT
-    gq = data.GQ
+    try:
+        gq = data.GQ
+    except AttributeError:
+        gq = None
     dp = data.DP
     if vcf_variant == GATK:
-        rd = data.AD[0]
-        ad = sum(data.AD[1:])
+        alleles = [int(a) for a in gt.split('/')]
+        rd = 0
+        ad = []
+        for allele_count, allele in zip(data.AD, alleles):
+            if allele == 0:
+                rd = allele_count
+            else:
+                ad.append(allele_count)
     elif vcf_variant == VARSCAN:
         rd = data.RD
-        ad = data.AD
+        ad = [data.AD]
     elif vcf_variant == FREEBAYES:
         rd = data.RO
         ad = data.AO
-        if isinstance(ad, list):
-            # mergin vcfs we can have None values in AD list
-            ad = [a for a in ad if a is not None]
-            ad = sum(ad)
-
+        if isinstance(ad, int):
+            ad = [ad]
     else:
         raise NotImplementedError('Not using one of the supported snp callers')
-    return gt, gq, dp, rd, ad
+    calldata = {GT: gt, GQ: gq, DP: dp, RC: rd, ACS: ad}
+    return calldata
 
 
 def calculate_maf(snp, vcf_variant):
@@ -64,10 +77,12 @@ def calculate_maf(snp, vcf_variant):
     mafs = {}
     for call in snp.samples:
         if call.called:
-            rd, ad = get_call_data(call, vcf_variant)[3:]
+            calldata = get_call_data(call, vcf_variant)
+            rd = calldata[RC]
+            ad = sum(calldata[ACS])
             if rd + ad == 0:
-                #freebayes writes some call data aldo it has no read counts for
-                # this sample. We have to pass those
+                #freebayes writes some call data although it has no read counts
+                # for this sample. We have to pass those
                 continue
             mafs[call.sample] = max([rd, ad]) / sum([rd, ad])
             total_ad += ad
@@ -122,9 +137,10 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
                                                          'num_het': 0})
             samples.add(sample_name)
             if call.called:
-                gt, gq, dp, rd, ad = get_call_data(call, vcf_variant)
-                call_datas[call.gt_type]['x'].append(rd)
-                call_datas[call.gt_type]['y'].append(ad)
+                calldata = get_call_data(call, vcf_variant)
+                gq = calldata[GQ]
+                call_datas[call.gt_type]['x'].append(calldata[RC])
+                call_datas[call.gt_type]['y'].append(sum(calldata[ACS]))
                 call_datas[call.gt_type]['value'].append(gq)
                 het_by_sample[sample_name]['num_gt'] += 1
                 gqs.append(gq)
@@ -134,13 +150,13 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
                 if (gq >= gq_threshold and call.gt_type == 2):
                     num_diff_to_ref_gts += 1
                 if gq >= gq_threshold:
-                    num_called +=1
+                    num_called += 1
 
         if snp.num_called:
             if num_called != 0:
                 perc_variable = (num_diff_to_ref_gts / num_called) * 100
-                if perc_variable == 0.0:
-                    print snp, snp.samples, num_diff_to_ref_gts,  snp.num_called
+#                 if perc_variable == 0.0:
+#                     print snp, snp.samples, num_diff_to_ref_gts,  snp.num_called
                 data['variable_gt_per_snp'].append(perc_variable)
 
     return data
