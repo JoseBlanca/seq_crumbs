@@ -9,7 +9,8 @@ from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
 from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
-from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK
+from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, RC,\
+    ACS
 
 COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
@@ -61,27 +62,19 @@ def count_alleles(record, sample_names=None, vcf_variant=None):
 #             msg += " alleles being alternate alleles"
 #             print record.CHROM, record.POS
 #             raise NotImplementedError(msg)
-        for index, genotype in enumerate(call.gt_alleles):
+        for genotype in call.gt_alleles:
             genotype = int(genotype)
             allele = alleles[genotype]
             if allele not in counts:
                 counts[call.sample][allele] = 0
-
-            if vcf_variant == VARSCAN:
-                allele_counts = call.data.RD if genotype == 0 else call.data.AD
-            elif vcf_variant == FREEBAYES:
-                if genotype == 0:
-                    acs = call.data.RO
-                else:
-                    ao = call.data.AO
-                    acs = ao[genotype - 1] if isinstance(ao, list) else ao
-                allele_counts = acs
-            elif vcf_variant == GATK:
-                #GATK
-                allele_counts = call.data.AD[index]
+            call_data = get_call_data(call, vcf_variant)
+            if genotype == 0:
+                allele_counts = call_data[RC]
             else:
-                msg = 'This snp_caller is not supported: {}'
-                raise NotImplementedError(msg.format(vcf_variant))
+                try:
+                    allele_counts = call_data[ACS][genotype - 1]
+                except IndexError:
+                    allele_counts = call_data[ACS][0]
             try:
                 counts[call.sample][allele] += allele_counts
             except TypeError:

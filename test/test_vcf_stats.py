@@ -44,7 +44,7 @@ class SnvStatTests(unittest.TestCase):
                          'pepo': IntCounter({'num_gt': 29, 'num_het': 4}),
                          'mu16': IntCounter({'num_gt': 107, 'num_het': 18})}
 
-        print data['variable_gt_per_snp']
+        assert len(data['variable_gt_per_snp']) == 81
 
     def test_calc_densities(self):
         data = get_data_from_vcf(FREEBAYES_VCF_PATH)
