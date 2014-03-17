@@ -22,7 +22,8 @@ MIN_READS_PER_ALLELE = 3
 def _calculate_maf_for_counts(counts):
     counts = counts.values()
     dp = sum(counts)
-
+    if dp == 0:
+        return None
     freqs = sorted([count / float(dp) for count in counts])
     return freqs[-1] if freqs else None
 
