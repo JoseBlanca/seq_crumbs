@@ -444,8 +444,6 @@ def _read_is_totally_mapped(alignments_group, max_clipping):
 #different ways to calculate them using cigar information
 def _get_qstart(aligned_read):
     positions = 0
-    if aligned_read.cigar is None:
-        return None
     for element in aligned_read.cigar:
         if element[0] == 0:
             return positions
@@ -698,19 +696,17 @@ def trim_chimeric_region(bamfile, max_clipping):
     for grouped_mates in _group_alignments_by_reads(bamfile):
         for aligned_reads in _split_mates(grouped_mates):
             primary_alignment = _get_primary_alignment(aligned_reads)
-            if _read_is_totally_mapped([primary_alignment], max_clipping):
-                yield alignedread_to_seqitem(primary_alignment)
-            else:
-                _5end = _get_longest_5end_alinged_read(aligned_reads,
-                                                       max_clipping)
-                if _5end is not None:
+            _5end = _get_longest_5end_alinged_read(aligned_reads, max_clipping)
+            if _5end is not None:
+                if _read_is_totally_mapped([_5end], max_clipping):
+                    yield alignedread_to_seqitem(primary_alignment)
+                else:
                     qstart = _get_qstart(_5end)
                     qend = _get_qend(_5end)
                     yield alignedread_to_seqitem(primary_alignment, qstart,
                                                  qend)
-                else:
-                    qstart = _get_qstart(primary_alignment)
-                    yield alignedread_to_seqitem(primary_alignment, 0, qstart)
+            else:
+                yield alignedread_to_seqitem(primary_alignment)
 
 
 def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None,
