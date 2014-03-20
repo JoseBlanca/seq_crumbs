@@ -70,7 +70,7 @@ class Bowtie2Test(unittest.TestCase):
         reference_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
         forward_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
         reverse_fpath = NamedTemporaryFile().name
-        paired_fpaths = [[forward_fpath], [reverse_fpath]]
+        paired_fpaths = [[forward_fpath, reverse_fpath]]
         directory = TemporaryDir()
         index_fpath = get_or_create_bowtie2_index(reference_fpath,
                                                   directory.name)
@@ -127,7 +127,7 @@ class Bowtie2Test(unittest.TestCase):
         r_fhand = NamedTemporaryFile()
         r_fhand.write(query_r)
         r_fhand.flush()
-        paired_fpaths = [[f_fhand.name], [r_fhand.name]]
+        paired_fpaths = [[f_fhand.name, r_fhand.name]]
         ref_fhand = NamedTemporaryFile()
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
