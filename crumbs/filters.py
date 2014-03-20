@@ -660,9 +660,6 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
         in_fpaths = [fhand.name for fhand in in_fhands]
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
                                        directory, min_seed_len, threads)
-    total = 0
-    chimeric = 0
-    unknown = 0
     for pair, kind in classify_mapped_reads(bamfile, settings=settings,
                                            mate_distance=mate_distance,
                                            out_format=out_format):
@@ -670,16 +667,8 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
             write_seqs(pair, out_fhand)
         elif kind is CHIMERA and chimeras_fhand is not None:
             write_seqs(pair, chimeras_fhand)
-            chimeric += 1
         elif kind is UNKNOWN and unknown_fhand is not None:
             write_seqs(pair, unknown_fhand)
-            unknown += 1
-        total += 1
-    mapped = total - chimeric - unknown
-    print 'Total pairs analyzed: ', total
-    print 'Chimeric pairs filtered: ', chimeric, '\t', chimeric / float(total)
-    print 'Unknown pairs found: ', unknown, '\t', unknown / float(total)
-    print 'Non-chimeric pairs: ', mapped, '\t', mapped / float(total)
 
 
 def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
