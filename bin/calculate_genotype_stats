@@ -7,7 +7,7 @@ import sys
 import argparse
 import vcf
 from crumbs.statistics import IntCounter
-from vcf_crumbs.vcf_stats import get_call_data, get_snpcaller_name
+from vcf_crumbs.vcf_stats import get_call_data, get_snpcaller_name, GQ
 
 
 def _setup_argparse():
@@ -51,7 +51,7 @@ def main():
 
         num_called = 0
         for call in record.samples:
-            gq = get_call_data(call, vcf_variant=vcf_variant)[1]
+            gq = get_call_data(call, vcf_variant=vcf_variant)[GQ]
             if gq > gq_threshold and call.called:
                 geno_stats_by_sample[call.sample] += 1
                 num_called += 1
