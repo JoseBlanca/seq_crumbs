@@ -13,7 +13,8 @@ from vcf_crumbs.vcf_filters import (calculate_maf, CloseToSnvFilter,
                                     CloseToLimitFilter, IsVariableFilter,
                                     CapEnzymeFilter, count_alleles,
                                     IsNotVariableFilter, ChangeAminoFilter,
-                                    ChangeAminoSeverityFilter)
+                                    ChangeAminoSeverityFilter,
+    HeterozigoteInSamples)
 from vcf_crumbs.utils import TEST_DATA_DIR
 from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK
 
@@ -26,6 +27,7 @@ GATK_VCF_PATH = join(TEST_DATA_DIR, 'gatk_sample.vcf.gz')
 FREEBAYES_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz')
 FREEBAYES2_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample2.vcf.gz')
 FREEBAYES_MULTI_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_multisample2.vcf.gz')
+FREEBAYES3_VCF_PATH = join(TEST_DATA_DIR, 'variable_in_sample_5.vcf.gz')
 
 
 def floats_are_equal(num1, num2):
@@ -579,6 +581,74 @@ class FilterTest(unittest.TestCase):
             print snp.is_snp
 
 
+class TestInfoMappers(unittest.TestCase):
+
+    def test_hetegorigot_percent(self):
+        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        snp = reader.next()
+        het_in_samples = HeterozigoteInSamples(filter_id=1)
+        het_in_samples.vcf_variant = FREEBAYES
+        het_in_samples(snp)
+        info_id = het_in_samples.info_id
+        assert snp.INFO[info_id] == 'True'
+
+        snp = reader.next()
+        het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30, min_num_called=3)
+        het_in_samples.vcf_variant = FREEBAYES
+        het_in_samples(snp)
+        info_id = het_in_samples.info_id
+        assert snp.INFO[info_id] == 'None'
+
+        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        snp = reader.next()
+        het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=50,
+                                               min_num_called=8)
+        het_in_samples.vcf_variant = FREEBAYES
+        het_in_samples(snp)
+        info_id = het_in_samples.info_id
+        assert snp.INFO[info_id] == 'None'
+
+        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30,
+                                               min_num_called=3,
+                                               min_percent_het_gt=30)
+        het_in_samples.vcf_variant = FREEBAYES
+        for snp in reader:
+            if snp.POS == 272668159 and snp.CHROM == 'Pepper.v.1.55.chr01':
+                het_in_samples(snp)
+                info_id = het_in_samples.info_id
+                assert snp.INFO[info_id] == 'False'
+                break
+
+        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30,
+                                               min_num_called=3,
+                                               min_percent_het_gt=30,
+                                               samples=['sample05_gbs',
+                                                        'sample06_gbs',
+                                                        'sample07_gbs'])
+        het_in_samples.vcf_variant = FREEBAYES
+
+        for snp in reader:
+            if snp.POS == 228123401 and snp.CHROM == 'Pepper.v.1.55.chr10':
+                het_in_samples(snp)
+                info_id = het_in_samples.info_id
+                assert snp.INFO[info_id] == 'None'
+                break
+
+
+
+        return
+        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        for snp in reader:
+            print snp
+            for call in snp.samples:
+                print call.gt_type,
+            print
+
+
+
+
 class BinaryTest(unittest.TestCase):
     def test_run_binary(self):
         binary = join(dirname(__file__), '..', 'bin', 'run_vcf_filters')
@@ -609,5 +679,5 @@ class BinaryTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterTest.test_is_not_variable_filter']
+    #import sys;sys.argv = ['', 'TestInfoMappers']
     unittest.main()

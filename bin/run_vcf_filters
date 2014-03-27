@@ -78,8 +78,9 @@ def _manage_mappers(reader, filters_in_conf):
 
     # se anyaden la metadata de FILTERS e INFO al reader. Tambien se
     for mapper in mappers_to_use:
-        reader.filters[mapper.name] = _Filter(mapper.name,
-                                               mapper.description)
+        if mapper.is_filter:
+            reader.filters[mapper.name] = _Filter(mapper.name,
+                                                  mapper.description)
         if mapper.info:
             info = mapper.info
             reader.infos[info['id']] = _Info(**info)
