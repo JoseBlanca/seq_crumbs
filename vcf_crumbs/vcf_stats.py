@@ -96,6 +96,116 @@ def calculate_maf(snp, vcf_variant):
     return mafs
 
 
+class VcfStats(object):
+    def __init__(self, vcf_path, gq_threshold=None):
+        self.reader = Reader(filename=vcf_path)
+        self.vcf_variant = get_snpcaller_name(self.reader)
+        self._gq_threslhold = 0 if gq_threshold is None else gq_threshold
+        self._samples = set()
+        self._snps_per_chromo = Counter()
+        # mafs
+        self._mafs = {}
+        self._variable_gt_per_snp = IntCounter()
+        #het by sample
+        self._het_by_sample = {}
+
+        int_code = 'I'
+        float_code = 'f'
+        self._genotype_qualities = IntCounter()
+
+        self._call_data = {HOM_REF: {'x': array(int_code), 'y':
+                                     array(int_code),
+                                     'value': array(float_code)},
+                          HET: {'x': array(int_code), 'y': array(int_code),
+                                'value': array(float_code)},
+                          HOM_ALT: {'x': array(int_code), 'y': array(int_code),
+                                    'value': array(float_code)}
+                         }
+        self._calculate()
+
+    def _calculate(self):
+        vcf_variant = self.vcf_variant
+        gq_threshold = self._gq_threslhold
+        chrom_counts = self._snps_per_chromo
+        mafs = self._mafs
+        call_datas = self._call_data
+        samples = self._samples
+        het_by_sample = self._het_by_sample
+        gqs = self._genotype_qualities
+        variable_gt_per_snp = self._variable_gt_per_snp
+
+        for snp in self.reader:
+            chrom_counts[snp.CHROM] += 1
+
+            #maf
+            maf_per_sample = calculate_maf(snp, vcf_variant=vcf_variant)
+            if maf_per_sample:
+                for sample, maf in maf_per_sample.items():
+                    if sample not in mafs:
+                        mafs[sample] = IntCounter()
+                    if maf:
+                        maf = int(maf * 100)
+                        mafs[sample][maf] += 1
+
+            #sample_data
+            num_diff_to_ref_gts = 0
+            num_called = 0
+            for call in snp.samples:
+                sample_name = call.sample
+                samples.add(sample_name)
+                if sample_name not in het_by_sample:
+                    het_by_sample[sample_name] = IntCounter({'num_gt': 0,
+                                                             'num_het': 0})
+                if call.called:
+                    calldata = get_call_data(call, vcf_variant)
+                    gq = calldata[GQ]
+                    call_datas[call.gt_type]['x'].append(calldata[RC])
+                    call_datas[call.gt_type]['y'].append(sum(calldata[ACS]))
+                    call_datas[call.gt_type]['value'].append(gq)
+                    het_by_sample[sample_name]['num_gt'] += 1
+                    gqs[int(gq)] += 1
+                    if (call.is_het and gq >= gq_threshold):
+                        het_by_sample[sample_name]['num_het'] += 1
+
+                    if (gq >= gq_threshold and call.gt_type == 2):
+                        num_diff_to_ref_gts += 1
+                    if gq >= gq_threshold:
+                        num_called += 1
+
+            if snp.num_called:
+                if num_called != 0:
+                    perc_variable = int((num_diff_to_ref_gts / num_called) * 100)
+                    variable_gt_per_snp[perc_variable] += 1
+
+    @property
+    def snps_per_chromosome(self):
+        return self._snps_per_chromo
+
+    @property
+    def mafs(self):
+        return self._mafs
+
+    @property
+    def variable_gt_per_snp(self):
+        return self._variable_gt_per_snp
+
+    @property
+    def call_data(self):
+        return self._call_data
+
+    @property
+    def genotype_qualities(self):
+        return self._genotype_qualities
+
+    @property
+    def het_by_sample(self):
+        return self._het_by_sample
+
+    @property
+    def samples(self):
+        return list(self._samples)
+
+
 def get_data_from_vcf(vcf_path, gq_threshold=0):
     reader = Reader(filename=vcf_path)
     vcf_variant = get_snpcaller_name(reader)

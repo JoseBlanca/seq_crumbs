@@ -10,7 +10,8 @@ import os
 
 from bam_crumbs.plot import draw_histogram, draw_scatter
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
-                                  HET, HOM_ALT, HOM_REF)
+                                  HET, HOM_ALT, HOM_REF, VcfStats)
+from crumbs.statistics import draw_histogram_matlib
 
 
 def _setup_argparse():
@@ -49,11 +50,11 @@ def main():
     out_dir = args['out_dir']
     ref_fhand = args['ref_fhand']
     gq_threshold = args['gq']
-    data = get_data_from_vcf(args['in_fhand'].name, gq_threshold=gq_threshold)
+    vcf_stats = VcfStats(args['in_fhand'].name, gq_threshold=gq_threshold)
 
     #densities
-    densities = calc_density_per_chrom(data['snps_per_chromo'], ref_fhand,
-                                       size=100)
+    densities = calc_density_per_chrom(vcf_stats.snps_per_chromosome,
+                                       ref_fhand, size=100)
     density_fhand = open(os.path.join(out_dir, 'distrib_snv_per_100_pb.png'),
                          'w')
     kwargs = {'title': 'Distribution of snps per 100 pb',
@@ -61,45 +62,54 @@ def main():
     draw_histogram(densities.values(), density_fhand, bins=100, **kwargs)
 
     #mafs
-    samples = list(data['samples']) + ['all']
+    samples = vcf_stats.samples + ['all']
     for sample in samples:
         maf_fhand = open(os.path.join(out_dir,
                              'distrib_maf_per_snv_{}.png'.format(sample)), 'w')
-        kwargs = {'title': 'Maf distribution for sample {}'.format(sample),
-                  'xlim': (0.5, 1), 'xlabel': 'Maf', 'ylabel': 'Num. Snvs'}
-        mafs = [maf[sample] for maf in data['maf_per_snp'] if sample in maf]
-        draw_histogram(mafs, maf_fhand, bins=20, **kwargs)
+        sample_maf = vcf_stats.mafs[sample]
+        distrib = sample_maf.calculate_distribution(bins=50, min_=50, max_=100)
+        draw_histogram_matlib(distrib['counts'], fhand=maf_fhand,
+                              bin_edges=distrib['bin_limits'],
+                        title='Maf distribution for sample {}'.format(sample),
+                              xlabel="maf x 100", ylabel="Num. Snvs")
 
     # call_scatter
     scatter_fhand = open(os.path.join(out_dir, 'call_scatter.png'), 'w')
     kwargs = {'title': 'Ref/alt allele count scatter',
               'ylabel': 'Alternative allele count',
-              'xlabel': 'Reference_allele count', 'xlim': 0, 'ylim': 0}
-    draw_scatter(data['call_data'].values(), scatter_fhand, **kwargs)
+              'xlabel': 'Reference_allele count', 'xlim': (0, 100),
+              'ylim': (0, 100)}
+    draw_scatter(vcf_stats.call_data.values(), scatter_fhand, **kwargs)
 
     # het % for called sample per snp
     variable_gt_fhand = open(os.path.join(out_dir, 'variable_gt_per_snp.png'),
                              'w')
-    kwargs = {'title': 'Percentaje of heterozigote samples  per called samples  in each snp',
-              'xlabel': 'percentaje het', 'ylabel': 'num snps'}
-    draw_histogram(data['variable_gt_per_snp'], variable_gt_fhand, bins=100,
-                   **kwargs)
+    distrib = vcf_stats.variable_gt_per_snp.calculate_distribution(bins=100,
+                                                                   min_=0,
+                                                                   max_=100)
+    draw_histogram_matlib(distrib['counts'], fhand=variable_gt_fhand,
+                              bin_edges=distrib['bin_limits'],
+    title='Percentaje of heterozigote samples  per called samples  in each snp',
+                              xlabel='percentaje het', ylabel="Num. Snvs")
 
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
-    kwargs = {'title': 'Histogram of the genotype qualities',
-              'xlabel': 'genotype Qualities', 'ylabel': 'num calls'}
-    draw_histogram(data['genotype_qualities'], gqs_fhand, bins=100, **kwargs)
+    distrib = vcf_stats.variable_gt_per_snp.calculate_distribution(bins=100)
+    draw_histogram_matlib(distrib['counts'], bin_edges=distrib['bin_limits'],
+                          fhand=gqs_fhand,
+                          title='Histogram of the genotype qualities x 100',
+                          xlabel='genotype Qualities x 100',
+                          ylabel='num calls')
 
     stats_fhand = open(os.path.join(out_dir, 'snv_stats.txt'), 'w')
-    stats_fhand.write('Num of hete/homo calls.')
+    stats_fhand.write('Num of hete/homo calls.\n')
     stats_fhand.write('----------------------\n')
 
-    num_hets = len([gq for gq in data['call_data'][HET]['value']
+    num_hets = len([gq for gq in vcf_stats.call_data[HET]['value']
                                                         if gq >= gq_threshold])
-    num_hom_ref = len([gq for gq in data['call_data'][HOM_REF]['value']
+    num_hom_ref = len([gq for gq in vcf_stats.call_data[HOM_REF]['value']
                                                         if gq >= gq_threshold])
-    num_hom_alt = len([gq for gq in data['call_data'][HOM_ALT]['value']
+    num_hom_alt = len([gq for gq in vcf_stats.call_data[HOM_ALT]['value']
                                                         if gq >= gq_threshold])
 
     stats_fhand.write('Num hete: {}\n'.format(num_hets))
@@ -108,8 +118,8 @@ def main():
     stats_fhand.write('\n')
     stats_fhand.write('% of heterozigote genotypes per sample\n')
     stats_fhand.write('--------------------------------------\n')
-    for sample in sorted(data['het_by_sample'].keys()):
-        counter = data['het_by_sample'][sample]
+    for sample in sorted(vcf_stats.het_by_sample.keys()):
+        counter = vcf_stats.het_by_sample[sample]
         percentaje_het = counter['num_het'] / counter['num_gt']
         stats_fhand.write('{}\t{:.2%}\n'.format(sample, percentaje_het))
 
