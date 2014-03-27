@@ -64,17 +64,30 @@ def _manage_mappers(reader, filters_in_conf):
     for mapper in filters_in_conf:
         # we add the snp caller to the mapper
         mapper.vcf_variant = snp_caller
-        if mapper.name in reader.filters:
-            new_conf = mapper.conf
-            conf_in_vcf = reader.filters[mapper.name].desc.split('::')[1]
-            conf_in_vcf = conf_in_vcf.replace("'", "\"")
-            conf_in_vcf = json.loads(conf_in_vcf)
-            if new_conf == conf_in_vcf:  # no need to run again
-                continue
+        if mapper.is_filter:
+            if mapper.name in reader.filters:
+                new_conf = mapper.conf
+                conf_in_vcf = reader.filters[mapper.name].desc.split('::')[1]
+                conf_in_vcf = conf_in_vcf.replace("'", "\"")
+                conf_in_vcf = json.loads(conf_in_vcf)
+                if new_conf == conf_in_vcf:  # no need to run again
+                    continue
+                else:
+                    mappers_to_use.append(mapper)
             else:
                 mappers_to_use.append(mapper)
         else:
-            mappers_to_use.append(mapper)
+            if mapper.info_id in reader.infos:
+                new_conf = mapper.conf
+                conf_in_vcf = reader.infos[mapper.info_id].desc.split('::')[1]
+                conf_in_vcf = conf_in_vcf.replace("'", "\"")
+                conf_in_vcf = json.loads(conf_in_vcf)
+                if new_conf == conf_in_vcf:  # no need to run again
+                    continue
+                else:
+                    mappers_to_use.append(mapper)
+            else:
+                mappers_to_use.append(mapper)
 
     # se anyaden la metadata de FILTERS e INFO al reader. Tambien se
     for mapper in mappers_to_use:

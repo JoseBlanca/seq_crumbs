@@ -628,7 +628,6 @@ class TestInfoMappers(unittest.TestCase):
                                                         'sample06_gbs',
                                                         'sample07_gbs'])
         het_in_samples.vcf_variant = FREEBAYES
-
         for snp in reader:
             if snp.POS == 228123401 and snp.CHROM == 'Pepper.v.1.55.chr10':
                 het_in_samples(snp)
@@ -640,6 +639,7 @@ class TestInfoMappers(unittest.TestCase):
 
         return
         reader = Reader(open(FREEBAYES3_VCF_PATH))
+
         for snp in reader:
             print snp
             for call in snp.samples:
@@ -666,6 +666,10 @@ class BinaryTest(unittest.TestCase):
     [[CapEnzymeFilter]]
         all_enzymes = True
         ref_fpath = '{sample_fasta}'
+
+[4]
+    [[HeterozigoteInSamples]]
+        filter_id = 1
 '''
         config = config.format(sample_fasta=REF_PATH)
 
@@ -673,9 +677,11 @@ class BinaryTest(unittest.TestCase):
         config_fhand.write(config)
         config_fhand.flush()
         cmd = [binary, VCF_PATH, '-f', config_fhand.name]
+#         raw_input(' '.join(cmd))
         result = check_output(cmd)
         assert 'cs60_0.70\t' in result
         assert 'CAP=SetI' in result
+        assert 'HIS1=True' in result
 
 
 if __name__ == "__main__":

@@ -111,6 +111,10 @@ class BaseFilter(object):
         if record.FILTER and name in record.FILTER:
             record.FILTER.remove(name)
 
+    def _clean_info(self, record):
+        if self.info_id in record.INFO:
+            del(record.INFO[self.info.id])
+
     @property
     def is_filter(self):
         return True
@@ -700,7 +704,8 @@ class HeterozigoteInSamples(BaseFilter):
         self.filter_id = filter_id
         self.conf = {'samples': samples,
                      'min_percent_het_get': min_percent_het_gt,
-                     'gq_threslhold': gq_threshold, }
+                     'gq_threslhold': gq_threshold,
+                     'min_num_called': min_num_called}
 
     def __call__(self, record):
         call_is_het = []
@@ -713,7 +718,7 @@ class HeterozigoteInSamples(BaseFilter):
                 call_is_het.append(call.is_het)
         num_calls = len(call_is_het)
         num_hets = len(filter(bool, call_is_het))
-        if num_calls < self._min_num_called:
+        if not num_calls or num_calls < self._min_num_called:
             result = None
         else:
             percent = int((num_hets / num_calls) * 100)
@@ -723,11 +728,22 @@ class HeterozigoteInSamples(BaseFilter):
                 result = False
 
         record.add_info(info=self.info_id, value=str(result))
+        return record
 
     @property
     def info(self):
-        return {'id': 'HV{}'.format(self.filter_id), 'num': 1, 'type': 'String',
-                'desc': ''}
+        if self._samples is None:
+            samples = 'all'
+        else:
+            samples = ','.join(self._samples)
+        description = 'True if at least {min_perc}% of the called samples are '
+        description += 'het. False if not. None if not enough data in the '
+        description += 'samples {samples} :: {conf}'
+        description = description.format(min_perc=self._min_percent_het_gt,
+                                        samples=samples, conf=self.encode_conf)
+
+        return {'id': 'HIS{}'.format(self.filter_id), 'num': 1, 'type': 'String',
+                'desc': description}
 
     @property
     def is_filter(self):
