@@ -87,10 +87,11 @@ def main():
     distrib = vcf_stats.variable_gt_per_snp.calculate_distribution(bins=100,
                                                                    min_=0,
                                                                    max_=100)
+    title_per = 'Percentage of genotypes different to reference samples  per '
+    title_per += 'called samples  in each snp'
     draw_histogram_matlib(distrib['counts'], fhand=variable_gt_fhand,
-                              bin_edges=distrib['bin_limits'],
-    title='Percentaje of heterozigote samples  per called samples  in each snp',
-                              xlabel='percentaje het', ylabel="Num. Snvs")
+                              bin_edges=distrib['bin_limits'], title=title_per,
+                              xlabel='percentaje variable', ylabel="Num. Snvs")
 
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
