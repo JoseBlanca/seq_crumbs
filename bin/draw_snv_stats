@@ -94,7 +94,7 @@ def main():
 
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
-    distrib = vcf_stats.variable_gt_per_snp.calculate_distribution(bins=100)
+    distrib = vcf_stats.genotype_qualities.calculate_distribution(bins=100)
     draw_histogram_matlib(distrib['counts'], bin_edges=distrib['bin_limits'],
                           fhand=gqs_fhand,
                           title='Histogram of the genotype qualities x 100',
