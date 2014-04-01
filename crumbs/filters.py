@@ -678,6 +678,7 @@ def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
         if (_5end_mapped(aligned_read, max_clipping)
             and aligned_read.alen > length):
             longest_5end = aligned_read
+            length = aligned_read.alen
     return longest_5end
 
 
