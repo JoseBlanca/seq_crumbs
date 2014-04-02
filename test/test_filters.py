@@ -664,6 +664,67 @@ class TrimChimericRegions(unittest.TestCase):
             counts += 1
         assert counts != 0
 
+    def test_trim_chimeras_bin(self):
+        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
+        assert 'usage' in check_output([trim_chimeras_bin, '-h'])
+        reference_seq = GENOME
+        query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
+        query1 += '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query2 = '@seq2 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
+        query2 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query = query1 + query2
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
+                         'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name, '-i',
+               '-o', out_fhand.name]
+        print check_output(cmd, stdin=in_fhand)
+        counts = 0
+        for seq in read_seqs([open(out_fhand.name)]):
+            assert get_str_seq(seq) in expected_seqs
+            counts += 1
+        assert counts != 0
+
+    def test_draw_distance_distribution(self):
+        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
+        assert 'usage' in check_output([trim_chimeras_bin, '-h'])
+
+        reference_seq = GENOME
+        #Non chimeric
+        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
+        #Chimeric
+        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
+        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
+        #unknown
+        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
+        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
+
+        query = query1 + query2 + query5 + query6 + query3 + query4
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+
+        distribution_fhand = NamedTemporaryFile()
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name, '-i',
+               '-o', out_fhand.name, '-x', distribution_fhand.name]
+        print check_output(cmd, stdin=in_fhand)
+        for line in open(distribution_fhand.name):
+            assert ('outies' in line or 'innies' in line or 'others' in line
+                    or '(1)' in line)
+
 
 class FilterByMappingType(unittest.TestCase):
     def test_classify_paired_reads(self):
@@ -746,6 +807,18 @@ class FilterByMappingType(unittest.TestCase):
         assert 'seq2' in open(chimeras_fhand.name).next()
         assert 'seq3' in open(unknown_fhand.name).next()
 
+        #draw_distance_distribution
+        distribution_fhand = NamedTemporaryFile()
+        cmd = [filter_chimeras_bin, in_fhand.name, '-r', ref_fhand.name]
+        cmd.extend(['-c', chimeras_fhand.name, '-u', unknown_fhand.name,
+                    '-s', '2000', '-o', out_fhand.name, '-x',
+                    distribution_fhand.name])
+        print check_output(cmd, stdin=in_fhand)
+        for line in open(distribution_fhand.name):
+            assert ('outies' in line or 'innies' in line or 'others' in line
+                    or '(1)' in line)
+
+
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterByMappingType']
+    #import sys;sys.argv = ['', 'TrimChimericRegions']
     unittest.main()
