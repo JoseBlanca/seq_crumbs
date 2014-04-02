@@ -33,8 +33,8 @@ def create_filter_argparse(add_reverse=True, **kwargs):
                         help='File for unknown sequences')
     parser.add_argument('-r', '--reference_seq', default=None,
                         help='fpath with reference sequence')
-    parser.add_argument('-s', '--insert_size', default=3000, type=int,
-                        help='Insert size of mate pair library (default:3000)')
+    parser.add_argument('-s', '--insert_size', default=None, type=int,
+                        help='Insert size of mate pair library', required=True)
     parser.add_argument('--tempdir', default='/tmp',
                         help='Path for temporary files (default /tmp)')
     help1 = 'Input sequences are not interleaved(default: interleaved)'
@@ -59,6 +59,15 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     help6 += '(default:' + str(settings['MAX_CLIPPING']) + ')'
     settings_group.add_argument('--max_clipping', default=None,
                           help=help6, type=float)
+    distance_name = 'Distance distribution and relative position of mate pairs'
+    distance_group = parser.add_argument_group(distance_name)
+    help7 = 'File to draw distance distribution of mate pairs.'
+    help7 += '"stdout" to write in stdout'
+    distance_group.add_argument('-x', '--graphs_fpath', default=None,
+                                help=help7)
+    distance_group.add_argument('-n', '--n_pairs_sampled', default=100000,
+                                help='Number of pairs sampled for drawing',
+                                type=int)
     return parser
 
 
@@ -73,6 +82,8 @@ def parse_filter_args(parser):
     args['tempdir'] = parsed_args.tempdir
     args['interleaved'] = not parsed_args.paired_fpaths
     args['threads'] = parsed_args.threads
+    args['n_pairs_sampled'] = parsed_args.n_pairs_sampled
+    args['graphs_fpath'] = parsed_args.graphs_fpath
 
     settings = get_setting('CHIMERAS_SETTINGS')
     setting_args = {}
@@ -102,6 +113,7 @@ def run():
     tempdir = args['tempdir']
     interleaved = args['interleaved']
     threads = args['threads']
+    n_pairs_sampled = args['n_pairs_sampled']
     in_fhand_name = in_fhands[0].name.split('/')
     if chimeras_fpath is not None:
         chimeras_fhand = open(chimeras_fpath, 'w')
@@ -115,10 +127,24 @@ def run():
         unknown_fpath = in_fhand_name[-1].split('.')[0] + '.unknown.fastq'
         unknown_fpath = ''.join(in_fhand_name[:-1]) + unknown_fpath
         unknown_fhand = open(unknown_fpath, 'w')
+
+    draw_distribution = False
+    if args['graphs_fpath'] is None:
+        graphs_fhand = None
+    elif args['graphs_fpath'] == 'stdout':
+        draw_distribution = True
+        graphs_fhand = sys.stdout
+    else:
+        draw_distribution = True
+        graphs_fhand = open(args['graphs_fpath'], 'w')
+
     filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                     unknown_fhand, settings=settings,
                     mate_distance=mate_distance, directory=tempdir,
-                    interleaved=interleaved, threads=threads)
+                    interleaved=interleaved, threads=threads,
+                    distance_distribution_fhand=graphs_fhand,
+                    n_pairs_sampled=n_pairs_sampled,
+                    draw_distribution=draw_distribution)
     flush_fhand(out_fhand)
     flush_fhand(chimeras_fhand)
     flush_fhand(unknown_fhand)

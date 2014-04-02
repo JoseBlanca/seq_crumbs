@@ -651,7 +651,8 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
                     unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
                     min_seed_len=None, mate_distance=3000,
                     out_format=SEQITEM, directory='/tmp', bamfile=False,
-                    interleaved=True, threads=None):
+                    interleaved=True, threads=None, draw_distribution=False,
+                    distance_distribution_fhand=None, n_pairs_sampled=None):
     '''It maps sequences from input files, sorts them and writes to output
     files according to its classification'''
     if bamfile:
@@ -669,6 +670,14 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
             write_seqs(pair, chimeras_fhand)
         elif kind is UNKNOWN and unknown_fhand is not None:
             write_seqs(pair, unknown_fhand)
+
+    if draw_distribution:
+        in_fpaths = [fhand.name for fhand in in_fhands]
+        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
+                                       directory, min_seed_len, threads)
+        max_clipping = settings['MAX_CLIPPING']
+        show_distances_distributions(bamfile, max_clipping, n_pairs_sampled,
+                                     distance_distribution_fhand)
 
 
 def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
@@ -701,7 +710,9 @@ def trim_chimeric_region(bamfile, max_clipping):
 
 def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None,
                 max_clipping=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
-                  tempdir='/tmp', interleaved=True, threads=None):
+                  tempdir='/tmp', interleaved=True, threads=None,
+                  distance_distribution_fhand=None, n_pairs_sampled=None,
+                  draw_distribution=False):
     if ref_fpath is None:
         bamfile = pysam.Samfile(in_fpaths[0])
     else:
@@ -709,13 +720,17 @@ def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None,
                                    interleaved=interleaved, threads=threads)
     trimmed_seqs = trim_chimeric_region(bamfile, max_clipping)
     write_seqs(trimmed_seqs, out_fhand)
+    if draw_distribution:
+        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
+                                   interleaved=interleaved, threads=threads)
+        show_distances_distributions(bamfile, max_clipping, n_pairs_sampled,
+                                     distance_distribution_fhand)
 
 
-def show_distances_distributions(bam_fpath, max_clipping, n,
+def show_distances_distributions(bamfile, max_clipping, n, out_fhand,
                                    remove_outliers=True):
     '''It shows distance distribution between pairs of sequences that map
     completely in the same reference sequence'''
-    bamfile = pysam.Samfile(bam_fpath)
     stats = {'outies': [], 'innies': [], 'others': []}
     counts = 0
     for grouped_mates in _group_alignments_by_reads(bamfile):
@@ -737,9 +752,11 @@ def show_distances_distributions(bam_fpath, max_clipping, n,
         if counts == n:
             break
     for key in stats.keys():
-        print key
-        counter = IntCounter(iter(stats[key]))
-        distribution = counter.calculate_distribution(remove_outliers=remove_outliers)
-        counts = distribution['counts']
-        bin_limits = distribution['bin_limits']
-        print draw_histogram(bin_limits, counts)
+        out_fhand.write(key + '\n')
+        if stats[key]:
+            counter = IntCounter(iter(stats[key]))
+            distribution = counter.calculate_distribution(remove_outliers=remove_outliers)
+            counts = distribution['counts']
+            bin_limits = distribution['bin_limits']
+            out_fhand.write(draw_histogram(bin_limits, counts))
+    out_fhand.flush()
