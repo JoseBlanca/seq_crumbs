@@ -108,13 +108,13 @@ def run():
     out_fhand = args['out_fhand']
     unknown_fpath = args['unknown_fpath']
     settings = args['settings']
-    in_fhands = args['in_fhands']
+    in_fpaths = [fhand.name for fhand in args['in_fhands']]
     mate_distance = args['insert_size']
     tempdir = args['tempdir']
     interleaved = args['interleaved']
     threads = args['threads']
     n_pairs_sampled = args['n_pairs_sampled']
-    in_fhand_name = in_fhands[0].name.split('/')
+    in_fhand_name = in_fpaths[0].split('/')
     if chimeras_fpath is not None:
         chimeras_fhand = open(chimeras_fpath, 'w')
     else:
@@ -138,7 +138,7 @@ def run():
         draw_distribution = True
         graphs_fhand = open(args['graphs_fpath'], 'w')
 
-    filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
+    filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                     unknown_fhand, settings=settings,
                     mate_distance=mate_distance, directory=tempdir,
                     interleaved=interleaved, threads=threads,

@@ -765,8 +765,8 @@ class FilterByMappingType(unittest.TestCase):
         out_fhand = NamedTemporaryFile()
         chimeras_fhand = NamedTemporaryFile()
         unknown_fhand = NamedTemporaryFile()
-        filter_chimeras(ref_fhand.name, out_fhand, chimeras_fhand, [in_fhand],
-                        unknown_fhand, mate_distance=2000)
+        filter_chimeras(ref_fhand.name, out_fhand, chimeras_fhand,
+                        [in_fhand.name], unknown_fhand, mate_distance=2000)
         out_fhand.flush()
         chimeras_fhand.flush()
         unknown_fhand.flush()

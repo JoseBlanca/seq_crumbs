@@ -647,7 +647,7 @@ def classify_mapped_reads(bamfile, mate_distance,
         yield [pair, kind]
 
 
-def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
+def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                     unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
                     min_seed_len=None, mate_distance=3000,
                     out_format=SEQITEM, directory='/tmp', bamfile=False,
@@ -656,9 +656,8 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
     '''It maps sequences from input files, sorts them and writes to output
     files according to its classification'''
     if bamfile:
-        bamfile = pysam.Samfile(in_fhands[0])
+        bamfile = pysam.Samfile(in_fpaths[0])
     else:
-        in_fpaths = [fhand.name for fhand in in_fhands]
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
                                        directory, min_seed_len, threads)
     for pair, kind in classify_mapped_reads(bamfile, settings=settings,
@@ -672,7 +671,6 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
             write_seqs(pair, unknown_fhand)
 
     if draw_distribution:
-        in_fpaths = [fhand.name for fhand in in_fhands]
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
                                        directory, min_seed_len, threads)
         max_clipping = settings['MAX_CLIPPING']
@@ -708,12 +706,12 @@ def trim_chimeric_region(bamfile, max_clipping):
                 yield alignedread_to_seqitem(primary_alignment)
 
 
-def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None,
+def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None, bamfile=False,
                 max_clipping=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
                   tempdir='/tmp', interleaved=True, threads=None,
                   distance_distribution_fhand=None, n_pairs_sampled=None,
                   draw_distribution=False):
-    if ref_fpath is None:
+    if bamfile:
         bamfile = pysam.Samfile(in_fpaths[0])
     else:
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
