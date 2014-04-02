@@ -19,6 +19,7 @@ from __future__ import division
 from tempfile import NamedTemporaryFile
 from crumbs.utils.file_formats import get_format, set_format
 from bisect import bisect
+from crumbs.iterutils import sample
 
 try:
     import pysam
@@ -674,8 +675,9 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
                                        directory, min_seed_len, threads)
         max_clipping = settings['MAX_CLIPPING']
-        show_distances_distributions(bamfile, max_clipping, n_pairs_sampled,
-                                     distance_distribution_fhand)
+        show_distances_distributions(bamfile, max_clipping,
+                                     distance_distribution_fhand,
+                                     n=n_pairs_sampled)
 
 
 def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
@@ -721,11 +723,12 @@ def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None, bamfile=False,
     if draw_distribution:
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
                                    interleaved=interleaved, threads=threads)
-        show_distances_distributions(bamfile, max_clipping, n_pairs_sampled,
-                                     distance_distribution_fhand)
+        show_distances_distributions(bamfile, max_clipping,
+                                     distance_distribution_fhand,
+                                     n=n_pairs_sampled)
 
 
-def show_distances_distributions(bamfile, max_clipping, n, out_fhand,
+def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
                                    remove_outliers=True):
     '''It shows distance distribution between pairs of sequences that map
     completely in the same reference sequence'''
@@ -758,3 +761,31 @@ def show_distances_distributions(bamfile, max_clipping, n, out_fhand,
             bin_limits = distribution['bin_limits']
             out_fhand.write(draw_histogram(bin_limits, counts))
     out_fhand.flush()
+
+
+def _get_n_seqs(in_fhand, n):
+    i = 0
+    for seq in read_seqs([in_fhand]):
+        i += 1
+        yield seq
+        if i == n:
+            break
+
+
+def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
+                               n=None, remove_outliers=True,
+                               interleaved=True, tempdir=None, threads=None):
+    tempdir = '/tmp' if tempdir is None else tempdir
+    if n is None:
+        sampled_fpaths = in_fpaths
+    else:
+        sampled_fpaths = []
+        for in_fpath in in_fpaths:
+            sampled_fhand = NamedTemporaryFile(dir=tempdir)
+            write_seqs(_get_n_seqs(open(in_fpath), n), sampled_fhand)
+            sampled_fhand.flush()
+            sampled_fpaths.append(sampled_fhand.name)
+    bamfile = _sorted_mapped_reads(ref_fpath, sampled_fpaths, threads=threads,
+                                   directory=tempdir, interleaved=interleaved)
+    show_distances_distributions(bamfile, max_clipping, out_fhand, n=n,
+                                   remove_outliers=remove_outliers)
