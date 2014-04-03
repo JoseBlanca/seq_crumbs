@@ -763,15 +763,6 @@ def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
     out_fhand.flush()
 
 
-def _get_n_seqs(in_fhand, n):
-    i = 0
-    for seq in read_seqs([in_fhand]):
-        i += 1
-        yield seq
-        if i == n:
-            break
-
-
 def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
                                n=None, remove_outliers=True,
                                interleaved=True, tempdir=None, threads=None):
