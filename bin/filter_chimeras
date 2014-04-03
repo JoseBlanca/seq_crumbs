@@ -140,7 +140,7 @@ def run():
 
     filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                     unknown_fhand, settings=settings,
-                    mate_distance=mate_distance, directory=tempdir,
+                    mate_distance=mate_distance, tempdir=tempdir,
                     interleaved=interleaved, threads=threads,
                     distance_distribution_fhand=graphs_fhand,
                     n_pairs_sampled=n_pairs_sampled,

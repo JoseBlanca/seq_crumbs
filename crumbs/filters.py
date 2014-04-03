@@ -499,8 +499,8 @@ def _mates_are_innies(mates):
 
 
 def _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved=True,
-                         directory='/tmp', min_seed_len=None, threads=None):
-    index_fpath = get_or_create_bwa_index(ref_fpath, directory)
+                         tempdir='/tmp', min_seed_len=None, threads=None):
+    index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
     extra_params = ['-a', '-M']
     if min_seed_len is not None:
         extra_params.extend(['-k', min_seed_len])
@@ -518,8 +518,8 @@ def _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved=True,
 
     bwa = map_with_bwamem(index_fpath, paired_fpaths=in_fpaths,
                          extra_params=extra_params, threads=threads)
-    bam_fhand = NamedTemporaryFile(dir=directory)
-    sort_mapped_reads(bwa, bam_fhand.name, key='queryname', tempdir=directory)
+    bam_fhand = NamedTemporaryFile(dir=tempdir)
+    sort_mapped_reads(bwa, bam_fhand.name, key='queryname', tempdir=tempdir)
     bamfile = pysam.Samfile(bam_fhand.name)
     return bamfile
 
@@ -651,7 +651,7 @@ def classify_mapped_reads(bamfile, mate_distance,
 def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                     unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
                     min_seed_len=None, mate_distance=3000,
-                    out_format=SEQITEM, directory='/tmp', bamfile=False,
+                    out_format=SEQITEM, tempdir='/tmp', bamfile=False,
                     interleaved=True, threads=None, draw_distribution=False,
                     distance_distribution_fhand=None, n_pairs_sampled=None):
     '''It maps sequences from input files, sorts them and writes to output
@@ -660,7 +660,7 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
         bamfile = pysam.Samfile(in_fpaths[0])
     else:
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
-                                       directory, min_seed_len, threads)
+                                       tempdir, min_seed_len, threads)
     for pair, kind in classify_mapped_reads(bamfile, settings=settings,
                                            mate_distance=mate_distance,
                                            out_format=out_format):
@@ -673,7 +673,7 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
 
     if draw_distribution:
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
-                                       directory, min_seed_len, threads)
+                                       tempdir, min_seed_len, threads)
         max_clipping = settings['MAX_CLIPPING']
         show_distances_distributions(bamfile, max_clipping,
                                      distance_distribution_fhand,
@@ -716,12 +716,12 @@ def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None, bamfile=False,
     if bamfile:
         bamfile = pysam.Samfile(in_fpaths[0])
     else:
-        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
+        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, tempdir=tempdir,
                                    interleaved=interleaved, threads=threads)
     trimmed_seqs = trim_chimeric_region(bamfile, max_clipping)
     write_seqs(trimmed_seqs, out_fhand)
     if draw_distribution:
-        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
+        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, tempdir=tempdir,
                                    interleaved=interleaved, threads=threads)
         show_distances_distributions(bamfile, max_clipping,
                                      distance_distribution_fhand,
@@ -786,6 +786,6 @@ def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
             sampled_fhand.flush()
             sampled_fpaths.append(sampled_fhand.name)
     bamfile = _sorted_mapped_reads(ref_fpath, sampled_fpaths, threads=threads,
-                                   directory=tempdir, interleaved=interleaved)
+                                   tempdir=tempdir, interleaved=interleaved)
     show_distances_distributions(bamfile, max_clipping, out_fhand, n=n,
                                    remove_outliers=remove_outliers)
