@@ -18,8 +18,8 @@ Changelog:
 
 Released on 21-5-13
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.8.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.8-x64-linux.tar.gz>`_
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.8.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.8-x64-linux.tar.gz>`_
 
 seq_crumbs 0.1.7
 ----------------
@@ -34,8 +34,8 @@ Changelog:
 
 Released on 10-2-13
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.7.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.7-x64-linux.tar.gz>`_
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.7.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.7-x64-linux.tar.gz>`_
 
 seq_crumbs 0.1.6
 ----------------
@@ -47,8 +47,8 @@ Changelog:
 
 Released on 10-12-12
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.6.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.6-x64-linux.tar.gz>`_
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.6.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.6-x64-linux.tar.gz>`_
 
 seq_crumbs 0.1.5
 ----------------
@@ -65,8 +65,8 @@ Changelog:
 
 Released on 26-11-12
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.5.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.5-x64-linux.tar.gz>`_
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.5.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.5-x64-linux.tar.gz>`_
 
 seq_crumbs 0.1.4
 ----------------
@@ -78,8 +78,8 @@ Changelog:
 
 Released on 7-11-12
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.4.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.4-x64-linux.tar.gz>`_
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.4.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.4-x64-linux.tar.gz>`_
 
 seq_crumbs 0.1.3
 ----------------
@@ -90,8 +90,8 @@ Changelog:
 
 Released on 22-10-12
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.3.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.3-x64-linux.tar.gz>`_.
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.3.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.3-x64-linux.tar.gz>`_.
 
 seq_crumbs 0.1.2
 ----------------
@@ -104,8 +104,8 @@ Changelog:
 
 Released on 22-10-12
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.2.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.2-x64-linux.tar.gz>`_.
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.2.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.2-x64-linux.tar.gz>`_.
 
 seq_crumbs 0.1.1
 ----------------
@@ -117,15 +117,15 @@ Changelog:
 
 Released on 18-10-12
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.1.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.1-x64-linux.tar.gz>`_.
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.1.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.1-x64-linux.tar.gz>`_.
 
 seq_crumbs 0.1
 ----------------
 
 Released on 04-10-12
 
-  * `Source distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1.tar.gz>`_.
-  * `x64-linux Binary distribution <http://bionf.comav.upv.es/downloads/seq_crumbs-0.1-x64-linux.tar.gz>`_.
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.tar.gz>`_.
+  * `x64-linux Binary distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1-x64-linux.tar.gz>`_.
 
 .. include:: links.txt
