@@ -35,7 +35,7 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
                             classify_mapped_reads, filter_chimeras,
-    _sorted_mapped_reads, trim_chimeric_region)
+    _sorted_mapped_reads, trim_chimeric_region, draw_distance_distribution)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -664,6 +664,67 @@ class TrimChimericRegions(unittest.TestCase):
             counts += 1
         assert counts != 0
 
+    def test_trim_chimeras_bin(self):
+        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
+        assert 'usage' in check_output([trim_chimeras_bin, '-h'])
+        reference_seq = GENOME
+        query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
+        query1 += '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query2 = '@seq2 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
+        query2 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query = query1 + query2
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
+                         'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name, '-i',
+               '-o', out_fhand.name]
+        print check_output(cmd, stdin=in_fhand)
+        counts = 0
+        for seq in read_seqs([open(out_fhand.name)]):
+            assert get_str_seq(seq) in expected_seqs
+            counts += 1
+        assert counts != 0
+
+    def test_draw_distance_distribution(self):
+        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
+        assert 'usage' in check_output([trim_chimeras_bin, '-h'])
+
+        reference_seq = GENOME
+        #Non chimeric
+        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
+        #Chimeric
+        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
+        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
+        #unknown
+        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
+        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
+
+        query = query1 + query2 + query5 + query6 + query3 + query4
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+
+        distribution_fhand = NamedTemporaryFile()
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name, '-i',
+               '-o', out_fhand.name, '-x', distribution_fhand.name]
+        print check_output(cmd, stdin=in_fhand)
+        for line in open(distribution_fhand.name):
+            assert ('outies' in line or 'innies' in line or 'others' in line
+                    or '(1)' in line)
+
 
 class FilterByMappingType(unittest.TestCase):
     def test_classify_paired_reads(self):
@@ -704,8 +765,8 @@ class FilterByMappingType(unittest.TestCase):
         out_fhand = NamedTemporaryFile()
         chimeras_fhand = NamedTemporaryFile()
         unknown_fhand = NamedTemporaryFile()
-        filter_chimeras(ref_fhand.name, out_fhand, chimeras_fhand, [in_fhand],
-                        unknown_fhand, mate_distance=2000)
+        filter_chimeras(ref_fhand.name, out_fhand, chimeras_fhand,
+                        [in_fhand.name], unknown_fhand, mate_distance=2000)
         out_fhand.flush()
         chimeras_fhand.flush()
         unknown_fhand.flush()
@@ -746,6 +807,77 @@ class FilterByMappingType(unittest.TestCase):
         assert 'seq2' in open(chimeras_fhand.name).next()
         assert 'seq3' in open(unknown_fhand.name).next()
 
+        #draw_distance_distribution
+        distribution_fhand = NamedTemporaryFile()
+        cmd = [filter_chimeras_bin, in_fhand.name, '-r', ref_fhand.name]
+        cmd.extend(['-c', chimeras_fhand.name, '-u', unknown_fhand.name,
+                    '-s', '2000', '-o', out_fhand.name, '-x',
+                    distribution_fhand.name])
+        print check_output(cmd, stdin=in_fhand)
+        for line in open(distribution_fhand.name):
+            assert ('outies' in line or 'innies' in line or 'others' in line
+                    or '(1)' in line)
+
+
+class DrawDistanceDistribution(unittest.TestCase):
+    def test_draw_distance_distribution(self):
+        reference_seq = GENOME
+        #Non chimeric
+        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
+        #Chimeric
+        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
+        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
+        #unknown
+        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
+        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
+
+        query = query1 + query2 + query5 + query6 + query3 + query4
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        distribution_fhand = NamedTemporaryFile()
+        draw_distance_distribution([in_fhand.name], ref_fhand.name,
+                                   distribution_fhand, max_clipping=0.05)
+        for line in open(distribution_fhand.name):
+            assert ('outies' in line or 'innies' in line or 'others' in line
+                    or '(1)' in line)
+
+    def test_draw_distance_distribution_bin(self):
+        reference_seq = GENOME
+        #Non chimeric
+        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
+        #Chimeric
+        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
+        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
+        #unknown
+        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
+        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
+
+        query = query1 + query2 + query5 + query6 + query3 + query4
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        distribution_fhand = NamedTemporaryFile()
+        draw_distances_distribution_bin = os.path.join(BIN_DIR,
+                                                'draw_mp_distance_distribution')
+        assert 'usage' in check_output([draw_distances_distribution_bin, '-h'])
+        cmd = [draw_distances_distribution_bin, in_fhand.name, '-r',
+               ref_fhand.name, '-o', distribution_fhand.name]
+        print check_output(cmd, stdin=in_fhand)
+        for line in open(distribution_fhand.name):
+            assert ('outies' in line or 'innies' in line or 'others' in line
+                    or '(1)' in line)
+
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterByMappingType']
+    #import sys;sys.argv = ['', 'DrawDistanceDistribution']
     unittest.main()

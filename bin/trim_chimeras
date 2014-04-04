@@ -37,10 +37,19 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     help1 = 'Max clipping positions percentage allowed to consider that 5 end'
     help1 += 'is mapped'
     parser.add_argument('--max_clipping',
-                        default=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
+                    default=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
                         help=help1)
     parser.add_argument('--threads', default=None, type=int,
                         help='number of threads for mapping (1)')
+    distance_name = 'Distance distribution and relative position of mate pairs'
+    distance_group = parser.add_argument_group(distance_name)
+    help2 = 'File to draw distance distribution of mate pairs.'
+    help2 += '"stdout" to write in stdout'
+    distance_group.add_argument('-x', '--graphs_fpath', default=None,
+                                help=help2)
+    distance_group.add_argument('-n', '--n_pairs_sampled', default=100000,
+                                help='Number of pairs sampled for drawing',
+                                type=int)
     return parser
 
 
@@ -52,6 +61,8 @@ def parse_filter_args(parser):
     args['max_clipping'] = parsed_args.max_clipping
     args['interleaved'] = parsed_args.interleaved
     args['threads'] = parsed_args.threads
+    args['n_pairs_sampled'] = parsed_args.n_pairs_sampled
+    args['graphs_fpath'] = parsed_args.graphs_fpath
 
     return args, parsed_args
 
@@ -68,9 +79,24 @@ def run():
     tempdir = args['tempdir']
     interleaved = args['interleaved']
     threads = args['threads']
+    n_pairs_sampled = args['n_pairs_sampled']
+
+    draw_distribution = False
+    if args['graphs_fpath'] is None:
+        graphs_fhand = None
+    elif args['graphs_fpath'] == 'stdout':
+        draw_distribution = True
+        graphs_fhand = sys.stdout
+    else:
+        draw_distribution = True
+        graphs_fhand = open(args['graphs_fpath'], 'w')
+
     trim_chimeras(in_fpaths, out_fhand, ref_fpath,
                   max_clipping=max_clipping, tempdir=tempdir,
-                  interleaved=interleaved, threads=threads)
+                  interleaved=interleaved, threads=threads,
+                  draw_distribution=draw_distribution,
+                  distance_distribution_fhand=graphs_fhand,
+                  n_pairs_sampled=n_pairs_sampled)
     flush_fhand(out_fhand)
 
 if __name__ == '__main__':

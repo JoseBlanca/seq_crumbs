@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+
+# Copyright 2013 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from crumbs.utils.bin_utils import (main, argparse,
+                                    parse_basic_args, create_basic_argparse)
+from crumbs.settings import get_setting
+from crumbs.filters import  draw_distance_distribution
+
+
+def create_argparse(add_reverse=True, **kwargs):
+    'It returns a cmd parser for the filter executables'
+    parser = create_basic_argparse(**kwargs)
+    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
+    parser.add_argument('-r', '--reference_seq', default=None,
+                        help='fpath with reference sequence')
+    parser.add_argument('--tempdir', default='/tmp',
+                        help='Path for temporary files (default /tmp)')
+    help1 = 'Input sequences are not interleaved(default: interleaved)'
+    parser.add_argument('--paired_fpaths', default=False,
+                        help=help1, action='store_true')
+    parser.add_argument('--threads', default=None, type=int,
+                        help='number of threads for mapping (1)')
+    settings = get_setting('CHIMERAS_SETTINGS')
+    help2 = 'Proportion of mapping positions required to consider a read '
+    help2 += 'as fully mapped'
+    help2 += '(default:' + str(settings['MAX_CLIPPING']) + ')'
+    parser.add_argument('--max_clipping', default=settings['MAX_CLIPPING'],
+                        help=help2, type=float)
+    parser.add_argument('-n', '--n_pairs_sampled', default=None,
+                        help='Number of pairs sampled for drawing', type=int)
+    return parser
+
+
+def parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['in_format'] = parsed_args.in_format
+    args['reference'] = parsed_args.reference_seq
+    args['tempdir'] = parsed_args.tempdir
+    args['interleaved'] = not parsed_args.paired_fpaths
+    args['threads'] = parsed_args.threads
+    args['n_pairs_sampled'] = parsed_args.n_pairs_sampled
+    args['max_clipping'] = parsed_args.max_clipping
+    return args, parsed_args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It draws mate pair distance distribution per each possible'
+    description += ' orientation'
+    parser = create_argparse(description=description)
+    args = parse_args(parser)[0]
+    ref_fpath = args['reference']
+    out_fhand = args['out_fhand']
+    max_clipping = args['max_clipping']
+    in_fpaths = [fhand.name for fhand in args['in_fhands']]
+    tempdir = args['tempdir']
+    interleaved = args['interleaved']
+    threads = args['threads']
+    n_pairs_sampled = args['n_pairs_sampled']
+
+    draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
+                               n=n_pairs_sampled, interleaved=interleaved,
+                               tempdir=tempdir, threads=threads)
+
+if __name__ == '__main__':
+    sys.exit(main(run))

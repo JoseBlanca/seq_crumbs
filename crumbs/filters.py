@@ -19,6 +19,7 @@ from __future__ import division
 from tempfile import NamedTemporaryFile
 from crumbs.utils.file_formats import get_format, set_format
 from bisect import bisect
+from crumbs.iterutils import sample
 
 try:
     import pysam
@@ -647,17 +648,17 @@ def classify_mapped_reads(bamfile, mate_distance,
         yield [pair, kind]
 
 
-def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
+def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                     unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
                     min_seed_len=None, mate_distance=3000,
                     out_format=SEQITEM, directory='/tmp', bamfile=False,
-                    interleaved=True, threads=None):
+                    interleaved=True, threads=None, draw_distribution=False,
+                    distance_distribution_fhand=None, n_pairs_sampled=None):
     '''It maps sequences from input files, sorts them and writes to output
     files according to its classification'''
     if bamfile:
-        bamfile = pysam.Samfile(in_fhands[0])
+        bamfile = pysam.Samfile(in_fpaths[0])
     else:
-        in_fpaths = [fhand.name for fhand in in_fhands]
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
                                        directory, min_seed_len, threads)
     for pair, kind in classify_mapped_reads(bamfile, settings=settings,
@@ -670,6 +671,14 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fhands,
         elif kind is UNKNOWN and unknown_fhand is not None:
             write_seqs(pair, unknown_fhand)
 
+    if draw_distribution:
+        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
+                                       directory, min_seed_len, threads)
+        max_clipping = settings['MAX_CLIPPING']
+        show_distances_distributions(bamfile, max_clipping,
+                                     distance_distribution_fhand,
+                                     n=n_pairs_sampled)
+
 
 def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
     longest_5end = None
@@ -678,6 +687,7 @@ def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
         if (_5end_mapped(aligned_read, max_clipping)
             and aligned_read.alen > length):
             longest_5end = aligned_read
+            length = aligned_read.alen
     return longest_5end
 
 
@@ -698,23 +708,30 @@ def trim_chimeric_region(bamfile, max_clipping):
                 yield alignedread_to_seqitem(primary_alignment)
 
 
-def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None,
+def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None, bamfile=False,
                 max_clipping=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
-                  tempdir='/tmp', interleaved=True, threads=None):
-    if ref_fpath is None:
+                  tempdir='/tmp', interleaved=True, threads=None,
+                  distance_distribution_fhand=None, n_pairs_sampled=None,
+                  draw_distribution=False):
+    if bamfile:
         bamfile = pysam.Samfile(in_fpaths[0])
     else:
         bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
                                    interleaved=interleaved, threads=threads)
     trimmed_seqs = trim_chimeric_region(bamfile, max_clipping)
     write_seqs(trimmed_seqs, out_fhand)
+    if draw_distribution:
+        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, directory=tempdir,
+                                   interleaved=interleaved, threads=threads)
+        show_distances_distributions(bamfile, max_clipping,
+                                     distance_distribution_fhand,
+                                     n=n_pairs_sampled)
 
 
-def show_distances_distributions(bam_fpath, max_clipping, n,
+def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
                                    remove_outliers=True):
     '''It shows distance distribution between pairs of sequences that map
     completely in the same reference sequence'''
-    bamfile = pysam.Samfile(bam_fpath)
     stats = {'outies': [], 'innies': [], 'others': []}
     counts = 0
     for grouped_mates in _group_alignments_by_reads(bamfile):
@@ -736,9 +753,39 @@ def show_distances_distributions(bam_fpath, max_clipping, n,
         if counts == n:
             break
     for key in stats.keys():
-        print key
-        counter = IntCounter(iter(stats[key]))
-        distribution = counter.calculate_distribution(remove_outliers=remove_outliers)
-        counts = distribution['counts']
-        bin_limits = distribution['bin_limits']
-        print draw_histogram(bin_limits, counts)
+        out_fhand.write(key + '\n')
+        if stats[key]:
+            counter = IntCounter(iter(stats[key]))
+            distribution = counter.calculate_distribution(remove_outliers=remove_outliers)
+            counts = distribution['counts']
+            bin_limits = distribution['bin_limits']
+            out_fhand.write(draw_histogram(bin_limits, counts))
+    out_fhand.flush()
+
+
+def _get_n_seqs(in_fhand, n):
+    i = 0
+    for seq in read_seqs([in_fhand]):
+        i += 1
+        yield seq
+        if i == n:
+            break
+
+
+def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
+                               n=None, remove_outliers=True,
+                               interleaved=True, tempdir=None, threads=None):
+    tempdir = '/tmp' if tempdir is None else tempdir
+    if n is None:
+        sampled_fpaths = in_fpaths
+    else:
+        sampled_fpaths = []
+        for in_fpath in in_fpaths:
+            sampled_fhand = NamedTemporaryFile(dir=tempdir)
+            write_seqs(_get_n_seqs(open(in_fpath), n), sampled_fhand)
+            sampled_fhand.flush()
+            sampled_fpaths.append(sampled_fhand.name)
+    bamfile = _sorted_mapped_reads(ref_fpath, sampled_fpaths, threads=threads,
+                                   directory=tempdir, interleaved=interleaved)
+    show_distances_distributions(bamfile, max_clipping, out_fhand, n=n,
+                                   remove_outliers=remove_outliers)
