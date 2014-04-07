@@ -143,7 +143,7 @@ def main():
     distrib = snps_per_refseq_stats.calculate_distribution(bins=max_,
                                                            min_=min_,
                                                            max_=max_)
-    title_per = 'Missing calls percentage distribution'
+    title_per = 'Number of SNPs per reference sequence'
     draw_histogram_matlib(distrib['counts'], fhand=snps_per_refseq_fhand,
                               bin_edges=distrib['bin_limits'], title=title_per,
                               xlabel='Number of SNPs per reference seq',
