@@ -97,11 +97,12 @@ def calculate_maf(snp, vcf_variant):
 
 
 class VcfStats(object):
-    def __init__(self, vcf_path, gq_threshold=None):
+    def __init__(self, vcf_path, gq_threshold=None, selected_samples=None):
         self.reader = Reader(filename=vcf_path)
         self.vcf_variant = get_snpcaller_name(self.reader)
         self._gq_threslhold = 0 if gq_threshold is None else gq_threshold
         self._samples = set()
+        self._selected_samples = selected_samples
         self._snps_per_chromo = Counter()
         # mafs
         self._mafs = {}
@@ -135,6 +136,7 @@ class VcfStats(object):
         gqs = self._genotype_qualities
         variable_gt_per_snp = self._variable_gt_per_snp
         missing_calls_prc = self._missing_calls_prc
+        selected_samples = self._selected_samples
 
         for snp in self.reader:
             chrom_counts[snp.CHROM] += 1
@@ -154,8 +156,11 @@ class VcfStats(object):
             num_called = 0
             total_calls = 0
             for call in snp.samples:
-                total_calls += 1
                 sample_name = call.sample
+                if (selected_samples is not None and
+                    sample_name not in selected_samples):
+                    continue
+                total_calls += 1
                 samples.add(sample_name)
                 if sample_name not in het_by_sample:
                     het_by_sample[sample_name] = IntCounter({'num_gt': 0,
