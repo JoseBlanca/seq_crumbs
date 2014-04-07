@@ -13,9 +13,11 @@ from vcf_crumbs.vcf_filters import (calculate_maf, CloseToSnvFilter,
                                     CloseToLimitFilter, IsVariableFilter,
                                     CapEnzymeFilter, count_alleles,
                                     IsNotVariableFilter, ChangeAminoFilter,
-                                    ChangeAminoSeverityFilter)
+                                    ChangeAminoSeverityFilter,
+    GenotypesInSamplesFilter, AlleleNumberFilter, MissingGenotypesFilter,
+    GenotypeQualityFilter)
 from vcf_crumbs.utils import TEST_DATA_DIR
-from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK
+from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, GQ
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -578,6 +580,60 @@ class FilterTest(unittest.TestCase):
             print 'end', snp.end
             print snp.is_snp
 
+    def test_gt_in_samples(self):
+        records = Reader(filename=VCF_PATH)
+        rec1 = records.next()
+        filter_ = GenotypesInSamplesFilter([0], ['mu16'])
+        filter_.vcf_variant = VARSCAN
+        assert filter_(rec1)
+
+        filter_ = GenotypesInSamplesFilter([0], ['pepo', 'mu16'])
+        filter_.vcf_variant = VARSCAN
+        assert not filter_(rec1)
+        assert  filter_.name == "smpl.['pepo', 'mu16'].gt.[0]"
+        desc = "Record has [0] genotypes in pepo,mu16"
+        assert  desc in filter_.description
+
+    def test_allele_number(self):
+        records = Reader(filename=VCF_PATH)
+        rec1 = records.next()
+        filter_ = AlleleNumberFilter(2)
+        filter_.vcf_variant = VARSCAN
+        assert filter_(rec1)
+
+        filter_ = AlleleNumberFilter(1)
+        filter_.vcf_variant = VARSCAN
+        assert not filter_(rec1)
+        assert  filter_.name == "na1"
+        desc = "Record has 1 different alleles"
+        assert  desc in filter_.description
+
+    def test_missing_genotypes(self):
+        records = Reader(filename=VCF_PATH)
+        rec1 = records.next()
+        filter_ = MissingGenotypesFilter(2)
+        filter_.vcf_variant = VARSCAN
+        assert filter_(rec1)
+
+        filter_ = MissingGenotypesFilter(0)
+        filter_.vcf_variant = VARSCAN
+        assert not filter_(rec1)
+        assert  filter_.name == "mgt0"
+        desc = "Record has <= 0 missing or uncalled genotypes"
+        assert  desc in filter_.description
+
+    def test_genotype_quality(self):
+        records = Reader(filename=VCF_PATH)
+        rec1 = records.next()
+        filter_ = GenotypeQualityFilter(20, records)
+        for call in filter_(rec1):
+            if call.sample != 'upv196':
+                assert call.gt_bases is None
+
+        assert  filter_.name == "gq20"
+        desc = "Genotypes under threshold quality 20 set as uncalled"
+        assert  desc in filter_.description
+
 
 class BinaryTest(unittest.TestCase):
     def test_run_binary(self):
@@ -609,5 +665,5 @@ class BinaryTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterTest.test_is_not_variable_filter']
+    #import sys;sys.argv = ['', 'FilterTest.test_genotype_quality']
     unittest.main()

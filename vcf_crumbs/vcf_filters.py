@@ -3,6 +3,7 @@ from __future__ import division
 import json
 from os.path import join
 from vcf import Reader
+import vcf
 
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
@@ -10,7 +11,7 @@ from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
 from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, RC,\
-    ACS
+    ACS, get_snpcaller_name, GQ
 
 COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
@@ -44,13 +45,17 @@ def aggregate_allele_counts(allele_counts):
     return {'all': all_counts}
 
 
-def count_alleles(record, sample_names=None, vcf_variant=None):
+def choose_samples(record, sample_names):
     if sample_names is None:
-        choosen_samples = record.samples
+        chosen_samples = record.samples
     else:
         filter_by_name = lambda x: True if x.sample in sample_names else False
-        choosen_samples = filter(filter_by_name, record.samples, )
+        chosen_samples = filter(filter_by_name, record.samples, )
+    return chosen_samples
 
+
+def count_alleles(record, sample_names=None, vcf_variant=None):
+    choosen_samples = choose_samples(record, sample_names)
     counts = {}
     alleles = _str_alleles(record)
     for call in choosen_samples:
@@ -683,3 +688,126 @@ class ChangeAminoSeverityFilter(BaseFilter):
     @property
     def description(self):
         return "Alt alleles change the amino acid and the change is severe"
+
+
+class GenotypeQualityFilter(BaseFilter):
+    ''''Filters by genotype quality and sets to uncalled those that do not meet
+    the requierements'''
+
+    def __init__(self, gq_threshold, reader):
+        self.gq_threshold = gq_threshold
+        self.conf = {'gq_threshold': gq_threshold}
+        self.reader = reader
+        self.vcf_variant = get_snpcaller_name(reader)
+
+        for record in reader:
+            for record_call in record:
+                if record_call.data[0] is None:
+                    data = record_call.data
+                    break
+            if data:
+                break
+        if data == None:
+            raise RuntimeError('Call could not be set to uncalled')
+        self._uncalled_data = data
+
+    def __call__(self, record):
+        self._clean_filter(record)
+        for index_, call in enumerate(record):
+            call_data = get_call_data(call, self.vcf_variant)
+            if call_data[GQ] is None or call_data[GQ] < self.gq_threshold:
+                sample = call.sample
+                site = call.site
+                data = self._uncalled_data
+                record.samples[index_] = vcf.model._Call(site, sample, data)
+        return record
+
+    @property
+    def name(self):
+        return 'gq{}'.format(self.gq_threshold)
+
+    @property
+    def description(self):
+        desc = "Genotypes under threshold quality {} set as uncalled"
+        return desc.format(self.gq_threshold)
+
+
+#These filters return True/False
+class GenotypesInSamplesFilter(BaseFilter):
+    'Filter by genotypes in specific samples'
+
+    def __init__(self, genotypes, samples=None):
+        self.genotypes = genotypes
+        self.samples = samples
+        self.conf = {'genotypes': genotypes, 'samples': samples}
+
+    def __call__(self, record):
+        self._clean_filter(record)
+        chosen_samples = choose_samples(record, self.samples)
+        for call in chosen_samples:
+            if call.gt_type not in self.genotypes:
+                return False
+        return True
+
+    @property
+    def name(self):
+        return 'smpl.{}.gt.{}'.format(self.samples, self.genotypes)
+
+    @property
+    def description(self):
+        samples = 'all' if self.samples is None else ','.join(self.samples)
+        desc = 'Record has {} genotypes in {}'
+        return desc.format(self.genotypes, samples)
+
+
+class AlleleNumberFilter(BaseFilter):
+    'Filter by number of different alleles'
+
+    def __init__(self, n_alleles):
+        self.n_alleles = n_alleles
+        self.conf = {'n_alleles': n_alleles}
+
+    def __call__(self, record):
+        self._clean_filter(record)
+        return len(record.alleles) == self.n_alleles
+
+    @property
+    def name(self):
+        return 'na{}'.format(self.n_alleles)
+
+    @property
+    def description(self):
+        desc = 'Record has {} different alleles'
+        return desc.format(self.n_alleles)
+
+
+def get_n_missing_genotypes(record):
+    n_missing = 0
+    for call in record:
+        if not call.called:
+            n_missing += 1
+    return n_missing
+
+
+class MissingGenotypesFilter(BaseFilter):
+    'Filter by maximim number of missing genotypes'
+
+    def __init__(self, max_missing_genotypes):
+        self.max_missing_genotypes = max_missing_genotypes
+        self.conf = {'max_missing_genotypes': max_missing_genotypes}
+
+    def __call__(self, record):
+        self._clean_filter(record)
+        n_missing = get_n_missing_genotypes(record)
+        return n_missing <= self.max_missing_genotypes
+
+    @property
+    def name(self):
+        return 'mgt{}'.format(self.max_missing_genotypes)
+
+    @property
+    def description(self):
+        desc = 'Record has <= {} missing or uncalled genotypes'
+        return desc.format(self.max_missing_genotypes)
+
+
