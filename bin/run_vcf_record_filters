@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+import sys
+import argparse
+
+
+from vcf import Reader, Writer
+from vcf_crumbs.vcf_filters import (GenotypesInSamplesFilter,
+                                    AlleleNumberFilter, MissingGenotypesFilter,
+                                    GenotypeQualityFilter)
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'Filter the snvs in an indexed vcf'
+    parser = argparse.ArgumentParser(description=description)
+    in_help = 'Indexed vcf file'
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rt'))
+    parser.add_argument('-o', '--output', required=True,
+                        help='output vcf file', type=argparse.FileType('wt'))
+    parser.add_argument('-s', '--samples_file', default=None,
+                        help='File with the filter configuration')
+    parser.add_argument('-g', '--genotypes_in_samples', default=None,
+                        help='Posible genotypes in selected samples(012)')
+    help1 = 'Genotype quality threshold. Lower values will be transformed '
+    help1 += 'into uncalled'
+    parser.add_argument('-t', '--gq_threshold', default=0, type=int,
+                        help=help1)
+    parser.add_argument('-n', '--allele_number', default=None, type=int,
+                        help='Allele number requiered to keep marker')
+    parser.add_argument('-m', '--missing_genotypes', default=None, type=int,
+                        help='Max number of missing genotypes allowed')
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    args = {}
+    args['in_fhand'] = parsed_args.input
+    if parsed_args.output is not None:
+        args['out_fhand'] = parsed_args.output
+    else:
+        args['out_fhand'] = sys.stdout
+    if parsed_args.genotypes is None:
+        args['genotypes'] = None
+    else:
+        args['genotypes'] = parsed_args.genotypes.split(',')
+    if parsed_args.samples_file is None:
+        args['samples'] = None
+    else:
+        args['samples'] = [line.strip() for line in open(parsed_args.samples_file)]
+    args['gq_threshold'] = parsed_args.gq_threshold
+    args['n_alleles'] = parsed_args.allele_number
+    args['n_missing_gt'] = parsed_args.missing_genotypes
+    return args
+
+
+def main():
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    reader = Reader(args['in_fhand'])
+    filters = []
+    if args['genotypes'] is not None:
+        genotypes_in_samples = GenotypesInSamplesFilter(args['genotypes'],
+                                                        args['samples'])
+        filters.append(genotypes_in_samples)
+    if args['n_alleles'] is not None:
+        n_alleles_filter = AlleleNumberFilter(args['n_alleles'])
+        filters.append(n_alleles_filter)
+    if args['n_missing_gt'] is not None:
+        n_missing_genotypes = MissingGenotypesFilter(args['n_missing_gt'])
+        filters.append(n_missing_genotypes)
+    gq_filter = GenotypeQualityFilter(args['gq_threshold'], reader)
+    writer = Writer(args['out_fhand'], reader)
+    for record in reader:
+        record = gq_filter(record)
+        passed = True
+        for filter_ in filters:
+            if not filter_(record):
+                passed = False
+        if passed:
+            writer.write_record(record)
+    writer.close()
+
+
+if __name__ == '__main__':
+    main()
