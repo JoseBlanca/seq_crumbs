@@ -771,12 +771,24 @@ class GenotypesInSamplesFilter(BaseFilter):
 class AlleleNumberFilter(BaseFilter):
     'Filter by number of different alleles'
 
-    def __init__(self, n_alleles):
+    def __init__(self, n_alleles, samples=None):
         self.n_alleles = n_alleles
+        self.samples = samples
         self.conf = {'n_alleles': n_alleles}
 
     def __call__(self, record):
         self._clean_filter(record)
+        chosen_samples = choose_samples(record, self.samples)
+        alleles = set()
+        for call in chosen_samples:
+            if call.gt_bases is None:
+                continue
+            if call.phased:
+                bases = call.gt_bases.split('|')
+            else:
+                bases = call.gt_bases.split('/')
+            for allele in bases:
+                alleles.add(allele)
         return len(record.alleles) == self.n_alleles
 
     @property
@@ -800,13 +812,15 @@ def get_n_missing_genotypes(record):
 class MissingGenotypesFilter(BaseFilter):
     'Filter by maximim number of missing genotypes'
 
-    def __init__(self, max_missing_genotypes):
+    def __init__(self, max_missing_genotypes, samples=None):
         self.max_missing_genotypes = max_missing_genotypes
         self.conf = {'max_missing_genotypes': max_missing_genotypes}
+        self.samples = samples
 
     def __call__(self, record):
         self._clean_filter(record)
-        n_missing = get_n_missing_genotypes(record)
+        chosen_samples = choose_samples(record, self.samples)
+        n_missing = get_n_missing_genotypes(chosen_samples)
         return n_missing <= self.max_missing_genotypes
 
     @property

@@ -66,10 +66,12 @@ def main():
                                                         args['samples'])
         filters.append(genotypes_in_samples)
     if args['n_alleles'] is not None:
-        n_alleles_filter = AlleleNumberFilter(args['n_alleles'])
+        n_alleles_filter = AlleleNumberFilter(args['n_alleles'],
+                                              args['samples'])
         filters.append(n_alleles_filter)
     if args['n_missing_gt'] is not None:
-        n_missing_genotypes = MissingGenotypesFilter(args['n_missing_gt'])
+        n_missing_genotypes = MissingGenotypesFilter(args['n_missing_gt'],
+                                                     args['samples'])
         filters.append(n_missing_genotypes)
     gq_filter = GenotypeQualityFilter(args['gq_threshold'], reader)
     writer = Writer(args['out_fhand'], reader)
