@@ -279,7 +279,7 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
                     num_diff_to_ref_gts += 1
                 if gq >= gq_threshold:
                     num_called += 1
-        missing_calls_prc.append(num_called * 100 / total_calls)
+        missing_calls_prc.append(100 - (num_called * 100 / total_calls))
 
         if snp.num_called:
             if num_called != 0:
