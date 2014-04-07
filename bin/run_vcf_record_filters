@@ -44,7 +44,7 @@ def _parse_args(parser):
     if parsed_args.genotypes_in_samples is None:
         args['genotypes'] = None
     else:
-        args['genotypes'] = parsed_args.genotypes_in_samples.split(',')
+        args['genotypes'] = [int(n) for n in parsed_args.genotypes_in_samples.split(',')]
     if parsed_args.samples_file is None:
         args['samples'] = None
     else:
