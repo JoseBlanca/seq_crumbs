@@ -300,8 +300,7 @@ def calc_n_bases_in_chrom_with_snp(counts, ref_fhand):
     n_bases = 0
     ref_lengths = _get_seq_lengths(ref_fhand)
     for ref_name, length in ref_lengths.items():
-        seq_count = counts[ref_name]
-        if seq_count > 0:
+        if ref_name.strip() in counts:
             n_bases += length
     return n_bases
 

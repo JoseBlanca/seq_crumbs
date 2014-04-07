@@ -182,6 +182,7 @@ def main():
     ref_fhand = open(ref_fhand.name)
     n_bases = calc_n_bases_in_chrom_with_snp(vcf_stats.snps_per_chromosome,
                                              ref_fhand)
+    stats_fhand.write('\n----------------------------------------\n')
     stats_fhand.write('Num bases covered by seqs with SNPs: {}'.format(
                                                                     n_bases))
 
