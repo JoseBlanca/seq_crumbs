@@ -10,7 +10,8 @@ import os
 
 from bam_crumbs.plot import draw_histogram, draw_scatter
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
-                                  HET, HOM_ALT, HOM_REF, VcfStats)
+                                  HET, HOM_ALT, HOM_REF, VcfStats,
+    calc_n_bases_in_chrom_with_snp)
 from crumbs.statistics import draw_histogram_matlib, IntCounter
 
 
@@ -170,6 +171,11 @@ def main():
         counter = vcf_stats.het_by_sample[sample]
         percentaje_het = counter['num_het'] / counter['num_gt']
         stats_fhand.write('{}\t{:.2%}\n'.format(sample, percentaje_het))
+    ref_fhand = open(ref_fhand.name)
+    n_bases = calc_n_bases_in_chrom_with_snp(vcf_stats.snps_per_chromosome,
+                                             ref_fhand)
+    stats_fhand.write('Num bases covered by seqs with SNPs: {}'.format(
+                                                                    n_bases))
 
 if __name__ == '__main__':
     main()

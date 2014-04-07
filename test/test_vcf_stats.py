@@ -5,7 +5,8 @@ import sys
 from vcf import Reader
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
                                   get_snpcaller_name, VARSCAN, GATK,
-                                  calculate_maf, FREEBAYES, VcfStats)
+                                  calculate_maf, FREEBAYES, VcfStats,
+                                  calc_n_bases_in_chrom_with_snp)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
 from subprocess import check_call, CalledProcessError
@@ -76,6 +77,12 @@ class SnvStatTests(unittest.TestCase):
                                            open(REF_PATH))
         assert densities['CUUC00355_TC01'] == 3.74
 
+    def test_calc_n_bases_in_chrom_with_snp(self):
+        vcf_stats = VcfStats(VARSCAN_VCF_PATH)
+        counts = vcf_stats.snps_per_chromosome
+        n_bases = calc_n_bases_in_chrom_with_snp(counts, open(REF_PATH))
+        assert n_bases == 16393
+
     def test_calc_maf(self):
         #varscan
         reader = Reader(filename=VARSCAN_VCF_PATH)
@@ -136,5 +143,5 @@ class StatBinTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'SnvStatTests.test_scatter_calldata']
+    #import sys;sys.argv = ['', 'SnvStatTests.test_calc_n_bases_in_chrom_with_snp']
     unittest.main()

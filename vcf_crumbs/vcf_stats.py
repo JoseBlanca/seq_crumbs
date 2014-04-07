@@ -290,6 +290,16 @@ def _get_seq_lengths(fhand):
     return {get_name(seq): get_length(seq) for seq in read_seqs([fhand])}
 
 
+def calc_n_bases_in_chrom_with_snp(counts, ref_fhand):
+    n_bases = 0
+    ref_lengths = _get_seq_lengths(ref_fhand)
+    for ref_name, length in ref_lengths.items():
+        seq_count = counts[ref_name]
+        if seq_count > 0:
+            n_bases += length
+    return n_bases
+
+
 def calc_density_per_chrom(counts, ref_fhand, size=100):
     densities = {}
     ref_lengths = _get_seq_lengths(ref_fhand)
