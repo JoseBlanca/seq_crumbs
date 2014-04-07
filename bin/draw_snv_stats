@@ -110,6 +110,19 @@ def main():
                               bin_edges=distrib['bin_limits'], title=title_per,
                               xlabel='Heterozigosity', ylabel="Num. samples")
 
+    #Missing calls percentage per snp histogram
+    missing_calls_fhand = open(os.path.join(out_dir,
+                                          'missing_calls_per_snp.png'),
+                             'w')
+    missing_calls_stats = IntCounter(iter(vcf_stats.missing_calls_prc))
+    distrib = missing_calls_stats.calculate_distribution(bins=100, min_=0,
+                                                         max_=100)
+    title_per = 'Missing calls percentage distribution'
+    draw_histogram_matlib(distrib['counts'], fhand=missing_calls_fhand,
+                              bin_edges=distrib['bin_limits'], title=title_per,
+                              xlabel='Missing calls percentage',
+                              ylabel="Num. SNPs")
+
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
     distrib = vcf_stats.genotype_qualities.calculate_distribution(bins=100)

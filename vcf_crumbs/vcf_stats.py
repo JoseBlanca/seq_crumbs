@@ -121,6 +121,7 @@ class VcfStats(object):
                           HOM_ALT: {'x': array(int_code), 'y': array(int_code),
                                     'value': array(float_code)}
                          }
+        self._missing_calls_prc = []
         self._calculate()
 
     def _calculate(self):
@@ -133,6 +134,7 @@ class VcfStats(object):
         het_by_sample = self._het_by_sample
         gqs = self._genotype_qualities
         variable_gt_per_snp = self._variable_gt_per_snp
+        missing_calls_prc = self._missing_calls_prc
 
         for snp in self.reader:
             chrom_counts[snp.CHROM] += 1
@@ -150,7 +152,9 @@ class VcfStats(object):
             #sample_data
             num_diff_to_ref_gts = 0
             num_called = 0
+            total_calls = 0
             for call in snp.samples:
+                total_calls += 1
                 sample_name = call.sample
                 samples.add(sample_name)
                 if sample_name not in het_by_sample:
@@ -171,6 +175,7 @@ class VcfStats(object):
                         num_diff_to_ref_gts += 1
                     if gq >= gq_threshold:
                         num_called += 1
+            missing_calls_prc.append(num_called * 100 / total_calls)
 
             if snp.num_called:
                 if num_called != 0:
@@ -205,6 +210,10 @@ class VcfStats(object):
     def samples(self):
         return list(self._samples)
 
+    @property
+    def missing_calls_prc(self):
+        return self._missing_calls_prc
+
 
 def get_data_from_vcf(vcf_path, gq_threshold=0):
     reader = Reader(filename=vcf_path)
@@ -217,6 +226,7 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
             'variable_gt_per_snp': array('f'),
             'het_by_sample': {},
             'genotype_qualities': array('f'),
+            'missing_calls_prc': [],
             'call_data': {HOM_REF: {'x': array(typecode), 'y': array(typecode),
                                     'value': array(value_typecode)},
                           HET: {'x': array(typecode), 'y': array(typecode),
@@ -232,6 +242,7 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
     samples = data['samples']
     het_by_sample = data['het_by_sample']
     gqs = data['genotype_qualities']
+    missing_calls_prc = data['missing_calls_prc']
     for snp in reader:
         chrom_counts[snp.CHROM] += 1
         maf = calculate_maf(snp, vcf_variant=vcf_variant)
@@ -240,7 +251,9 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
         #sample_data
         num_diff_to_ref_gts = 0
         num_called = 0
+        total_calls = 0
         for call in snp.samples:
+            total_calls += 1
             sample_name = call.sample
             if sample_name not in het_by_sample:
                 het_by_sample[sample_name] = IntCounter({'num_gt': 0,
@@ -261,6 +274,7 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
                     num_diff_to_ref_gts += 1
                 if gq >= gq_threshold:
                     num_called += 1
+        missing_calls_prc.append(num_called * 100 / total_calls)
 
         if snp.num_called:
             if num_called != 0:
