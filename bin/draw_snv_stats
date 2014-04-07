@@ -11,7 +11,7 @@ import os
 from bam_crumbs.plot import draw_histogram, draw_scatter
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
                                   HET, HOM_ALT, HOM_REF, VcfStats)
-from crumbs.statistics import draw_histogram_matlib
+from crumbs.statistics import draw_histogram_matlib, IntCounter
 
 
 def _setup_argparse():
@@ -81,7 +81,8 @@ def main():
               'ylim': (0, 100)}
     draw_scatter(vcf_stats.call_data.values(), scatter_fhand, **kwargs)
 
-    # het % for called sample per snp
+    # Percentage of genotypes different to reference samples  per
+    # called samples in each snp
     variable_gt_fhand = open(os.path.join(out_dir, 'variable_gt_per_snp.png'),
                              'w')
     distrib = vcf_stats.variable_gt_per_snp.calculate_distribution(bins=100,
@@ -92,6 +93,22 @@ def main():
     draw_histogram_matlib(distrib['counts'], fhand=variable_gt_fhand,
                               bin_edges=distrib['bin_limits'], title=title_per,
                               xlabel='percentaje variable', ylabel="Num. Snvs")
+
+    #Heterozigosity per sample histogram
+    het_by_sample_fhand = open(os.path.join(out_dir,
+                                          'heterozygosity_per_sample.png'),
+                             'w')
+    heterozygosity_per_sample = []
+    for het_by_sample in vcf_stats.het_by_sample.values():
+        heterozygosity = het_by_sample['num_het'] * 100 / het_by_sample['num_gt']
+        heterozygosity_per_sample.append(heterozygosity)
+    heterozygosity_stats = IntCounter(iter(heterozygosity_per_sample))
+    distrib = heterozygosity_stats.calculate_distribution(bins=100, min_=0,
+                                                                   max_=100)
+    title_per = 'Heterozigosity per sample distribution'
+    draw_histogram_matlib(distrib['counts'], fhand=het_by_sample_fhand,
+                              bin_edges=distrib['bin_limits'], title=title_per,
+                              xlabel='Heterozigosity', ylabel="Num. samples")
 
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
