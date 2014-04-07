@@ -17,7 +17,8 @@ from vcf_crumbs.vcf_filters import (calculate_maf, CloseToSnvFilter,
     GenotypesInSamplesFilter, AlleleNumberFilter, MissingGenotypesFilter,
     GenotypeQualityFilter, HeterozigoteInSamples)
 from vcf_crumbs.utils import TEST_DATA_DIR
-from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, GQ
+from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, GQ,\
+    get_snpcaller_name
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -689,9 +690,6 @@ class TestInfoMappers(unittest.TestCase):
                 info_id = het_in_samples.info_id
                 assert snp.INFO[info_id] == 'None'
                 break
-
-
-
         return
         reader = Reader(open(FREEBAYES3_VCF_PATH))
 
@@ -700,8 +698,6 @@ class TestInfoMappers(unittest.TestCase):
             for call in snp.samples:
                 print call.gt_type,
             print
-
-
 
 
 class BinaryTest(unittest.TestCase):
@@ -738,7 +734,27 @@ class BinaryTest(unittest.TestCase):
         assert 'CAP=SetI' in result
         assert 'HIS1=True' in result
 
+    def test_bin_record_filters(self):
+        binary = join(dirname(__file__), '..', 'bin', 'run_vcf_record_filters')
+        assert 'usage' in check_output([binary, '-h'])
+
+        out_fhand = NamedTemporaryFile()
+        in_fpath = VCF_PATH
+        samples_fhand = NamedTemporaryFile()
+        samples_fhand.write('mu16\n')
+        samples_fhand.flush()
+        cmd = [binary, in_fpath, '-o', out_fhand.name, '-g', '0', '-s',
+               samples_fhand.name, '-t', '20']
+        check_output(cmd)
+        reader = Reader(filename=out_fhand.name)
+        vcf_variant = get_snpcaller_name(reader)
+        for snp in reader:
+            assert snp.genotype('mu16').gt_type == 0
+            for call in snp:
+                data = get_call_data(call, vcf_variant)
+                assert data[GQ] >= 20 or data[GQ] == None
+
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterTest.test_genotype_quality']
+    #import sys;sys.argv = ['', 'BinaryTest']
     unittest.main()
