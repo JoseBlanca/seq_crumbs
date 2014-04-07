@@ -123,6 +123,23 @@ def main():
                               xlabel='Missing calls percentage',
                               ylabel="Num. SNPs")
 
+    #Number of SNP per ref_seq histogram
+    snps_per_refseq_fhand = open(os.path.join(out_dir,
+                                          'snps_per_ref_seq.png'),
+                             'w')
+    snps_per_refseq = vcf_stats.snps_per_chromosome.values()
+    max_ = max(snps_per_refseq)
+    min_ = min(snps_per_refseq)
+    snps_per_refseq_stats = IntCounter(iter(snps_per_refseq))
+    distrib = snps_per_refseq_stats.calculate_distribution(bins=max_,
+                                                           min_=min_,
+                                                           max_=max_)
+    title_per = 'Missing calls percentage distribution'
+    draw_histogram_matlib(distrib['counts'], fhand=snps_per_refseq_fhand,
+                              bin_edges=distrib['bin_limits'], title=title_per,
+                              xlabel='Number of SNPs per reference seq',
+                              ylabel="Num. reference sequences")
+
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
     distrib = vcf_stats.genotype_qualities.calculate_distribution(bins=100)
