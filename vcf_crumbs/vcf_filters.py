@@ -11,7 +11,7 @@ from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
 from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, RC,\
-    ACS, get_snpcaller_name, GQ
+    ACS, get_snpcaller_name, GQ, GT
 
 COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
@@ -115,6 +115,14 @@ class BaseFilter(object):
         name = self.name
         if record.FILTER and name in record.FILTER:
             record.FILTER.remove(name)
+
+    def _clean_info(self, record):
+        if self.info_id in record.INFO:
+            del(record.INFO[self.info.id])
+
+    @property
+    def is_filter(self):
+        return True
 
     @property
     def info(self):
@@ -810,4 +818,60 @@ class MissingGenotypesFilter(BaseFilter):
         desc = 'Record has <= {} missing or uncalled genotypes'
         return desc.format(self.max_missing_genotypes)
 
+
+class HeterozigoteInSamples(BaseFilter):
+
+    def __init__(self, filter_id, samples=None, min_percent_het_gt=0,
+                 gq_threshold=0, min_num_called=0):
+        self._samples = samples
+        self._min_percent_het_gt = min_percent_het_gt
+        self._gq_threshold = gq_threshold
+        self._min_num_called = min_num_called
+        self.filter_id = filter_id
+        self.conf = {'samples': samples,
+                     'min_percent_het_get': min_percent_het_gt,
+                     'gq_threslhold': gq_threshold,
+                     'min_num_called': min_num_called}
+
+    def __call__(self, record):
+        call_is_het = []
+        for call in record:
+            sample_name = call.sample
+            if self._samples and sample_name not in self._samples:
+                continue
+            gt_qual = get_call_data(call, vcf_variant=self.vcf_variant)[GQ]
+            if gt_qual >= self._gq_threshold:
+                call_is_het.append(call.is_het)
+        num_calls = len(call_is_het)
+        num_hets = len(filter(bool, call_is_het))
+        if not num_calls or num_calls < self._min_num_called:
+            result = None
+        else:
+            percent = int((num_hets / num_calls) * 100)
+            if percent >= self._min_percent_het_gt:
+                result = True
+            else:
+                result = False
+
+        record.add_info(info=self.info_id, value=str(result))
+        return record
+
+    @property
+    def info(self):
+        if self._samples is None:
+            samples = 'all'
+        else:
+            samples = ','.join(self._samples)
+        description = 'True if at least {min_perc}% of the called samples are '
+        description += 'het. False if not. None if not enough data in the '
+        description += 'samples {samples} :: {conf}'
+        description = description.format(min_perc=self._min_percent_het_gt,
+                                        samples=samples, conf=self.encode_conf)
+
+        return {'id': 'HIS{}'.format(self.filter_id), 'num': 1, 'type': 'String',
+                'desc': description}
+
+    @property
+    def is_filter(self):
+        return False
 
