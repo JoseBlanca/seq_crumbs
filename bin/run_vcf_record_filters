@@ -41,10 +41,10 @@ def _parse_args(parser):
         args['out_fhand'] = parsed_args.output
     else:
         args['out_fhand'] = sys.stdout
-    if parsed_args.genotypes is None:
+    if parsed_args.genotypes_in_samples is None:
         args['genotypes'] = None
     else:
-        args['genotypes'] = parsed_args.genotypes.split(',')
+        args['genotypes'] = parsed_args.genotypes_in_samples.split(',')
     if parsed_args.samples_file is None:
         args['samples'] = None
     else:
