@@ -274,8 +274,9 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
                 gqs.append(gq)
                 if (call.is_het and gq >= gq_threshold):
                     het_by_sample[sample_name]['num_het'] += 1
-
-                if (gq >= gq_threshold and call.gt_type == 2):
+                #Should it be == 1 or 2?
+                if (gq >= gq_threshold and (call.gt_type == 2 or
+                                            call.gt_type == 1)):
                     num_diff_to_ref_gts += 1
                 if gq >= gq_threshold:
                     num_called += 1
