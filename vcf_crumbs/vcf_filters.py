@@ -744,18 +744,26 @@ class GenotypeQualityFilter(BaseFilter):
 class GenotypesInSamplesFilter(BaseFilter):
     'Filter by genotypes in specific samples'
 
-    def __init__(self, genotypes, samples=None):
+    def __init__(self, genotypes, samples=None, n_min_called=None):
         self.genotypes = genotypes
+        self.genotypes.append(None)
         self.samples = samples
+        self.n_min_called = n_min_called
         self.conf = {'genotypes': genotypes, 'samples': samples}
 
     def __call__(self, record):
         self._clean_filter(record)
         chosen_samples = choose_samples(record, self.samples)
+        n_called = 0
         for call in chosen_samples:
             if call.gt_type not in self.genotypes:
                 return False
-        return True
+            if call.gt_type is not None:
+                n_called += 1
+        if self.n_min_called is None or n_called >= self.n_min_called:
+            return True
+        else:
+            return False
 
     @property
     def name(self):

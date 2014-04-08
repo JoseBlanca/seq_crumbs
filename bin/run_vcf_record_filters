@@ -19,16 +19,22 @@ def _setup_argparse():
                         help='output vcf file', type=argparse.FileType('wt'))
     parser.add_argument('-s', '--samples_file', default=None,
                         help='File with the filter configuration')
+    help1 = 'Posible genotypes in selected samples(012)'
+    help1 += 'It can take a min of number called calls set with -x. '
+    help1 += 'Otherwise, if all genotypes are uncalled, '
+    help1 += 'the record passes the filter anyway'
     parser.add_argument('-g', '--genotypes_in_samples', default=None,
-                        help='Posible genotypes in selected samples(012)')
-    help1 = 'Genotype quality threshold. Lower values will be transformed '
-    help1 += 'into uncalled'
-    parser.add_argument('-t', '--gq_threshold', default=0, type=int,
                         help=help1)
+    help2 = 'Genotype quality threshold. Lower values will be transformed '
+    help2 += 'into uncalled'
+    parser.add_argument('-t', '--gq_threshold', default=0, type=int,
+                        help=help2)
     parser.add_argument('-n', '--allele_number', default=None, type=int,
                         help='Allele number requiered to keep marker')
     parser.add_argument('-m', '--missing_genotypes', default=None, type=int,
                         help='Max number of missing genotypes allowed')
+    parser.add_argument('-x', '--min_n_called', default=None, type=int,
+                        help='Min number of called genotypes in -g option')
     return parser
 
 
@@ -52,6 +58,7 @@ def _parse_args(parser):
     args['gq_threshold'] = parsed_args.gq_threshold
     args['n_alleles'] = parsed_args.allele_number
     args['n_missing_gt'] = parsed_args.missing_genotypes
+    args['min_n_called'] = parsed_args.min_n_called
     return args
 
 
@@ -63,7 +70,8 @@ def main():
     filters = []
     if args['genotypes'] is not None:
         genotypes_in_samples = GenotypesInSamplesFilter(args['genotypes'],
-                                                        args['samples'])
+                                                        args['samples'],
+                                                        args['min_n_called'])
         filters.append(genotypes_in_samples)
     if args['n_alleles'] is not None:
         n_alleles_filter = AlleleNumberFilter(args['n_alleles'],

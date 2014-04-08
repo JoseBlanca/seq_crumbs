@@ -589,11 +589,11 @@ class FilterTest(unittest.TestCase):
         filter_.vcf_variant = VARSCAN
         assert filter_(rec1)
 
-        filter_ = GenotypesInSamplesFilter([0], ['pepo', 'mu16'])
+        filter_ = GenotypesInSamplesFilter([0], ['pepo', 'mu16'], 2)
         filter_.vcf_variant = VARSCAN
         assert not filter_(rec1)
-        assert  filter_.name == "smpl.['pepo', 'mu16'].gt.[0]"
-        desc = "Record has [0] genotypes in pepo,mu16"
+        assert  filter_.name == "smpl.['pepo', 'mu16'].gt.[0, None]"
+        desc = "Record has [0, None] genotypes in pepo,mu16"
         assert  desc in filter_.description
 
     def test_allele_number(self):
@@ -749,7 +749,8 @@ class BinaryTest(unittest.TestCase):
         reader = Reader(filename=out_fhand.name)
         vcf_variant = get_snpcaller_name(reader)
         for snp in reader:
-            assert snp.genotype('mu16').gt_type == 0
+            gt = snp.genotype('mu16').gt_type
+            assert gt == 0 or gt == None
             for call in snp:
                 data = get_call_data(call, vcf_variant)
                 assert data[GQ] >= 20 or data[GQ] == None
