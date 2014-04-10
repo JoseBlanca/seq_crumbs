@@ -34,6 +34,9 @@ def _setup_argparse():
             help='Genotype quelity threshold to take into account a genotype')
     parser.add_argument('-s', '--samples_file', default=None,
                         help='File containing selected samples for statistics')
+    parser.add_argument('-m', '--maf_per_sample', default=False,
+                        action='store_true',
+                        help='Draw maf distribution per sample')
     return parser
 
 
@@ -48,6 +51,7 @@ def _parse_args(parser):
     args['ref_fhand'] = parsed_args.reference_file
     args['gq'] = parsed_args.gt_qual_threshold
     args['samples_fpath'] = parsed_args.samples_file
+    args['maf_per_sample'] = parsed_args.maf_per_sample
     return args
 
 
@@ -57,6 +61,7 @@ def main():
     out_dir = args['out_dir']
     ref_fhand = args['ref_fhand']
     gq_threshold = args['gq']
+    maf_per_sample = args['maf_per_sample']
     if args['samples_fpath'] is None:
         selected_samples = None
     else:
@@ -74,7 +79,9 @@ def main():
     draw_histogram(densities.values(), density_fhand, bins=100, **kwargs)
 
     #mafs
-    samples = ['all'] + vcf_stats.samples
+    samples = ['all']
+    if maf_per_sample:
+        samples += vcf_stats.samples
     for sample in samples:
         maf_fhand = open(os.path.join(out_dir,
                              'distrib_maf_per_snv_{}.png'.format(sample)), 'w')
