@@ -55,8 +55,24 @@ def draw_scatter(groups, fhand, plot_lines=False, **kwargs):
         y_vals = group['y']
         sct_kwargs = {}
         sct_kwargs['marker'] = MARKERGLHYPS[index]
-        color = COLORS[index]
+        # TODO. Review the API for the colors.
+        # The following cases should be posible for color/value:
+        #    - a tuple RGB
+        #    - nothing. It has to chose one color by default
+        #    - a string: 'blue', 'green', etc.
+        #    - a list of numbers (intensities) and ColorMap
+        # A possible option could be:
+        # group['color] for anything that matplotlib could digest for a single
+        # color: RGB tuple or string.
+        # group['color_intensities'] for the values of the color. In this case
+        # a color map should be given or a default one should be used.
+        # In this is used 'color' and 'color_intensities' should be
+        # incompatible
+        # What about plot_lines? That should be incompatible with
+        # color_intensities
+        color = group.get('color', COLORS[index])
         if 'value' in group:
+            # value is a list with color intensities
             sct_kwargs['c'] = group['value']
             sct_kwargs['norm'] = colors.Normalize()
             sct_kwargs['cmap'] = cm.get_cmap(COLORMAPS[index])
@@ -74,7 +90,6 @@ def draw_scatter(groups, fhand, plot_lines=False, **kwargs):
         else:
             sct_kwargs['s'] = MARKER_SIZE2
             axes.scatter(x_vals, y_vals, **sct_kwargs)
-
 
     canvas.print_figure(fhand, format=_get_format_from_fname(fhand.name))
     fhand.flush()
