@@ -8,11 +8,15 @@ from __future__ import division
 import argparse
 import os
 
-from bam_crumbs.plot import draw_histogram, draw_scatter
+from bam_crumbs.plot import draw_histogram, draw_scatter, draw_density_plot,\
+    _get_canvas_and_axes, FIGURE_SIZE
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
                                   HET, HOM_ALT, HOM_REF, VcfStats,
     calc_n_bases_in_chrom_with_snp)
 from crumbs.statistics import draw_histogram_matlib, IntCounter
+from array import array
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 
 def _setup_argparse():
@@ -30,7 +34,6 @@ def _setup_argparse():
             help='Genotype quelity threshold to take into account a genotype')
     parser.add_argument('-s', '--samples_file', default=None,
                         help='File containing selected samples for statistics')
-
     return parser
 
 
@@ -71,7 +74,7 @@ def main():
     draw_histogram(densities.values(), density_fhand, bins=100, **kwargs)
 
     #mafs
-    samples = vcf_stats.samples + ['all']
+    samples = ['all'] + vcf_stats.samples
     for sample in samples:
         maf_fhand = open(os.path.join(out_dir,
                              'distrib_maf_per_snv_{}.png'.format(sample)), 'w')
@@ -89,6 +92,37 @@ def main():
               'xlabel': 'Reference_allele count', 'xlim': (0, 100),
               'ylim': (0, 100)}
     draw_scatter(vcf_stats.call_data.values(), scatter_fhand, **kwargs)
+
+    # call_density_plot
+    figure_size = (15.0, 30.0)
+    fig = Figure(figsize=figure_size)
+    canvas = FigureCanvasAgg(fig)
+    axes1 = fig.add_subplot(211)
+    axes2 = fig.add_subplot(212)
+    n_bins = 100
+    range_ = [[0, 100], [0, 100]]
+
+    density_plot_fhand = open(os.path.join(out_dir, 'density_plot.png'), 'w')
+    kwargs = {'title': 'Ref/alt allele count scatter in Heterozygote',
+              'ylabel': 'Alternative allele count', 'aspect':'equal',
+              'xlabel': 'Reference_allele count'}
+    x = vcf_stats.call_data[1]['x']
+    y = vcf_stats.call_data[1]['y']
+    draw_density_plot(x, y, density_plot_fhand, n_bins=n_bins, canvas=canvas,
+                      axes=axes1, range_=range_, **kwargs)
+
+    density_plot_fhand = open(os.path.join(out_dir, 'density_plot.png'), 'w')
+    kwargs = {'title': 'Ref/alt allele count scatter in Homozygote',
+              'ylabel': 'Alternative allele count', 'aspect': 'equal',
+              'xlabel': 'Reference_allele count'}
+    x = array('I')
+    x.extend(vcf_stats.call_data[0]['x'])
+    x.extend(vcf_stats.call_data[2]['x'])
+    y = array('I')
+    y.extend(vcf_stats.call_data[0]['y'])
+    y.extend(vcf_stats.call_data[2]['y'])
+    draw_density_plot(x, y, density_plot_fhand, n_bins=n_bins, canvas=canvas,
+                      axes=axes2, range_=range_, **kwargs)
 
     # Percentage of genotypes different to reference samples  per
     # called samples in each snp
