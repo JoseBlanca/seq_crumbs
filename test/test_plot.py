@@ -8,7 +8,8 @@ import unittest
 from tempfile import NamedTemporaryFile
 from array import array
 
-from bam_crumbs.plot import draw_histogram, draw_scatter
+from bam_crumbs.plot import draw_histogram, draw_scatter, draw_density_plot
+import numpy
 
 
 class PlotTests(unittest.TestCase):
@@ -33,6 +34,12 @@ class PlotTests(unittest.TestCase):
                  'x': array('B', [20, 45, 45])}]
         draw_scatter(data, fhand, plot_lines=True)
         #raw_input(fhand.name)
+
+    def test_draw_density_plot(self):
+        fhand = NamedTemporaryFile(suffix='.png')
+        data = {'y': array('f', numpy.random.normal(40, 5, 40000)),
+                 'x': array('f', numpy.random.normal(40, 5, 40000))}
+        draw_density_plot(data['x'], data['y'], fhand, n_bins=200)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

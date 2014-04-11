@@ -93,3 +93,26 @@ def draw_scatter(groups, fhand, plot_lines=False, **kwargs):
 
     canvas.print_figure(fhand, format=_get_format_from_fname(fhand.name))
     fhand.flush()
+
+
+def draw_density_plot(xs, ys, fhand, n_bins=40, canvas=None, axes=None,
+                      range_=None, **kwargs):
+    if canvas is None and axes is None:
+        canvas, axes = _get_canvas_and_axes()
+    elif canvas is not None and axes is not None:
+        pass
+    else:
+        msg = 'If an axes is given the canvas is also required'
+        raise NotImplementedError(msg)
+
+    for key, value in kwargs.items():
+        getattr(axes, 'set_{}'.format(key))(value)
+
+    # TODO check with norm=LogNorm() and/or normed=True
+    if range_ is None:
+        axes.hist2d(xs, ys, bins=n_bins)
+    else:
+        axes.hist2d(xs, ys, bins=n_bins, range=range_)
+
+    canvas.print_figure(fhand, format=_get_format_from_fname(fhand.name))
+    fhand.flush()
