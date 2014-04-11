@@ -111,13 +111,27 @@ class SnvStatTests(unittest.TestCase):
                      ylim=(0, 100))
         #raw_input(fhand.name)
 
+    def test_counts_distribution_in_genotype(self):
+        vcf_stats = VcfStats(VARSCAN_VCF_PATH)
+        results_dp11 = {0: IntCounter({7: 8, 8: 3, 11: 3, 6: 2, 10: 1}),
+                        1: IntCounter({4: 4, 5: 4, 3: 3}),
+                        2: IntCounter({2: 2})}
+        assert vcf_stats.counts_distribution_in_gt[11] == results_dp11
+
+        vcf_stats = VcfStats(FREEBAYES_VCF_PATH)
+        results_dp11 = {1: IntCounter({8: 10, 7: 5, 4: 4, 5: 3, 3: 2, 6: 2, 0: 1}),
+                        2: IntCounter({0: 7, 1: 2, 2: 2})}
+        assert vcf_stats.counts_distribution_in_gt[11] == results_dp11
+        #raw_input(fhand.name)
+
 
 class StatBinTests(unittest.TestCase):
 
     def test_draw_snv_stats_bin(self):
         binary = join(BIN_DIR, 'draw_snv_stats')
         tempdir = TemporaryDir()
-        cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, VARSCAN_VCF_PATH]
+        cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, VARSCAN_VCF_PATH,
+               '-d', '10']
         stderr = NamedTemporaryFile()
         stdout = NamedTemporaryFile()
         try:
@@ -143,5 +157,5 @@ class StatBinTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'SnvStatTests.test_calc_n_bases_in_chrom_with_snp']
+    #import sys;sys.argv = ['', 'SnvStatTests.test_counts_distribution_in_genotype']
     unittest.main()

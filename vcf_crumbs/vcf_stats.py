@@ -21,7 +21,7 @@ HOM_REF = 0
 HET = 1
 HOM_ALT = 2
 
-DP = 'deep'
+DP = 'depth'
 ACS = 'alt_counts'
 RC = 'ref_count'
 GQ = 'genotype_quality'
@@ -123,6 +123,7 @@ class VcfStats(object):
                                     'value': array(float_code)}
                          }
         self._missing_calls_prc = []
+        self._counts_distribution_in_gt = {}
         self._calculate()
 
     def _calculate(self):
@@ -137,6 +138,7 @@ class VcfStats(object):
         variable_gt_per_snp = self._variable_gt_per_snp
         missing_calls_prc = self._missing_calls_prc
         selected_samples = self._selected_samples
+        counts_distribution_in_gt = self._counts_distribution_in_gt
 
         for snp in self.reader:
             chrom_counts[snp.CHROM] += 1
@@ -165,8 +167,21 @@ class VcfStats(object):
                 if sample_name not in het_by_sample:
                     het_by_sample[sample_name] = IntCounter({'num_gt': 0,
                                                              'num_het': 0})
+                calldata = get_call_data(call, vcf_variant)
+                gt = call.gt_type
+                depth = calldata[DP]
+                rc = calldata[RC]
+                if depth in counts_distribution_in_gt:
+                    if gt in counts_distribution_in_gt[depth]:
+                        if rc in counts_distribution_in_gt[depth][gt]:
+                            counts_distribution_in_gt[depth][gt][rc] += 1
+                        else:
+                            counts_distribution_in_gt[depth][gt][rc] = 1
+                    else:
+                        counts_distribution_in_gt[depth][gt] = IntCounter({rc: 1})
+                else:
+                    counts_distribution_in_gt[depth] = {gt: IntCounter({rc: 1})}
                 if call.called:
-                    calldata = get_call_data(call, vcf_variant)
                     gq = calldata[GQ]
                     call_datas[call.gt_type]['x'].append(calldata[RC])
                     call_datas[call.gt_type]['y'].append(sum(calldata[ACS]))
@@ -218,6 +233,10 @@ class VcfStats(object):
     @property
     def missing_calls_prc(self):
         return self._missing_calls_prc
+
+    @property
+    def counts_distribution_in_gt(self):
+        return self._counts_distribution_in_gt
 
 
 def get_data_from_vcf(vcf_path, gq_threshold=0):
