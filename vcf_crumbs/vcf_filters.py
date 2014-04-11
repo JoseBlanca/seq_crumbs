@@ -699,31 +699,24 @@ class ChangeAminoSeverityFilter(BaseFilter):
         return "Alt alleles change the amino acid and the change is severe"
 
 
-class GenotypeQualityFilter(BaseFilter):
+def remove_low_quality_gt(record, gq_threshold, vcf_variant):
     ''''Filters by genotype quality and sets to uncalled those that do not meet
     the requierements'''
-
-    def __init__(self, gq_threshold, reader):
-        self._gq_threshold = gq_threshold
-        self._vcf_variant = get_snpcaller_name(reader)
-
-    def __call__(self, record):
-
-        for index_, call in enumerate(record):
-            call_data = get_call_data(call, self._vcf_variant)
-            if call_data[GQ] is None or call_data[GQ] < self._gq_threshold:
-                calldata = make_calldata_tuple(record.FORMAT.split(':'))
-                sampdat = []
-                for format_def in record.FORMAT.split(':'):
-                    if format_def == 'GT':
-                        value = None
-                    else:
-                        value = getattr(call.data, format_def)
-                    sampdat.append(value)
-                call = _Call(record, call.sample, calldata(*sampdat))
-                call_data = get_call_data(call, self._vcf_variant)
-                record.samples[index_] = call
-        return record
+    for index_, call in enumerate(record):
+        call_data = get_call_data(call, vcf_variant)
+        if call_data[GQ] is None or call_data[GQ] < gq_threshold:
+            calldata = make_calldata_tuple(record.FORMAT.split(':'))
+            sampdat = []
+            for format_def in record.FORMAT.split(':'):
+                if format_def == 'GT':
+                    value = None
+                else:
+                    value = getattr(call.data, format_def)
+                sampdat.append(value)
+            call = _Call(record, call.sample, calldata(*sampdat))
+            call_data = get_call_data(call, vcf_variant)
+            record.samples[index_] = call
+    return record
 
 
 #These filters return True/False

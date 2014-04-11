@@ -15,7 +15,7 @@ from vcf_crumbs.vcf_filters import (calculate_maf, CloseToSnvFilter,
                                     IsNotVariableFilter, ChangeAminoFilter,
                                     ChangeAminoSeverityFilter,
     GenotypesInSamplesFilter, AlleleNumberFilter, MissingGenotypesFilter,
-    GenotypeQualityFilter, HeterozigoteInSamples)
+    HeterozigoteInSamples, remove_low_quality_gt)
 from vcf_crumbs.utils import TEST_DATA_DIR
 from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, GQ,\
     get_snpcaller_name, GT
@@ -626,9 +626,9 @@ class FilterTest(unittest.TestCase):
 
     def test_genotype_quality(self):
         records = Reader(filename=VCF_PATH)
+        vcf_variant = get_snpcaller_name(records)
         rec1 = records.next()
-        filter_ = GenotypeQualityFilter(20, records)
-        for call in filter_(rec1):
+        for call in remove_low_quality_gt(rec1, 20, vcf_variant):
             if call.sample != 'upv196':
                 assert call.gt_bases is None
 

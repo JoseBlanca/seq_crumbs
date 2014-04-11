@@ -6,7 +6,8 @@ import argparse
 from vcf import Reader, Writer
 from vcf_crumbs.vcf_filters import (GenotypesInSamplesFilter,
                                     AlleleNumberFilter, MissingGenotypesFilter,
-                                    GenotypeQualityFilter)
+                                    remove_low_quality_gt)
+from vcf_crumbs.vcf_stats import get_snpcaller_name
 
 
 def _setup_argparse():
@@ -81,10 +82,10 @@ def main():
         n_missing_genotypes = MissingGenotypesFilter(args['n_missing_gt'],
                                                      args['samples'])
         filters.append(n_missing_genotypes)
-    gq_filter = GenotypeQualityFilter(args['gq_threshold'], reader)
+    vcf_variant = get_snpcaller_name(reader)
     writer = Writer(args['out_fhand'], reader)
     for record in reader:
-        record = gq_filter(record)
+        record = remove_low_quality_gt(record, args['gq_threshold'], vcf_variant)
         passed = True
         for filter_ in filters:
             if not filter_(record):
