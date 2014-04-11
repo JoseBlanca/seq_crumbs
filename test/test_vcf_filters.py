@@ -18,7 +18,7 @@ from vcf_crumbs.vcf_filters import (calculate_maf, CloseToSnvFilter,
     GenotypeQualityFilter, HeterozigoteInSamples)
 from vcf_crumbs.utils import TEST_DATA_DIR
 from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, GQ,\
-    get_snpcaller_name
+    get_snpcaller_name, GT
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -632,10 +632,6 @@ class FilterTest(unittest.TestCase):
             if call.sample != 'upv196':
                 assert call.gt_bases is None
 
-        assert  filter_.name == "gq20"
-        desc = "Genotypes under threshold quality 20 set as uncalled"
-        assert  desc in filter_.description
-
 
 class TestInfoMappers(unittest.TestCase):
 
@@ -753,9 +749,10 @@ class BinaryTest(unittest.TestCase):
             assert gt == 0 or gt == None
             for call in snp:
                 data = get_call_data(call, vcf_variant)
-                assert data[GQ] >= 20 or data[GQ] == None
+                if data[GQ] < 20:
+                    assert data[GT] is None
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'BinaryTest']
+    #import sys;sys.argv = ['', 'FilterTest.test_genotype_quality']
     unittest.main()

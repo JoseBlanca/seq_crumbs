@@ -12,6 +12,7 @@ from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
 from vcf_crumbs.utils import DATA_DIR
 from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, RC,\
     ACS, get_snpcaller_name, GQ, GT
+from vcf.model import make_calldata_tuple, _Call
 
 COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
@@ -703,41 +704,26 @@ class GenotypeQualityFilter(BaseFilter):
     the requierements'''
 
     def __init__(self, gq_threshold, reader):
-        self.gq_threshold = gq_threshold
-        self.conf = {'gq_threshold': gq_threshold}
-        self.reader = reader
-        self.vcf_variant = get_snpcaller_name(reader)
-
-        for record in reader:
-            for record_call in record:
-                if record_call.data[0] is None:
-                    data = record_call.data
-                    break
-            if data:
-                break
-        if data == None:
-            raise RuntimeError('Call could not be set to uncalled')
-        self._uncalled_data = data
+        self._gq_threshold = gq_threshold
+        self._vcf_variant = get_snpcaller_name(reader)
 
     def __call__(self, record):
-        self._clean_filter(record)
+
         for index_, call in enumerate(record):
-            call_data = get_call_data(call, self.vcf_variant)
-            if call_data[GQ] is None or call_data[GQ] < self.gq_threshold:
-                sample = call.sample
-                site = call.site
-                data = self._uncalled_data
-                record.samples[index_] = vcf.model._Call(site, sample, data)
+            call_data = get_call_data(call, self._vcf_variant)
+            if call_data[GQ] is None or call_data[GQ] < self._gq_threshold:
+                calldata = make_calldata_tuple(record.FORMAT.split(':'))
+                sampdat = []
+                for format_def in record.FORMAT.split(':'):
+                    if format_def == 'GT':
+                        value = None
+                    else:
+                        value = getattr(call.data, format_def)
+                    sampdat.append(value)
+                call = _Call(record, call.sample, calldata(*sampdat))
+                call_data = get_call_data(call, self._vcf_variant)
+                record.samples[index_] = call
         return record
-
-    @property
-    def name(self):
-        return 'gq{}'.format(self.gq_threshold)
-
-    @property
-    def description(self):
-        desc = "Genotypes under threshold quality {} set as uncalled"
-        return desc.format(self.gq_threshold)
 
 
 #These filters return True/False
