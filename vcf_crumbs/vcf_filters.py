@@ -720,7 +720,7 @@ def remove_low_quality_gt(record, gq_threshold, vcf_variant):
 
 
 #These filters return True/False
-class GenotypesInSamplesFilter(BaseFilter):
+class GenotypesInSamplesFilter(object):
     'Filter by genotypes in specific samples'
 
     def __init__(self, genotypes, samples=None, n_min_called=None):
@@ -728,10 +728,8 @@ class GenotypesInSamplesFilter(BaseFilter):
         self.genotypes.append(None)
         self.samples = samples
         self.n_min_called = n_min_called
-        self.conf = {'genotypes': genotypes, 'samples': samples}
 
     def __call__(self, record):
-        self._clean_filter(record)
         chosen_samples = choose_samples(record, self.samples)
         n_called = 0
         for call in chosen_samples:
@@ -744,27 +742,15 @@ class GenotypesInSamplesFilter(BaseFilter):
         else:
             return False
 
-    @property
-    def name(self):
-        return 'smpl.{}.gt.{}'.format(self.samples, self.genotypes)
 
-    @property
-    def description(self):
-        samples = 'all' if self.samples is None else ','.join(self.samples)
-        desc = 'Record has {} genotypes in {}'
-        return desc.format(self.genotypes, samples)
-
-
-class AlleleNumberFilter(BaseFilter):
+class AlleleNumberFilter(object):
     'Filter by number of different alleles'
 
     def __init__(self, n_alleles, samples=None):
         self.n_alleles = n_alleles
         self.samples = samples
-        self.conf = {'n_alleles': n_alleles}
 
     def __call__(self, record):
-        self._clean_filter(record)
         chosen_samples = choose_samples(record, self.samples)
         alleles = set()
         for call in chosen_samples:
@@ -778,15 +764,6 @@ class AlleleNumberFilter(BaseFilter):
                 alleles.add(allele)
         return len(record.alleles) == self.n_alleles
 
-    @property
-    def name(self):
-        return 'na{}'.format(self.n_alleles)
-
-    @property
-    def description(self):
-        desc = 'Record has {} different alleles'
-        return desc.format(self.n_alleles)
-
 
 def get_n_missing_genotypes(record):
     n_missing = 0
@@ -796,28 +773,17 @@ def get_n_missing_genotypes(record):
     return n_missing
 
 
-class MissingGenotypesFilter(BaseFilter):
+class MissingGenotypesFilter(object):
     'Filter by maximim number of missing genotypes'
 
     def __init__(self, max_missing_genotypes, samples=None):
         self.max_missing_genotypes = max_missing_genotypes
-        self.conf = {'max_missing_genotypes': max_missing_genotypes}
         self.samples = samples
 
     def __call__(self, record):
-        self._clean_filter(record)
         chosen_samples = choose_samples(record, self.samples)
         n_missing = get_n_missing_genotypes(chosen_samples)
         return n_missing <= self.max_missing_genotypes
-
-    @property
-    def name(self):
-        return 'mgt{}'.format(self.max_missing_genotypes)
-
-    @property
-    def description(self):
-        desc = 'Record has <= {} missing or uncalled genotypes'
-        return desc.format(self.max_missing_genotypes)
 
 
 class HeterozigoteInSamples(BaseFilter):
