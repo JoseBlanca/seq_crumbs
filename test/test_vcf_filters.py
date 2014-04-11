@@ -592,9 +592,6 @@ class FilterTest(unittest.TestCase):
         filter_ = GenotypesInSamplesFilter([0], ['pepo', 'mu16'], 2)
         filter_.vcf_variant = VARSCAN
         assert not filter_(rec1)
-        assert  filter_.name == "smpl.['pepo', 'mu16'].gt.[0, None]"
-        desc = "Record has [0, None] genotypes in pepo,mu16"
-        assert  desc in filter_.description
 
     def test_allele_number(self):
         records = Reader(filename=VCF_PATH)
@@ -606,9 +603,6 @@ class FilterTest(unittest.TestCase):
         filter_ = AlleleNumberFilter(1)
         filter_.vcf_variant = VARSCAN
         assert not filter_(rec1)
-        assert  filter_.name == "na1"
-        desc = "Record has 1 different alleles"
-        assert  desc in filter_.description
 
     def test_missing_genotypes(self):
         records = Reader(filename=VCF_PATH)
@@ -620,9 +614,6 @@ class FilterTest(unittest.TestCase):
         filter_ = MissingGenotypesFilter(0)
         filter_.vcf_variant = VARSCAN
         assert not filter_(rec1)
-        assert  filter_.name == "mgt0"
-        desc = "Record has <= 0 missing or uncalled genotypes"
-        assert  desc in filter_.description
 
     def test_genotype_quality(self):
         records = Reader(filename=VCF_PATH)
