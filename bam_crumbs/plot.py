@@ -33,10 +33,20 @@ def _get_format_from_fname(fname):
     return os.path.splitext(fname)[1][1:]
 
 
-def draw_histogram(values, fhand, bins=10, range_=None, **kwargs):
+def draw_histogram(values, fhand, bins=10, range_=None, stacked=False,
+                   color=None, label=None, log=False, **kwargs):
     'It draws a histogram of a pandas Series into a file'
     canvas, axes = _get_canvas_and_axes()
-    axes.hist(values, bins=bins, range=range_)
+    if color is None:
+        if label is None:
+            axes.hist(values, bins=bins, range=range_, stacked=stacked,
+                      log=log)
+        else:
+            axes.hist(values, bins=bins, range=range_, stacked=stacked,
+                      label=label, log=log)
+    else:
+        axes.hist(values, bins=bins, range=range_, stacked=stacked,
+                  label=label, color=color, log=log)
     for key, value in kwargs.items():
         getattr(axes, 'set_{}'.format(key))(value)
 
