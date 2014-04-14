@@ -113,14 +113,22 @@ class SnvStatTests(unittest.TestCase):
 
     def test_counts_distribution_in_genotype(self):
         vcf_stats = VcfStats(VARSCAN_VCF_PATH)
-        results_dp11 = {0: IntCounter({7: 8, 8: 3, 11: 3, 6: 2, 10: 1}),
-                        1: IntCounter({4: 4, 5: 4, 3: 3}),
-                        2: IntCounter({2: 2})}
+        results_dp11 = {'0/0': IntCounter({7: 8, 8: 3, 11: 3, 6: 2, 10: 1}),
+                        '0/1': IntCounter({4: 4, 5: 4, 3: 3}),
+                        '1/1': IntCounter({2: 2})}
         assert vcf_stats.counts_distribution_in_gt[11] == results_dp11
 
         vcf_stats = VcfStats(FREEBAYES_VCF_PATH)
-        results_dp11 = {1: IntCounter({8: 10, 7: 5, 4: 4, 5: 3, 3: 2, 6: 2, 0: 1}),
-                        2: IntCounter({0: 7, 1: 2, 2: 2})}
+        results_dp11 = {
+        '1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1': IntCounter({0: 7, 1: 2, 2: 2}),
+         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1/1/1': IntCounter({5: 3}),
+         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1': IntCounter({8: 10}),
+         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1': IntCounter({7: 5}),
+         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1/1': IntCounter({6: 2}),
+         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1/1/1/1': IntCounter({4: 4}),
+         '0/0/0/0/0/0/0/0/0/0/1/1/1/1/1/1/1/1/1/1': IntCounter({3: 2, 0: 1})}
+#                         '0/1': IntCounter({8: 10, 7: 5, 4: 4, 5: 3, 3: 2, 6: 2, 0: 1}),
+#                         '1/1': IntCounter({0: 7, 1: 2, 2: 2})}
         assert vcf_stats.counts_distribution_in_gt[11] == results_dp11
         #raw_input(fhand.name)
 

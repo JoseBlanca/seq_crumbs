@@ -170,7 +170,7 @@ class VcfStats(object):
                     het_by_sample[sample_name] = IntCounter({'num_gt': 0,
                                                              'num_het': 0})
                 calldata = get_call_data(call, vcf_variant)
-                gt = call.gt_type
+                gt = calldata[GT]
                 depth = calldata[DP]
                 if depth is None:
                     depth = 0
