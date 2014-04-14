@@ -37,8 +37,9 @@ def _setup_argparse():
     parser.add_argument('-m', '--maf_per_sample', default=False,
                         action='store_true',
                         help='Draw maf distribution per sample')
-    parser.add_argument('-d', '--selected_depth', default=100, type=int,
-                        help='Depth to draw ref_counts distribution per gt (100)')
+    help_d = 'Depth to draw ref_counts distribution per gt (100). '
+    help_d += 'Several can be writen separated by comas(10,20,30)'
+    parser.add_argument('-d', '--selected_depth', default='100', help=help_d)
     return parser
 
 
@@ -54,7 +55,7 @@ def _parse_args(parser):
     args['gq'] = parsed_args.gt_qual_threshold
     args['samples_fpath'] = parsed_args.samples_file
     args['maf_per_sample'] = parsed_args.maf_per_sample
-    args['depth_for_counts_hist'] = parsed_args.selected_depth
+    args['depth_for_counts_hist'] = [int(n) for n in parsed_args.selected_depth.split(',')]
     return args
 
 
@@ -136,23 +137,23 @@ def main():
                       axes=axes2, range_=range_, **kwargs)
 
     # Counts distribution per genotypes histograms for differente coverages
-    depth = depth_for_counts_hist
-    values = vcf_stats.counts_distribution_in_gt
-    counts_dist_fpath = 'ref_counts_per_gt_dp_{}.png'.format(str(depth))
-    counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
-    title = 'Reference counts distribution per genotype with depht {}'
-    kwargs = {'title': title.format(str(depth)),
-              'ylabel': 'Number of genotypes',
-              'xlabel': 'Reference allele count'}
-    data_values = []
-    for genotype in values[depth].values():
-        rc_counts = array('I')
-        for rc, counts in genotype.items():
-            for i in range(counts):
-                rc_counts.append(rc)
-        data_values.append(rc_counts)
-    draw_histogram(data_values, counts_dist_fhand, bins=depth,
-                   stacked=True, log=True, **kwargs)
+    for depth in depth_for_counts_hist:
+        values = vcf_stats.counts_distribution_in_gt
+        counts_dist_fpath = 'ref_counts_per_gt_dp_{}.png'.format(str(depth))
+        counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
+        title = 'Reference counts distribution per genotype with depht {}'
+        kwargs = {'title': title.format(str(depth)),
+                  'ylabel': 'Number of genotypes',
+                  'xlabel': 'Reference allele count'}
+        data_values = []
+        for genotype in values[depth].values():
+            rc_counts = array('I')
+            for rc, counts in genotype.items():
+                for i in range(counts):
+                    rc_counts.append(rc)
+            data_values.append(rc_counts)
+        draw_histogram(data_values, counts_dist_fhand, bins=depth,
+                       stacked=True, log=True, **kwargs)
 
     # Percentage of genotypes different to reference samples  per
     # called samples in each snp
