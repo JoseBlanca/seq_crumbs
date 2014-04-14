@@ -146,14 +146,16 @@ def main():
                   'ylabel': 'Number of genotypes',
                   'xlabel': 'Reference allele count'}
         data_values = []
-        for genotype in values[depth].values():
+        labels = []
+        for geno_name, genotype in values[depth].items():
             rc_counts = array('I')
             for rc, counts in genotype.items():
                 for i in range(counts):
                     rc_counts.append(rc)
             data_values.append(rc_counts)
+            labels.append(str(geno_name))
         draw_histogram(data_values, counts_dist_fhand, bins=depth,
-                       stacked=True, log=True, **kwargs)
+                       stacked=True, label=labels, **kwargs)
 
     # Depths distribution in called/uncalled(or below gq_threshold)
     values = vcf_stats.depths_distribution.values()
