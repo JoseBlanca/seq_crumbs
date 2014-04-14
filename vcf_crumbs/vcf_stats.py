@@ -124,6 +124,7 @@ class VcfStats(object):
                          }
         self._missing_calls_prc = []
         self._counts_distribution_in_gt = {}
+        self._depths_distribution = {'called': [], 'uncalled': []}
         self._calculate()
 
     def _calculate(self):
@@ -139,6 +140,7 @@ class VcfStats(object):
         missing_calls_prc = self._missing_calls_prc
         selected_samples = self._selected_samples
         counts_distribution_in_gt = self._counts_distribution_in_gt
+        depths_distribution = self._depths_distribution
 
         for snp in self.reader:
             chrom_counts[snp.CHROM] += 1
@@ -170,6 +172,8 @@ class VcfStats(object):
                 calldata = get_call_data(call, vcf_variant)
                 gt = call.gt_type
                 depth = calldata[DP]
+                if depth is None:
+                    depth = 0
                 rc = calldata[RC]
                 gq = calldata[GQ]
                 if depth in counts_distribution_in_gt:
@@ -197,6 +201,11 @@ class VcfStats(object):
                         num_diff_to_ref_gts += 1
                     if gq >= gq_threshold:
                         num_called += 1
+                        depths_distribution['called'].append(depth)
+                    else:
+                        depths_distribution['uncalled'].append(depth)
+                else:
+                    depths_distribution['uncalled'].append(depth)
             missing_calls_prc.append(100 - (num_called * 100 / total_calls))
 
             if snp.num_called:
@@ -239,6 +248,10 @@ class VcfStats(object):
     @property
     def counts_distribution_in_gt(self):
         return self._counts_distribution_in_gt
+
+    @property
+    def depths_distribution(self):
+        return self._depths_distribution
 
 
 def get_data_from_vcf(vcf_path, gq_threshold=0):

@@ -116,7 +116,7 @@ def main():
 
     density_plot_fhand = open(os.path.join(out_dir, 'density_plot.png'), 'w')
     kwargs = {'title': 'Ref/alt allele count scatter in Heterozygote',
-              'ylabel': 'Alternative allele count', 'aspect':'equal',
+              'ylabel': 'Alternative allele count', 'aspect': 'equal',
               'xlabel': 'Reference_allele count'}
     x = vcf_stats.call_data[1]['x']
     y = vcf_stats.call_data[1]['y']
@@ -154,6 +154,17 @@ def main():
             data_values.append(rc_counts)
         draw_histogram(data_values, counts_dist_fhand, bins=depth,
                        stacked=True, log=True, **kwargs)
+
+    # Depths distribution in called/uncalled(or below gq_threshold)
+    values = vcf_stats.depths_distribution.values()
+    if len(values[1]) == 0:
+        values = values[0]
+    depth_dist_fhand = open(os.path.join(out_dir, 'depths_distrib.png'), 'w')
+    kwargs = {'title': 'Depths distribution per call',
+              'ylabel': 'Number of calls',
+              'xlabel': 'Depth'}
+    draw_histogram(values, depth_dist_fhand, bins=100,
+                       stacked=True, **kwargs)
 
     # Percentage of genotypes different to reference samples  per
     # called samples in each snp
