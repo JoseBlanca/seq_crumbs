@@ -131,7 +131,7 @@ class StatBinTests(unittest.TestCase):
         binary = join(BIN_DIR, 'draw_snv_stats')
         tempdir = TemporaryDir()
         cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, VARSCAN_VCF_PATH,
-               '-d', '10']
+               '-d', '10,20,30']
         stderr = NamedTemporaryFile()
         stdout = NamedTemporaryFile()
         try:
