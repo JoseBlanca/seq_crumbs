@@ -171,7 +171,10 @@ class VcfStats(object):
                 gt = call.gt_type
                 depth = calldata[DP]
                 rc = calldata[RC]
+                gq = calldata[GQ]
                 if depth in counts_distribution_in_gt:
+                    if gq < gq_threshold:
+                        gt = None
                     if gt in counts_distribution_in_gt[depth]:
                         if rc in counts_distribution_in_gt[depth][gt]:
                             counts_distribution_in_gt[depth][gt][rc] += 1
@@ -182,7 +185,6 @@ class VcfStats(object):
                 else:
                     counts_distribution_in_gt[depth] = {gt: IntCounter({rc: 1})}
                 if call.called:
-                    gq = calldata[GQ]
                     call_datas[call.gt_type]['x'].append(calldata[RC])
                     call_datas[call.gt_type]['y'].append(sum(calldata[ACS]))
                     call_datas[call.gt_type]['value'].append(gq)
