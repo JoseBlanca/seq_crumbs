@@ -12,7 +12,7 @@ from bam_crumbs.plot import draw_histogram, draw_scatter, draw_density_plot,\
     _get_canvas_and_axes, FIGURE_SIZE
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
                                   HET, HOM_ALT, HOM_REF, VcfStats,
-    calc_n_bases_in_chrom_with_snp)
+    calc_n_bases_in_chrom_with_snp, calc_n_bases_per_n_snps_in_chrom)
 from crumbs.statistics import draw_histogram_matlib, IntCounter
 from array import array
 from matplotlib.figure import Figure
@@ -37,9 +37,10 @@ def _setup_argparse():
     parser.add_argument('-m', '--maf_per_sample', default=False,
                         action='store_true',
                         help='Draw maf distribution per sample')
-    help_d = 'Depth to draw ref_counts distribution per gt (100). '
-    help_d += 'Several can be writen separated by comas(10,20,30)'
-    parser.add_argument('-d', '--selected_depth', default='100', help=help_d)
+    help_d = 'Depth to draw ref_counts distribution per gt. '
+    help_d += 'Several can be writen (-d 10 -d 20)'
+    parser.add_argument('-d', '--selected_depth', help=help_d, required=True,
+                        action='append')
     return parser
 
 
@@ -55,7 +56,7 @@ def _parse_args(parser):
     args['gq'] = parsed_args.gt_qual_threshold
     args['samples_fpath'] = parsed_args.samples_file
     args['maf_per_sample'] = parsed_args.maf_per_sample
-    args['depth_for_counts_hist'] = [int(n) for n in parsed_args.selected_depth.split(',')]
+    args['depth_for_counts_hist'] = [int(n) for n in parsed_args.selected_depth]
     return args
 
 
@@ -156,6 +157,11 @@ def main():
             labels.append(str(geno_name))
         draw_histogram(data_values, counts_dist_fhand, bins=depth,
                        stacked=True, label=labels, **kwargs)
+        counts_dist_fpath = 'ref_counts_per_gt_dp_{}_2.png'.format(str(depth))
+        counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
+        draw_histogram(data_values, counts_dist_fhand, bins=depth - 2,
+                       stacked=True, label=labels, range_=(1, depth - 1),
+                       **kwargs)
 
     # Depths distribution in called/uncalled(or below gq_threshold)
     values = vcf_stats.depths_distribution.values()

@@ -152,7 +152,8 @@ class StatBinTests(unittest.TestCase):
             tempdir.close()
         #FREEBAYES
         tempdir = TemporaryDir()
-        cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, FREEBAYES_VCF_PATH]
+        cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, FREEBAYES_VCF_PATH,
+               '-d', '10']
         stderr = NamedTemporaryFile()
         stdout = NamedTemporaryFile()
         try:
