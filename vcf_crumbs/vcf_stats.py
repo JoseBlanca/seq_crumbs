@@ -339,6 +339,19 @@ def calc_n_bases_in_chrom_with_snp(counts, ref_fhand):
     return n_bases
 
 
+def calc_n_bases_per_n_snps_in_chrom(counts, ref_fhand):
+    distribution = {}
+    ref_lengths = _get_seq_lengths(ref_fhand)
+    for ref_name, length in ref_lengths.items():
+        if ref_name.strip() in counts:
+            n = counts[ref_name.strip()]
+            if n in distribution:
+                distribution[n] += length
+            else:
+                distribution[n] = length
+    return distribution
+
+
 def calc_density_per_chrom(counts, ref_fhand, size=100):
     densities = {}
     ref_lengths = _get_seq_lengths(ref_fhand)
