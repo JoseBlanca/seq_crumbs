@@ -49,8 +49,8 @@ def draw_histogram(values, fhand, bins=10, range_=None, stacked=False,
                   label=label, color=color, log=log)
     for key, value in kwargs.items():
         getattr(axes, 'set_{}'.format(key))(value)
-
-    axes.legend()
+    if label is not None:
+        axes.legend()
 
     canvas.print_figure(fhand, format=_get_format_from_fname(fhand.name))
     fhand.flush()
