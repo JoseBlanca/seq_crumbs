@@ -25,7 +25,8 @@ from collections import Counter
 
 from crumbs.utils.bin_utils import main, build_version_msg
 from bam_crumbs.statistics import get_genome_coverage
-from crumbs.statistics import draw_histogram, draw_histogram_matlib
+from crumbs.statistics import draw_histogram_ascii
+from crumbs.plot import draw_histogram
 
 COVERAGE_RANGE = (1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 24, 48, 96)
 
@@ -93,16 +94,15 @@ def run():
                                                       max_=args['xlim_rigth'])
 
     if not args['ascii_output']:
-        draw_histogram_matlib(distrib['counts'],
-                              bin_edges=distrib['bin_limits'], fhand=out_fhand,
-                              title='Distribution of coverages',
-                              ylabel="Num. Bases with this coverage",
-                              xlabel="Coverage")
+        draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
+                       fhand=out_fhand, title='Distribution of coverages',
+                       ylabel="Num. Bases with this coverage",
+                       xlabel="Coverage")
     else:
         out_fhand.write('\n')
         out_fhand.write('Distribution of coverages\n')
         out_fhand.write('-------------------------\n')
-        out_fhand.write(draw_histogram(distrib['bin_limits'],
+        out_fhand.write(draw_histogram_ascii(distrib['bin_limits'],
                                        distrib['counts']))
 
 if __name__ == '__main__':

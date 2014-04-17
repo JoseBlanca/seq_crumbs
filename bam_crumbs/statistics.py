@@ -9,7 +9,7 @@ from numpy import histogram, zeros, median, sum as np_sum
 
 import pysam
 
-from crumbs.statistics import (draw_histogram, IntCounter, LABELS,
+from crumbs.statistics import (draw_histogram_ascii, IntCounter, LABELS,
                                BestItemsKeeper)
 
 from bam_crumbs.settings import get_setting
@@ -107,7 +107,7 @@ class ArrayWrapper(object):
             text += '\n'
             distrib = self.calculate_distribution(max_=max_in_distrib,
                                                   bins=self._bins)
-            text += draw_histogram(distrib['bin_limits'], distrib['counts'])
+            text += draw_histogram_ascii(distrib['bin_limits'], distrib['counts'])
             return text
         return ''
 

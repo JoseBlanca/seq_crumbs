@@ -12,7 +12,8 @@ import pysam
 from crumbs.utils.bin_utils import main, build_version_msg
 
 from bam_crumbs.statistics import ReadStats
-from crumbs.statistics import draw_histogram, draw_histogram_matlib
+from crumbs.statistics import draw_histogram_ascii
+from crumbs.plot import  draw_histogram
 
 
 def _setup_argparse():
@@ -56,16 +57,14 @@ def run():
     distrib = mapq_counter.calculate_distribution()
 
     if not args['ascii_output']:
-        draw_histogram_matlib(distrib['counts'],
-                              bin_edges=distrib['bin_limits'], fhand=out_fhand,
-                              title='Mapq distribution',
-                              ylabel="Num. Seqs",
-                              xlabel="Mapq")
+        draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
+                       fhand=out_fhand, title='Mapq distribution',
+                       ylabel="Num. Seqs", xlabel="Mapq")
     else:
         out_fhand.write('\n')
         out_fhand.write('Distribution of coverages\n')
         out_fhand.write('-------------------------\n')
-        out_fhand.write(draw_histogram(distrib['bin_limits'],
+        out_fhand.write(draw_histogram_ascii(distrib['bin_limits'],
                                        distrib['counts']))
 
 
