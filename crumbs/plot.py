@@ -37,8 +37,13 @@ def _guess_output_for_matplotlib(fhand):
 def _get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1, right=0.9, top=0.9,
                          bottom=0.1):
     'It returns a matplotlib canvas and axes instance'
-    fig = Figure(figsize=figure_size)
-    canvas = FigureCanvas(fig)
+    try:
+        fig = Figure()
+        canvas = FigureCanvas(fig)
+    except NameError:
+        msg = 'Matplotlib module is required to draw graphical histograms'
+        raise OptionalRequirementError(msg)
+
     axes = fig.add_subplot(111)
     fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
 
