@@ -17,9 +17,6 @@
 
 from __future__ import division
 from tempfile import NamedTemporaryFile
-from crumbs.utils.file_formats import get_format, set_format
-from bisect import bisect
-from crumbs.iterutils import sample
 
 try:
     import pysam
@@ -30,18 +27,18 @@ except ImportError:
 from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
                                SEQRECORD, CHIMERA, NON_CHIMERIC, UNKNOWN)
 from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
-from crumbs.seq import get_name, get_file_format, get_str_seq, get_length,\
-    SeqItem, SeqWrapper
+from crumbs.seq import get_name, get_file_format, get_str_seq, get_length
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster, BlasterForFewSubjects
-from crumbs.statistics import calculate_dust_score, IntCounter, draw_histogram
+from crumbs.statistics import (calculate_dust_score, IntCounter,
+                               draw_histogram_ascii)
 from crumbs.settings import get_setting
 from crumbs.mapping import (get_or_create_bowtie2_index, map_with_bowtie2,
                             map_process_to_bam, sort_mapped_reads,
                             get_or_create_bwa_index, map_with_bwamem,
-                            alignedread_to_seqitem, _reverse, _complementary)
+                            alignedread_to_seqitem)
 from crumbs.seqio import write_seqs, read_seqs
-from crumbs.pairs import group_pairs, group_pairs_by_name, deinterleave_pairs
+from crumbs.pairs import group_pairs, group_pairs_by_name
 
 
 def seq_to_filterpackets(seq_packets, group_paired_reads=False):
@@ -759,7 +756,7 @@ def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
             distribution = counter.calculate_distribution(remove_outliers=remove_outliers)
             counts = distribution['counts']
             bin_limits = distribution['bin_limits']
-            out_fhand.write(draw_histogram(bin_limits, counts))
+            out_fhand.write(draw_histogram_ascii(bin_limits, counts))
     out_fhand.flush()
 
 

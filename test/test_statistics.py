@@ -26,7 +26,7 @@ import operator
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.statistics import (IntCounter, draw_histogram, IntBoxplot,
+from crumbs.statistics import (IntCounter, draw_histogram_ascii, IntBoxplot,
                                calculate_sequence_stats, NuclFreqsPlot,
                                KmerCounter, calculate_dust_score,
                                calculate_nx, BestItemsKeeper,
@@ -42,7 +42,7 @@ class HistogramTest(unittest.TestCase):
     'It tests the ASCII histogram plotting'
     def test_ascii_histogram(self):
         'It plots an ASCII histogram'
-        hist = draw_histogram(bin_limits=[-2, -1, 0, 1, 2],
+        hist = draw_histogram_ascii(bin_limits=[-2, -1, 0, 1, 2],
                               counts=[9, 20, 30, 40])
         assert '[-2 , -1[ ( 9): ****************' in hist
 
