@@ -82,7 +82,7 @@ def run_mafs(vcf_stats, out_dir, maf_per_sample):
         sample_maf = vcf_stats.mafs[sample]
         distrib = sample_maf.calculate_distribution(bins=50, min_=50, max_=100)
         draw_histogram(distrib['counts'], fhand=maf_fhand,
-                       bin_edges=distrib['bin_limits'],
+                       bin_limits=distrib['bin_limits'],
                        title='Maf distribution for sample {}'.format(sample),
                        xlabel="maf x 100", ylabel="Num. Snvs")
 
@@ -183,8 +183,8 @@ def run_heterocigosity(vcf_stats, out_dir):
                                                                    max_=100)
     title_per = 'Heterozigosity per sample distribution'
     draw_histogram(distrib['counts'], fhand=het_by_sample_fhand,
-                              bin_edges=distrib['bin_limits'], title=title_per,
-                              xlabel='Heterozigosity', ylabel="Num. samples")
+                             bin_limits=distrib['bin_limits'], title=title_per,
+                             xlabel='Heterozigosity', ylabel="Num. samples")
 
 
 def run_missig_call(vcf_stats, out_dir):
@@ -197,7 +197,7 @@ def run_missig_call(vcf_stats, out_dir):
                                                          max_=100)
     title_per = 'Missing calls percentage distribution'
     draw_histogram(distrib['counts'], fhand=missing_calls_fhand,
-                              bin_edges=distrib['bin_limits'], title=title_per,
+                              bin_limits=distrib['bin_limits'], title=title_per,
                               xlabel='Missing calls percentage',
                               ylabel="Num. SNPs")
 
@@ -216,7 +216,7 @@ def run_vcf_per_ref(vcf_stats, out_dir):
                                                            max_=max_)
     title_per = 'Number of SNPs per reference sequence'
     draw_histogram(distrib['counts'], fhand=snps_per_refseq_fhand,
-                              bin_edges=distrib['bin_limits'], title=title_per,
+                              bin_limits=distrib['bin_limits'], title=title_per,
                               xlabel='Number of SNPs per reference seq',
                               ylabel="Num. reference sequences")
 
@@ -225,7 +225,7 @@ def run_geno_qualities(vcf_stats, out_dir):
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
     distrib = vcf_stats.genotype_qualities.calculate_distribution(bins=100)
-    draw_histogram(distrib['counts'], bin_edges=distrib['bin_limits'],
+    draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
                           fhand=gqs_fhand,
                           title='Histogram of the genotype qualities x 100',
                           xlabel='genotype Qualities x 100',

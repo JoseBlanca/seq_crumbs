@@ -1,20 +1,21 @@
 import unittest
 from os.path import join
 import sys
+from tempfile import NamedTemporaryFile
 
 from vcf import Reader
 from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
                                   get_snpcaller_name, VARSCAN, GATK,
                                   calculate_maf, FREEBAYES, VcfStats,
-                                  calc_n_bases_in_chrom_with_snp)
+                                  calc_n_bases_in_chrom_with_snp, HOM_REF)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
 from subprocess import check_call, CalledProcessError
-from tempfile import NamedTemporaryFile
+
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.statistics import IntCounter
-from cyvcf.parser import HOM_REF
-from bam_crumbs.plot import draw_scatter
+from crumbs.plot import draw_scatter
+
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
