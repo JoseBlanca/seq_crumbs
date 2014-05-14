@@ -677,54 +677,6 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                                      n=n_pairs_sampled)
 
 
-def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
-    longest_5end = None
-    length = 0
-    for aligned_read in aligned_reads:
-        if (_5end_mapped(aligned_read, max_clipping)
-            and aligned_read.alen > length):
-            longest_5end = aligned_read
-            length = aligned_read.alen
-    return longest_5end
-
-
-def trim_chimeric_region(bamfile, max_clipping):
-    for grouped_mates in _group_alignments_by_reads(bamfile):
-        for aligned_reads in _split_mates(grouped_mates):
-            primary_alignment = _get_primary_alignment(aligned_reads)
-            _5end = _get_longest_5end_alinged_read(aligned_reads, max_clipping)
-            if _5end is not None:
-                if _read_is_totally_mapped([_5end], max_clipping):
-                    yield alignedread_to_seqitem(primary_alignment)
-                else:
-                    qstart = _get_qstart(_5end)
-                    qend = _get_qend(_5end)
-                    yield alignedread_to_seqitem(primary_alignment, qstart,
-                                                 qend)
-            else:
-                yield alignedread_to_seqitem(primary_alignment)
-
-
-def trim_chimeras(in_fpaths, out_fhand, ref_fpath=None, bamfile=False,
-                max_clipping=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
-                  tempdir='/tmp', interleaved=True, threads=None,
-                  distance_distribution_fhand=None, n_pairs_sampled=None,
-                  draw_distribution=False):
-    if bamfile:
-        bamfile = pysam.Samfile(in_fpaths[0])
-    else:
-        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, tempdir=tempdir,
-                                   interleaved=interleaved, threads=threads)
-    trimmed_seqs = trim_chimeric_region(bamfile, max_clipping)
-    write_seqs(trimmed_seqs, out_fhand)
-    if draw_distribution:
-        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, tempdir=tempdir,
-                                   interleaved=interleaved, threads=threads)
-        show_distances_distributions(bamfile, max_clipping,
-                                     distance_distribution_fhand,
-                                     n=n_pairs_sampled)
-
-
 def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
                                    remove_outliers=True):
     '''It shows distance distribution between pairs of sequences that map

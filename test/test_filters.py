@@ -35,7 +35,7 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
                             classify_mapped_reads, filter_chimeras,
-    _sorted_mapped_reads, trim_chimeric_region, draw_distance_distribution)
+    _sorted_mapped_reads, draw_distance_distribution)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -634,96 +634,6 @@ GGCTACAGGACACCCAGTCTCCCGGGAGTCTTTTCCAAGGTGTGCTCCTGATCGCCGTGTTAATCTGCACGGGCTAG
 AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGA
 TCCCGGGAGTCTTTTCCAAGGTGTGC
 '''
-
-
-class TrimChimericRegions(unittest.TestCase):
-    def test_trim_chimeric_region(self):
-        reference_seq = GENOME
-        query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
-        query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
-        query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
-        query1 += '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
-        query2 = '@seq2 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
-        query2 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
-        query = query1 + query2
-        fhand = NamedTemporaryFile()
-        fhand.write(query)
-        fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-
-        bamfile = _sorted_mapped_reads(ref_fhand.name,
-                                       in_fpaths=[fhand.name],
-                                       interleaved=True)
-        expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
-                         'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
-        counts = 0
-        for seq in trim_chimeric_region(bamfile, 0.05):
-            assert get_str_seq(seq) in expected_seqs
-            counts += 1
-        assert counts != 0
-
-    def test_trim_chimeras_bin(self):
-        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
-        assert 'usage' in check_output([trim_chimeras_bin, '-h'])
-        reference_seq = GENOME
-        query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
-        query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
-        query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
-        query1 += '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
-        query2 = '@seq2 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
-        query2 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
-        query = query1 + query2
-        in_fhand = NamedTemporaryFile()
-        in_fhand.write(query)
-        in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-        out_fhand = NamedTemporaryFile()
-        expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
-                         'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
-        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name, '-i',
-               '-o', out_fhand.name]
-        print check_output(cmd, stdin=in_fhand)
-        counts = 0
-        for seq in read_seqs([open(out_fhand.name)]):
-            assert get_str_seq(seq) in expected_seqs
-            counts += 1
-        assert counts != 0
-
-    def test_draw_distance_distribution(self):
-        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
-        assert 'usage' in check_output([trim_chimeras_bin, '-h'])
-
-        reference_seq = GENOME
-        #Non chimeric
-        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
-        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
-        #Chimeric
-        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
-        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
-        #unknown
-        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
-        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
-
-        query = query1 + query2 + query5 + query6 + query3 + query4
-        in_fhand = NamedTemporaryFile()
-        in_fhand.write(query)
-        in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-        out_fhand = NamedTemporaryFile()
-
-        distribution_fhand = NamedTemporaryFile()
-        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name, '-i',
-               '-o', out_fhand.name, '-x', distribution_fhand.name]
-        print check_output(cmd, stdin=in_fhand)
-        for line in open(distribution_fhand.name):
-            assert ('outies' in line or 'innies' in line or 'others' in line
-                    or '(1)' in line)
 
 
 class FilterByMappingType(unittest.TestCase):

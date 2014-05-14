@@ -17,19 +17,19 @@
 
 import sys
 from crumbs.utils.bin_utils import (main, argparse, create_basic_argparse,
-                                    parse_basic_args)
+                                    parse_basic_args, create_trimmer_argparse,
+    parse_trimmer_args)
 from crumbs.utils.file_utils import flush_fhand
-from crumbs.filters import  trim_chimeras
+from crumbs.trim import  TrimChimeras, seq_to_trim_packets, TrimOrMask
 from crumbs.settings import get_setting
+from crumbs.seqio import read_seq_packets, write_trim_packets
+from crumbs.utils.seq_utils import process_seq_packets
 
 
-def create_filter_argparse(add_reverse=True, **kwargs):
-    'It returns a cmd parser for the filter executables'
-    parser = create_basic_argparse(**kwargs)
-    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
-    parser.add_argument('-i', '--interleaved', default=False,
-                        help='input sequences are paired and interleaved',
-                        action='store_true')
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It trims chimeric regions from illumina mate pairs seqs'
+    parser = create_trimmer_argparse(description=description)
     parser.add_argument('-r', '--reference_seq', default=None,
                         help='fpath with reference sequence')
     parser.add_argument('--tempdir', default='/tmp',
@@ -39,65 +39,46 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     parser.add_argument('--max_clipping',
                     default=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
                         help=help1)
-    parser.add_argument('--threads', default=None, type=int,
-                        help='number of threads for mapping (1)')
-    distance_name = 'Distance distribution and relative position of mate pairs'
-    distance_group = parser.add_argument_group(distance_name)
-    help2 = 'File to draw distance distribution of mate pairs.'
-    help2 += '"stdout" to write in stdout'
-    distance_group.add_argument('-x', '--graphs_fpath', default=None,
-                                help=help2)
-    distance_group.add_argument('-n', '--n_pairs_sampled', default=100000,
-                                help='Number of pairs sampled for drawing',
-                                type=int)
     return parser
 
 
-def parse_filter_args(parser):
+def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
-    args, parsed_args = parse_basic_args(parser)
+    args, parsed_args = parse_trimmer_args(parser)
     args['reference'] = parsed_args.reference_seq
     args['tempdir'] = parsed_args.tempdir
     args['max_clipping'] = parsed_args.max_clipping
-    args['interleaved'] = parsed_args.interleaved
-    args['threads'] = parsed_args.threads
-    args['n_pairs_sampled'] = parsed_args.n_pairs_sampled
-    args['graphs_fpath'] = parsed_args.graphs_fpath
 
     return args, parsed_args
 
 
 def run():
     'The main function of the binary'
-    description = 'It trims chimeric regions from illumina mate pairs seqs'
-    parser = create_filter_argparse(description=description)
-    args = parse_filter_args(parser)[0]
+    parser = _setup_argparse()
+    args = _parse_args(parser)[0]
     ref_fpath = args['reference']
     out_fhand = args['out_fhand']
-    in_fpaths = [fhand.name for fhand in args['in_fhands']]
+    orphan_fhand = args['orphan_fhand']
+    in_fhands = args['in_fhands']
     max_clipping = args['max_clipping']
     tempdir = args['tempdir']
-    interleaved = args['interleaved']
-    threads = args['threads']
-    n_pairs_sampled = args['n_pairs_sampled']
+    seq_packets = read_seq_packets(in_fhands)
+    trim_packets = seq_to_trim_packets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
+    prep_trim = TrimChimeras(ref_fpath, max_clipping=max_clipping,
+                             tempdir=tempdir)
+    trim_or_mask = TrimOrMask(mask=args['mask'])
 
-    draw_distribution = False
-    if args['graphs_fpath'] is None:
-        graphs_fhand = None
-    elif args['graphs_fpath'] == 'stdout':
-        draw_distribution = True
-        graphs_fhand = sys.stdout
-    else:
-        draw_distribution = True
-        graphs_fhand = open(args['graphs_fpath'], 'w')
+    trim_packets, workers = process_seq_packets(trim_packets,
+                                               [prep_trim, trim_or_mask],
+                                               processes=args['processes'])
+    write_trim_packets(out_fhand, orphan_fhand, trim_packets,
+                         args['out_format'], workers=workers)
 
-    trim_chimeras(in_fpaths, out_fhand, ref_fpath,
-                  max_clipping=max_clipping, tempdir=tempdir,
-                  interleaved=interleaved, threads=threads,
-                  draw_distribution=draw_distribution,
-                  distance_distribution_fhand=graphs_fhand,
-                  n_pairs_sampled=n_pairs_sampled)
     flush_fhand(out_fhand)
+    if orphan_fhand is not None:
+        orphan_fhand.flush()
+
 
 if __name__ == '__main__':
     sys.exit(main(run))

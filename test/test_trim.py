@@ -24,13 +24,16 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality, TrimWithBlastShort,
-    seq_to_trim_packets)
+    seq_to_trim_packets,
+    TrimChimeras)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import (SEQRECORD, SEQITEM, TRIMMING_RECOMMENDATIONS,
-                               VECTOR, ORPHAN_SEQS, SEQS_PASSED)
+                               VECTOR, ORPHAN_SEQS, SEQS_PASSED, OTHER)
 from crumbs.seq import get_str_seq, get_annotations, get_int_qualities, get_name
-from crumbs.seqio import read_seq_packets
+from crumbs.seqio import read_seq_packets, read_seqs
 from crumbs.seq import SeqWrapper, SeqItem
+from test.test_filters import GENOME
+from crumbs.filters import _sorted_mapped_reads, _group_alignments_by_reads
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
@@ -452,6 +455,24 @@ GGAAGAGGAACAAGTGAGCAGCAGGACTGTATGATATTCTCATCTGAAGACAGGGACCATCATATTCCCCGGGAAACTCC
 @1?DFFFFGHHHHIBGGHGHGEICCAGHHCFGHHIGGHFIHIIIJJJIJIJJJIJIIIJJJJJJJICEEHHFDADBCCDDDDDBBDDCAB@CCDEEDDEDC
 '''
 
+FASTQ5 = '''@HWI-ST1203:122:C130PACXX:4:1101:13499:4144 1:N:0:CAGATC
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAGATGTGTATAAGAGACAGCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCAGATGTGTATA
++
+@@@DBDDDDHFBHGGHFEA@GG<?FHHIIIIIIIIIGCCCCCCCCCCCCCCCCBCCBC###########################################
+@HWI-ST1203:122:C130PACXX:4:1101:13623:4101 1:N:0:CAGATC
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACTGTCTCTTATACACATCTAGATGTGTATAAGAGACAGTTTTTTTTTTTTTTTT
++
+CCCFFFFFHHHHHJJIJJJHIIHGIIIIIIIJGGHIIJGHJIJIGHFG@FHGGHIJHHHHHFFFFFDEEEEEEDDBDCBDDDDDDDBADCD>C@DCDD<<<
+@HWI-ST1203:122:C130PACXX:4:1101:13615:4163 1:N:0:CAGATC
+GGAAGAGGAACAAGTGAGCAGCAGGACTGTATGATATTCTCATCTGAAGACAGGGACCATCATATTCCCCGGGAAACTCCGATGCCAGAGTATTAGCATGC
++
+@1?DFFFFGHHHHIBGGHGHGEICCAGHHCFGHHIGGHFIHIIIJJJIJIJJJIJIIIJJJJJJJICEEHHFDADBCCDDDDDBBDDCAB@CCDEEDDEDC
+@HWI-ST1203:122:C130PACXX:4:1101:13615:4164 1:N:0:CAGATC
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACTGTCTCTTATACA
++
+@1?DFFFFGHHHHIBGGHGHGEICCAGHHCFGHHIGGHFIHIIIJJJIJIJJJIJIIIJJJ
+'''
+
 
 class TrimBlastShortTest(unittest.TestCase):
     'It tests the blast short adaptor trimming'
@@ -512,6 +533,74 @@ class TrimBlastShortTest(unittest.TestCase):
         assert '\nTTTTTTTTTTTTTTTTTTTT' in result
         assert '\nCGAGAAGAAGGATCCAAGT' in result
 
+
+class TrimChimericRegions(unittest.TestCase):
+    def test_trim_chimeric_region(self):
+        reference_seq = GENOME
+        query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
+        query1 += '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query2 = '@seq2 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
+        query2 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query = query1 + query2
+        fhand = NamedTemporaryFile()
+        fhand.write(query)
+        fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+
+        trim_chimeras = TrimChimeras(ref_fhand.name)
+        seq_packets = list(read_seq_packets([open(fhand.name)]))
+        trim_packets = list(seq_to_trim_packets(seq_packets))
+        trim_packets2 = trim_chimeras(trim_packets[0])
+        # It should trim the first and the second reads.
+        res = [get_annotations(s).get(TRIMMING_RECOMMENDATIONS, {}).get(OTHER,
+                                                                        [])
+                            for l in trim_packets2[SEQS_PASSED] for s in l]
+        assert res == [[(49, 105)], []]
+
+    def test_trim_chimeras_bin(self):
+        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
+        assert 'usage' in check_output([trim_chimeras_bin, '-h'])
+        reference_seq = GENOME
+        query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
+        query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+        query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
+        query1 += '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query2 = '@seq2 r\nCATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG\n'
+        query2 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n'
+        query = query1 + query2
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
+        ref_fhand = NamedTemporaryFile()
+        ref_fhand.write(reference_seq)
+        ref_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
+                         'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name,
+               '-o', out_fhand.name,]
+        print check_output(cmd, stdin=in_fhand)
+        counts = 0
+        for seq in read_seqs([open(out_fhand.name)]):
+            assert get_str_seq(seq) in expected_seqs
+            counts += 1
+        assert counts != 0
+
+        #With several threads
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name,
+               '-o', out_fhand.name, '-p', '2']
+        print check_output(cmd, stdin=in_fhand)
+        counts = 0
+        for seq in read_seqs([open(out_fhand.name)]):
+            assert get_str_seq(seq) in expected_seqs
+            counts += 1
+        assert counts != 0
+
+
 if __name__ == '__main__':
-#     import sys; sys.argv = ['', 'TrimTest']
+    #import sys; sys.argv = ['', 'TrimChimericRegions.test_trim_chimeras_bin']
     unittest.main()

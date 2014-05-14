@@ -30,6 +30,18 @@ from crumbs.iterutils import rolling_window
 from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqs
 from crumbs.pairs import group_pairs_by_name, group_pairs
+import subprocess
+import sys
+from crumbs.settings import get_setting
+from crumbs.filters import _split_mates, _get_primary_alignment,\
+    _read_is_totally_mapped, _get_qstart,\
+    _get_qend, _sorted_mapped_reads, _group_alignments_by_reads,\
+    show_distances_distributions, _5end_mapped
+from crumbs.mapping import alignedread_to_seqitem
+import pysam
+import itertools
+from multiprocessing.pool import Pool
+from tempfile import NamedTemporaryFile
 
 # pylint: disable=R0903
 
@@ -321,3 +333,65 @@ class TrimWithBlastShort(_BaseTrim):
         if segments is not None:
             _add_trim_segments(segments[0], seq, kind=VECTOR)
         return seq
+
+
+def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
+    longest_5end = None
+    length = 0
+    for aligned_read in aligned_reads:
+        if (_5end_mapped(aligned_read, max_clipping)
+            and aligned_read.alen > length):
+            longest_5end = aligned_read
+            length = aligned_read.alen
+    return longest_5end
+
+
+class TrimChimeras(_BaseTrim):
+    'It trims chimeric regions in mate pairs reads'
+
+    def __init__(self, ref_fpath, max_clipping=None, tempdir=None):
+        'The initiator'
+        self.ref_fpath = ref_fpath
+        if tempdir is None:
+            self.tempdir = '/tmp'
+        else:
+            self.tempdir = tempdir
+        if max_clipping is not None:
+            self.max_clipping = max_clipping
+        else:
+            self.max_clipping = get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING']
+
+    def _pre_trim(self, trim_packet):
+        seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
+        reads_fhand = NamedTemporaryFile(dir=self.tempdir, suffix='.trimming')
+        write_seqs(seqs, reads_fhand)
+        reads_fhand.flush()
+        self.bamfile = _sorted_mapped_reads(self.ref_fpath, [reads_fhand.name],
+                                       tempdir=self.tempdir, interleaved=True)
+
+    def _do_trim(self, aligned_reads):
+        max_clipping = self.max_clipping
+        primary_alignment = _get_primary_alignment(aligned_reads)
+        _5end = _get_longest_5end_alinged_read(aligned_reads, max_clipping)
+        seq = alignedread_to_seqitem(primary_alignment)
+        segments = None
+        if _5end is not None:
+            if not _read_is_totally_mapped([_5end], max_clipping):
+                if not _5end.is_reverse:
+                    qend = _get_qend(_5end)
+                else:
+                    qend = get_length(seq) - _get_qstart(_5end)
+                segments = [(qend, get_length(seq) - 1)]
+        if segments is not None:
+            _add_trim_segments(segments, seq, kind=OTHER)
+        return seq
+
+    def __call__(self, trim_packet):
+        'It trims the seqs'
+        self._pre_trim(trim_packet)
+        trimmed_seqs = []
+        for grouped_mates in _group_alignments_by_reads(self.bamfile):
+            for aligned_reads in _split_mates(grouped_mates):
+                trimmed_seqs.append([self._do_trim(aligned_reads)])
+        return {SEQS_PASSED: trimmed_seqs,
+                ORPHAN_SEQS: trim_packet[ORPHAN_SEQS]}
