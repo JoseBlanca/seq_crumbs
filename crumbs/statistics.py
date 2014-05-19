@@ -161,14 +161,14 @@ class IntCounter(Counter):
 
         if remove_outliers:
             left_limit = self.count * remove_outliers / 100
-            rigth_limit = self.count - left_limit
+            right_limit = self.count - left_limit
             left_value = self._get_value_for_index(left_limit)
-            rigth_value = self._get_value_for_index(rigth_limit)
+            right_value = self._get_value_for_index(right_limit)
 
             if min_ < left_value:
                 min_ = left_value
-            if max_ > rigth_value:
-                max_ = rigth_value
+            if max_ > right_value:
+                max_ = right_value
         return min_, max_
 
     def calculate_bin_edges(self, min_, max_, n_bins=None):
@@ -209,17 +209,17 @@ class IntCounter(Counter):
         bin_edges = self.calculate_bin_edges(min_, max_, bins)
         for bin_index, left_edge in enumerate(bin_edges):
             try:
-                rigth_edge = bin_edges[bin_index + 1]
+                right_edge = bin_edges[bin_index + 1]
             except IndexError:
                 break
             sum_values = 0
 
             for index2 in sorted(self.keys()):
                 value = self[index2]
-                if index2 > rigth_edge:
+                if index2 > right_edge:
                     break
 
-                elif (left_edge <= index2  and index2 < rigth_edge or
+                elif (left_edge <= index2 < right_edge or
                      left_edge <= index2 and index2 == max_):
                     sum_values += value
 

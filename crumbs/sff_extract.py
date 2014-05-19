@@ -155,11 +155,11 @@ def _do_seq_xml(seq):
     if qual_left:
         xml += '\t\t<clip_quality_left>{}</clip_quality_left>\n'.format(int(qual_left) + 1)
     if qual_right:
-        xml += '\t\t<clip_quality_rigth>{}</clip_quality_rigth>\n'.format(qual_right)
+        xml += '\t\t<clip_quality_right>{}</clip_quality_right>\n'.format(qual_right)
     if vector_left:
         xml += '\t\t<clip_vector_left>{}</clip_vector_left>\n'.format(int(vector_left) + 1)
     if vector_right:
-        xml += '\t\t<clip_vector_rigth>{}</clip_vector_rigth>\n'.format(vector_right)
+        xml += '\t\t<clip_vector_right>{}</clip_vector_right>\n'.format(vector_right)
     xml += '\t</trace>\n'
 
     return xml
