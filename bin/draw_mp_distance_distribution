@@ -35,6 +35,8 @@ def create_argparse(add_reverse=True, **kwargs):
                         help=help1, action='store_true')
     parser.add_argument('--threads', default=None, type=int,
                         help='number of threads for mapping (1)')
+    parser.add_argument('-m', '--max_distance', default=None, type=int,
+                        help='Max distance to be plotted')
     settings = get_setting('CHIMERAS_SETTINGS')
     help2 = 'Proportion of mapping positions required to consider a read '
     help2 += 'as fully mapped'
@@ -56,6 +58,7 @@ def parse_args(parser):
     args['threads'] = parsed_args.threads
     args['n_pairs_sampled'] = parsed_args.n_pairs_sampled
     args['max_clipping'] = parsed_args.max_clipping
+    args['max_distance'] = parsed_args.max_distance
     return args, parsed_args
 
 
@@ -73,10 +76,12 @@ def run():
     interleaved = args['interleaved']
     threads = args['threads']
     n_pairs_sampled = args['n_pairs_sampled']
+    max_distance = args['max_distance']
 
     draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
                                n=n_pairs_sampled, interleaved=interleaved,
-                               tempdir=tempdir, threads=threads)
+                               tempdir=tempdir, threads=threads,
+                               max_=max_distance)
 
 if __name__ == '__main__':
     sys.exit(main(run))

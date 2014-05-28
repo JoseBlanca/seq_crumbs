@@ -678,7 +678,7 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
 
 
 def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
-                                   remove_outliers=True):
+                                   remove_outliers=True, max_=None):
     '''It shows distance distribution between pairs of sequences that map
     completely in the same reference sequence'''
     stats = {'outies': [], 'innies': [], 'others': []}
@@ -705,7 +705,8 @@ def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
         out_fhand.write(key + '\n')
         if stats[key]:
             counter = IntCounter(iter(stats[key]))
-            distribution = counter.calculate_distribution(remove_outliers=remove_outliers)
+            distribution = counter.calculate_distribution(remove_outliers=remove_outliers,
+                                                          max_=max_)
             counts = distribution['counts']
             bin_limits = distribution['bin_limits']
             out_fhand.write(draw_histogram_ascii(bin_limits, counts))
@@ -713,7 +714,7 @@ def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
 
 
 def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
-                               n=None, remove_outliers=True,
+                               n=None, remove_outliers=True, max_=None,
                                interleaved=True, tempdir=None, threads=None):
     tempdir = '/tmp' if tempdir is None else tempdir
     if n is None:
@@ -728,4 +729,4 @@ def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
     bamfile = _sorted_mapped_reads(ref_fpath, sampled_fpaths, threads=threads,
                                    tempdir=tempdir, interleaved=interleaved)
     show_distances_distributions(bamfile, max_clipping, out_fhand, n=n,
-                                   remove_outliers=remove_outliers)
+                                   remove_outliers=remove_outliers, max_=max_)
