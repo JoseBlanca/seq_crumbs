@@ -14,9 +14,9 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 from crumbs.plot import (draw_histogram, draw_scatter, draw_density_plot,
                          build_histogram)
-from vcf_crumbs.vcf_stats import (calc_density_per_chrom, HET, HOM_ALT,
-                                  HOM_REF, VcfStats,
-                                  calc_n_bases_in_chrom_with_snp)
+from vcf_crumbs.statistics import (calc_density_per_chrom, HET, HOM_ALT,
+                                   HOM_REF, VcfStats,
+                                   calc_n_bases_in_chrom_with_snp)
 from crumbs.statistics import IntCounter
 
 

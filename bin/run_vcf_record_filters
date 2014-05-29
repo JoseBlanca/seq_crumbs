@@ -7,7 +7,7 @@ from vcf import Reader, Writer
 from vcf_crumbs.filters import (GenotypesInSamplesFilter,
                                     AlleleNumberFilter, MissingGenotypesFilter,
                                     remove_low_quality_gt)
-from vcf_crumbs.vcf_stats import get_snpcaller_name
+from vcf_crumbs.statistics import get_snpcaller_name
 
 
 def _setup_argparse():

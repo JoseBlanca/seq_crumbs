@@ -8,8 +8,8 @@ from vcf import Reader
 from vcf_crumbs.filters import (GenotypesInSamplesFilter, AlleleNumberFilter,
                                 MissingGenotypesFilter, remove_low_quality_gt)
 from vcf_crumbs.utils import TEST_DATA_DIR
-from vcf_crumbs.vcf_stats import (VARSCAN,  get_call_data, GQ,
-                                  get_snpcaller_name, GT)
+from vcf_crumbs.statistics import (VARSCAN,  get_call_data, GQ,
+                                   get_snpcaller_name, GT)
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')

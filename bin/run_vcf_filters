@@ -8,7 +8,7 @@ from configobj import ConfigObj
 
 from vcf import Reader, Writer
 from vcf.parser import _Filter, _Info
-from vcf_crumbs.vcf_stats import get_snpcaller_name
+from vcf_crumbs.statistics import get_snpcaller_name
 
 FILTERS_USING_VCF = ('CloseToSnv', 'HighVariableRegion')
 

@@ -4,10 +4,10 @@ import sys
 from tempfile import NamedTemporaryFile
 
 from vcf import Reader
-from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
-                                  get_snpcaller_name, VARSCAN, GATK,
-                                  calculate_maf, FREEBAYES, VcfStats,
-                                  calc_n_bases_in_chrom_with_snp, HOM_REF)
+from vcf_crumbs.statistics import (calc_density_per_chrom, get_data_from_vcf,
+                                   get_snpcaller_name, VARSCAN, GATK,
+                                   calculate_maf, FREEBAYES, VcfStats,
+                                   calc_n_bases_in_chrom_with_snp, HOM_REF)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
 from subprocess import check_call, CalledProcessError

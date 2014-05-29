@@ -3,7 +3,7 @@ from __future__ import division
 from vcf.model import make_calldata_tuple, _Call
 
 from vcf_crumbs.annotation import choose_samples
-from vcf_crumbs.vcf_stats import get_call_data, GQ
+from vcf_crumbs.statistics import get_call_data, GQ
 
 
 def remove_low_quality_gt(record, gq_threshold, vcf_variant):
