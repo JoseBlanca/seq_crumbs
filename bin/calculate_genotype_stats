@@ -7,7 +7,7 @@ import sys
 import argparse
 import vcf
 from crumbs.statistics import IntCounter
-from vcf_crumbs.vcf_stats import get_call_data, get_snpcaller_name, GQ
+from vcf_crumbs.statistics import get_call_data, get_snpcaller_name, GQ
 
 
 def _setup_argparse():

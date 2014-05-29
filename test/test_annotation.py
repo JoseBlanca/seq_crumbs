@@ -17,7 +17,7 @@ from vcf_crumbs.annotation import (calculate_maf, count_alleles, CloseToSnv,
                                    CapEnzyme, AminoChangeAnnotator,
                                    AminoSeverityChangeAnnotator,
                                    HeterozigoteInSamples, IsVariableAnnotator)
-from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK
+from vcf_crumbs.statistics import VARSCAN, FREEBAYES, GATK
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')

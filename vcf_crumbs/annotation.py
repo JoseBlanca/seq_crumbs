@@ -12,7 +12,7 @@ from vcf import Reader
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
 
-from vcf_crumbs.vcf_stats import get_call_data, RC, ACS, GQ
+from vcf_crumbs.statistics import get_call_data, RC, ACS, GQ
 from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
