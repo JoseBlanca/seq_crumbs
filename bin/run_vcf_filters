@@ -10,7 +10,7 @@ from vcf import Reader, Writer
 from vcf.parser import _Filter, _Info
 from vcf_crumbs.vcf_stats import get_snpcaller_name
 
-FILTERS_USING_VCF = ('CloseToSnvFilter', 'HighVariableRegionFilter')
+FILTERS_USING_VCF = ('CloseToSnv', 'HighVariableRegion')
 
 
 def _setup_argparse():
@@ -47,8 +47,7 @@ def _parse_filters_conf(fpath, snv_in_fpath):
     for filter_confs in config.values():
         filter_class_name = filter_confs.keys()[0]
         args = filter_confs.values()[0]
-
-        mod = __import__('vcf_crumbs.vcf_filters',
+        mod = __import__('vcf_crumbs.annotation',
                          fromlist=[filter_class_name])
         filter_class = getattr(mod, filter_class_name)
         if filter_class_name in FILTERS_USING_VCF:

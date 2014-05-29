@@ -1,58 +1,68 @@
+'''
+Created on 2014 mai 28
+
+@author: peio
+'''
 from __future__ import division
 
 import json
 from os.path import join
-from vcf import Reader
-import vcf
 
+from vcf import Reader
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
+
+from vcf_crumbs.vcf_stats import get_call_data, RC, ACS, GQ
 from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
-from vcf_crumbs.vcf_stats import VARSCAN, FREEBAYES, GATK, get_call_data, RC,\
-    ACS, get_snpcaller_name, GQ, GT
-from vcf.model import make_calldata_tuple, _Call
 
 COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
                   'HaeIII', 'KpnI', 'ScaI', 'HinfI', 'DraI', 'ApaI', 'BstEII',
                   'ZraI', 'BanI', 'Asp718I']
+
 MIN_READS = 6
 MIN_READS_PER_ALLELE = 3
 
 
-def _calculate_maf_for_counts(counts):
-    counts = counts.values()
-    dp = sum(counts)
-    if dp == 0:
+class BaseAnnotator(object):
+
+    def __call__(self, record):
+        raise NotImplementedError()
+
+    @property
+    def encode_conf(self):
+        encoded_conf = json.dumps(self.conf).replace("\"", "'")
+        return encoded_conf
+
+    def _clean_filter(self, record):
+        name = self.name
+        if record.FILTER and name in record.FILTER:
+            record.FILTER.remove(name)
+
+    def _clean_info(self, record):
+        if self.info_id in record.INFO:
+            del(record.INFO[self.info.id])
+
+    @property
+    def is_filter(self):
+        return True
+
+    @property
+    def info(self):
+        return {}
+
+    @property
+    def info_id(self):
+        if self.info:
+            return self.info['id']
         return None
-    freqs = sorted([count / float(dp) for count in counts])
-    return freqs[-1] if freqs else None
 
 
 def calculate_maf(record, vcf_variant):
     counts = count_alleles(record, vcf_variant=vcf_variant)['all']
     return _calculate_maf_for_counts(counts)
-
-
-def aggregate_allele_counts(allele_counts):
-    all_counts = {}
-    for values in allele_counts.values():
-        for allele, count in values.items():
-            if allele not in all_counts:
-                all_counts[allele] = 0
-            all_counts[allele] += count
-    return {'all': all_counts}
-
-
-def choose_samples(record, sample_names):
-    if sample_names is None:
-        chosen_samples = record.samples
-    else:
-        filter_by_name = lambda x: True if x.sample in sample_names else False
-        chosen_samples = filter(filter_by_name, record.samples, )
-    return chosen_samples
 
 
 def count_alleles(record, sample_names=None, vcf_variant=None):
@@ -95,6 +105,34 @@ def count_alleles(record, sample_names=None, vcf_variant=None):
     return counts
 
 
+def _calculate_maf_for_counts(counts):
+    counts = counts.values()
+    dp = sum(counts)
+    if dp == 0:
+        return None
+    freqs = sorted([count / float(dp) for count in counts])
+    return freqs[-1] if freqs else None
+
+
+def aggregate_allele_counts(allele_counts):
+    all_counts = {}
+    for values in allele_counts.values():
+        for allele, count in values.items():
+            if allele not in all_counts:
+                all_counts[allele] = 0
+            all_counts[allele] += count
+    return {'all': all_counts}
+
+
+def choose_samples(record, sample_names):
+    if sample_names is None:
+        chosen_samples = record.samples
+    else:
+        filter_by_name = lambda x: True if x.sample in sample_names else False
+        chosen_samples = filter(filter_by_name, record.samples, )
+    return chosen_samples
+
+
 def _str_alleles(record):
     alleles = [record.alleles[0]]
     for alt_allele in record.alleles[1:]:
@@ -102,41 +140,7 @@ def _str_alleles(record):
     return alleles
 
 
-class BaseFilter(object):
-
-    def __call__(self, record):
-        raise NotImplementedError()
-
-    @property
-    def encode_conf(self):
-        encoded_conf = json.dumps(self.conf).replace("\"", "'")
-        return encoded_conf
-
-    def _clean_filter(self, record):
-        name = self.name
-        if record.FILTER and name in record.FILTER:
-            record.FILTER.remove(name)
-
-    def _clean_info(self, record):
-        if self.info_id in record.INFO:
-            del(record.INFO[self.info.id])
-
-    @property
-    def is_filter(self):
-        return True
-
-    @property
-    def info(self):
-        return {}
-
-    @property
-    def info_id(self):
-        if self.info:
-            return self.info['id']
-        return None
-
-
-class CloseToSnvFilter(BaseFilter):
+class CloseToSnv(BaseAnnotator):
     '''Filter snps with other close snvs.
 
     Allowed snv_types:  [snp, indel, unknown] '''
@@ -173,7 +177,8 @@ class CloseToSnvFilter(BaseFilter):
                     passed_snvs += 1
             else:
                 calculated_maf = calculate_maf(snv)
-                if calculated_maf and calculated_maf < maf and snv_type == snv.var_type:
+                if (calculated_maf and calculated_maf < maf and
+                    snv_type == snv.var_type):
                     passed_snvs += 1
         if passed_snvs:
             record.add_filter(self.name)
@@ -200,7 +205,7 @@ def _get_lengths(fhand):
     return lengths
 
 
-class HighVariableRegionFilter(BaseFilter):
+class HighVariableRegion(BaseAnnotator):
     'Filter depending on the variability of the region'
 
     def __init__(self, max_variability, vcf_fpath, ref_fpath, window=None):
@@ -247,7 +252,7 @@ class HighVariableRegionFilter(BaseFilter):
         return desc.format(self.max_variability * 100, self.encode_conf)
 
 
-class CloseToLimitFilter(BaseFilter):
+class CloseToLimit(BaseAnnotator):
     'Filter snps close to chromosome limits'
 
     def __init__(self, distance, ref_fpath):
@@ -275,7 +280,7 @@ class CloseToLimitFilter(BaseFilter):
         return desc.format(self.distance, self.encode_conf)
 
 
-class MafLimitFilter(BaseFilter):
+class MafLimit(BaseAnnotator):
     'Filter by maf'
 
     def __init__(self, max_maf, samples=None):
@@ -305,7 +310,7 @@ class MafLimitFilter(BaseFilter):
         return desc.format(samples, self.max_maf, self.encode_conf)
 
 
-class CapEnzymeFilter(BaseFilter):
+class CapEnzyme(BaseAnnotator):
     'Filters by detectablity by restriction enzymes'
 
     def __init__(self, all_enzymes, ref_fpath):
@@ -384,7 +389,7 @@ def _cap_enzymes_between_alleles(allele1, allele2, reference, start, end,
     return enzymes
 
 
-class KindFilter(BaseFilter):
+class Kind(BaseAnnotator):
     '''Choose Snv by type
 
     type options = snp, indel, unknown
@@ -410,7 +415,7 @@ class KindFilter(BaseFilter):
         return 'It is not an {} :: {}'.format(self.kind, self.encode_conf)
 
 
-class IsVariableFilter(BaseFilter):
+class IsVariableAnnotator(BaseAnnotator):
     'Variable in readgroup'
 
     def __init__(self, filter_id, samples, max_maf=None, min_reads=MIN_READS,
@@ -430,97 +435,30 @@ class IsVariableFilter(BaseFilter):
                      'in_all_groups': in_all_groups,
                      'reference_free': reference_free}
 
-    def __call__(self, record):
-        self._clean_filter(record)
-        is_variable = variable_in_samples(record, self.samples, self.in_union,
+    def __call__(self, snv):
+        is_variable = variable_in_samples(snv, self.samples, self.in_union,
                                           self.max_maf, self.in_all_groups,
                                           self.reference_free, self.min_reads,
                                           self.min_reads_per_allele,
                                           vcf_variant=self.vcf_variant)
-        if not is_variable:
-            record.add_filter(self.name)
-        return record
+
+        snv.add_info(info=self.info_id, value=str(is_variable))
+        return snv
 
     @property
-    def name(self):
-        return 'vs{}'.format(self.filter_id)
-
-    @property
-    def description(self):
+    def info(self):
         samples = ','.join(self.samples)
-        desc = 'It is not variable, or no data, in the samples : {}. '
-        desc += 'All together: {} :: {}'
-        return desc.format(samples, str(self.in_union), self.encode_conf)
+        desc = 'True if the samples are variable. False if they are not. '
+        desc += 'None if there is not enougth data in the samples: {samples}'
+        desc += ' :: {conf}'
+        desc = desc.format(samples=samples, conf=self.encode_conf)
 
-
-class IsNotVariableFilter(BaseFilter):
-    'Variable in readgroup'
-
-    def __init__(self, filter_id, samples, max_maf=None, min_reads=MIN_READS,
-                 in_union=True, reference_free=True, min_reads_per_allele=MIN_READS_PER_ALLELE):
-        self.max_maf = max_maf
-        self.samples = samples
-        self.min_reads = min_reads
-        self.min_reads_per_allele = min_reads_per_allele
-        self.in_union = in_union
-        self.reference_free = reference_free
-        self.filter_id = filter_id
-        self.conf = {'max_maf': max_maf, 'samples': samples,
-                     'min_reads': min_reads, 'in_union': in_union,
-                     'reference_free': reference_free}
-
-    def __call__(self, record):
-        self._clean_filter(record)
-        is_invariable = invariant_in_samples(record, self.samples,
-                                    in_union=self.in_union, maf=self.max_maf,
-                                    reference_free=self.reference_free,
-                                    min_reads=self.min_reads,
-                                    vcf_variant=self.vcf_variant,
-                                    min_reads_per_allele=self.min_reads_per_allele)
-        if not is_invariable:
-            record.add_filter(self.name)
-        return record
+        return {'id': 'IV{}'.format(self.filter_id), 'num': 1,
+                'type': 'String', 'desc': desc}
 
     @property
-    def name(self):
-        return 'nvs{}'.format(self.filter_id)
-
-    @property
-    def description(self):
-        samples = ','.join(self.samples)
-        desc = 'It is variable, or no data, in the samples : {}. '
-        desc += 'All together: {} :: {}'
-        return desc.format(samples, str(self.in_union), self.encode_conf)
-
-
-def invariant_in_samples(record, samples, in_union=True,
-                           in_all_groups=True, reference_free=True, maf=None,
-                           min_reads=None, vcf_variant=None,
-                           min_reads_per_allele=None):
-    'it check if the given snv is invariant form the given groups'
-    allele_counts = count_alleles(record, samples, vcf_variant=vcf_variant)
-
-    if not allele_counts:
-        return False if reference_free else True
-
-    if in_union:
-        allele_counts = aggregate_allele_counts(allele_counts)
-
-    invariable_in_samples = []
-    alleles = _str_alleles(record)
-    for sample_counts in allele_counts.values():
-        invariable_in_sample = not _is_variable_in_sample(alleles,
-                                                 sample_counts,
-                                                 reference_free=reference_free,
-                                                 maf=maf,
-                                                 min_reads=min_reads,
-                                     min_reads_per_allele=min_reads_per_allele)
-        invariable_in_samples.append(invariable_in_sample)
-
-    if in_all_groups:
-        return all(invariable_in_samples)
-    else:
-        return any(invariable_in_samples)
+    def is_filter(self):
+        return False
 
 
 def variable_in_samples(record, samples, in_union=True, maf=None,
@@ -541,6 +479,10 @@ def variable_in_samples(record, samples, in_union=True, maf=None,
                                      min_reads_per_allele=min_reads_per_allele)
 
         variable_in_samples.append(variable_in_sample)
+
+    if None in variable_in_samples or not variable_in_samples:
+        return None
+
     if in_all_groups:
         return all(variable_in_samples)
     else:
@@ -550,14 +492,18 @@ def variable_in_samples(record, samples, in_union=True, maf=None,
 def _is_variable_in_sample(alleles, allele_counts, reference_free, maf,
                            min_reads, min_reads_per_allele):
     'It checks if the allele is variable'
-
+    num_reads = sum(allele_counts.values())
+    if min_reads > num_reads:
+        return None
     num_alleles = 0
     # first remove  the bad alleles
     for allele in allele_counts:
         if allele_counts[allele] >= min_reads_per_allele:
             num_alleles += 1
+
     if not num_alleles:
-        return False
+        return None
+
     ref_allele = alleles[0]
 
     if (ref_allele in allele_counts and
@@ -572,16 +518,71 @@ def _is_variable_in_sample(alleles, allele_counts, reference_free, maf,
         elif not reference_free and ref_in_alleles:
             return False
 
-    num_reads = sum(allele_counts.values())
     maf_allele = _calculate_maf_for_counts(allele_counts)
-    if ((maf and maf < maf_allele) or
-        (min_reads and min_reads > num_reads)):
+    if maf and maf < maf_allele:
         return False
 
     return True
 
 
-class ChangeAminoFilter(BaseFilter):
+class HeterozigoteInSamples(BaseAnnotator):
+
+    def __init__(self, filter_id, samples=None, min_percent_het_gt=0,
+                 gq_threshold=0, min_num_called=0):
+        self._samples = samples
+        self._min_percent_het_gt = min_percent_het_gt
+        self._gq_threshold = gq_threshold
+        self._min_num_called = min_num_called
+        self.filter_id = filter_id
+        self.conf = {'samples': samples,
+                     'min_percent_het_get': min_percent_het_gt,
+                     'gq_threslhold': gq_threshold,
+                     'min_num_called': min_num_called}
+
+    def __call__(self, record):
+        call_is_het = []
+        for call in record:
+            sample_name = call.sample
+            if self._samples and sample_name not in self._samples:
+                continue
+            gt_qual = get_call_data(call, vcf_variant=self.vcf_variant)[GQ]
+            if gt_qual >= self._gq_threshold:
+                call_is_het.append(call.is_het)
+        num_calls = len(call_is_het)
+        num_hets = len(filter(bool, call_is_het))
+        if not num_calls or num_calls < self._min_num_called:
+            result = None
+        else:
+            percent = int((num_hets / num_calls) * 100)
+            if percent >= self._min_percent_het_gt:
+                result = True
+            else:
+                result = False
+
+        record.add_info(info=self.info_id, value=str(result))
+        return record
+
+    @property
+    def info(self):
+        if self._samples is None:
+            samples = 'all'
+        else:
+            samples = ','.join(self._samples)
+        description = 'True if at least {min_perc}% of the called samples are '
+        description += 'het. False if not. None if not enough data in the '
+        description += 'samples {samples} :: {conf}'
+        description = description.format(min_perc=self._min_percent_het_gt,
+                                        samples=samples, conf=self.encode_conf)
+
+        return {'id': 'HIS{}'.format(self.filter_id), 'num': 1,
+                'type': 'String', 'desc': description}
+
+    @property
+    def is_filter(self):
+        return False
+
+
+class AminoChangeAnnotator(BaseAnnotator):
     'The aminoacid changes with the alternative allele'
 
     def __init__(self, ref_fpath, orf_seq_fpath):
@@ -646,7 +647,7 @@ def _parse_blossum_matrix(path):
     return matrix
 
 
-class ChangeAminoSeverityFilter(BaseFilter):
+class AminoSeverityChangeAnnotator(BaseAnnotator):
     'Check if the change is severe  or not'
 
     def __init__(self, ref_fpath, orf_seq_fpath):
@@ -697,148 +698,3 @@ class ChangeAminoSeverityFilter(BaseFilter):
     @property
     def description(self):
         return "Alt alleles change the amino acid and the change is severe"
-
-
-def remove_low_quality_gt(record, gq_threshold, vcf_variant):
-    ''''Filters by genotype quality and sets to uncalled those that do not meet
-    the requierements'''
-    for index_, call in enumerate(record):
-        call_data = get_call_data(call, vcf_variant)
-        if call_data[GQ] is None or call_data[GQ] < gq_threshold:
-            calldata = make_calldata_tuple(record.FORMAT.split(':'))
-            sampdat = []
-            for format_def in record.FORMAT.split(':'):
-                if format_def == 'GT':
-                    value = None
-                else:
-                    value = getattr(call.data, format_def)
-                sampdat.append(value)
-            call = _Call(record, call.sample, calldata(*sampdat))
-            call_data = get_call_data(call, vcf_variant)
-            record.samples[index_] = call
-    return record
-
-
-#These filters return True/False
-class GenotypesInSamplesFilter(object):
-    'Filter by genotypes in specific samples'
-
-    def __init__(self, genotypes, samples=None, n_min_called=None):
-        self.genotypes = genotypes
-        self.genotypes.append(None)
-        self.samples = samples
-        self.n_min_called = n_min_called
-
-    def __call__(self, record):
-        chosen_samples = choose_samples(record, self.samples)
-        n_called = 0
-        for call in chosen_samples:
-            if call.gt_type not in self.genotypes:
-                return False
-            if call.gt_type is not None:
-                n_called += 1
-        if self.n_min_called is None or n_called >= self.n_min_called:
-            return True
-        else:
-            return False
-
-
-class AlleleNumberFilter(object):
-    'Filter by number of different alleles'
-
-    def __init__(self, n_alleles, samples=None):
-        self.n_alleles = n_alleles
-        self.samples = samples
-
-    def __call__(self, record):
-        chosen_samples = choose_samples(record, self.samples)
-        alleles = set()
-        for call in chosen_samples:
-            if call.gt_bases is None:
-                continue
-            if call.phased:
-                bases = call.gt_bases.split('|')
-            else:
-                bases = call.gt_bases.split('/')
-            for allele in bases:
-                alleles.add(allele)
-        return len(record.alleles) == self.n_alleles
-
-
-def get_n_missing_genotypes(record):
-    n_missing = 0
-    for call in record:
-        if not call.called:
-            n_missing += 1
-    return n_missing
-
-
-class MissingGenotypesFilter(object):
-    'Filter by maximim number of missing genotypes'
-
-    def __init__(self, max_missing_genotypes, samples=None):
-        self.max_missing_genotypes = max_missing_genotypes
-        self.samples = samples
-
-    def __call__(self, record):
-        chosen_samples = choose_samples(record, self.samples)
-        n_missing = get_n_missing_genotypes(chosen_samples)
-        return n_missing <= self.max_missing_genotypes
-
-
-class HeterozigoteInSamples(BaseFilter):
-
-    def __init__(self, filter_id, samples=None, min_percent_het_gt=0,
-                 gq_threshold=0, min_num_called=0):
-        self._samples = samples
-        self._min_percent_het_gt = min_percent_het_gt
-        self._gq_threshold = gq_threshold
-        self._min_num_called = min_num_called
-        self.filter_id = filter_id
-        self.conf = {'samples': samples,
-                     'min_percent_het_get': min_percent_het_gt,
-                     'gq_threslhold': gq_threshold,
-                     'min_num_called': min_num_called}
-
-    def __call__(self, record):
-        call_is_het = []
-        for call in record:
-            sample_name = call.sample
-            if self._samples and sample_name not in self._samples:
-                continue
-            gt_qual = get_call_data(call, vcf_variant=self.vcf_variant)[GQ]
-            if gt_qual >= self._gq_threshold:
-                call_is_het.append(call.is_het)
-        num_calls = len(call_is_het)
-        num_hets = len(filter(bool, call_is_het))
-        if not num_calls or num_calls < self._min_num_called:
-            result = None
-        else:
-            percent = int((num_hets / num_calls) * 100)
-            if percent >= self._min_percent_het_gt:
-                result = True
-            else:
-                result = False
-
-        record.add_info(info=self.info_id, value=str(result))
-        return record
-
-    @property
-    def info(self):
-        if self._samples is None:
-            samples = 'all'
-        else:
-            samples = ','.join(self._samples)
-        description = 'True if at least {min_perc}% of the called samples are '
-        description += 'het. False if not. None if not enough data in the '
-        description += 'samples {samples} :: {conf}'
-        description = description.format(min_perc=self._min_percent_het_gt,
-                                        samples=samples, conf=self.encode_conf)
-
-        return {'id': 'HIS{}'.format(self.filter_id), 'num': 1, 'type': 'String',
-                'desc': description}
-
-    @property
-    def is_filter(self):
-        return False
-
