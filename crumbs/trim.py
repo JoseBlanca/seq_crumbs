@@ -427,7 +427,8 @@ class TrimNexteraAdapters(_BaseTrim):
             _add_trim_segments(segments, seq, kind=OTHER)
         return seq
 
-CUTADAPT = 'cutadapt'
+CUTADAPT = '/home/carlos/devel/bin/cutadapt'
+#cutadapt bin should be included somewhere else
 _5END = '5end'
 _3END = '3end'
 ANYWHERE = 'anywhere'
