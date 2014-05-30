@@ -732,15 +732,20 @@ class FilterByMappingType(unittest.TestCase):
 class DrawDistanceDistribution(unittest.TestCase):
     def test_draw_distance_distribution(self):
         reference_seq = GENOME
-        #Non chimeric
-        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
-        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
+        query1 = '>seq1 1:N:0:GATCAG\n'
+        query1 += 'GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 2:N:0:GATCAG\n'
+        query2 += 'AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
         #Chimeric
-        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
-        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
+        query3 = '>seq2 1:N:0:GATCAG\n'
+        query3 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
+        query4 = '>seq2 2:N:0:GATCAG\n'
+        query4 += 'ACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
         #unknown
-        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
-        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
+        query5 = '>seq3 1:N:0:GATCAG\n'
+        query5 += 'AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
+        query6 = '>seq3 2:N:0:GATCAG\n'
+        query6 += 'GTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
 
         query = query1 + query2 + query5 + query6 + query3 + query4
         in_fhand = NamedTemporaryFile()
@@ -760,14 +765,20 @@ class DrawDistanceDistribution(unittest.TestCase):
     def test_draw_distance_distribution_bin(self):
         reference_seq = GENOME
         #Non chimeric
-        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
-        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
+        query1 = '>seq1 1:N:0:GATCAG\n'
+        query1 += 'GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 2:N:0:GATCAG\n'
+        query2 += 'AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
         #Chimeric
-        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
-        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
+        query3 = '>seq2 1:N:0:GATCAG\n'
+        query3 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
+        query4 = '>seq2 2:N:0:GATCAG\n'
+        query4 += 'ACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
         #unknown
-        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
-        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
+        query5 = '>seq3 1:N:0:GATCAG\n'
+        query5 += 'AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
+        query6 = '>seq3 2:N:0:GATCAG\n'
+        query6 += 'GTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
 
         query = query1 + query2 + query5 + query6 + query3 + query4
         in_fhand = NamedTemporaryFile()
