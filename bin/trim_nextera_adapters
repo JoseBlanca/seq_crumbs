@@ -1,0 +1,117 @@
+#!/usr/bin/env python
+
+# Copyright 2013 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from crumbs.utils.bin_utils import (main, argparse, create_trimmer_argparse,
+                                    parse_trimmer_args)
+from crumbs.utils.file_utils import flush_fhand
+from tempfile import NamedTemporaryFile
+import os
+from crumbs.trim import trim_with_cutadapt, _3END, seq_to_trim_packets,\
+    TrimNexteraAdapters, TrimOrMask
+from crumbs.seqio import read_seq_packets, write_trim_packets
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.utils.tags import SEQITEM
+
+
+def create_argparse(add_reverse=True, **kwargs):
+    'It returns a cmd parser for the filter executables'
+    parser = create_trimmer_argparse(**kwargs)
+    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
+    help1 = 'File containing one adapter sequence per line. '
+    help1 += 'If not given it will use the ones given by Illumina'
+    parser.add_argument('-l', '--oligos_file', default=None,
+                        help=help1)
+    parser.add_argument('-c', '--use_cutadapt', default=False,
+                        action='store_true', help=help1)
+    cutadapt_group = parser.add_argument_group('Trim with cutadapt')
+    cutadapt_group.add_argument('--error_rate', default=None,
+                        help='Max error rate for adapter finding (0.1)')
+    cutadapt_group.add_argument('-s', '--summary_file', default=None,
+                        help='File to write cutadapt summary (stdout)')
+    return parser
+
+
+def parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_trimmer_args(parser)
+    args['use_cutadapt'] = parsed_args.use_cutadapt
+    args['oligos_fpath'] = parsed_args.oligos_file
+    args['error_rate'] = parsed_args.error_rate
+    args['summary_fpath'] = parsed_args.summary_file
+
+    return args, parsed_args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It trims Nextera adapters from illumina mate pairs seqs'
+    parser = create_argparse(description=description)
+    args = parse_args(parser)[0]
+    out_fhand = args['out_fhand']
+    use_cutadapt = args['use_cutadapt']
+    oligos_fpath = args['oligos_fpath']
+    error_rate = args['error_rate']
+    summary_fpath = args['summary_fpath']
+
+    if oligos_fpath is not None:
+        oligos_seqs = [line.strip() for line in open(oligos_fpath)]
+    else:
+        oligos_seqs = ['CTGTCTCTTATACACATCT', 'AGATGTGTATAAGAGACAG']
+    if use_cutadapt:
+        in_fpaths = [fhand.name for fhand in args['in_fhands']]
+        if len(in_fpaths) != 1:
+            in_fhand = NamedTemporaryFile(suffix='fastq', dir=os.getcwd())
+            for fpath in in_fpaths:
+                for line in open(fpath):
+                    in_fhand.write(line)
+            in_fhand.flush()
+            in_fpath = in_fhand.name
+        else:
+            in_fpath = in_fpaths[0]
+        oligos = {_3END: oligos_seqs}
+        trim_with_cutadapt(in_fpath, out_fhand.name, oligos,
+                           error_rate=error_rate, summary_fpath=summary_fpath)
+    else:
+        in_fhands = args['in_fhands']
+        orphan_fhand = args['orphan_fhand']
+        oligos = []
+        for oligo_index, str_seq in enumerate(oligos_seqs):
+            name = 'oligo' + str(oligo_index)
+            lines = ['>' + name + '\n', str_seq + '\n']
+            oligos.append(SeqWrapper(SEQITEM, SeqItem(name, lines), 'fasta'))
+
+        seq_packets = read_seq_packets(in_fhands)
+        trim_packets = seq_to_trim_packets(seq_packets,
+                                    group_paired_reads=args['paired_reads'])
+        prep_trim = TrimNexteraAdapters(oligos=oligos)
+        trim_or_mask = TrimOrMask(mask=args['mask'])
+
+        trim_packets, workers = process_seq_packets(trim_packets,
+                                                   [prep_trim, trim_or_mask],
+                                                   processes=args['processes'])
+        write_trim_packets(out_fhand, orphan_fhand, trim_packets,
+                             args['out_format'], workers=workers)
+
+        flush_fhand(out_fhand)
+        if orphan_fhand is not None:
+            orphan_fhand.flush()
+
+
+if __name__ == '__main__':
+    sys.exit(main(run))
