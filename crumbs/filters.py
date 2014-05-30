@@ -668,14 +668,6 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
         elif kind is UNKNOWN and unknown_fhand is not None:
             write_seqs(pair, unknown_fhand)
 
-    if draw_distribution:
-        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
-                                       tempdir, min_seed_len, threads)
-        max_clipping = settings['MAX_CLIPPING']
-        show_distances_distributions(bamfile, max_clipping,
-                                     distance_distribution_fhand,
-                                     n=n_pairs_sampled)
-
 
 def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
                                    remove_outliers=True, max_=None):
@@ -713,6 +705,16 @@ def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
     out_fhand.flush()
 
 
+def _get_n_seqs(seqs, n):
+    reads = ''
+    total = 0
+    for seq in seqs:
+        reads += seq
+        total += 1
+        if total == n * 4:
+            return reads
+
+
 def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
                                n=None, remove_outliers=True, max_=None,
                                interleaved=True, tempdir=None, threads=None):
@@ -723,7 +725,11 @@ def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
         sampled_fpaths = []
         for in_fpath in in_fpaths:
             sampled_fhand = NamedTemporaryFile(dir=tempdir)
-            write_seqs(_get_n_seqs(open(in_fpath), n), sampled_fhand)
+            sampled_fhand.write(_get_n_seqs(open(in_fpath), n))
+#             this does not work with read_seqs. It says unknown format. Check
+#             because this will only work for fastq files
+#             write_seqs(_get_n_seqs(read_seqs([open(in_fpath)]), n),
+#                        sampled_fhand)
             sampled_fhand.flush()
             sampled_fpaths.append(sampled_fhand.name)
     bamfile = _sorted_mapped_reads(ref_fpath, sampled_fpaths, threads=threads,

@@ -717,17 +717,6 @@ class FilterByMappingType(unittest.TestCase):
         assert 'seq2' in open(chimeras_fhand.name).next()
         assert 'seq3' in open(unknown_fhand.name).next()
 
-        #draw_distance_distribution
-        distribution_fhand = NamedTemporaryFile()
-        cmd = [filter_chimeras_bin, in_fhand.name, '-r', ref_fhand.name]
-        cmd.extend(['-c', chimeras_fhand.name, '-u', unknown_fhand.name,
-                    '-s', '2000', '-o', out_fhand.name, '-x',
-                    distribution_fhand.name])
-        print check_output(cmd, stdin=in_fhand)
-        for line in open(distribution_fhand.name):
-            assert ('outies' in line or 'innies' in line or 'others' in line
-                    or '(1)' in line)
-
 
 class DrawDistanceDistribution(unittest.TestCase):
     def test_draw_distance_distribution(self):
@@ -790,10 +779,18 @@ class DrawDistanceDistribution(unittest.TestCase):
 
         distribution_fhand = NamedTemporaryFile()
         draw_distances_distribution_bin = os.path.join(BIN_DIR,
-                                                'draw_mp_distance_distribution')
+                                            'draw_mp_distance_distribution')
         assert 'usage' in check_output([draw_distances_distribution_bin, '-h'])
         cmd = [draw_distances_distribution_bin, in_fhand.name, '-r',
                ref_fhand.name, '-o', distribution_fhand.name]
+        print check_output(cmd, stdin=in_fhand)
+        for line in open(distribution_fhand.name):
+            assert ('outies' in line or 'innies' in line or 'others' in line
+                    or '(1)' in line)
+
+        #sampling a number of reads
+        cmd = [draw_distances_distribution_bin, in_fhand.name, '-r',
+               ref_fhand.name, '-o', distribution_fhand.name, '-n', '2']
         print check_output(cmd, stdin=in_fhand)
         for line in open(distribution_fhand.name):
             assert ('outies' in line or 'innies' in line or 'others' in line
