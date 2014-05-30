@@ -7,11 +7,17 @@ Created on 2013 urr 3
 from __future__ import division
 import argparse
 import os
+from array import array
 
-from bam_crumbs.plot import draw_histogram, draw_scatter
-from vcf_crumbs.vcf_stats import (calc_density_per_chrom, get_data_from_vcf,
-                                  HET, HOM_ALT, HOM_REF, VcfStats)
-from crumbs.statistics import draw_histogram_matlib
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+from crumbs.plot import (draw_histogram, draw_scatter, draw_density_plot,
+                         build_histogram)
+from vcf_crumbs.statistics import (calc_density_per_chrom, HET, HOM_ALT,
+                                   HOM_REF, VcfStats,
+                                   calc_n_bases_in_chrom_with_snp)
+from crumbs.statistics import IntCounter
 
 
 def _setup_argparse():
@@ -27,7 +33,15 @@ def _setup_argparse():
                         help='Directory to write all output files')
     parser.add_argument('-q', '--gt_qual_threshold', default=0.0, type=float,
             help='Genotype quelity threshold to take into account a genotype')
-
+    parser.add_argument('-s', '--samples_file', default=None,
+                        help='File containing selected samples for statistics')
+    parser.add_argument('-m', '--maf_per_sample', default=False,
+                        action='store_true',
+                        help='Draw maf distribution per sample')
+    help_d = 'Depth to draw ref_counts distribution per gt. '
+    help_d += 'Several can be writen (-d 10 -d 20)'
+    parser.add_argument('-d', '--selected_depth', help=help_d, required=True,
+                        action='append')
     return parser
 
 
@@ -41,39 +55,39 @@ def _parse_args(parser):
         os.mkdir(os.path.abspath(args['out_dir']))
     args['ref_fhand'] = parsed_args.reference_file
     args['gq'] = parsed_args.gt_qual_threshold
+    args['samples_fpath'] = parsed_args.samples_file
+    args['maf_per_sample'] = parsed_args.maf_per_sample
+    args['depth_for_counts_hist'] = [int(n) for n in parsed_args.selected_depth]
     return args
 
 
-def main():
-    parser = _setup_argparse()
-    args = _parse_args(parser)
-    out_dir = args['out_dir']
-    ref_fhand = args['ref_fhand']
-    gq_threshold = args['gq']
-    vcf_stats = VcfStats(args['in_fhand'].name, gq_threshold=gq_threshold)
-
-    #densities
+def run_densities(vcf_stats, ref_fhand, out_dir):
     densities = calc_density_per_chrom(vcf_stats.snps_per_chromosome,
                                        ref_fhand, size=100)
     density_fhand = open(os.path.join(out_dir, 'distrib_snv_per_100_pb.png'),
                          'w')
     kwargs = {'title': 'Distribution of snps per 100 pb',
               'xlabel': 'Snvs per 100 pb', 'ylabel': 'Num. Seqs'}
-    draw_histogram(densities.values(), density_fhand, bins=100, **kwargs)
+    build_histogram(densities.values(), density_fhand, bins=100, **kwargs)
 
+
+def run_mafs(vcf_stats, out_dir, maf_per_sample):
     #mafs
-    samples = vcf_stats.samples + ['all']
+    samples = ['all']
+    if maf_per_sample:
+        samples += vcf_stats.samples
     for sample in samples:
         maf_fhand = open(os.path.join(out_dir,
                              'distrib_maf_per_snv_{}.png'.format(sample)), 'w')
         sample_maf = vcf_stats.mafs[sample]
         distrib = sample_maf.calculate_distribution(bins=50, min_=50, max_=100)
-        draw_histogram_matlib(distrib['counts'], fhand=maf_fhand,
-                              bin_edges=distrib['bin_limits'],
-                        title='Maf distribution for sample {}'.format(sample),
-                              xlabel="maf x 100", ylabel="Num. Snvs")
+        draw_histogram(distrib['counts'], fhand=maf_fhand,
+                       bin_limits=distrib['bin_limits'],
+                       title='Maf distribution for sample {}'.format(sample),
+                       xlabel="maf x 100", ylabel="Num. Snvs")
 
-    # call_scatter
+
+def run_call_scatter(vcf_stats, out_dir):
     scatter_fhand = open(os.path.join(out_dir, 'call_scatter.png'), 'w')
     kwargs = {'title': 'Ref/alt allele count scatter',
               'ylabel': 'Alternative allele count',
@@ -81,31 +95,147 @@ def main():
               'ylim': (0, 100)}
     draw_scatter(vcf_stats.call_data.values(), scatter_fhand, **kwargs)
 
-    # het % for called sample per snp
-    variable_gt_fhand = open(os.path.join(out_dir, 'variable_gt_per_snp.png'),
-                             'w')
-    distrib = vcf_stats.variable_gt_per_snp.calculate_distribution(bins=100,
-                                                                   min_=0,
-                                                                   max_=100)
-    title_per = 'Percentage of genotypes different to reference samples  per '
-    title_per += 'called samples  in each snp'
-    draw_histogram_matlib(distrib['counts'], fhand=variable_gt_fhand,
-                              bin_edges=distrib['bin_limits'], title=title_per,
-                              xlabel='percentaje variable', ylabel="Num. Snvs")
 
+def run_call_density_plot(vcf_stats, out_dir):
+    # call_density_plot
+    figure_size = (15.0, 30.0)
+    fig = Figure(figsize=figure_size)
+    canvas = FigureCanvasAgg(fig)
+    axes1 = fig.add_subplot(211)
+    axes2 = fig.add_subplot(212)
+    n_bins = 100
+    range_ = [[0, 100], [0, 100]]
+
+    density_plot_fhand = open(os.path.join(out_dir, 'density_plot.png'), 'w')
+    kwargs = {'title': 'Ref/alt allele count scatter in Heterozygote',
+              'ylabel': 'Alternative allele count', 'aspect': 'equal',
+              'xlabel': 'Reference_allele count'}
+    x = vcf_stats.call_data[1]['x']
+    y = vcf_stats.call_data[1]['y']
+    draw_density_plot(x, y, density_plot_fhand, n_bins=n_bins, canvas=canvas,
+                      axes=axes1, range_=range_, **kwargs)
+
+    density_plot_fhand = open(os.path.join(out_dir, 'density_plot.png'), 'w')
+    kwargs = {'title': 'Ref/alt allele count scatter in Homozygote',
+              'ylabel': 'Alternative allele count', 'aspect': 'equal',
+              'xlabel': 'Reference_allele count'}
+    x = array('I')
+    x.extend(vcf_stats.call_data[0]['x'])
+    x.extend(vcf_stats.call_data[2]['x'])
+    y = array('I')
+    y.extend(vcf_stats.call_data[0]['y'])
+    y.extend(vcf_stats.call_data[2]['y'])
+    draw_density_plot(x, y, density_plot_fhand, n_bins=n_bins, canvas=canvas,
+                      axes=axes2, range_=range_, **kwargs)
+
+
+def run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist):
+    # Counts distribution per genotypes histograms for differente coverages
+    for depth in depth_for_counts_hist:
+        values = vcf_stats.counts_distribution_in_gt
+        counts_dist_fpath = 'ref_counts_per_gt_dp_{}.png'.format(str(depth))
+        counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
+        title = 'Reference counts distribution per genotype with depht {}'
+        kwargs = {'title': title.format(str(depth)),
+                  'ylabel': 'Number of genotypes',
+                  'xlabel': 'Reference allele count'}
+        data_values = []
+        labels = []
+        for geno_name, genotype in values[depth].items():
+            rc_counts = array('I')
+            for rc, counts in genotype.items():
+                for i in range(counts):
+                    rc_counts.append(rc)
+            data_values.append(rc_counts)
+            labels.append(str(geno_name))
+        build_histogram(data_values, counts_dist_fhand, bins=depth,
+                       stacked=True, label=labels, **kwargs)
+        counts_dist_fpath = 'ref_counts_per_gt_dp_{}_2.png'.format(str(depth))
+        counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
+        build_histogram(data_values, counts_dist_fhand, bins=depth - 2,
+                       stacked=True, label=labels, range_=(1, depth - 1),
+                       **kwargs)
+
+
+def run_deep_distrib(vcf_stats, out_dir):
+    # Depths distribution in called/uncalled(or below gq_threshold)
+    values = vcf_stats.depths_distribution.values()
+    if len(values[1]) == 0:
+        values = values[0]
+    depth_dist_fhand = open(os.path.join(out_dir, 'depths_distrib.png'), 'w')
+    kwargs = {'title': 'Depths distribution per call',
+              'ylabel': 'Number of calls',
+              'xlabel': 'Depth'}
+    build_histogram(values, depth_dist_fhand, bins=100, stacked=True, **kwargs)
+
+
+def run_heterocigosity(vcf_stats, out_dir):
+    #Heterozigosity per sample histogram
+    het_by_sample_fhand = open(os.path.join(out_dir,
+                                          'heterozygosity_per_sample.png'),
+                             'w')
+    heterozygosity_per_sample = []
+    for het_by_sample in vcf_stats.het_by_sample.values():
+        heterozygosity = het_by_sample['num_het'] * 100 / het_by_sample['num_gt']
+        heterozygosity_per_sample.append(heterozygosity)
+    heterozygosity_stats = IntCounter(iter(heterozygosity_per_sample))
+    distrib = heterozygosity_stats.calculate_distribution(bins=100, min_=0,
+                                                                   max_=100)
+    title_per = 'Heterozigosity per sample distribution'
+    draw_histogram(distrib['counts'], fhand=het_by_sample_fhand,
+                             bin_limits=distrib['bin_limits'], title=title_per,
+                             xlabel='Heterozigosity', ylabel="Num. samples")
+
+
+def run_missig_call(vcf_stats, out_dir):
+#Missing calls percentage per snp histogram
+    missing_calls_fhand = open(os.path.join(out_dir,
+                                          'missing_calls_per_snp.png'),
+                             'w')
+    missing_calls_stats = IntCounter(iter(vcf_stats.missing_calls_prc))
+    distrib = missing_calls_stats.calculate_distribution(bins=100, min_=0,
+                                                         max_=100)
+    title_per = 'Missing calls percentage distribution'
+    draw_histogram(distrib['counts'], fhand=missing_calls_fhand,
+                              bin_limits=distrib['bin_limits'], title=title_per,
+                              xlabel='Missing calls percentage',
+                              ylabel="Num. SNPs")
+
+
+def run_vcf_per_ref(vcf_stats, out_dir):
+    #Number of SNP per ref_seq histogram
+    snps_per_refseq_fhand = open(os.path.join(out_dir,
+                                          'snps_per_ref_seq.png'),
+                             'w')
+    snps_per_refseq = vcf_stats.snps_per_chromosome.values()
+    max_ = max(snps_per_refseq)
+    min_ = min(snps_per_refseq)
+    snps_per_refseq_stats = IntCounter(iter(snps_per_refseq))
+    distrib = snps_per_refseq_stats.calculate_distribution(bins=max_,
+                                                           min_=min_,
+                                                           max_=max_)
+    title_per = 'Number of SNPs per reference sequence'
+    draw_histogram(distrib['counts'], fhand=snps_per_refseq_fhand,
+                              bin_limits=distrib['bin_limits'], title=title_per,
+                              xlabel='Number of SNPs per reference seq',
+                              ylabel="Num. reference sequences")
+
+
+def run_geno_qualities(vcf_stats, out_dir):
     # histogram of the genotype qualities
     gqs_fhand = open(os.path.join(out_dir, 'gt_qual_hist.png'), 'w')
     distrib = vcf_stats.genotype_qualities.calculate_distribution(bins=100)
-    draw_histogram_matlib(distrib['counts'], bin_edges=distrib['bin_limits'],
+    draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
                           fhand=gqs_fhand,
                           title='Histogram of the genotype qualities x 100',
                           xlabel='genotype Qualities x 100',
                           ylabel='num calls')
 
+
+def run_general_stats(vcf_stats, out_dir, gq_threshold, ref_fhand):
     stats_fhand = open(os.path.join(out_dir, 'snv_stats.txt'), 'w')
     stats_fhand.write('Num of hete/homo calls.\n')
     stats_fhand.write('----------------------\n')
-
     num_hets = len([gq for gq in vcf_stats.call_data[HET]['value']
                                                         if gq >= gq_threshold])
     num_hom_ref = len([gq for gq in vcf_stats.call_data[HOM_REF]['value']
@@ -123,6 +253,41 @@ def main():
         counter = vcf_stats.het_by_sample[sample]
         percentaje_het = counter['num_het'] / counter['num_gt']
         stats_fhand.write('{}\t{:.2%}\n'.format(sample, percentaje_het))
+    ref_fhand = open(ref_fhand.name)
+    n_bases = calc_n_bases_in_chrom_with_snp(vcf_stats.snps_per_chromosome,
+                                             ref_fhand)
+    stats_fhand.write('\n----------------------------------------\n')
+    stats_fhand.write('Num bases covered by seqs with SNPs: {}'.format(
+                                                                    n_bases))
+
+
+def main():
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+    out_dir = args['out_dir']
+    ref_fhand = args['ref_fhand']
+    gq_threshold = args['gq']
+    maf_per_sample = args['maf_per_sample']
+    depth_for_counts_hist = args['depth_for_counts_hist']
+    if args['samples_fpath'] is None:
+        selected_samples = None
+    else:
+        selected_samples = [line.strip() for line in open(args['samples_fpath'])]
+    vcf_stats = VcfStats(args['in_fhand'].name, gq_threshold=gq_threshold,
+                         selected_samples=selected_samples)
+
+    run_densities(vcf_stats, ref_fhand, out_dir)
+    run_mafs(vcf_stats, out_dir, maf_per_sample)
+    run_call_scatter(vcf_stats, out_dir)
+    run_call_density_plot(vcf_stats, out_dir)
+    run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist)
+    run_deep_distrib(vcf_stats, out_dir)
+    run_heterocigosity(vcf_stats, out_dir)
+    run_missig_call(vcf_stats, out_dir)
+    run_vcf_per_ref(vcf_stats, out_dir)
+    run_geno_qualities(vcf_stats, out_dir)
+    run_general_stats(vcf_stats, out_dir, gq_threshold, ref_fhand)
+
 
 if __name__ == '__main__':
     main()

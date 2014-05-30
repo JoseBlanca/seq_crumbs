@@ -21,7 +21,7 @@ HOM_REF = 0
 HET = 1
 HOM_ALT = 2
 
-DP = 'deep'
+DP = 'depth'
 ACS = 'alt_counts'
 RC = 'ref_count'
 GQ = 'genotype_quality'
@@ -97,11 +97,12 @@ def calculate_maf(snp, vcf_variant):
 
 
 class VcfStats(object):
-    def __init__(self, vcf_path, gq_threshold=None):
+    def __init__(self, vcf_path, gq_threshold=None, selected_samples=None):
         self.reader = Reader(filename=vcf_path)
         self.vcf_variant = get_snpcaller_name(self.reader)
         self._gq_threslhold = 0 if gq_threshold is None else gq_threshold
         self._samples = set()
+        self._selected_samples = selected_samples
         self._snps_per_chromo = Counter()
         # mafs
         self._mafs = {}
@@ -121,6 +122,9 @@ class VcfStats(object):
                           HOM_ALT: {'x': array(int_code), 'y': array(int_code),
                                     'value': array(float_code)}
                          }
+        self._missing_calls_prc = []
+        self._counts_distribution_in_gt = {}
+        self._depths_distribution = {'called': [], 'uncalled': []}
         self._calculate()
 
     def _calculate(self):
@@ -133,6 +137,10 @@ class VcfStats(object):
         het_by_sample = self._het_by_sample
         gqs = self._genotype_qualities
         variable_gt_per_snp = self._variable_gt_per_snp
+        missing_calls_prc = self._missing_calls_prc
+        selected_samples = self._selected_samples
+        counts_distribution_in_gt = self._counts_distribution_in_gt
+        depths_distribution = self._depths_distribution
 
         for snp in self.reader:
             chrom_counts[snp.CHROM] += 1
@@ -150,15 +158,37 @@ class VcfStats(object):
             #sample_data
             num_diff_to_ref_gts = 0
             num_called = 0
+            total_calls = 0
             for call in snp.samples:
                 sample_name = call.sample
+                if (selected_samples is not None and
+                    sample_name not in selected_samples):
+                    continue
+                total_calls += 1
                 samples.add(sample_name)
                 if sample_name not in het_by_sample:
                     het_by_sample[sample_name] = IntCounter({'num_gt': 0,
                                                              'num_het': 0})
+                calldata = get_call_data(call, vcf_variant)
+                gt = calldata[GT]
+                depth = calldata[DP]
+                if depth is None:
+                    depth = 0
+                rc = calldata[RC]
+                gq = calldata[GQ]
+                if depth in counts_distribution_in_gt:
+                    if gq < gq_threshold:
+                        gt = None
+                    if gt in counts_distribution_in_gt[depth]:
+                        if rc in counts_distribution_in_gt[depth][gt]:
+                            counts_distribution_in_gt[depth][gt][rc] += 1
+                        else:
+                            counts_distribution_in_gt[depth][gt][rc] = 1
+                    else:
+                        counts_distribution_in_gt[depth][gt] = IntCounter({rc: 1})
+                else:
+                    counts_distribution_in_gt[depth] = {gt: IntCounter({rc: 1})}
                 if call.called:
-                    calldata = get_call_data(call, vcf_variant)
-                    gq = calldata[GQ]
                     call_datas[call.gt_type]['x'].append(calldata[RC])
                     call_datas[call.gt_type]['y'].append(sum(calldata[ACS]))
                     call_datas[call.gt_type]['value'].append(gq)
@@ -171,6 +201,12 @@ class VcfStats(object):
                         num_diff_to_ref_gts += 1
                     if gq >= gq_threshold:
                         num_called += 1
+                        depths_distribution['called'].append(depth)
+                    else:
+                        depths_distribution['uncalled'].append(depth)
+                else:
+                    depths_distribution['uncalled'].append(depth)
+            missing_calls_prc.append(100 - (num_called * 100 / total_calls))
 
             if snp.num_called:
                 if num_called != 0:
@@ -205,6 +241,18 @@ class VcfStats(object):
     def samples(self):
         return list(self._samples)
 
+    @property
+    def missing_calls_prc(self):
+        return self._missing_calls_prc
+
+    @property
+    def counts_distribution_in_gt(self):
+        return self._counts_distribution_in_gt
+
+    @property
+    def depths_distribution(self):
+        return self._depths_distribution
+
 
 def get_data_from_vcf(vcf_path, gq_threshold=0):
     reader = Reader(filename=vcf_path)
@@ -217,6 +265,7 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
             'variable_gt_per_snp': array('f'),
             'het_by_sample': {},
             'genotype_qualities': array('f'),
+            'missing_calls_prc': [],
             'call_data': {HOM_REF: {'x': array(typecode), 'y': array(typecode),
                                     'value': array(value_typecode)},
                           HET: {'x': array(typecode), 'y': array(typecode),
@@ -232,6 +281,7 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
     samples = data['samples']
     het_by_sample = data['het_by_sample']
     gqs = data['genotype_qualities']
+    missing_calls_prc = data['missing_calls_prc']
     for snp in reader:
         chrom_counts[snp.CHROM] += 1
         maf = calculate_maf(snp, vcf_variant=vcf_variant)
@@ -240,7 +290,9 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
         #sample_data
         num_diff_to_ref_gts = 0
         num_called = 0
+        total_calls = 0
         for call in snp.samples:
+            total_calls += 1
             sample_name = call.sample
             if sample_name not in het_by_sample:
                 het_by_sample[sample_name] = IntCounter({'num_gt': 0,
@@ -256,11 +308,13 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
                 gqs.append(gq)
                 if (call.is_het and gq >= gq_threshold):
                     het_by_sample[sample_name]['num_het'] += 1
-
-                if (gq >= gq_threshold and call.gt_type == 2):
+                #Should it be == 1 or 2?
+                if (gq >= gq_threshold and (call.gt_type == 2 or
+                                            call.gt_type == 1)):
                     num_diff_to_ref_gts += 1
                 if gq >= gq_threshold:
                     num_called += 1
+        missing_calls_prc.append(100 - (num_called * 100 / total_calls))
 
         if snp.num_called:
             if num_called != 0:
@@ -274,6 +328,28 @@ def get_data_from_vcf(vcf_path, gq_threshold=0):
 
 def _get_seq_lengths(fhand):
     return {get_name(seq): get_length(seq) for seq in read_seqs([fhand])}
+
+
+def calc_n_bases_in_chrom_with_snp(counts, ref_fhand):
+    n_bases = 0
+    ref_lengths = _get_seq_lengths(ref_fhand)
+    for ref_name, length in ref_lengths.items():
+        if ref_name.strip() in counts:
+            n_bases += length
+    return n_bases
+
+
+def calc_n_bases_per_n_snps_in_chrom(counts, ref_fhand):
+    distribution = {}
+    ref_lengths = _get_seq_lengths(ref_fhand)
+    for ref_name, length in ref_lengths.items():
+        if ref_name.strip() in counts:
+            n = counts[ref_name.strip()]
+            if n in distribution:
+                distribution[n] += length
+            else:
+                distribution[n] = length
+    return distribution
 
 
 def calc_density_per_chrom(counts, ref_fhand, size=100):
