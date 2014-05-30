@@ -1,12 +1,15 @@
 from __future__ import division
 
+import os.path
 from subprocess import Popen, PIPE
 from operator import itemgetter
 from itertools import izip
-
+from array import array
 from numpy import histogram, zeros, median, sum as np_sum
 
-from crumbs.statistics import (draw_histogram, IntCounter, LABELS,
+import pysam
+
+from crumbs.statistics import (draw_histogram_ascii, IntCounter, LABELS,
                                BestItemsKeeper)
 
 from bam_crumbs.settings import get_setting
@@ -104,7 +107,7 @@ class ArrayWrapper(object):
             text += '\n'
             distrib = self.calculate_distribution(max_=max_in_distrib,
                                                   bins=self._bins)
-            text += draw_histogram(distrib['bin_limits'], distrib['counts'])
+            text += draw_histogram_ascii(distrib['bin_limits'], distrib['counts'])
             return text
         return ''
 
@@ -213,8 +216,9 @@ class ReadStats(object):
         mapqs = self._mapqs
         flag_counts = [0] * len(SAM_FLAG_BINARIES)
         for bam in self._bams:
-            for read in bam.fetch():
-                mapqs[read.mapq] += 1
+            for read in bam:
+                if not read.is_unmapped:
+                    mapqs[read.mapq] += 1
                 for flag_index in _flag_to_binary(read.flag):
                     flag_counts[flag_index] += 1
 
@@ -275,3 +279,72 @@ def get_reference_counts(bam_fpath):
         yield {'reference': ref_name, 'length': ref_length,
                'mapped_reads': int(mapped_reads),
                'unmapped_reads': int(unmapped_reads)}
+
+
+def get_genome_coverage(bam_fhands):
+    coverage_hist = IntCounter()
+    for bam_fhand in bam_fhands:
+        bam_fpath = bam_fhand.name
+        cmd = [get_binary_path('bedtools'), 'genomecov', '-ibam', bam_fpath]
+        cover_process = Popen(cmd, stdout=PIPE)
+        for line in cover_process.stdout:
+            if line.startswith('genome'):
+                cov, value = line.split('\t')[1: 3]
+                coverage_hist[int(cov)] += int(value)
+    return coverage_hist
+
+
+def counter_to_scatter_group(coverage_hist):
+    # convert histohgram to the format that scatter_draw understands
+    scatter_group = {'x': array('l'), 'y': array('l')}
+    for integer in range(0, coverage_hist.max + 1):
+        scatter_group['x'].append(integer)
+        scatter_group['y'].append(coverage_hist[integer])
+
+    return scatter_group
+
+
+def get_bam_readgroups(bam):
+    header = bam.header
+    if 'RG' not in header:
+        return None
+    readgroups = []
+    for rg in header['RG']:
+        readgroups.append(rg)
+    return readgroups
+
+
+def get_rg_from_alignedread(read):
+    rgid = [value for key, value in read.tags if key == 'RG']
+    return None if not rgid else rgid[0]
+
+
+def mapped_count_by_rg(bam_fpaths, mapqx=None):
+    do_mapqx = True if mapqx is not None else False
+    counter_by_rg = {}
+    for bam_fpath in bam_fpaths:
+        bam = pysam.Samfile(bam_fpath, 'rb')
+        readgroups = get_bam_readgroups(bam)
+        if readgroups is None:
+            bam_basename = os.path.splitext(os.path.basename(bam_fpath))[0]
+            readgroups = [bam_basename]
+        else:
+            readgroups = [rg['ID'] for rg in readgroups]
+        for readgroup in readgroups:
+            counter = IntCounter({'unmapped': 0, 'mapped': 0})
+            if do_mapqx:
+                counter['bigger_mapqx'] = 0
+            counter_by_rg[readgroup] = counter
+
+        for read in bam:
+            rg = get_rg_from_alignedread(read)
+            if rg is None:
+                rg = bam_basename
+            if do_mapqx and read.mapq >= mapqx:
+                counter_by_rg[rg]['bigger_mapqx'] += 1
+            if read.is_unmapped:
+                counter_by_rg[rg]['unmapped'] += 1
+            else:
+                counter_by_rg[rg]['mapped'] += 1
+    return counter_by_rg
+

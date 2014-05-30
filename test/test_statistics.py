@@ -10,7 +10,9 @@ from bam_crumbs.utils.bin import BIN_DIR
 from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
                                    CoverageCounter, _flag_to_binary,
                                    get_reference_counts,
-                                   get_reference_counts_dict)
+                                   get_reference_counts_dict,
+                                   get_genome_coverage, get_bam_readgroups,
+                                   mapped_count_by_rg)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -44,7 +46,7 @@ class StatsTest(unittest.TestCase):
         assert 'Most represented' in str(refstats)
 
         refstats = ReferenceStats([bam, bam])
-        n_max_expressed = len(set([i['reference'] for i in refstats.most_abundant_refs])) 
+        n_max_expressed = len(set([i['reference'] for i in refstats.most_abundant_refs]))
         assert n_max_expressed == 2
         max_rpkm = refstats.most_abundant_refs[0]['rpkm']
         assert max_rpkm - refstats.rpkms.max < 0.1
@@ -93,6 +95,46 @@ class StatsTest(unittest.TestCase):
         assert  None in counts.keys()
         assert  'reference2' in counts.keys()
         assert  'reference2' in counts.keys()
+
+    def test_get_readgroup(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        readgroups = get_bam_readgroups(pysam.Samfile(bam_fpath))
+        assert readgroups == [{'LB': 'group1', 'ID': 'group1+454',
+                               'PL': '454', 'SM': 'group1+454'},
+                              {'LB': 'group2', 'ID': 'group2+454',
+                               'PL': '454', 'SM': 'group2+454'}]
+
+    def test_mapped_counts(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        map_counts = mapped_count_by_rg([bam_fpath])
+        assert map_counts['group1+454']['mapped'] == 9
+
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'sample_no_rg.bam')
+        map_counts = mapped_count_by_rg([bam_fpath])
+        assert map_counts['sample_no_rg']['mapped'] == 1
+        assert 'bigger_mapqx' not in map_counts['sample_no_rg']
+        map_counts = mapped_count_by_rg([bam_fpath], mapqx=20)
+        assert map_counts['sample_no_rg']['bigger_mapqx'] == 1
+
+        map_counts = mapped_count_by_rg([bam_fpath], mapqx=50)
+        assert map_counts['sample_no_rg']['bigger_mapqx'] == 0
+
+    def test_bin_mapped_counts(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+
+        bin_ = os.path.join(BIN_DIR, 'count_mapped_by_rg')
+        cmd = [bin_, bam_fpath]
+        output = check_output(cmd)
+        assert "group2+454" in  output
+
+
+class GenomeCoverageTest(unittest.TestCase):
+
+    def test_genome_cover(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        scatter_group = get_genome_coverage([open(bam_fpath)])
+        assert scatter_group.items() == [(0, 2400), (9, 144), (6, 3)]
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'StatsTest.test_ref_counts']

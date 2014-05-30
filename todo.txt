@@ -1,0 +1,5 @@
+bam_crum that calculates the mapped/unmmpaded read counts by readgroup.
+input can be one or more bam file
+
+Add to coverage histogram binary to show in stdout percentaje of bases with covertures 6,12,24,48...
+
