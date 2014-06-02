@@ -582,7 +582,7 @@ class TrimChimericRegions(unittest.TestCase):
         expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
                          'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
         cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name,
-               '-o', out_fhand.name,]
+               '-o', out_fhand.name]
         check_output(cmd, stdin=in_fhand)
         counts = 0
         for seq in read_seqs([open(out_fhand.name)]):
