@@ -583,7 +583,7 @@ class TrimChimericRegions(unittest.TestCase):
                          'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
         cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name,
                '-o', out_fhand.name,]
-        print check_output(cmd, stdin=in_fhand)
+        check_output(cmd, stdin=in_fhand)
         counts = 0
         for seq in read_seqs([open(out_fhand.name)]):
             assert get_str_seq(seq) in expected_seqs
@@ -593,7 +593,7 @@ class TrimChimericRegions(unittest.TestCase):
         #With several threads
         cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name,
                '-o', out_fhand.name, '-p', '2']
-        print check_output(cmd, stdin=in_fhand)
+        check_output(cmd, stdin=in_fhand)
         counts = 0
         for seq in read_seqs([open(out_fhand.name)]):
             assert get_str_seq(seq) in expected_seqs
