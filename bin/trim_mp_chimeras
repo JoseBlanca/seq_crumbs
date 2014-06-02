@@ -61,7 +61,8 @@ def run():
     in_fhands = args['in_fhands']
     max_clipping = args['max_clipping']
     tempdir = args['tempdir']
-    seq_packets = read_seq_packets(in_fhands)
+    seq_packets = read_seq_packets(in_fhands,
+                                   size=get_setting('PACKET_SIZE') * 10)
     trim_packets = seq_to_trim_packets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
     prep_trim = TrimMatePairChimeras(ref_fpath, max_clipping=max_clipping,
