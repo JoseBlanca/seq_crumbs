@@ -14,6 +14,7 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 from operator import itemgetter
+from tempfile import NamedTemporaryFile
 
 from crumbs.utils.optional_modules import Seq
 from crumbs.utils.tags import (TRIMMING_RECOMMENDATIONS, QUALITY, OTHER,
@@ -30,18 +31,14 @@ from crumbs.iterutils import rolling_window
 from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqs
 from crumbs.pairs import group_pairs_by_name, group_pairs
-import subprocess
-import sys
+from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import get_setting
-from crumbs.filters import _split_mates, _get_primary_alignment,\
-    _read_is_totally_mapped, _get_qstart,\
-    _get_qend, _sorted_mapped_reads, _group_alignments_by_reads,\
-    show_distances_distributions, _5end_mapped
+from crumbs.filters import (_split_mates, _get_primary_alignment,
+                            _read_is_totally_mapped, _get_qstart,
+                            _get_qend, _sorted_mapped_reads,
+                            _group_alignments_by_reads, _5end_mapped)
 from crumbs.mapping import alignedread_to_seqitem
-import pysam
-import itertools
-from multiprocessing.pool import Pool
-from tempfile import NamedTemporaryFile
+
 
 # pylint: disable=R0903
 
@@ -65,6 +62,7 @@ class _BaseTrim(object):
         trimmed_seqs = []
         for paired_seqs in trim_packet[SEQS_PASSED]:
             trimmed_seqs.append([self._do_trim(s) for s in paired_seqs])
+        self._post_trim()
         return {SEQS_PASSED: trimmed_seqs,
                 ORPHAN_SEQS: trim_packet[ORPHAN_SEQS]}
 
@@ -72,6 +70,9 @@ class _BaseTrim(object):
         raise NotImplementedError()
 
     def _pre_trim(self, trim_packet):
+        pass
+
+    def _post_trim(self):
         pass
 
 
@@ -360,11 +361,14 @@ class TrimMatePairChimeras(_BaseTrim):
 
     def _pre_trim(self, trim_packet):
         seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
-        reads_fhand = NamedTemporaryFile(dir=self.tempdir, suffix='.trimming')
+        self.subtempdir = TemporaryDir(directory=self.tempdir)
+        reads_fhand = NamedTemporaryFile(dir=self.subtempdir.name,
+                                         suffix='.trimming')
         write_seqs(seqs, reads_fhand)
         reads_fhand.flush()
         self.bamfile = _sorted_mapped_reads(self.ref_fpath, [reads_fhand.name],
-                                       tempdir=self.tempdir, interleaved=True)
+                                            tempdir=self.subtempdir.name,
+                                            interleaved=True)
 
     def _do_trim(self, aligned_reads):
         max_clipping = self.max_clipping
@@ -390,9 +394,12 @@ class TrimMatePairChimeras(_BaseTrim):
         for grouped_mates in _group_alignments_by_reads(self.bamfile):
             for aligned_reads in _split_mates(grouped_mates):
                 trimmed_seqs.append([self._do_trim(aligned_reads)])
+        self._post_trim()
         return {SEQS_PASSED: trimmed_seqs,
                 ORPHAN_SEQS: trim_packet[ORPHAN_SEQS]}
 
+    def _post_trim(self):
+        self.subtempdir.close()
 
 # class TrimNexteraAdapters(_BaseTrim):
 #     "It trims from Nextera adaptors found with blast short algorithm to 3'end"
