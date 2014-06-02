@@ -24,7 +24,7 @@ from Bio.SeqRecord import SeqRecord
 
 from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
                          TrimByQuality, TrimWithBlastShort,
-                         seq_to_trim_packets, TrimChimeras)
+                         seq_to_trim_packets, TrimMatePairChimeras)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import (SEQRECORD, SEQITEM, TRIMMING_RECOMMENDATIONS,
                                VECTOR, ORPHAN_SEQS, SEQS_PASSED, OTHER)
@@ -551,7 +551,7 @@ class TrimChimericRegions(unittest.TestCase):
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
 
-        trim_chimeras = TrimChimeras(ref_fhand.name)
+        trim_chimeras = TrimMatePairChimeras(ref_fhand.name)
         seq_packets = list(read_seq_packets([open(fhand.name)]))
         trim_packets = list(seq_to_trim_packets(seq_packets))
         trim_packets2 = trim_chimeras(trim_packets[0])

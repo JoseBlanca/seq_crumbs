@@ -16,11 +16,10 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from crumbs.utils.bin_utils import (main, argparse, create_basic_argparse,
-                                    parse_basic_args, create_trimmer_argparse,
-    parse_trimmer_args)
+from crumbs.utils.bin_utils import (main, create_trimmer_argparse,
+                                    parse_trimmer_args)
 from crumbs.utils.file_utils import flush_fhand
-from crumbs.trim import  TrimChimeras, seq_to_trim_packets, TrimOrMask
+from crumbs.trim import TrimMatePairChimeras, seq_to_trim_packets, TrimOrMask
 from crumbs.settings import get_setting
 from crumbs.seqio import read_seq_packets, write_trim_packets
 from crumbs.utils.seq_utils import process_seq_packets
@@ -65,8 +64,8 @@ def run():
     seq_packets = read_seq_packets(in_fhands)
     trim_packets = seq_to_trim_packets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
-    prep_trim = TrimChimeras(ref_fpath, max_clipping=max_clipping,
-                             tempdir=tempdir)
+    prep_trim = TrimMatePairChimeras(ref_fpath, max_clipping=max_clipping,
+                                     tempdir=tempdir)
     trim_or_mask = TrimOrMask(mask=args['mask'])
 
     trim_packets, workers = process_seq_packets(trim_packets,

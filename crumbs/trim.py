@@ -346,7 +346,7 @@ def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
     return longest_5end
 
 
-class TrimChimeras(_BaseTrim):
+class TrimMatePairChimeras(_BaseTrim):
     'It trims chimeric regions in mate pairs reads'
 
     def __init__(self, ref_fpath, max_clipping=None, tempdir=None):
