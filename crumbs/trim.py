@@ -397,55 +397,56 @@ class TrimChimeras(_BaseTrim):
                 ORPHAN_SEQS: trim_packet[ORPHAN_SEQS]}
 
 
-class TrimNexteraAdapters(_BaseTrim):
-    "It trims from Nextera adaptors found with blast short algorithm to 3'end"
-    "If adapter is at one end and it is not complete, it trims more bases"
-    def __init__(self, oligos):
-        'The initiator'
-        self.oligos = oligos
-        super(TrimNexteraAdapters, self).__init__()
+# class TrimNexteraAdapters(_BaseTrim):
+#     "It trims from Nextera adaptors found with blast short algorithm to 3'end"
+#     "If adapter is at one end and it is not complete, it trims more bases"
+#     def __init__(self, oligos):
+#         'The initiator'
+#         self.oligos = oligos
+#         super(TrimNexteraAdapters, self).__init__()
+# 
+#     def _pre_trim(self, trim_packet):
+#         seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
+#         db_fhand = write_seqs(seqs, file_format='fasta')
+#         db_fhand.flush()
+#         params = {'task': 'blastn-short', 'expect': '0.0001'}
+#         filters = [{'kind': 'score_threshold', 'score_key': 'identity',
+#                     'min_score': 87},
+#                    {'kind': 'min_length', 'min_num_residues': 13,
+#                     'length_in_query': False}]
+#         self._matcher = BlasterForFewSubjects(db_fhand.name, self.oligos,
+#                                              program='blastn', filters=filters,
+#                                              params=params,
+#                                              elongate_for_global=True)
+# 
+#     def _do_trim(self, seq):
+#         'It trims the masked segments of the SeqWrappers.'
+#         segments = self._matcher.get_matched_segments_for_read(get_name(seq))
+#         if segments is not None:
+#             segments = [(segment[0], get_length(seq) - 1) for segment in segments[0]]
+#             _add_trim_segments(segments, seq, kind=OTHER)
+#         return seq
 
-    def _pre_trim(self, trim_packet):
-        seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
-        db_fhand = write_seqs(seqs, file_format='fasta')
-        db_fhand.flush()
-        params = {'task': 'blastn-short', 'expect': '0.0001'}
-        filters = [{'kind': 'score_threshold', 'score_key': 'identity',
-                    'min_score': 87},
-                   {'kind': 'min_length', 'min_num_residues': 13,
-                    'length_in_query': False}]
-        self._matcher = BlasterForFewSubjects(db_fhand.name, self.oligos,
-                                             program='blastn', filters=filters,
-                                             params=params,
-                                             elongate_for_global=True)
-
-    def _do_trim(self, seq):
-        'It trims the masked segments of the SeqWrappers.'
-        segments = self._matcher.get_matched_segments_for_read(get_name(seq))
-        if segments is not None:
-            segments = [(segment[0], get_length(seq) - 1) for segment in segments[0]]
-            _add_trim_segments(segments, seq, kind=OTHER)
-        return seq
-
-CUTADAPT = '/home/carlos/devel/bin/cutadapt'
+#CUTADAPT = '/home/carlos/devel/bin/cutadapt'
 #cutadapt bin should be included somewhere else
-_5END = '5end'
-_3END = '3end'
-ANYWHERE = 'anywhere'
+#_5END = '5end'
+#_3END = '3end'
+#ANYWHERE = 'anywhere'
 
-
-def trim_with_cutadapt(in_fpath, out_fpath, oligos, error_rate=None,
-                       summary_fpath=None):
-    options = {_3END: '-a', ANYWHERE: '-b', _5END: '-g'}
-    cmd = [CUTADAPT, in_fpath, '-o', out_fpath]
-    for kind, oligo_seqs in oligos.items():
-        for oligo_seq in oligo_seqs:
-            cmd.extend([options[kind], oligo_seq])
-    if error_rate is not None:
-        cmd.append(str(error_rate))
-    if summary_fpath is None:
-        summary_fhand = sys.stdout
-    else:
-        summary_fhand = open(summary_fpath, 'w')
-    cutadapt = subprocess.Popen(cmd, stdout=summary_fhand)
-    cutadapt.wait()
+# def trim_with_cutadapt(in_fpath, out_fpath, oligos, error_rate=None,
+#                        summary_fpath=None):
+#     #TODO: include cutadapt in the code or remove this function
+#     # This functionallity is not throughly tested
+#     options = {_3END: '-a', ANYWHERE: '-b', _5END: '-g'}
+#     cmd = [CUTADAPT, in_fpath, '-o', out_fpath]
+#     for kind, oligo_seqs in oligos.items():
+#         for oligo_seq in oligo_seqs:
+#             cmd.extend([options[kind], oligo_seq])
+#     if error_rate is not None:
+#         cmd.append(str(error_rate))
+#     if summary_fpath is None:
+#         summary_fhand = sys.stdout
+#     else:
+#         summary_fhand = open(summary_fpath, 'w')
+#     cutadapt = subprocess.Popen(cmd, stdout=summary_fhand)
+#     cutadapt.wait()

@@ -24,6 +24,12 @@ from crumbs.utils.bin_utils import (main, create_basic_argparse,
 from crumbs.seqio import write_seqs, read_seqs
 
 
+# TODO
+# Give the option to count the input, it should work if we're not reading from
+# stdin
+# If we want to do it from stdin, give the option to store the items in
+# disk by providing a temp_dir option
+
 def _setup_argparse():
     'It returns the argument parser'
     dsc = 'It selects some random sequences from the given files'
