@@ -562,7 +562,7 @@ class TrimChimericRegions(unittest.TestCase):
         assert res == [[(49, 105)], []]
 
     def test_trim_chimeras_bin(self):
-        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_chimeras')
+        trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_mp_chimeras')
         assert 'usage' in check_output([trim_chimeras_bin, '-h'])
         reference_seq = GENOME
         query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
