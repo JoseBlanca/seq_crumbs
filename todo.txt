@@ -1,6 +1,11 @@
 TODO
 -----
 
+Create functions to reverse and complement sequence objects:
+	- check that there are no functions already in place
+	- create the functions in seq.py
+	- remove the _reverse and _complementary functions from mapping.py
+
 Take a look at kraken: http://www.ebi.ac.uk/research/enright/software/kraken
 Reaper + Tally + Minion
 Reaper is a program for demultiplexing, trimming and filtering short read sequencing data. It can handle barcodes, trim adapter sequences, strip low quality bases and low complexity sequence, and has many more features. It is fast (written in C) and uses very little memory (one read at-a-time).
