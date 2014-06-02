@@ -1,6 +1,12 @@
 TODO
 -----
 
+Remove the option to give fasta files when a bwa or bowtie2 index is required:
+	- add to bam_crumbs a crumb to create indexes in the designated direcotry
+	(by default the directory in which the fasta file is)?
+	- Remove the option and check that the index exists. Raise an error if a 
+	fasta is given with no index.
+
 Create functions to reverse and complement sequence objects:
 	- check that there are no functions already in place
 	- create the functions in seq.py
