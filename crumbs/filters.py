@@ -496,7 +496,7 @@ def _mates_are_innies(mates):
 
 
 def _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved=True,
-                         tempdir='/tmp', min_seed_len=None, threads=None):
+                         tempdir=None, min_seed_len=None, threads=None):
     index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
     extra_params = ['-a', '-M']
     if min_seed_len is not None:
@@ -648,7 +648,7 @@ def classify_mapped_reads(bamfile, mate_distance,
 def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                     unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
                     min_seed_len=None, mate_distance=3000,
-                    out_format=SEQITEM, tempdir='/tmp', bamfile=False,
+                    out_format=SEQITEM, tempdir=None, bamfile=False,
                     interleaved=True, threads=None, draw_distribution=False,
                     distance_distribution_fhand=None, n_pairs_sampled=None):
     '''It maps sequences from input files, sorts them and writes to output
@@ -718,7 +718,6 @@ def _get_n_seqs(seqs, n):
 def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
                                n=None, remove_outliers=True, max_=None,
                                interleaved=True, tempdir=None, threads=None):
-    tempdir = '/tmp' if tempdir is None else tempdir
     if n is None:
         sampled_fpaths = in_fpaths
     else:

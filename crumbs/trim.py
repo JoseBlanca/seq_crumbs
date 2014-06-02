@@ -352,10 +352,7 @@ class TrimChimeras(_BaseTrim):
     def __init__(self, ref_fpath, max_clipping=None, tempdir=None):
         'The initiator'
         self.ref_fpath = ref_fpath
-        if tempdir is None:
-            self.tempdir = '/tmp'
-        else:
-            self.tempdir = tempdir
+        self.tempdir = tempdir
         if max_clipping is not None:
             self.max_clipping = max_clipping
         else:

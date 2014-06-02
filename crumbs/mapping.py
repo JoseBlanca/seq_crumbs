@@ -212,7 +212,9 @@ def map_process_to_bam(map_process, bam_fpath, readgroup=None, log_fpath=None,
 
 
 def sort_mapped_reads(map_process, out_fpath, key='coordinate',
-                      tempdir='/tmp'):
+                      tempdir=None):
+    if tempdir is None:
+        tempdir = tempfile.gettempdir()
     picard_tools = get_setting("PICARD_TOOLS_DIR")
     fpath = os.path.join(picard_tools, 'SortSam.jar')
     cmd = ['java', '-jar', fpath, 'I=/dev/stdin',
@@ -272,7 +274,7 @@ def alignedread_to_seqitem(aligned_read, start_pos=0, end_pos=None):
 
 
 def sort_by_position_in_ref(in_fhands, ref_fpath, directory=None,
-                            tempdir='/tmp'):
+                            tempdir=None):
     #changed to bwa mem from bowtie, test doesn't work well, check it out
     in_fpaths = [fhand.name for fhand in in_fhands]
     file_format = get_format(open(in_fpaths[0]))
@@ -291,7 +293,7 @@ def sort_by_position_in_ref(in_fhands, ref_fpath, directory=None,
 
 
 def sort_fastx_files(in_fhands, key, ref_fpath=None, directory=None,
-                     max_items_in_memory=None, tempdir='/tmp'):
+                     max_items_in_memory=None, tempdir=None):
     if key == 'seq':
         reads = read_seqs(in_fhands)
         return sorted_items(reads, key=get_str_seq, tempdir=tempdir,

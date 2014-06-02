@@ -184,8 +184,6 @@ class FilterDuplicatesTest(unittest.TestCase):
         assert'@seq1.f\naaaa\n+\nHHHH\n@seq2.f\naaab\n+\nHHHH\n' in result
         result = check_output([filter_bin], stdin=in_fhand)
         assert'@seq1.f\naaaa\n+\nHHHH\n@seq2.f\naaab\n+\nHHHH\n' in result
-        result = check_output([filter_bin, in_fhand.name, '-d',
-                               '/home/carlos/devel/tmp'])
         assert'@seq1.f\naaaa\n+\nHHHH\n@seq2.f\naaab\n+\nHHHH\n' in result
         result = check_output([filter_bin, in_fhand.name, '-m', '3'])
         assert'@seq1.f\naaaa\n+\nHHHH\n@seq2.f\naaab\n+\nHHHH\n' in result
