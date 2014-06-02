@@ -37,7 +37,7 @@ from crumbs.filters import (_split_mates, _get_primary_alignment,
                             _read_is_totally_mapped, _get_qstart,
                             _get_qend, _sorted_mapped_reads,
                             _group_alignments_by_reads, _5end_mapped)
-from crumbs.mapping import alignedread_to_seqitem
+from crumbs.mapping import (alignedread_to_seqitem, get_or_create_bwa_index)
 
 
 # pylint: disable=R0903
@@ -354,6 +354,7 @@ class TrimMatePairChimeras(_BaseTrim):
         'The initiator'
         self.ref_fpath = ref_fpath
         self.tempdir = tempdir
+        self.index_fpath = get_or_create_bwa_index(ref_fpath, self.tempdir)
         if max_clipping is not None:
             self.max_clipping = max_clipping
         else:
@@ -366,7 +367,7 @@ class TrimMatePairChimeras(_BaseTrim):
                                          suffix='.trimming')
         write_seqs(seqs, reads_fhand)
         reads_fhand.flush()
-        self.bamfile = _sorted_mapped_reads(self.ref_fpath, [reads_fhand.name],
+        self.bamfile = _sorted_mapped_reads(self.index_fpath, [reads_fhand.name],
                                             tempdir=self.subtempdir.name,
                                             interleaved=True)
 

@@ -495,9 +495,8 @@ def _mates_are_innies(mates):
     return (not mates[0].is_reverse) and mates[1].is_reverse
 
 
-def _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved=True,
+def _sorted_mapped_reads(index_fpath, in_fpaths, interleaved=True,
                          tempdir=None, min_seed_len=None, threads=None):
-    index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
     extra_params = ['-a', '-M']
     if min_seed_len is not None:
         extra_params.extend(['-k', min_seed_len])
@@ -649,14 +648,14 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
                     unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
                     min_seed_len=None, mate_distance=3000,
                     out_format=SEQITEM, tempdir=None, bamfile=False,
-                    interleaved=True, threads=None, draw_distribution=False,
-                    distance_distribution_fhand=None, n_pairs_sampled=None):
+                    interleaved=True, threads=None):
     '''It maps sequences from input files, sorts them and writes to output
     files according to its classification'''
     if bamfile:
         bamfile = pysam.Samfile(in_fpaths[0])
     else:
-        bamfile = _sorted_mapped_reads(ref_fpath, in_fpaths, interleaved,
+        index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
+        bamfile = _sorted_mapped_reads(index_fpath, in_fpaths, interleaved,
                                        tempdir, min_seed_len, threads)
     for pair, kind in classify_mapped_reads(bamfile, settings=settings,
                                            mate_distance=mate_distance,
@@ -731,7 +730,9 @@ def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
 #                        sampled_fhand)
             sampled_fhand.flush()
             sampled_fpaths.append(sampled_fhand.name)
-    bamfile = _sorted_mapped_reads(ref_fpath, sampled_fpaths, threads=threads,
-                                   tempdir=tempdir, interleaved=interleaved)
+    index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
+    bamfile = _sorted_mapped_reads(index_fpath, sampled_fpaths,
+                                   threads=threads, tempdir=tempdir,
+                                   interleaved=interleaved)
     show_distances_distributions(bamfile, max_clipping, out_fhand, n=n,
                                    remove_outliers=remove_outliers, max_=max_)

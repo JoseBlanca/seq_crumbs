@@ -26,7 +26,6 @@ import pysam
 from crumbs.utils.file_formats import get_format
 from crumbs.seq import SeqItem, SeqWrapper, get_str_seq, get_name
 from crumbs.utils.tags import SEQITEM
-from crumbs.exceptions import IncompatibleFormatError
 from crumbs.iterutils import sorted_items
 from crumbs.seqio import read_seqs
 import tempfile
@@ -49,7 +48,6 @@ def _create_bwa_index(index_fpath):
 
 def get_or_create_bwa_index(fpath, directory=None):
     'It creates the bwa index for the given reference'
-
     fpath = os.path.abspath(fpath)
     if directory is not None:
         index_fpath = os.path.join(directory, os.path.basename(fpath))

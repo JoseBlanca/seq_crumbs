@@ -42,8 +42,9 @@ from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
                                SEQRECORD, NON_CHIMERIC, CHIMERA, UNKNOWN)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.seq import get_name, get_str_seq, SeqWrapper
-from crumbs.mapping import get_or_create_bowtie2_index
-from crumbs.seqio import read_seq_packets, read_seqs
+from crumbs.mapping import (get_or_create_bowtie2_index,
+                            get_or_create_bwa_index)
+from crumbs.seqio import read_seq_packets
 
 
 _seqs_to_names = lambda seqs: [get_name(s) for pair in seqs for s in pair]
@@ -656,8 +657,10 @@ class FilterByMappingType(unittest.TestCase):
         ref_fhand = NamedTemporaryFile()
         ref_fhand.write(reference_seq)
         ref_fhand.flush()
+        directory = TemporaryDir()
+        index_fpath = get_or_create_bwa_index(ref_fhand.name, directory.name)
 
-        bamfile = _sorted_mapped_reads(ref_fhand.name,
+        bamfile = _sorted_mapped_reads(index_fpath,
                                        in_fpaths=[in_fhand.name],
                                        interleaved=True)
         result = classify_mapped_reads(bamfile, mate_distance=2000)
@@ -670,6 +673,7 @@ class FilterByMappingType(unittest.TestCase):
                 assert 'seq2' in get_name(pair[0])
             else:
                 self.fail()
+        directory.close()
 
         #filter_chimeras function
         out_fhand = NamedTemporaryFile()
