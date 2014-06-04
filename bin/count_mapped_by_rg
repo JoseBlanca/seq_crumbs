@@ -49,6 +49,7 @@ def main():
     total_mapped = 0
     total_unmapped = 0
     total_mapqx = 0
+    mapqx = None
     for rg, map_counts in counts.items():
         mapped = map_counts['mapped']
         unmapped = map_counts['unmapped']
