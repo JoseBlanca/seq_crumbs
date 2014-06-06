@@ -5,8 +5,8 @@ import argparse
 
 from vcf import Reader, Writer
 from vcf_crumbs.filters import (GenotypesInSamplesFilter,
-                                    AlleleNumberFilter, MissingGenotypesFilter,
-                                    remove_low_quality_gt)
+                                AlleleNumberFilter, MissingGenotypesFilter,
+                                remove_low_quality_gt)
 from vcf_crumbs.statistics import get_snpcaller_name
 
 
@@ -51,11 +51,13 @@ def _parse_args(parser):
     if parsed_args.genotypes_in_samples is None:
         args['genotypes'] = None
     else:
-        args['genotypes'] = [int(n) for n in parsed_args.genotypes_in_samples.split(',')]
+        args['genotypes'] = [int(n)
+                          for n in parsed_args.genotypes_in_samples.split(',')]
     if parsed_args.samples_file is None:
         args['samples'] = None
     else:
-        args['samples'] = [line.strip() for line in open(parsed_args.samples_file)]
+        args['samples'] = [line.strip()
+                                    for line in open(parsed_args.samples_file)]
     args['gq_threshold'] = parsed_args.gq_threshold
     args['n_alleles'] = parsed_args.allele_number
     args['n_missing_gt'] = parsed_args.missing_genotypes
@@ -85,7 +87,8 @@ def main():
     vcf_variant = get_snpcaller_name(reader)
     writer = Writer(args['out_fhand'], reader)
     for record in reader:
-        record = remove_low_quality_gt(record, args['gq_threshold'], vcf_variant)
+        record = remove_low_quality_gt(record, args['gq_threshold'],
+                                       vcf_variant)
         passed = True
         for filter_ in filters:
             if not filter_(record):
