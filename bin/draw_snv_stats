@@ -157,7 +157,7 @@ def run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist):
                        **kwargs)
 
 
-def run_deep_distrib(vcf_stats, out_dir):
+def run_depth_distrib(vcf_stats, out_dir):
     # Depths distribution in called/uncalled(or below gq_threshold)
     values = vcf_stats.depths_distribution.values()
     if len(values[1]) == 0:
@@ -281,7 +281,7 @@ def main():
     run_call_scatter(vcf_stats, out_dir)
     run_call_density_plot(vcf_stats, out_dir)
     run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist)
-    run_deep_distrib(vcf_stats, out_dir)
+    run_depth_distrib(vcf_stats, out_dir)
     run_heterocigosity(vcf_stats, out_dir)
     run_missig_call(vcf_stats, out_dir)
     run_vcf_per_ref(vcf_stats, out_dir)
