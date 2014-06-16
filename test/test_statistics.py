@@ -31,6 +31,7 @@ class TestVcfStats(unittest.TestCase):
                         {'upv196': IntCounter({'num_gt': 90, 'num_het': 19}),
                          'pepo': IntCounter({'num_gt': 29, 'num_het': 8}),
                          'mu16': IntCounter({'num_gt': 107, 'num_het': 26})}
+        assert vcf_stats.snv_quals.count == 0
         vcf_stats = VcfStats(VARSCAN_VCF_PATH, gq_threshold=25)
         assert vcf_stats.het_by_sample == \
                         {'upv196': IntCounter({'num_gt': 90, 'num_het': 7}),
@@ -167,5 +168,5 @@ class StatBinTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'SnvStatTests.test_counts_distribution_in_genotype']
+    #import sys;sys.argv = ['', 'TestVcfStats']
     unittest.main()
