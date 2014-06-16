@@ -19,6 +19,8 @@ from vcf_crumbs.statistics import (calc_density_per_chrom, HET, HOM_ALT,
                                    calc_n_bases_in_chrom_with_snp)
 from crumbs.statistics import IntCounter
 
+MAX_DEPTH = 200
+
 
 def _setup_argparse():
     'It prepares the command line argument parsing.'
@@ -154,11 +156,11 @@ def run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist):
         counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
         build_histogram(data_values, counts_dist_fhand, bins=depth - 2,
                        stacked=True, label=labels, range_=(1, depth - 1),
-                       **kwargs)
+                       **kwargs) 
 
 
-def run_depth_distrib(vcf_stats, out_dir):
-    # Depths distribution in called/uncalled(or below gq_threshold)
+def run_depth_distrib(vcf_stats, out_dir, max_depth):
+    # Depths distribution in called/uncalled(or below g q_threshold)
     values = vcf_stats.depths_distribution.values()
     if len(values[1]) == 0:
         values = values[0]
@@ -166,7 +168,8 @@ def run_depth_distrib(vcf_stats, out_dir):
     kwargs = {'title': 'Depths distribution per call',
               'ylabel': 'Number of calls',
               'xlabel': 'Depth'}
-    build_histogram(values, depth_dist_fhand, bins=100, stacked=True, **kwargs)
+    build_histogram(values, depth_dist_fhand, bins=100, stacked=True, 
+                    range_=(0, max_depth), **kwargs)
 
 
 def run_heterocigosity(vcf_stats, out_dir):
@@ -281,7 +284,7 @@ def main():
     run_call_scatter(vcf_stats, out_dir)
     run_call_density_plot(vcf_stats, out_dir)
     run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist)
-    run_depth_distrib(vcf_stats, out_dir)
+    run_depth_distrib(vcf_stats, out_dir, max_depth=MAX_DEPTH)
     run_heterocigosity(vcf_stats, out_dir)
     run_missig_call(vcf_stats, out_dir)
     run_vcf_per_ref(vcf_stats, out_dir)
