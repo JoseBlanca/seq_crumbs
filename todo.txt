@@ -1,0 +1,7 @@
+Del paper del stacks:
+
+paralogous stacks because all individuals homozygous for a specific sequence at one paralog and homozygous for a slightly different sequence in the other paralog would appear to be heterozygotes for the relevant SNP.
+In addition, a diploid individual will never have more than two alleles of a single locus, so if individuals are discovered with three or more alleles, paralogs are likely to blame.
+loci exhibited segregation distortion in segregation or HW in population. Especialmente exceso de heterocigotos.
+
+
