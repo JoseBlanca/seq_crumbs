@@ -113,6 +113,7 @@ class VcfStats(object):
         int_code = 'I'
         float_code = 'f'
         self._genotype_qualities = IntCounter()
+        self._snv_quals = IntCounter()
 
         self._call_data = {HOM_REF: {'x': array(int_code), 'y':
                                      array(int_code),
@@ -141,8 +142,12 @@ class VcfStats(object):
         selected_samples = self._selected_samples
         counts_distribution_in_gt = self._counts_distribution_in_gt
         depths_distribution = self._depths_distribution
+        snv_quals = self._snv_quals
 
         for snp in self.reader:
+            snv_qual = snp.QUAL
+            if snv_qual is not None:
+                snv_quals[int(snv_qual)] += 1
             chrom_counts[snp.CHROM] += 1
 
             #maf
@@ -252,6 +257,10 @@ class VcfStats(object):
     @property
     def depths_distribution(self):
         return self._depths_distribution
+
+    @property
+    def snv_quals(self):
+        return self._snv_quals
 
 
 def get_data_from_vcf(vcf_path, gq_threshold=0):

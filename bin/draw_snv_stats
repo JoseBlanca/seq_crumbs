@@ -18,6 +18,9 @@ from vcf_crumbs.statistics import (calc_density_per_chrom, HET, HOM_ALT,
                                    HOM_REF, VcfStats,
                                    calc_n_bases_in_chrom_with_snp)
 from crumbs.statistics import IntCounter
+from collections import OrderedDict
+
+MAX_DEPTH = 200
 
 
 def _setup_argparse():
@@ -154,11 +157,11 @@ def run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist):
         counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
         build_histogram(data_values, counts_dist_fhand, bins=depth - 2,
                        stacked=True, label=labels, range_=(1, depth - 1),
-                       **kwargs)
+                       **kwargs) 
 
 
-def run_deep_distrib(vcf_stats, out_dir):
-    # Depths distribution in called/uncalled(or below gq_threshold)
+def run_depth_distrib(vcf_stats, out_dir, max_depth):
+    # Depths distribution in called/uncalled(or below g q_threshold)
     values = vcf_stats.depths_distribution.values()
     if len(values[1]) == 0:
         values = values[0]
@@ -166,7 +169,8 @@ def run_deep_distrib(vcf_stats, out_dir):
     kwargs = {'title': 'Depths distribution per call',
               'ylabel': 'Number of calls',
               'xlabel': 'Depth'}
-    build_histogram(values, depth_dist_fhand, bins=100, stacked=True, **kwargs)
+    build_histogram(values, depth_dist_fhand, bins=100, stacked=True, 
+                    range_=(0, max_depth), **kwargs)
 
 
 def run_heterocigosity(vcf_stats, out_dir):
@@ -232,6 +236,25 @@ def run_geno_qualities(vcf_stats, out_dir):
                           ylabel='num calls')
 
 
+def run_snp_qualities(vcf_stats, out_dir):
+    if not vcf_stats.snv_quals.count:
+        return
+    quals_fhand = open(os.path.join(out_dir, 'snv_qual_hist.1-200.png'), 'w')
+    distrib = vcf_stats.snv_quals.calculate_distribution(bins=100, max_=200)
+    draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
+                          fhand=quals_fhand,
+                          title='Histogram of the snv qualities',
+                          xlabel='snv Qualities',
+                          ylabel='num snv')
+    quals2_fhand = open(os.path.join(out_dir, 'snv_qual_hist.png'), 'w')
+    distrib = vcf_stats.snv_quals.calculate_distribution(bins=100)
+    draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
+                          fhand=quals2_fhand,
+                          title='Histogram of the snv qualities',
+                          xlabel='snv Qualities',
+                          ylabel='num snv')
+
+
 def run_general_stats(vcf_stats, out_dir, gq_threshold, ref_fhand):
     stats_fhand = open(os.path.join(out_dir, 'snv_stats.txt'), 'w')
     stats_fhand.write('Num of hete/homo calls.\n')
@@ -257,8 +280,25 @@ def run_general_stats(vcf_stats, out_dir, gq_threshold, ref_fhand):
     n_bases = calc_n_bases_in_chrom_with_snp(vcf_stats.snps_per_chromosome,
                                              ref_fhand)
     stats_fhand.write('\n----------------------------------------\n')
-    stats_fhand.write('Num bases covered by seqs with SNPs: {}'.format(
+    stats_fhand.write('Num bases covered by seqs with SNPs: {}\n'.format(
                                                                     n_bases))
+
+    quals_to_count = (20, 40, 60, 80, 100, 120, 150, 200, 500)
+    quals_bigger_than = OrderedDict()
+    for qual_to_count in quals_to_count:
+        quals_bigger_than[qual_to_count] = 0
+    for value, count in vcf_stats.snv_quals.items():
+        for qual_to_count in quals_to_count:
+            if value > qual_to_count:
+                quals_bigger_than[qual_to_count] += count
+
+    stats_fhand.write('--------------------------------------------\n')
+    stats_fhand.write('\n')
+    stats_fhand.write('Number of snps by quality\n')
+    stats_fhand.write('-------------------------\n')
+    for bigger_than, count in quals_bigger_than.items():
+        msg = 'snvs with quality bigger than\t{}\t{}\n'
+        stats_fhand.write(msg.format(bigger_than, count))
 
 
 def main():
@@ -281,13 +321,13 @@ def main():
     run_call_scatter(vcf_stats, out_dir)
     run_call_density_plot(vcf_stats, out_dir)
     run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist)
-    run_deep_distrib(vcf_stats, out_dir)
+    run_depth_distrib(vcf_stats, out_dir, max_depth=MAX_DEPTH)
     run_heterocigosity(vcf_stats, out_dir)
     run_missig_call(vcf_stats, out_dir)
     run_vcf_per_ref(vcf_stats, out_dir)
     run_geno_qualities(vcf_stats, out_dir)
     run_general_stats(vcf_stats, out_dir, gq_threshold, ref_fhand)
-
+    run_snp_qualities(vcf_stats, out_dir)
 
 if __name__ == '__main__':
     main()
