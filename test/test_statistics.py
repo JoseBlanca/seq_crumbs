@@ -4,7 +4,7 @@ import sys
 from tempfile import NamedTemporaryFile
 
 from vcf import Reader
-from vcf_crumbs.statistics import (calc_density_per_chrom, get_data_from_vcf,
+from vcf_crumbs.statistics import (calc_density_per_chrom,
                                    get_snpcaller_name, VARSCAN, GATK,
                                    calculate_maf, FREEBAYES, VcfStats,
                                    calc_n_bases_in_chrom_with_snp, HOM_REF)
@@ -56,22 +56,6 @@ class SnvStatTests(unittest.TestCase):
 
         assert get_snpcaller_name(Reader(filename=FREEBAYES_VCF_PATH)) == \
                                                                 FREEBAYES
-
-    def test_get_data(self):
-        data = get_data_from_vcf(VARSCAN_VCF_PATH, gq_threshold=0)
-        assert data['samples'] == set(['upv196', 'pepo', 'mu16'])
-        assert data['het_by_sample'] == \
-                        {'upv196': IntCounter({'num_gt': 90, 'num_het': 19}),
-                         'pepo': IntCounter({'num_gt': 29, 'num_het': 8}),
-                         'mu16': IntCounter({'num_gt': 107, 'num_het': 26})}
-
-        data = get_data_from_vcf(VARSCAN_VCF_PATH, gq_threshold=25)
-        assert data['het_by_sample'] == \
-                        {'upv196': IntCounter({'num_gt': 90, 'num_het': 7}),
-                         'pepo': IntCounter({'num_gt': 29, 'num_het': 4}),
-                         'mu16': IntCounter({'num_gt': 107, 'num_het': 18})}
-
-        assert len(data['variable_gt_per_snp']) == 81
 
     def test_calc_densities(self):
         vcf_stats = VcfStats(VARSCAN_VCF_PATH)
