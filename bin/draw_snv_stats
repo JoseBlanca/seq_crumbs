@@ -157,7 +157,7 @@ def run_ref_count_distribution(vcf_stats, out_dir, depth_for_counts_hist):
         counts_dist_fhand = open(os.path.join(out_dir, counts_dist_fpath), 'w')
         build_histogram(data_values, counts_dist_fhand, bins=depth - 2,
                        stacked=True, label=labels, range_=(1, depth - 1),
-                       **kwargs) 
+                       **kwargs)
 
 
 def run_depth_distrib(vcf_stats, out_dir, max_depth):
@@ -169,7 +169,7 @@ def run_depth_distrib(vcf_stats, out_dir, max_depth):
     kwargs = {'title': 'Depths distribution per call',
               'ylabel': 'Number of calls',
               'xlabel': 'Depth'}
-    build_histogram(values, depth_dist_fhand, bins=100, stacked=True, 
+    build_histogram(values, depth_dist_fhand, bins=100, stacked=True,
                     range_=(0, max_depth), **kwargs)
 
 
@@ -201,7 +201,8 @@ def run_missig_call(vcf_stats, out_dir):
                                                          max_=100)
     title_per = 'Missing calls percentage distribution'
     draw_histogram(distrib['counts'], fhand=missing_calls_fhand,
-                              bin_limits=distrib['bin_limits'], title=title_per,
+                              bin_limits=distrib['bin_limits'],
+                              title=title_per,
                               xlabel='Missing calls percentage',
                               ylabel="Num. SNPs")
 
@@ -220,9 +221,9 @@ def run_vcf_per_ref(vcf_stats, out_dir):
                                                            max_=max_)
     title_per = 'Number of SNPs per reference sequence'
     draw_histogram(distrib['counts'], fhand=snps_per_refseq_fhand,
-                              bin_limits=distrib['bin_limits'], title=title_per,
-                              xlabel='Number of SNPs per reference seq',
-                              ylabel="Num. reference sequences")
+                   bin_limits=distrib['bin_limits'], title=title_per,
+                   xlabel='Number of SNPs per reference seq',
+                   ylabel="Num. reference sequences")
 
 
 def run_geno_qualities(vcf_stats, out_dir):
