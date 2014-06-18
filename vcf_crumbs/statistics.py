@@ -190,9 +190,11 @@ class VcfStats(object):
                         else:
                             counts_distribution_in_gt[depth][gt][rc] = 1
                     else:
-                        counts_distribution_in_gt[depth][gt] = IntCounter({rc: 1})
+                        counts_distribution_in_gt[depth][gt] = \
+                                                            IntCounter({rc: 1})
                 else:
-                    counts_distribution_in_gt[depth] = {gt: IntCounter({rc: 1})}
+                    counts_distribution_in_gt[depth] = \
+                                                      {gt: IntCounter({rc: 1})}
                 if call.called:
                     call_datas[call.gt_type]['x'].append(calldata[RC])
                     call_datas[call.gt_type]['y'].append(sum(calldata[ACS]))
@@ -215,8 +217,8 @@ class VcfStats(object):
 
             if snp.num_called:
                 if num_called != 0:
-                    perc_variable = int((num_diff_to_ref_gts / num_called) * 100)
-                    variable_gt_per_snp[perc_variable] += 1
+                    perc_variable = (num_diff_to_ref_gts / num_called) * 100
+                    variable_gt_per_snp[int(perc_variable)] += 1
 
     @property
     def snps_per_chromosome(self):
