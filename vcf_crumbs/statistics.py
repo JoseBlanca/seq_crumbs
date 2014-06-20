@@ -301,3 +301,54 @@ def calc_density_per_chrom(counts, ref_fhand, size=100):
         else:
             densities[ref_name] = round((seq_count / length) * 100, 2)
     return densities
+
+
+def create_snp_name(vcf_record):
+    return str(vcf_record.CHROM) + '_' + str(vcf_record.POS)
+
+
+def choose_samples(record, sample_names):
+    if sample_names is None:
+        chosen_samples = record.samples
+    else:
+        filter_by_name = lambda x: True if x.sample in sample_names else False
+        chosen_samples = filter(filter_by_name, record.samples, )
+    return chosen_samples
+
+
+class VCFcomparisons(object):
+    def __init__(self, vcf_path, samples=None):
+        reader = Reader(filename=vcf_path)
+        self.index = {}
+        self.samples = samples
+        for vcf_record in reader:
+            snp_name = create_snp_name(vcf_record)
+            self.index[snp_name] = vcf_record
+
+    def calculate_statistics(self, reader, samples=None):
+        n_common_snps = 0
+        total_snps = 0
+        common_genotypes = 0
+        uncalled_genotypes = 0
+        different_genotypes = 0
+        for vcf_record in reader:
+            total_snps += 1
+            snp_name = create_snp_name(vcf_record)
+            if snp_name not in self.index:
+                continue
+            n_common_snps += 1
+            for call1 in choose_samples(vcf_record, samples):
+                for call2 in choose_samples(self.index[snp_name],
+                                            self.samples):
+                    if call1.gt_type is None or call2.gt_type is None:
+                        uncalled_genotypes += 1
+                    elif call1.gt_type == call2.gt_type:
+                        common_genotypes += 1
+                    else:
+                        different_genotypes += 1
+        common_snps_prc = n_common_snps / float(total_snps) * 100
+        statistics = {'common_snps_prc': common_snps_prc,
+                      'common': common_genotypes,
+                      'uncalled': uncalled_genotypes,
+                      'different': different_genotypes}
+        return statistics

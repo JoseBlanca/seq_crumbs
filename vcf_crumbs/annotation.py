@@ -12,7 +12,7 @@ from vcf import Reader
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
 
-from vcf_crumbs.statistics import get_call_data, RC, ACS, GQ
+from vcf_crumbs.statistics import get_call_data, RC, ACS, GQ, choose_samples
 from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
@@ -122,15 +122,6 @@ def aggregate_allele_counts(allele_counts):
                 all_counts[allele] = 0
             all_counts[allele] += count
     return {'all': all_counts}
-
-
-def choose_samples(record, sample_names):
-    if sample_names is None:
-        chosen_samples = record.samples
-    else:
-        filter_by_name = lambda x: True if x.sample in sample_names else False
-        chosen_samples = filter(filter_by_name, record.samples, )
-    return chosen_samples
 
 
 def _str_alleles(record):

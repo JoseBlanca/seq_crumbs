@@ -7,10 +7,11 @@ from vcf import Reader
 from vcf_crumbs.statistics import (calc_density_per_chrom,
                                    get_snpcaller_name, VARSCAN, GATK,
                                    calculate_maf, FREEBAYES, VcfStats,
-                                   calc_n_bases_in_chrom_with_snp, HOM_REF)
+                                   calc_n_bases_in_chrom_with_snp, HOM_REF,
+    VCFcomparisons)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
-from subprocess import check_call, CalledProcessError
+from subprocess import check_call, CalledProcessError, check_output
 
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.statistics import IntCounter
@@ -153,6 +154,41 @@ class StatBinTests(unittest.TestCase):
             tempdir.close()
 
 
+class VCFcomparisonsTest(unittest.TestCase):
+    def test_calculate_statistics(self):
+        #with freebayes
+        reader = Reader(filename=FREEBAYES_VCF_PATH)
+        vcf_to_compare = VCFcomparisons(FREEBAYES_VCF_PATH)
+        stats = vcf_to_compare.calculate_statistics(reader)
+        assert stats['common'] == 944
+        assert stats['uncalled'] == 0
+        assert stats['different'] == 0
+        assert stats['common_snps_prc'] == 100
+
+        #with varscan
+        reader = Reader(filename=VARSCAN_VCF_PATH)
+        vcf_to_compare = VCFcomparisons(VARSCAN_VCF_PATH, samples=['mu16'])
+        stats = vcf_to_compare.calculate_statistics(reader, samples=['mu16'])
+        assert stats['common'] == 107
+        assert stats['uncalled'] == 69
+        assert stats['different'] == 0
+        assert stats['common_snps_prc'] == 100
+
+    def test_compare_vcfs_samples(self):
+        binary = join(BIN_DIR, 'compare_vcfs_samples')
+        assert 'usage' in check_output([binary, '-h'])
+        samples_fhand = NamedTemporaryFile()
+        samples_fhand.write('mu16\n')
+        samples_fhand.flush()
+
+        cmd = [binary, VARSCAN_VCF_PATH, '-s', samples_fhand.name,
+               '-r', samples_fhand.name, '-v', VARSCAN_VCF_PATH]
+        stats = check_output(cmd)
+        result = 'common_snps_prc : 100.0\ndifferent : 0\ncommon : 107\n'
+        result += 'uncalled : 69\n'
+        assert stats == result
+
+
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'TestVcfStats']
+    import sys;sys.argv = ['', 'VCFcomparisonsTest']
     unittest.main()
