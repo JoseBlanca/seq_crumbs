@@ -24,12 +24,17 @@ from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
 from crumbs.seq import get_str_seq, get_length, get_int_qualities
+from crumbs.plot import get_canvas_and_axes
+
 
 LABELS = {'title': 'histogram', 'xlabel': 'values',
           'ylabel': 'count', 'minimum': 'minimum',
           'maximum': 'maximum', 'average': 'average',
           'variance': 'variance', 'sum': 'sum',
           'items': 'items', 'quartiles': 'quartiles'}
+
+BAR = 'bar'
+LINE = 'line'
 
 
 class IntCounter(Counter):
@@ -152,15 +157,21 @@ class IntCounter(Counter):
                 raise IndexError('You asked for an index beyond the scope')
             return index
 
-    def _calculate_dist_range(self, min_, max_, remove_outliers):
+    def _calculate_dist_range(self, min_, max_, outlier_threshold):
         'it calculates the range for the histogram'
+        if ((min_ is not None or max_ is not None) and
+            outlier_threshold is None):
+            msg = 'You can not pass max, min and outlier_threslhosld to '
+            msg += 'calculate distribution range'
+            raise ValueError(msg)
+
         if min_ is None:
             min_ = self.min
         if max_ is None:
             max_ = self.max
 
-        if remove_outliers:
-            left_limit = self.count * remove_outliers / 100
+        if outlier_threshold:
+            left_limit = self.count * outlier_threshold / 100
             rigth_limit = self.count - left_limit
             left_value = self._get_value_for_index(left_limit)
             rigth_value = self._get_value_for_index(rigth_limit)
@@ -200,10 +211,10 @@ class IntCounter(Counter):
         return bin_edges
 
     def calculate_distribution(self, bins=None, min_=None, max_=None,
-                               remove_outliers=None):
+                               outlier_threshold=None):
         'It returns an histogram with the given range and bin'
         distrib = []
-        min_, max_ = self._calculate_dist_range(min_, max_, remove_outliers)
+        min_, max_ = self._calculate_dist_range(min_, max_, outlier_threshold)
         if min_ is None or max_ is None:
             return None
         bin_edges = self.calculate_bin_edges(min_, max_, bins)
@@ -245,7 +256,8 @@ class IntCounter(Counter):
         if self.count != 0:
             labels = self.labels
             # now we write some basic stats
-            format_num = lambda x: '{:,d}'.format(x) if isinstance(x, int) else '%.2f' % x
+            format_num = lambda x: '{:,d}'.format(x) if isinstance(x, int) \
+                                                                else '%.2f' % x
             text = '{}: {}\n'.format(labels['minimum'], format_num(self.min))
             text += '{}: {}\n'.format(labels['maximum'], format_num(self.max))
             text += '{}: {}\n'.format(labels['average'],
@@ -262,7 +274,8 @@ class IntCounter(Counter):
             text += '\n'
 
             distrib = self.calculate_distribution()
-            text += draw_histogram_ascii(distrib['bin_limits'], distrib['counts'])
+            text += draw_histogram_ascii(distrib['bin_limits'],
+                                         distrib['counts'])
             return text
         return ''
 
@@ -274,7 +287,8 @@ def draw_histogram_ascii(bin_limits, counts):
 
     assert len(bin_limits) == len(counts) + 1
     # pylint: disable=W0108
-    number_to_str = lambda n: '{:d}'.format(n) if isinstance(n, int) else '{:.2f}'.format(n)
+    number_to_str = lambda n: '{:d}'.format(n) if isinstance(n, int) else \
+                                                            '{:.2f}'.format(n)
 
     # we gather all bin limits and we calculate the longest number
     bin_start = None
@@ -294,7 +308,8 @@ def draw_histogram_ascii(bin_limits, counts):
 
     limit_fmt_int = '{:>' + str(max_ndigits) + 'd}'
     limit_fmt_float = '{:>' + str(max_ndigits) + '.5f}'
-    limit_to_padded_str = lambda n: limit_fmt_int.format(n) if isinstance(n, int) else limit_fmt_float.format(n)
+    limit_to_padded_str = lambda n: limit_fmt_int.format(n) \
+                           if isinstance(n, int) else limit_fmt_float.format(n)
 
     count_fmt = '{:>' + str(max_count_ndigits) + 'd}'
     count_to_padded_str = lambda n: count_fmt.format(n)

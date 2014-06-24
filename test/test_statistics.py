@@ -166,7 +166,7 @@ class CounterTest(unittest.TestCase):
 
         ints_counter = self.create_test_counter()
         distrib = ints_counter.calculate_distribution(bins=10,
-                                                        remove_outliers=5)
+                                                        outlier_threshold=5)
 
         assert distrib['counts'] == [7L, 13L, 7L, 10L, 7L, 22L, 6L, 4L, 5L,
                                       5L]
