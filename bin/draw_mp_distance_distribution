@@ -43,8 +43,6 @@ def create_argparse(add_reverse=True, **kwargs):
     help2 += '(default:' + str(settings['MAX_CLIPPING']) + ')'
     parser.add_argument('--max_clipping', default=settings['MAX_CLIPPING'],
                         help=help2, type=float)
-    parser.add_argument('-n', '--n_pairs_sampled', default=None,
-                        help='Number of pairs sampled for drawing', type=int)
     return parser
 
 
@@ -56,7 +54,6 @@ def parse_args(parser):
     args['tempdir'] = parsed_args.tempdir
     args['interleaved'] = not parsed_args.paired_fpaths
     args['threads'] = parsed_args.threads
-    args['n_pairs_sampled'] = parsed_args.n_pairs_sampled
     args['max_clipping'] = parsed_args.max_clipping
     args['max_distance'] = parsed_args.max_distance
     return args, parsed_args
@@ -75,13 +72,12 @@ def run():
     tempdir = args['tempdir']
     interleaved = args['interleaved']
     threads = args['threads']
-    n_pairs_sampled = args['n_pairs_sampled']
     max_distance = args['max_distance']
 
     draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
-                               n=n_pairs_sampled, interleaved=interleaved,
+                               interleaved=interleaved,
                                tempdir=tempdir, threads=threads,
-                               max_=max_distance)
+                               max_distance=max_distance)
 
 if __name__ == '__main__':
     sys.exit(main(run))

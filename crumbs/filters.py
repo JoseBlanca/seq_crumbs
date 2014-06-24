@@ -668,14 +668,12 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
             write_seqs(pair, unknown_fhand)
 
 
-def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
-                                   remove_outliers=True, max_=None):
+def show_distances_distributions(bamfile, max_clipping, out_fhand,
+                                   remove_outliers=True, max_distance=None):
     '''It shows distance distribution between pairs of sequences that map
     completely in the same reference sequence'''
     stats = {'outies': [], 'innies': [], 'others': []}
-    counts = 0
     for grouped_mates in _group_alignments_by_reads(bamfile):
-        counts += 1
         mates = _split_mates(grouped_mates)
         for aligned_read1 in _get_totally_mapped_alignments(mates[0],
                                                             max_clipping):
@@ -690,49 +688,25 @@ def show_distances_distributions(bamfile, max_clipping, out_fhand, n=None,
                         stats['innies'].append(distance)
                     else:
                         stats['others'].append(distance)
-        if counts == n:
-            break
     for key in stats.keys():
         out_fhand.write(key + '\n')
         if stats[key]:
             counter = IntCounter(iter(stats[key]))
             distribution = counter.calculate_distribution(remove_outliers=remove_outliers,
-                                                          max_=max_)
+                                                          max_=max_distance)
             counts = distribution['counts']
             bin_limits = distribution['bin_limits']
             out_fhand.write(draw_histogram_ascii(bin_limits, counts))
     out_fhand.flush()
 
 
-def _get_n_seqs(seqs, n):
-    reads = ''
-    total = 0
-    for seq in seqs:
-        reads += seq
-        total += 1
-        if total == n * 4:
-            return reads
-
-
 def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
-                               n=None, remove_outliers=True, max_=None,
+                               remove_outliers=True, max_distance=None,
                                interleaved=True, tempdir=None, threads=None):
-    if n is None:
-        sampled_fpaths = in_fpaths
-    else:
-        sampled_fpaths = []
-        for in_fpath in in_fpaths:
-            sampled_fhand = NamedTemporaryFile(dir=tempdir)
-            sampled_fhand.write(_get_n_seqs(open(in_fpath), n))
-#             this does not work with read_seqs. It says unknown format. Check
-#             because this will only work for fastq files
-#             write_seqs(_get_n_seqs(read_seqs([open(in_fpath)]), n),
-#                        sampled_fhand)
-            sampled_fhand.flush()
-            sampled_fpaths.append(sampled_fhand.name)
     index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
-    bamfile = _sorted_mapped_reads(index_fpath, sampled_fpaths,
+    bamfile = _sorted_mapped_reads(index_fpath, in_fpaths,
                                    threads=threads, tempdir=tempdir,
                                    interleaved=interleaved)
-    show_distances_distributions(bamfile, max_clipping, out_fhand, n=n,
-                                   remove_outliers=remove_outliers, max_=max_)
+    show_distances_distributions(bamfile, max_clipping, out_fhand,
+                                 remove_outliers=remove_outliers,
+                                 max_distance=max_distance)

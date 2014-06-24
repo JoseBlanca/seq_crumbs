@@ -792,13 +792,6 @@ class DrawDistanceDistribution(unittest.TestCase):
             assert ('outies' in line or 'innies' in line or 'others' in line
                     or '(1)' in line)
 
-        #sampling a number of reads
-        cmd = [draw_distances_distribution_bin, in_fhand.name, '-r',
-               ref_fhand.name, '-o', distribution_fhand.name, '-n', '2']
-        check_output(cmd, stdin=in_fhand)
-        for line in open(distribution_fhand.name):
-            assert ('outies' in line or 'innies' in line or 'others' in line
-                    or '(1)' in line)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'DrawDistanceDistribution']
