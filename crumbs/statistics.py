@@ -24,7 +24,6 @@ from crumbs.settings import get_setting
 from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
 from crumbs.seq import get_str_seq, get_length, get_int_qualities
-from crumbs.plot import get_canvas_and_axes
 
 
 LABELS = {'title': 'histogram', 'xlabel': 'values',
@@ -32,9 +31,6 @@ LABELS = {'title': 'histogram', 'xlabel': 'values',
           'maximum': 'maximum', 'average': 'average',
           'variance': 'variance', 'sum': 'sum',
           'items': 'items', 'quartiles': 'quartiles'}
-
-BAR = 'bar'
-LINE = 'line'
 
 
 class IntCounter(Counter):
