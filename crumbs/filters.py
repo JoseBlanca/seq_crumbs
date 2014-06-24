@@ -669,7 +669,7 @@ def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
 
 
 def show_distances_distributions(bamfile, max_clipping, out_fhand,
-                                   remove_outliers=True, max_distance=None):
+                                   remove_outliers=0.95, max_distance=None):
     '''It shows distance distribution between pairs of sequences that map
     completely in the same reference sequence'''
     stats = {'outies': [], 'innies': [], 'others': []}
@@ -692,8 +692,8 @@ def show_distances_distributions(bamfile, max_clipping, out_fhand,
         out_fhand.write(key + '\n')
         if stats[key]:
             counter = IntCounter(iter(stats[key]))
-            distribution = counter.calculate_distribution(remove_outliers=remove_outliers,
-                                                          max_=max_distance)
+            distribution = counter.calculate_distribution(max_=max_distance,
+                                             outlier_threshold=remove_outliers)
             counts = distribution['counts']
             bin_limits = distribution['bin_limits']
             out_fhand.write(draw_histogram_ascii(bin_limits, counts))
