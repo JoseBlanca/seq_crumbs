@@ -1,0 +1,342 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+from os.path import join
+from itertools import izip, chain, repeat
+from collections import OrderedDict
+
+import numpy
+from matplotlib.mlab import griddata
+from matplotlib import cm
+
+from vcf_crumbs.statistics import (VcfStats2, HET, HOM, WINDOWS_SIZE, HOM_ALT,
+                                   HOM_REF)
+from crumbs.plot import  (draw_histogram_in_fhand, draw_histograms, LINE,
+                          get_fig_and_canvas)
+from matplotlib.colorbar import make_axes, Colorbar
+
+PLOTS_PER_CHART = 3
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'Filter the snvs in an indexed vcf'
+    parser = argparse.ArgumentParser(description=description)
+    in_help = 'Indexed vcf file'
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rt'))
+    parser.add_argument('-o', '--out_dir', default=os.getcwd(),
+                        help='Directory to write all output files')
+    parser.add_argument('-q', '--gt_qual_threshold', default=0.0, type=float,
+            help='Genotype quelity threshold to take into account a genotype')
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    args = {}
+    args['in_fhand'] = parsed_args.input
+    args['out_dir'] = parsed_args.out_dir
+    args['gq'] = parsed_args.gt_qual_threshold
+    if not os.path.exists(args['out_dir']):
+        os.mkdir(os.path.abspath(args['out_dir']))
+    return args
+
+
+def draw_snv_densities(vcf_stats, out_dir):
+    fhand = open(join(out_dir, 'snv_densities_distrib.png'), 'w')
+    density_counter = vcf_stats.snv_density
+    distrib = density_counter.calculate_distribution()
+    xlabel = 'Num. of snvs in a {} pb window'
+    draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
+                            title='SNV densities distribution',
+                            xlabel=xlabel.format(WINDOWS_SIZE * 2),
+                            ylabel='Num. SNVs', fhand=fhand)
+
+
+def draw_mafs(vcf_stats, out_dir):
+    fhand = open(join(out_dir, 'maf_samples.png'), 'w')
+    counters = []
+    distrib_labels = []
+    for sample in vcf_stats.samples:
+        counters.append(vcf_stats.mafs(sample=sample))
+        distrib_labels.append(sample)
+    titles = ['MAF distribution'] * len(counters)
+    xlabel = 'MAF x 100'
+    ylabel = 'Num. SNVs'
+    draw_histograms(counters, distrib_labels, fhand, xlabel=xlabel,
+                    ylabel=ylabel, titles=titles)
+
+    #all_together
+    fhand = open(join(out_dir, 'maf_all_samples.png'), 'w')
+    distrib = vcf_stats.mafs().calculate_distribution()
+    title = 'MAF distribution all samples'
+    draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
+                            title=title, xlabel=xlabel, ylabel=ylabel,
+                            fhand=fhand, kind=LINE)
+
+
+def grouper(n, iterable, padvalue=None):
+    return izip(*[chain(iterable, repeat(padvalue, n - 1))] * n)
+
+
+def draw_gt_depths(vcf_stats, out_dir, gq_threshold=None):
+    gq_str = '_{}'.format(gq_threshold) if gq_threshold else ''
+    fhand = open(join(out_dir, 'qt_depth_samples{}.png'.format(gq_str)), 'w')
+
+    het_counters = []
+    hom_counters = []
+    samples = vcf_stats.samples
+
+    for sample in samples:
+        het_counters.append(vcf_stats.gt_depths(HET, sample=sample))
+        hom_counters.append(vcf_stats.gt_depths(HOM, sample=sample))
+
+    counters = []
+    distrib_labels = []
+    titles = []
+    xlabel = 'GT depths'
+    ylabel = 'Num. GTs'
+    for het, hom, sample_names in zip(grouper(PLOTS_PER_CHART, het_counters),
+                                      grouper(PLOTS_PER_CHART, hom_counters),
+                                      grouper(PLOTS_PER_CHART, samples)):
+        counters.extend(het)
+        counters.extend(hom)
+        distrib_labels.extend(sample_names)
+        distrib_labels.extend(sample_names)
+        titles.extend(['GT Depths distribution for Heterozigotes'] *
+                                                               PLOTS_PER_CHART)
+        titles.extend(['GT Depths distribution for Homozigotes'] *
+                                                               PLOTS_PER_CHART)
+
+    draw_histograms(counters, distrib_labels, fhand, xlabel=xlabel,
+                    plots_per_chart=PLOTS_PER_CHART, ylabel=ylabel,
+                    titles=titles)
+
+    # al samples
+    fhand = open(join(out_dir, 'qt_depth_all_samples{}.png'.format(gq_str)),
+                 'w')
+    counters = [vcf_stats.gt_depths(HET)]
+    counters.append(vcf_stats.gt_depths(HOM))
+    distrib_labels = ['All samples', 'All samples']
+    titles = ['GT Depths distribution for Heterozigotes',
+              'GT Depths distribution for Homozigotes']
+
+    draw_histograms(counters, distrib_labels, fhand=fhand, titles=titles,
+                    xlabel=xlabel, ylabel=ylabel, plots_per_chart=1)
+
+
+def draw_gt_quals(vcf_stats, out_dir, gq_threshold=None):
+    gq_str = '_{}'.format(gq_threshold) if gq_threshold else ''
+    fhand = open(join(out_dir, 'qt_qual_samples{}.png'.format(gq_str)), 'w')
+
+    het_counters = []
+    hom_counters = []
+    samples = vcf_stats.samples
+
+    for sample in samples:
+        het_counters.append(vcf_stats.gt_quals(HET, sample=sample))
+        hom_counters.append(vcf_stats.gt_quals(HOM, sample=sample))
+
+    counters = []
+    distrib_labels = []
+    titles = []
+    xlabel = 'GT quals'
+    ylabel = 'Num. GTs'
+    for het, hom, sample_names in zip(grouper(PLOTS_PER_CHART, het_counters),
+                                      grouper(PLOTS_PER_CHART, hom_counters),
+                                      grouper(PLOTS_PER_CHART, samples)):
+        counters.extend(het)
+        counters.extend(hom)
+        distrib_labels.extend(sample_names)
+        distrib_labels.extend(sample_names)
+        titles.extend(['GT qual distribution for Heterozigotes'] *
+                                                               PLOTS_PER_CHART)
+        titles.extend(['GT qual distribution for Homozigotes'] *
+                                                               PLOTS_PER_CHART)
+
+    draw_histograms(counters, distrib_labels, fhand, xlabel=xlabel,
+                    plots_per_chart=PLOTS_PER_CHART, ylabel=ylabel,
+                    titles=titles)
+
+    # all samples
+    fhand = open(join(out_dir, 'qt_qual_all_samples{}.png'.format(gq_str)),
+                 'w')
+    counters = [vcf_stats.gt_quals(HET)]
+    counters.append(vcf_stats.gt_quals(HOM))
+    distrib_labels = ['All samples', 'All samples']
+    titles = ['GT Quals distribution for Heterozigotes',
+              'GT Quals distribution for Homozigotes']
+
+    draw_histograms(counters, distrib_labels, fhand=fhand, titles=titles,
+                    xlabel=xlabel, ylabel=ylabel, plots_per_chart=1)
+
+
+def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
+                      ac_max=100):
+    #rc_max = 10
+    #ac_max = 10
+    fhand = open(join(out_dir, 'gt_densities.png'), 'w')
+    ac2d = vcf_stats.allelecount2d
+    fig, canvas = get_fig_and_canvas(num_rows=3, figsize=(25, 25))
+    xlabel = 'Reference_allele count'
+    ylabel = 'Alternative allele count'
+    desc_gt_type = {HET: ' Heterozigote', HOM_REF: 'Reference Homocigote',
+                    HOM_ALT: 'Alternative homozigote'}
+    for index, gt_type in enumerate((HOM_REF, HOM_ALT, HET)):
+        axes = fig.add_subplot(3, 2, 2 * index + 1)
+        title = 'Ref/alt allele count density in {}'.format(desc_gt_type[gt_type])
+        kwargs = {'title': title, 'xlabel': xlabel, 'ylabel': ylabel,
+                  'aspect': 'equal'}
+
+        # gt_counts
+        xi = numpy.linspace(0, rc_max, 100)
+        yi = numpy.linspace(0, ac_max, 100)
+
+        x, y, gt_counts = zip(*ac2d.get_gt_counts(gt_type, rc_max=rc_max,
+                                                  ac_max=ac_max))
+        zi = griddata(x, y, gt_counts, xi, yi)
+
+        cs = axes.contourf(xi, yi, zi)
+        color_axes = make_axes(axes)[0]
+        Colorbar(color_axes, cs)
+
+        for key, value in kwargs.items():
+            getattr(axes, 'set_{}'.format(key))(value)
+
+        # qt_qual_avg
+        axes = fig.add_subplot(3, 2, 2 * index + 2)
+        titl = 'Ref/alt gt quality average in {}'.format(desc_gt_type[gt_type])
+        kwargs = {'title': titl, 'xlabel': xlabel, 'ylabel': ylabel,
+                  'aspect': 'equal'}
+
+        x, y, quals = zip(*ac2d.get_avg_gt_quals(gt_type, rc_max=rc_max,
+                                                  ac_max=ac_max))
+        zi = griddata(x, y, quals, xi, yi)
+        cs = axes.contourf(xi, yi, zi, **kwargs)
+        color_axes = make_axes(axes)[0]
+        Colorbar(color_axes, cs)
+
+        for key, value in kwargs.items():
+            getattr(axes, 'set_{}'.format(key))(value)
+
+    canvas.print_figure(fhand)
+    fhand.flush()
+
+
+def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
+    fhand = open(join(out_dir, 'gt_type_counts_at_contant_coverage.png'), 'w')
+    ac2d = vcf_stats.allelecount2d
+    fig, canvas = get_fig_and_canvas(num_rows=3, figsize=(15, 30))
+
+    coverages = (10, 20, 35, 50, 70)
+    colormap = cm.jet
+
+    all_genotypes = ac2d.genotypes
+
+    for index, coverage in enumerate(coverages):
+        gt_bar_counts = OrderedDict()
+        gt_quals = {}
+
+        for gt_type in (HOM_REF, HET, HOM_ALT):
+            for gt in all_genotypes[gt_type]:
+                gt_bar_counts[gt] = {}
+                gt_quals[gt] = {}
+
+        for ref_count, genotype in ac2d.get_gt_depths_for_coverage(coverage):
+            if ref_count not in gt_quals:
+                gt_quals[ref_count] = {'num_gts': [], 'sum_gqs': []}
+            for gt, counts in genotype.viewitems():
+                gt_bar_counts[gt][ref_count] = counts['num_gt']
+                mean_gt_qual = counts['sum_gq'] / counts['num_gt']
+                gt_quals[ref_count]['num_gts'].append(counts['num_gt'])
+                gt_quals[ref_count]['sum_gqs'].append(mean_gt_qual)
+
+        axes = fig.add_subplot(len(coverages), 1, index + 1)
+        # make room for the legend
+        box = axes.get_position()
+        box_shinkage = 0.9  # to make room for the legend
+        axes.set_position([box.x0, box.y0, box.width * box_shinkage,
+                           box.height])
+
+        # add bars
+        for gt_index, gt in enumerate(gt_bar_counts):
+            lefts = list(range(coverage + 1))
+            heights = [0] * (coverage + 1)
+            bottoms = [0] * (coverage + 1)
+
+            prev_bottoms = bottoms[:]
+            for ref_count in range(coverage + 1):
+                gt_count = gt_bar_counts.get(gt, {}).get(ref_count, None)
+                if gt_count:
+                    heights[ref_count] = gt_count
+                    bottoms[ref_count] += gt_count
+            if any(heights):
+                axes.bar(lefts, heights, bottom=prev_bottoms, label=gt,
+                         color=colormap(1. * gt_index / len(gt_bar_counts)),
+                         width=0.95)
+
+        # add mean qualities
+        xs, ys = [], []
+        for ref_count in range(coverage + 1):
+            num_gts = 0
+            partial_gt_sum = 0
+            if ref_count not in gt_quals:
+                continue
+            for index in range(len(gt_quals[ref_count]['num_gts'])):
+                partial_gt_sum += gt_quals[ref_count]['num_gts'][index] * gt_quals[ref_count]['sum_gqs'][index]
+                num_gts += gt_quals[ref_count]['num_gts'][index]
+            mean_qual = partial_gt_sum / num_gts
+            xs.append(ref_count + 0.5)  # we add 0.5 to have the point in the
+                                        # middle of the bar
+            ys.append(mean_qual)
+        axes2 = axes.twinx()
+        # make room for the legend
+        box = axes2.get_position()
+        axes2.set_position([box.x0, box.y0, box.width * box_shinkage,
+                           box.height])
+        axes2.plot(xs, ys, color='black', linewidth=2.0)
+        axes2.set_ylabel('Num. genotypes')
+
+        axes.legend(loc='center left', bbox_to_anchor=(1.1, 0.5))
+        axes.set_xlim(right=coverage + 1)
+        axes.set_ylabel('Num. genotypes')
+        axes.set_title('Genotype Counts for Coverage %s' % str(coverage))
+        axes.set_xlabel('Ref. Allele Count')
+
+        # we add 0.5 to have the x ticks in  the middle of the bar
+        xtick_spacing = coverage // 50 + 1
+        xticks = [x + 0.5 for x in range(0, coverage + 1, xtick_spacing)]
+        xticks_lables = [str(x) for x in range(0, coverage + 1, xtick_spacing)]
+        axes.set_xticks(xticks)
+        axes.set_xticklabels(xticks_lables)
+
+    canvas.print_figure(fhand)
+    fhand.flush()
+
+
+def main():
+    #TODO boxplot qual vs coverate for genotypes and for SNPs
+
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+    out_dir = args['out_dir']
+    gq_threshold = args['gq']
+    in_vcf_fpath = args['in_fhand'].name
+
+    vcf_stats = VcfStats2(in_vcf_fpath, gq_threshold)
+
+    draw_gt_hist_vs_allele_counts(vcf_stats, out_dir)
+
+    draw_snv_densities(vcf_stats, out_dir)
+    draw_mafs(vcf_stats, out_dir)
+
+    draw_gt_depths(vcf_stats, out_dir)
+    draw_gt_quals(vcf_stats, out_dir)
+
+    draw_call_density(vcf_stats, out_dir)
+
+
+if __name__ == '__main__':
+    main()

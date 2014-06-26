@@ -20,6 +20,7 @@ FREEBAYES = 'freebayes'
 HOM_REF = 0
 HET = 1
 HOM_ALT = 2
+HOM = 3
 
 DP = 'depth'
 ACS = 'alt_counts'
@@ -352,3 +353,257 @@ class VCFcomparisons(object):
                       'uncalled': uncalled_genotypes,
                       'different': different_genotypes}
         return statistics
+
+
+WINDOWS_SIZE = 50
+MAFS = 'mafs'
+GT_DEPTHS = 'gt_depths'
+GT_QUALS = 'gt_quals'
+HETEROZIGOSITY = 'heterozigosity'
+GT_TYPES = 'gt_types'
+SAMPLE_COUNTERS = (MAFS, GT_DEPTHS, GT_QUALS, HETEROZIGOSITY, GT_TYPES)
+
+SNV_QUALS = 'snv_quals'
+SNV_DENSITY = 'snv_density'
+HET_IN_SNP = 'heterozigotes_in_snp'
+
+
+class _AlleleCounts2D(object):
+    def __init__(self):
+        self._data = {}
+        self._genotypes = {HOM_REF: set(['0/0']),
+                           HOM_ALT: set(),
+                           HET: set()}
+
+    @property
+    def genotypes(self):
+        return self._genotypes
+
+    def add(self, rc, acs, gt, gq):
+        if gt != '0/0':
+            if gt[0] == gt[-1]:
+                self._genotypes[HOM_ALT].add(gt)
+            else:
+                self._genotypes[HET].add(gt)
+
+        data = self._data
+        if rc not in data:
+            data[rc] = {}
+        if acs not in data[rc]:
+            data[rc][acs] = {}
+        if gt not in data[rc][acs]:
+            data[rc][acs][gt] = {'num_gt': 0, 'sum_gq': 0}
+        data[rc][acs][gt]['num_gt'] += 1
+        data[rc][acs][gt]['sum_gq'] += gq
+
+    def _get_data_for_gt_type(self, ref_count, alt_count, gt_type):
+        genotypes = self._data.get(ref_count, {}).get(alt_count, None)
+        if genotypes is None:
+            return None
+
+        gts = self._genotypes[gt_type]
+        gt_count = 0
+        gq_quals = 0
+        for gt in gts:
+            if gt in genotypes:
+                gt_count += genotypes[gt]['num_gt']
+                gq_quals += genotypes[gt]['sum_gq']
+
+        if not gt_count:
+            return None
+
+        return gt_count, gq_quals
+
+    def get_gt_count(self, ref_count, alt_count, gt_type):
+        count_and_qual = self._get_data_for_gt_type(ref_count, alt_count,
+                                                    gt_type)
+        if count_and_qual is None:
+            return None
+        else:
+            return count_and_qual[0]
+
+    def get_avg_gt_qual(self, ref_count, alt_count, gt_type):
+        counts_and_quals = self._get_data_for_gt_type(ref_count, alt_count,
+                                                      gt_type)
+        if counts_and_quals is None:
+            return None
+
+        gt_count, gq_quals = counts_and_quals
+
+        return gq_quals / gt_count
+
+    def get_avg_gt_quals(self, gt_type, rc_max=None, ac_max=None):
+        for rc, allele_counts in self._data.items():
+            if rc_max and rc > rc_max:
+                continue
+            for ac in allele_counts:
+                if ac_max and ac > ac_max:
+                    continue
+                avg_qual = self.get_avg_gt_qual(rc, ac, gt_type)
+                if avg_qual is not None:
+                    yield rc, ac, avg_qual
+
+    def get_gt_counts(self, gt_type, rc_max=None, ac_max=None):
+        for rc, allele_counts in self._data.items():
+            if rc_max and rc > rc_max:
+                continue
+            for ac in allele_counts:
+                if ac_max and ac > ac_max:
+                    continue
+                gt_count = self.get_gt_count(rc, ac, gt_type)
+                if gt_count is not None:
+                    yield rc, ac, gt_count
+
+    def get_gt_depths_for_coverage(self, coverage):
+        for ref_count in range(coverage + 1):
+            alt_count = coverage - ref_count
+
+            genotypes = self._data.get(ref_count, {}).get(alt_count, None)
+            if genotypes is None:
+                continue
+            yield ref_count, genotypes
+
+
+class VcfStats2(object):
+    def __init__(self, vcf_path, gq_threshold=None):
+        self._reader = Reader(filename=vcf_path)
+        self._random_reader = Reader(filename=vcf_path)
+        self._vcf_variant = get_snpcaller_name(self._reader)
+        self._samples = self._reader.samples
+        self._gq_threshold = 0 if gq_threshold is None else gq_threshold
+        # sample_counter
+        self._sample_counters = {}
+        for counter_name in SAMPLE_COUNTERS:
+            if counter_name not in self._sample_counters:
+                self._sample_counters[counter_name] = {}
+            for sample in self._samples:
+                if counter_name in (GT_DEPTHS, GT_QUALS):
+                    counters = {HOM: IntCounter(), HET: IntCounter()}
+                else:
+                    counters = IntCounter()
+                self._sample_counters[counter_name][sample] = counters
+
+        self._snv_counters = {MAFS: IntCounter(),
+                              SNV_QUALS: IntCounter(),
+                              HET_IN_SNP: IntCounter(),
+                              SNV_DENSITY: IntCounter()}
+        self._ac2d = _AlleleCounts2D()
+        self._calculate()
+
+    def _add_maf(self, snp):
+        mafs = calculate_maf(snp, vcf_variant=self._vcf_variant)
+        if mafs:
+            for sample, maf in mafs.items():
+                if maf:
+                    maf = int(maf * 100)
+                    if sample == 'all':
+                        self._snv_counters[MAFS][maf] += 1
+                    else:
+                        self._sample_counters[MAFS][sample][maf] += 1
+
+    def _add_snv_qual(self, snp):
+        snv_qual = snp.QUAL
+        if snv_qual is not None:
+            self._snv_counters[SNV_QUALS][int(snv_qual)] += 1
+
+    def _add_snv_density(self, snp):
+        windows_size = WINDOWS_SIZE
+        pos = snp.POS
+        start = pos - windows_size if pos - windows_size > windows_size else 0
+        end = pos + windows_size
+        chrom = snp.CHROM
+        num_snvs = len(list(self._random_reader.fetch(chrom, start, end))) - 1
+
+        self._snv_counters[SNV_DENSITY][num_snvs] += 1
+
+    def _add_snv_het_obs_fraction(self, snp, min_num_samples=6):
+        if snp.num_called < min_num_samples:
+            return
+        het_for_snp = int((snp.num_het / snp.num_called) * 100)
+        self._snv_counters[HET_IN_SNP][het_for_snp] += 1
+
+    def _calculate(self):
+        snp_counter = 0
+        vcf_variant = self._vcf_variant
+        for snp in self._reader:
+            snp_counter += 1
+            self._add_maf(snp)
+            self._add_snv_qual(snp)
+            self._add_snv_density(snp)
+            self._add_snv_het_obs_fraction(snp)
+
+            for call in snp.samples:
+                if not call.called:
+                    continue
+                sample_name = call.sample
+                calldata = get_call_data(call, vcf_variant)
+                dp = calldata[DP]
+                gq = calldata[GQ]
+                rc = calldata[RC]
+                gt = calldata[GT]
+                acs = sum(calldata[ACS])
+                gt_type = call.gt_type
+                if gq >= self._gq_threshold:
+                    gt_broud_type = HET if call.is_het else HOM
+                    self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][dp] += 1
+                    self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gq] += 1
+                    self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
+                self._ac2d.add(rc=rc, acs=acs, gt=gt, gq=gq)
+
+    def _get_sample_counter(self, kind, sample=None, gt_broud_type=None):
+        counters = self._sample_counters[kind]
+        if sample is not None:
+            if gt_broud_type is None:
+                return counters[sample]
+            else:
+                return counters[sample][gt_broud_type]
+        all_counters = IntCounter()
+        for sample_counter in counters.values():
+            if gt_broud_type is None:
+                all_counters += sample_counter
+            else:
+                all_counters += sample_counter[gt_broud_type]
+        return all_counters
+
+    def mafs(self, sample=None):
+        if sample is None:
+            return self._snv_counters[MAFS]
+        return self._get_sample_counter(MAFS, sample)
+
+    def gt_depths(self, gt_broud_type, sample=None):
+        return self._get_sample_counter(GT_DEPTHS, sample,
+                                        gt_broud_type=gt_broud_type)
+
+    def gt_quals(self, gt_broud_type, sample=None):
+        return self._get_sample_counter(GT_QUALS, sample,
+                                        gt_broud_type=gt_broud_type)
+
+    def heterozigotes_by_sample(self, sample):
+        sample_gt_types = self._get_sample_counter(GT_TYPES, sample)
+        het_gt = sample_gt_types[HET]
+        all_gts = sample_gt_types.count
+        print het_gt, all_gts
+        return het_gt / all_gts
+
+    def gt_types(self, sample=None):
+        return self._get_sample_counter(GT_TYPES, sample)
+
+    @property
+    def samples(self):
+        return self._samples
+
+    @property
+    def snv_density(self):
+        return self._snv_counters[SNV_DENSITY]
+
+    @property
+    def snv_quals(self):
+        return self._snv_counters[SNV_QUALS]
+
+    def het_by_snp(self):
+        return
+
+    @property
+    def allelecount2d(self):
+        return self._ac2d
+

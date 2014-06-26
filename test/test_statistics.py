@@ -8,7 +8,7 @@ from vcf_crumbs.statistics import (calc_density_per_chrom,
                                    get_snpcaller_name, VARSCAN, GATK,
                                    calculate_maf, FREEBAYES, VcfStats,
                                    calc_n_bases_in_chrom_with_snp, HOM_REF,
-    VCFcomparisons)
+    VCFcomparisons, VcfStats2, _AlleleCounts2D, HOM_ALT, HET, HOM)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
 from subprocess import check_call, CalledProcessError, check_output
@@ -41,11 +41,43 @@ class TestVcfStats(unittest.TestCase):
         assert len(vcf_stats.samples) == 3
         assert len(vcf_stats.mafs) == 4
         assert vcf_stats.mafs['all'][63] == 11
+        assert vcf_stats.mafs['pepo'].count == 29
         assert vcf_stats.snps_per_chromosome['CUUC00423_TC01'] == 26
         assert len(vcf_stats.call_data[HOM_REF]['x']) == 95
         assert vcf_stats.genotype_qualities.count == 226
         assert vcf_stats.genotype_qualities[3] == 25
         assert vcf_stats.variable_gt_per_snp[100] == 50
+
+    def  test_vcf_stats2(self):
+        vcf_stats = VcfStats2(VARSCAN_VCF_PATH)
+        assert vcf_stats.mafs().count == 153
+        assert vcf_stats.mafs()[63] == 11
+        assert vcf_stats.mafs('pepo').count == 29
+        assert vcf_stats.gt_quals(HET)[21] == 2
+        assert vcf_stats.gt_quals(HOM)[3] == 25
+        assert vcf_stats.gt_quals(HET).count == 53
+
+
+class AlleleCount2DTest(unittest.TestCase):
+    def test_allele_count2d(self):
+        allelecount = _AlleleCounts2D()
+        allelecount.add(2, 3, '0/0', 25)
+        allelecount.add(2, 3, '1/0', 25)
+        allelecount.add(2, 3, '1/1', 25)
+        allelecount.add(2, 3, '0/0', 25)
+        allelecount.add(2, 3, '0/1', 50)
+        allelecount.add(2, 3, '2/2', 25)
+        allelecount.add(2, 3, '1/0', 75)
+        allelecount.add(2, 4, '1/0', 75)
+
+        assert allelecount.get_gt_count(2, 3, HOM_ALT) == 2
+        assert allelecount.get_gt_count(2, 3, HOM_REF) == 2
+        assert allelecount.get_gt_count(2, 3, HET) == 3
+        assert allelecount.get_avg_gt_qual(2, 3, HOM_ALT) == 25
+        assert allelecount.get_avg_gt_qual(2, 3, HOM_REF) == 25
+        assert allelecount.get_avg_gt_qual(2, 3, HET) == 50
+
+        allelecount.get_gt_depths_for_coverage(5)
 
 
 class SnvStatTests(unittest.TestCase):
@@ -190,5 +222,5 @@ class VCFcomparisonsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'VCFcomparisonsTest']
+    import sys;sys.argv = ['', 'AlleleCount2DTest', 'TestVcfStats']
     unittest.main()
