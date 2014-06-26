@@ -156,7 +156,7 @@ class IntCounter(Counter):
     def _calculate_dist_range(self, min_, max_, outlier_threshold):
         'it calculates the range for the histogram'
         if ((min_ is not None or max_ is not None) and
-            outlier_threshold is None):
+            outlier_threshold is not None):
             msg = 'You can not pass max, min and outlier_threslhosld to '
             msg += 'calculate distribution range'
             raise ValueError(msg)
