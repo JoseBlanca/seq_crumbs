@@ -9,7 +9,7 @@ from  vcf import Reader
 
 from crumbs.seq import get_name, get_length
 from crumbs.seqio import read_seqs
-from crumbs.statistics import IntCounter
+from crumbs.statistics import IntCounter, IntBoxplot
 
 
 VARSCAN = 'VarScan'
@@ -97,7 +97,7 @@ def calculate_maf(snp, vcf_variant):
     return mafs
 
 
-class VcfStats(object):
+class VcfStats_old(object):
     def __init__(self, vcf_path, gq_threshold=None, selected_samples=None):
         self.reader = Reader(filename=vcf_path)
         self.vcf_variant = get_snpcaller_name(self.reader)
@@ -464,8 +464,8 @@ class _AlleleCounts2D(object):
             yield ref_count, genotypes
 
 
-class VcfStats2(object):
-    def __init__(self, vcf_path, gq_threshold=None):
+class VcfStats(object):
+    def __init__(self, vcf_path, gq_threshold=None, dp_threshold=100):
         self._reader = Reader(filename=vcf_path)
         self._random_reader = Reader(filename=vcf_path)
         self._vcf_variant = get_snpcaller_name(self._reader)
@@ -473,6 +473,10 @@ class VcfStats2(object):
         self._gq_threshold = 0 if gq_threshold is None else gq_threshold
         # sample_counter
         self._sample_counters = {}
+
+        self.dp_threshold = dp_threshold
+        self._gt_qual_cov_counter = {HOM: IntBoxplot(), HET: IntBoxplot()}
+
         for counter_name in SAMPLE_COUNTERS:
             if counter_name not in self._sample_counters:
                 self._sample_counters[counter_name] = {}
@@ -543,8 +547,13 @@ class VcfStats2(object):
                 gt = calldata[GT]
                 acs = sum(calldata[ACS])
                 gt_type = call.gt_type
+
+                gt_broud_type = HET if call.is_het else HOM
+
+                if dp < self.dp_threshold:
+                    self._gt_qual_cov_counter[gt_broud_type].append(dp, gq)
+
                 if gq >= self._gq_threshold:
-                    gt_broud_type = HET if call.is_het else HOM
                     self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][dp] += 1
                     self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gq] += 1
                     self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
@@ -607,3 +616,6 @@ class VcfStats2(object):
     def allelecount2d(self):
         return self._ac2d
 
+    @property
+    def gt_depths_by_gt_and_qual(self):
+        return self._gt_qual_cov_counter

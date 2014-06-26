@@ -10,10 +10,11 @@ import numpy
 from matplotlib.mlab import griddata
 from matplotlib import cm
 
-from vcf_crumbs.statistics import (VcfStats2, HET, HOM, WINDOWS_SIZE, HOM_ALT,
+from vcf_crumbs.statistics import (VcfStats, HET, HOM, WINDOWS_SIZE, HOM_ALT,
                                    HOM_REF)
 from crumbs.plot import  (draw_histogram_in_fhand, draw_histograms, LINE,
-                          get_fig_and_canvas)
+                          get_fig_and_canvas, draw_int_boxplot,
+                          draw_histogram_in_axes)
 from matplotlib.colorbar import make_axes, Colorbar
 
 PLOTS_PER_CHART = 3
@@ -316,8 +317,39 @@ def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
     fhand.flush()
 
 
+def draw_quals_vs_depth(vcf_stats, out_dir):
+
+    fig, canvas = get_fig_and_canvas(num_rows=3, figsize=(15, 30))
+
+    axes = fig.add_subplot(211)
+    draw_int_boxplot(vcf_stats.gt_depths_by_gt_and_qual[HOM], axes=axes,
+                     title='Genotype Qual. distribs vs Genotype Depth (HOMO)',
+                     ylabel='Genotype Quality', xlabel='Genoype Depth')
+
+    axes2 = axes.twinx()
+    distrib = vcf_stats.gt_depths(HOM).calculate_distribution(min_=1,
+                                                   max_=vcf_stats.dp_threshold)
+    draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
+                           kind=LINE, axes=axes2, ylabel='Num. Genotypes',)
+
+    axes = fig.add_subplot(212)
+    draw_int_boxplot(vcf_stats.gt_depths_by_gt_and_qual[HET], axes=axes,
+                     title='Genotype Qual. distribs vs Genotype Depth (HET)',
+                     ylabel='Genotype Quality', xlabel='Genoype Depth')
+
+    axes2 = axes.twinx()
+    distrib = vcf_stats.gt_depths(HET).calculate_distribution(min_=1,
+                                                   max_=vcf_stats.dp_threshold)
+    draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
+                           kind=LINE, axes=axes2, ylabel='Num. Genotypes',)
+
+    fhand = open(join(out_dir, 'gt_qual_distribs_vs_depth.png'), 'w')
+    canvas.print_figure(fhand)
+    fhand.flush()
+
+
 def main():
-    #TODO boxplot qual vs coverate for genotypes and for SNPs
+    # TODO something to look for SNP that are het in most samples
 
     parser = _setup_argparse()
     args = _parse_args(parser)
@@ -325,7 +357,9 @@ def main():
     gq_threshold = args['gq']
     in_vcf_fpath = args['in_fhand'].name
 
-    vcf_stats = VcfStats2(in_vcf_fpath, gq_threshold)
+    vcf_stats = VcfStats(in_vcf_fpath, gq_threshold)
+
+    draw_quals_vs_depth(vcf_stats, out_dir)
 
     draw_gt_hist_vs_allele_counts(vcf_stats, out_dir)
 
