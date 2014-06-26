@@ -10,9 +10,10 @@ from array import array
 
 import numpy
 
-from crumbs.plot import build_histogram, draw_scatter, draw_density_plot,\
-    draw_histogram
-from crumbs.statistics import IntCounter
+from crumbs.plot import (build_histogram, draw_scatter, draw_density_plot,
+                         draw_histogram_in_fhand, draw_histogram_in_axes, LINE,
+                         BAR, draw_histograms, draw_int_boxplot)
+from crumbs.statistics import IntCounter, IntBoxplot
 
 
 class PlotTests(unittest.TestCase):
@@ -44,12 +45,50 @@ class PlotTests(unittest.TestCase):
                  'x': array('f', numpy.random.normal(40, 5, 40000))}
         draw_density_plot(data['x'], data['y'], fhand, n_bins=200)
 
-    def test_draw_histogram(self):
+    def test_draw_histogram_in_fhand(self):
         values = [1, 2, 3, 1, 2, 3, 2, 3, 2, 3, 2, 1, 4]
         fhand = NamedTemporaryFile(suffix='.png')
         counter = IntCounter(values)
         distrib = counter.calculate_distribution()
-        draw_histogram(distrib['counts'], distrib['bin_limits'], fhand=fhand)
+        draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'], fhand=fhand)
+        #raw_input(fhand.name)
+
+    def test_draw_histogram_in_axes(self):
+        values = [1, 2, 3, 1, 2, 3, 2, 3, 2, 3, 2, 1, 4]
+        fhand = NamedTemporaryFile(suffix='.png')
+        counter = IntCounter(values)
+        distrib = counter.calculate_distribution()
+        axes, canvas = draw_histogram_in_axes(distrib['counts'],
+                                             distrib['bin_limits'], kind=LINE,
+                                             distrib_label='test')
+        axes.legend()
+        canvas.print_figure(fhand, format='png')
+        fhand.flush()
+
+    def tests_draw_histograms(self):
+        fhand = NamedTemporaryFile(suffix='.png')
+        values = [1, 2, 3, 1, 2, 3, 2, 3, 2, 3, 2, 1, 4]
+        counters = []
+        counters.append(IntCounter(values))
+        counters.append(IntCounter(values))
+        counters.append(IntCounter(values))
+        titles = ['t1', 't2', 't3']
+        draw_histograms(counters, titles, fhand, plots_per_chart=2)
+        #raw_input(fhand.name)
+
+    def test_int_boxplot(self):
+        box = IntBoxplot()
+        box.append(1, 50)
+        box.append(1, 40)
+        box.append(1, 30)
+        box.append(1, 40)
+        box.append(2, 30)
+        box.append(2, 10)
+        box.append(2, 20)
+        box.append(2, 40)
+
+        fhand = NamedTemporaryFile(suffix='.png')
+        draw_int_boxplot(box, fhand=fhand)
         #raw_input(fhand.name)
 
 if __name__ == "__main__":
