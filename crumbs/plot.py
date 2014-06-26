@@ -312,7 +312,7 @@ def draw_int_boxplot(boxplot, fhand=None, axes=None, title=None,
     if axes is None:
         canvas, axes = get_canvas_and_axes()
         using_given_axes = False
-    elif canvas is not None and fhand is None:
+    elif fhand is None:
         using_given_axes = True
     else:
         msg = 'If an axes is not given the fhand also required'
@@ -326,8 +326,25 @@ def draw_int_boxplot(boxplot, fhand=None, axes=None, title=None,
     # memory, this is why we have reimplemented the boxplot
     #axes.boxplot([list(boxplot.counts[x_val].elements()) for x_val in x_vals])
 
+    # we don't want more than 50 bars
+    max_n_boxes = 40
+    n_boxes = len(x_vals) - 1
+    xpurge = n_boxes // max_n_boxes + 1
+
+    xticks_lables = []
+    xticks = []
     for index, x_val in enumerate(x_vals):
+        if index % xpurge != 0:
+            continue
+
+        xticks_lables.append(str(x_val))
+        xticks.append(index + 0.5)  # we add 0.5 to have the x ticks in  the
+                                    # middle of the bar
+
         intcounter = boxplot.counts[x_val]
+        if intcounter.count < 5:
+            # at least for values are required to calculate the qualties
+            continue
         quart = intcounter.quartiles
         min_ = intcounter.min
         max_ = intcounter.max
@@ -349,19 +366,15 @@ def draw_int_boxplot(boxplot, fhand=None, axes=None, title=None,
     max_x = len(x_vals) - 1
     axes.set_xlim(0, max_x + 1)
 
-    # we add 0.5 to have the x ticks in  the middle of the bar
-    xtick_spacing = max_x // 50 + 1
-    xticks = [x + 0.5 for x in range(0, max_x + 1, xtick_spacing)]
-    xticks_lables = [str(x) for x in range(0, max_x + 1, xtick_spacing)]
     axes.set_xticks(xticks)
     axes.set_xticklabels(xticks_lables)
 
     if title:
         axes.set_title(title)
     if xlabel:
-        axes.set_xlabel(title)
+        axes.set_xlabel(xlabel)
     if ylabel:
-        axes.set_ylabel(title)
+        axes.set_ylabel(ylabel)
 
     if not using_given_axes:
         canvas.print_figure(fhand)
