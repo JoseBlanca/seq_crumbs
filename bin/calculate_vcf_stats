@@ -11,7 +11,7 @@ from matplotlib.mlab import griddata
 from matplotlib import cm
 
 from vcf_crumbs.statistics import (VcfStats, HET, HOM, WINDOWS_SIZE, HOM_ALT,
-                                   HOM_REF)
+                                   HOM_REF, MIN_NUM_SAMPLES)
 from crumbs.plot import  (draw_histogram_in_fhand, draw_histograms, LINE,
                           get_fig_and_canvas, draw_int_boxplot,
                           draw_histogram_in_axes)
@@ -30,6 +30,8 @@ def _setup_argparse():
                         help='Directory to write all output files')
     parser.add_argument('-q', '--gt_qual_threshold', default=0.0, type=float,
             help='Genotype quelity threshold to take into account a genotype')
+    parser.add_argument('-s', '--min_samples', default=6, type=int,
+            help='Min num. called samples to calculate heterocigosity by snv')
     return parser
 
 
@@ -40,6 +42,7 @@ def _parse_args(parser):
     args['in_fhand'] = parsed_args.input
     args['out_dir'] = parsed_args.out_dir
     args['gq'] = parsed_args.gt_qual_threshold
+    args['min_samples'] = parsed_args.min_samples
     if not os.path.exists(args['out_dir']):
         os.mkdir(os.path.abspath(args['out_dir']))
     return args
@@ -188,6 +191,24 @@ def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
     for index, gt_type in enumerate((HOM_REF, HOM_ALT, HET)):
         axes = fig.add_subplot(3, 2, 2 * index + 1)
         title = 'Ref/alt allele count density in {}'.format(desc_gt_type[gt_type])
+
+        try:
+            x, y, gt_counts = zip(*ac2d.get_gt_counts(gt_type, rc_max=rc_max,
+                                                      ac_max=ac_max))
+        except ValueError as error:
+            if 'need more than 0 values to unpack' in error:
+                x, y, gt_counts = None, None, None
+            else:
+                raise
+        axes2 = fig.add_subplot(3, 2, 2 * index + 2)
+        titl2 = 'Ref/alt gt quality average in {}'.format(desc_gt_type[gt_type])
+        if x is None:
+            title += ' (NO DATA)'
+            axes.set_title(title)
+            titl2 += ' (NO DATA)'
+            axes2.set_title(title)
+            continue
+
         kwargs = {'title': title, 'xlabel': xlabel, 'ylabel': ylabel,
                   'aspect': 'equal'}
 
@@ -195,8 +216,6 @@ def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
         xi = numpy.linspace(0, rc_max, 100)
         yi = numpy.linspace(0, ac_max, 100)
 
-        x, y, gt_counts = zip(*ac2d.get_gt_counts(gt_type, rc_max=rc_max,
-                                                  ac_max=ac_max))
         zi = griddata(x, y, gt_counts, xi, yi)
 
         cs = axes.contourf(xi, yi, zi)
@@ -207,20 +226,18 @@ def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
             getattr(axes, 'set_{}'.format(key))(value)
 
         # qt_qual_avg
-        axes = fig.add_subplot(3, 2, 2 * index + 2)
-        titl = 'Ref/alt gt quality average in {}'.format(desc_gt_type[gt_type])
-        kwargs = {'title': titl, 'xlabel': xlabel, 'ylabel': ylabel,
+        kwargs = {'title': titl2, 'xlabel': xlabel, 'ylabel': ylabel,
                   'aspect': 'equal'}
 
         x, y, quals = zip(*ac2d.get_avg_gt_quals(gt_type, rc_max=rc_max,
                                                   ac_max=ac_max))
         zi = griddata(x, y, quals, xi, yi)
-        cs = axes.contourf(xi, yi, zi, **kwargs)
-        color_axes = make_axes(axes)[0]
+        cs = axes2.contourf(xi, yi, zi, **kwargs)
+        color_axes = make_axes(axes2)[0]
         Colorbar(color_axes, cs)
 
         for key, value in kwargs.items():
-            getattr(axes, 'set_{}'.format(key))(value)
+            getattr(axes2, 'set_{}'.format(key))(value)
 
     canvas.print_figure(fhand)
     fhand.flush()
@@ -326,26 +343,47 @@ def draw_quals_vs_depth(vcf_stats, out_dir):
                      title='Genotype Qual. distribs vs Genotype Depth (HOMO)',
                      ylabel='Genotype Quality', xlabel='Genoype Depth')
 
-    axes2 = axes.twinx()
-    distrib = vcf_stats.gt_depths(HOM).calculate_distribution(min_=1,
+    try:
+        distrib = vcf_stats.gt_depths(HOM).calculate_distribution(min_=1,
                                                    max_=vcf_stats.dp_threshold)
-    draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                           kind=LINE, axes=axes2, ylabel='Num. Genotypes',)
+    except RuntimeError:
+        distrib = None
+    if distrib is not None:
+        axes2 = axes.twinx()
+        draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
+                               kind=LINE, axes=axes2, ylabel='Num. Genotypes')
 
     axes = fig.add_subplot(212)
     draw_int_boxplot(vcf_stats.gt_depths_by_gt_and_qual[HET], axes=axes,
                      title='Genotype Qual. distribs vs Genotype Depth (HET)',
                      ylabel='Genotype Quality', xlabel='Genoype Depth')
 
-    axes2 = axes.twinx()
-    distrib = vcf_stats.gt_depths(HET).calculate_distribution(min_=1,
+    try:
+        distrib = vcf_stats.gt_depths(HET).calculate_distribution(min_=1,
                                                    max_=vcf_stats.dp_threshold)
-    draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                           kind=LINE, axes=axes2, ylabel='Num. Genotypes',)
+    except RuntimeError:
+        distrib = None
+    if distrib is not None:
+        axes2 = axes.twinx()
+        draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
+                               kind=LINE, axes=axes2, ylabel='Num. Genotypes',)
 
     fhand = open(join(out_dir, 'gt_qual_distribs_vs_depth.png'), 'w')
     canvas.print_figure(fhand)
     fhand.flush()
+
+
+def draw_het_by_snp(vcf_stats, out_dir):
+    fhand = open(join(out_dir, 'heterozigosity_by_snv_distrib.png'), 'w')
+    title = 'Distribution of the heterozigosity by snv'
+    xlabel = '% heterozigote samples / called samples'
+    ylabel = 'Num. SNVs'
+
+    distrib = vcf_stats.het_by_snp.calculate_distribution()
+
+    draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
+                            title=title, xlabel=xlabel, ylabel=ylabel,
+                            fhand=fhand)
 
 
 def main():
@@ -356,9 +394,14 @@ def main():
     out_dir = args['out_dir']
     gq_threshold = args['gq']
     in_vcf_fpath = args['in_fhand'].name
+    min_samples = args['min_samples']
 
-    vcf_stats = VcfStats(in_vcf_fpath, gq_threshold)
+    vcf_stats = VcfStats(in_vcf_fpath, gq_threshold,
+                         min_samples_for_heterozigosity=min_samples)
+    if len(vcf_stats.samples) >= MIN_NUM_SAMPLES:
+        draw_het_by_snp(vcf_stats, out_dir)
 
+    draw_gt_depths(vcf_stats, out_dir)
     draw_quals_vs_depth(vcf_stats, out_dir)
 
     draw_gt_hist_vs_allele_counts(vcf_stats, out_dir)
@@ -366,7 +409,6 @@ def main():
     draw_snv_densities(vcf_stats, out_dir)
     draw_mafs(vcf_stats, out_dir)
 
-    draw_gt_depths(vcf_stats, out_dir)
     draw_gt_quals(vcf_stats, out_dir)
 
     draw_call_density(vcf_stats, out_dir)

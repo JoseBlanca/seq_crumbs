@@ -464,13 +464,18 @@ class _AlleleCounts2D(object):
             yield ref_count, genotypes
 
 
+MIN_NUM_SAMPLES = 6
+
+
 class VcfStats(object):
-    def __init__(self, vcf_path, gq_threshold=None, dp_threshold=100):
+    def __init__(self, vcf_path, gq_threshold=None, dp_threshold=100,
+                 min_samples_for_heterozigosity=MIN_NUM_SAMPLES):
         self._reader = Reader(filename=vcf_path)
         self._random_reader = Reader(filename=vcf_path)
         self._vcf_variant = get_snpcaller_name(self._reader)
         self._samples = self._reader.samples
         self._gq_threshold = 0 if gq_threshold is None else gq_threshold
+        self._min_samples_for_heterozigosity = min_samples_for_heterozigosity
         # sample_counter
         self._sample_counters = {}
 
@@ -520,7 +525,7 @@ class VcfStats(object):
 
         self._snv_counters[SNV_DENSITY][num_snvs] += 1
 
-    def _add_snv_het_obs_fraction(self, snp, min_num_samples=6):
+    def _add_snv_het_obs_fraction(self, snp, min_num_samples):
         if snp.num_called < min_num_samples:
             return
         het_for_snp = int((snp.num_het / snp.num_called) * 100)
@@ -534,7 +539,8 @@ class VcfStats(object):
             self._add_maf(snp)
             self._add_snv_qual(snp)
             self._add_snv_density(snp)
-            self._add_snv_het_obs_fraction(snp)
+            self._add_snv_het_obs_fraction(snp,
+                                          self._min_samples_for_heterozigosity)
 
             for call in snp.samples:
                 if not call.called:
@@ -591,7 +597,6 @@ class VcfStats(object):
         sample_gt_types = self._get_sample_counter(GT_TYPES, sample)
         het_gt = sample_gt_types[HET]
         all_gts = sample_gt_types.count
-        print het_gt, all_gts
         return het_gt / all_gts
 
     def gt_types(self, sample=None):
@@ -609,8 +614,9 @@ class VcfStats(object):
     def snv_quals(self):
         return self._snv_counters[SNV_QUALS]
 
+    @property
     def het_by_snp(self):
-        return
+        return self._snv_counters[HET_IN_SNP]
 
     @property
     def allelecount2d(self):

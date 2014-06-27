@@ -8,7 +8,8 @@ from vcf_crumbs.statistics import (calc_density_per_chrom,
                                    get_snpcaller_name, VARSCAN, GATK,
                                    calculate_maf, FREEBAYES, VcfStats,
                                    calc_n_bases_in_chrom_with_snp, HOM_REF,
-    VCFcomparisons, VcfStats2, _AlleleCounts2D, HOM_ALT, HET, HOM)
+                                   VCFcomparisons, _AlleleCounts2D, HOM_ALT,
+                                   HET, HOM, VcfStats_old)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
 from subprocess import check_call, CalledProcessError, check_output
@@ -26,14 +27,14 @@ FREEBAYES_MULTI_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_multisample.vcf.gz')
 
 
 class TestVcfStats(unittest.TestCase):
-    def test_vcf_stats(self):
-        vcf_stats = VcfStats(VARSCAN_VCF_PATH, gq_threshold=0)
+    def test_vcf_stats_old(self):
+        vcf_stats = VcfStats_old(VARSCAN_VCF_PATH, gq_threshold=0)
         assert vcf_stats.het_by_sample == \
                         {'upv196': IntCounter({'num_gt': 90, 'num_het': 19}),
                          'pepo': IntCounter({'num_gt': 29, 'num_het': 8}),
                          'mu16': IntCounter({'num_gt': 107, 'num_het': 26})}
         assert vcf_stats.snv_quals.count == 0
-        vcf_stats = VcfStats(VARSCAN_VCF_PATH, gq_threshold=25)
+        vcf_stats = VcfStats_old(VARSCAN_VCF_PATH, gq_threshold=25)
         assert vcf_stats.het_by_sample == \
                         {'upv196': IntCounter({'num_gt': 90, 'num_het': 7}),
                          'pepo': IntCounter({'num_gt': 29, 'num_het': 4}),
@@ -48,14 +49,17 @@ class TestVcfStats(unittest.TestCase):
         assert vcf_stats.genotype_qualities[3] == 25
         assert vcf_stats.variable_gt_per_snp[100] == 50
 
-    def  test_vcf_stats2(self):
-        vcf_stats = VcfStats2(VARSCAN_VCF_PATH)
+    def  test_vcf_stats(self):
+        vcf_stats = VcfStats(VARSCAN_VCF_PATH,
+                             min_samples_for_heterozigosity=2)
         assert vcf_stats.mafs().count == 153
         assert vcf_stats.mafs()[63] == 11
         assert vcf_stats.mafs('pepo').count == 29
         assert vcf_stats.gt_quals(HET)[21] == 2
         assert vcf_stats.gt_quals(HOM)[3] == 25
         assert vcf_stats.gt_quals(HET).count == 53
+        assert (0.28 - vcf_stats.heterozigotes_by_sample('pepo')) < 0.01
+        assert vcf_stats.het_by_snp[0] == 46
 
 
 class AlleleCount2DTest(unittest.TestCase):
