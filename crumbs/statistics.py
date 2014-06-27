@@ -209,6 +209,8 @@ class IntCounter(Counter):
     def calculate_distribution(self, bins=None, min_=None, max_=None,
                                outlier_threshold=None):
         'It returns an histogram with the given range and bin'
+        if self.count == 0:
+            raise RuntimeError('No items in IntCounter')
         distrib = []
         min_, max_ = self._calculate_dist_range(min_, max_, outlier_threshold)
         if min_ is None or max_ is None:

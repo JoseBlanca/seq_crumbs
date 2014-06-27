@@ -167,7 +167,14 @@ def draw_histograms(counters, distrib_labels, fhand, num_cols=2,
                 distrib_label = distrib_labels[counter_index]
             except IndexError:
                 break
-            distrib = counter.calculate_distribution()
+            title = titles[counter_index] if titles else None
+            try:
+                distrib = counter.calculate_distribution()
+            except RuntimeError:
+                axes.set_title(title + ' (NO DATA)')
+                counter_index += 1
+                continue
+
             title = titles[counter_index] if titles else None
             draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
                                    kind=LINE, axes=axes, ylabel=ylabel,
