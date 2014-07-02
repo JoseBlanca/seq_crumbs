@@ -9,7 +9,7 @@ from vcf_crumbs.statistics import (calc_density_per_chrom,
                                    calculate_maf, FREEBAYES, VcfStats,
                                    calc_n_bases_in_chrom_with_snp, HOM_REF,
                                    VCFcomparisons, _AlleleCounts2D, HOM_ALT,
-                                   HET, HOM, VcfStats_old)
+                                   HET, HOM)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
 from subprocess import check_call, CalledProcessError, check_output
@@ -27,28 +27,6 @@ FREEBAYES_MULTI_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_multisample.vcf.gz')
 
 
 class TestVcfStats(unittest.TestCase):
-    def test_vcf_stats_old(self):
-        vcf_stats = VcfStats_old(VARSCAN_VCF_PATH, gq_threshold=0)
-        assert vcf_stats.het_by_sample == \
-                        {'upv196': IntCounter({'num_gt': 90, 'num_het': 19}),
-                         'pepo': IntCounter({'num_gt': 29, 'num_het': 8}),
-                         'mu16': IntCounter({'num_gt': 107, 'num_het': 26})}
-        assert vcf_stats.snv_quals.count == 0
-        vcf_stats = VcfStats_old(VARSCAN_VCF_PATH, gq_threshold=25)
-        assert vcf_stats.het_by_sample == \
-                        {'upv196': IntCounter({'num_gt': 90, 'num_het': 7}),
-                         'pepo': IntCounter({'num_gt': 29, 'num_het': 4}),
-                         'mu16': IntCounter({'num_gt': 107, 'num_het': 18})}
-        assert len(vcf_stats.samples) == 3
-        assert len(vcf_stats.mafs) == 4
-        assert vcf_stats.mafs['all'][63] == 11
-        assert vcf_stats.mafs['pepo'].count == 29
-        assert vcf_stats.snps_per_chromosome['CUUC00423_TC01'] == 26
-        assert len(vcf_stats.call_data[HOM_REF]['x']) == 95
-        assert vcf_stats.genotype_qualities.count == 226
-        assert vcf_stats.genotype_qualities[3] == 25
-        assert vcf_stats.variable_gt_per_snp[100] == 50
-
     def  test_vcf_stats(self):
         vcf_stats = VcfStats(VARSCAN_VCF_PATH,
                              min_samples_for_heterozigosity=2)
