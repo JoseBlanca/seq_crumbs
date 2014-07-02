@@ -1,22 +1,15 @@
 import unittest
 from os.path import join
-import sys
 from tempfile import NamedTemporaryFile
 
 from vcf import Reader
-from vcf_crumbs.statistics import (calc_density_per_chrom,
-                                   get_snpcaller_name, VARSCAN, GATK,
+from vcf_crumbs.statistics import (get_snpcaller_name, VARSCAN, GATK,
                                    calculate_maf, FREEBAYES, VcfStats,
-                                   calc_n_bases_in_chrom_with_snp, HOM_REF,
-                                   VCFcomparisons, _AlleleCounts2D, HOM_ALT,
-                                   HET, HOM)
+                                   HOM_REF, VCFcomparisons, _AlleleCounts2D,
+                                   HOM_ALT, HET, HOM)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
-from subprocess import check_call, CalledProcessError, check_output
-
-from crumbs.utils.file_utils import TemporaryDir
-from crumbs.statistics import IntCounter
-from crumbs.plot import draw_scatter
+from subprocess import check_output
 
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -72,18 +65,6 @@ class SnvStatTests(unittest.TestCase):
         assert get_snpcaller_name(Reader(filename=FREEBAYES_VCF_PATH)) == \
                                                                 FREEBAYES
 
-    def test_calc_densities(self):
-        vcf_stats = VcfStats(VARSCAN_VCF_PATH)
-        densities = calc_density_per_chrom(vcf_stats.snps_per_chromosome,
-                                           open(REF_PATH))
-        assert densities['CUUC00355_TC01'] == 3.74
-
-    def test_calc_n_bases_in_chrom_with_snp(self):
-        vcf_stats = VcfStats(VARSCAN_VCF_PATH)
-        counts = vcf_stats.snps_per_chromosome
-        n_bases = calc_n_bases_in_chrom_with_snp(counts, open(REF_PATH))
-        assert n_bases == 16393
-
     def test_calc_maf(self):
         #varscan
         reader = Reader(filename=VARSCAN_VCF_PATH)
@@ -104,68 +85,6 @@ class SnvStatTests(unittest.TestCase):
         snp = reader.next()
         maf = calculate_maf(snp, vcf_variant=FREEBAYES)
         assert maf == {'all': 1.0, 'pep': 1.0}
-
-    def test_scatter_calldata(self):
-        vcf_stats = VcfStats(FREEBAYES_VCF_PATH)
-        fhand = NamedTemporaryFile(suffix='.png')
-        draw_scatter(vcf_stats.call_data.values(), fhand, xlim=(0, 100),
-                     ylim=(0, 100))
-        #raw_input(fhand.name)
-
-    def test_counts_distribution_in_genotype(self):
-        vcf_stats = VcfStats(VARSCAN_VCF_PATH)
-        results_dp11 = {'0/0': IntCounter({7: 8, 8: 3, 11: 3, 6: 2, 10: 1}),
-                        '0/1': IntCounter({4: 4, 5: 4, 3: 3}),
-                        '1/1': IntCounter({2: 2})}
-        assert vcf_stats.counts_distribution_in_gt[11] == results_dp11
-
-        vcf_stats = VcfStats(FREEBAYES_VCF_PATH)
-        results_dp11 = {
-        '1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1': IntCounter({0: 7, 1: 2,
-                                                               2: 2}),
-         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1/1/1': IntCounter({5: 3}),
-         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1': IntCounter({8: 10}),
-         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1': IntCounter({7: 5}),
-         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1/1': IntCounter({6: 2}),
-         '0/0/0/0/0/0/0/0/0/0/0/0/0/0/1/1/1/1/1/1': IntCounter({4: 4}),
-         '0/0/0/0/0/0/0/0/0/0/1/1/1/1/1/1/1/1/1/1': IntCounter({3: 2, 0: 1})}
-#                         '0/1': IntCounter({8: 10, 7: 5, 4: 4, 5: 3, 3: 2, 6:
-#                                                                    2, 0: 1}),
-#                         '1/1': IntCounter({0: 7, 1: 2, 2: 2})}
-        assert vcf_stats.counts_distribution_in_gt[11] == results_dp11
-        #raw_input(fhand.name)
-
-
-class StatBinTests(unittest.TestCase):
-
-    def test_draw_snv_stats_bin(self):
-        binary = join(BIN_DIR, 'draw_snv_stats')
-        tempdir = TemporaryDir()
-        cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, VARSCAN_VCF_PATH,
-               '-d', '10', '-d', '20']
-        stderr = NamedTemporaryFile()
-        stdout = NamedTemporaryFile()
-        try:
-            check_call(cmd, stderr=stderr, stdout=stdout)
-            #raw_input()
-        except CalledProcessError:
-            sys.stderr.write(open(stderr.name).read())
-            sys.stdout.write(open(stdout.name).read())
-        finally:
-            tempdir.close()
-        #FREEBAYES
-        tempdir = TemporaryDir()
-        cmd = [binary, '-r', REF_PATH, '-o', tempdir.name, FREEBAYES_VCF_PATH,
-               '-d', '10']
-        stderr = NamedTemporaryFile()
-        stdout = NamedTemporaryFile()
-        try:
-            check_call(cmd, stderr=stderr, stdout=stdout)
-        except CalledProcessError:
-            sys.stderr.write(open(stderr.name).read())
-            sys.stdout.write(open(stdout.name).read())
-        finally:
-            tempdir.close()
 
 
 class VCFcomparisonsTest(unittest.TestCase):
@@ -204,5 +123,5 @@ class VCFcomparisonsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'AlleleCount2DTest', 'TestVcfStats']
+    #import sys;sys.argv = ['', 'AlleleCount2DTest', 'TestVcfStats']
     unittest.main()

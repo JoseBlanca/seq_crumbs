@@ -68,8 +68,7 @@ def get_call_data(call, vcf_variant):
             ad = [ad]
     else:
         raise NotImplementedError('Not using one of the supported snp callers')
-    print DP, dp, RC, rd
-    calldata = {GQ: gq, DP: dp, RC: rd, ACS: ad}
+    calldata = {GT: gt, GQ: gq, DP: dp, RC: rd, ACS: ad}
     return calldata
 
 
@@ -297,22 +296,35 @@ class _AlleleCounts2D(object):
 
 
 MIN_NUM_SAMPLES = 6
+REMARKABLE_DEPTHS = (10, 20, 35, 50, 70)
 
 
 class VcfStats(object):
     def __init__(self, vcf_path, gq_threshold=None, dp_threshold=100,
-                 min_samples_for_heterozigosity=MIN_NUM_SAMPLES):
+                 min_samples_for_heterozigosity=MIN_NUM_SAMPLES,
+                 remarkable_coverages=None):
+        if remarkable_coverages is None:
+            remarkable_depths = REMARKABLE_DEPTHS
+        self.remarkable_depths = remarkable_depths
+
         self._reader = Reader(filename=vcf_path)
         self._random_reader = Reader(filename=vcf_path)
+
         self._vcf_variant = get_snpcaller_name(self._reader)
         self._samples = self._reader.samples
         self._gq_threshold = 0 if gq_threshold is None else gq_threshold
         self._min_samples_for_heterozigosity = min_samples_for_heterozigosity
-        # sample_counter
-        self._sample_counters = {}
 
         self.dp_threshold = dp_threshold
         self._gt_qual_cov_counter = {HOM: IntBoxplot(), HET: IntBoxplot()}
+        self._ac2d = _AlleleCounts2D()
+
+        self.sample_dp_coincidence = {1: IntCounter()}
+        for cov in remarkable_depths:
+            self.sample_dp_coincidence[cov] = IntCounter()
+
+        # sample_counter
+        self._sample_counters = {}
 
         for counter_name in SAMPLE_COUNTERS:
             if counter_name not in self._sample_counters:
@@ -328,7 +340,6 @@ class VcfStats(object):
                               SNV_QUALS: IntCounter(),
                               HET_IN_SNP: IntCounter(),
                               SNV_DENSITY: IntCounter()}
-        self._ac2d = _AlleleCounts2D()
         self._calculate()
 
     def _add_maf(self, snp):
@@ -363,6 +374,16 @@ class VcfStats(object):
         het_for_snp = int((snp.num_het / snp.num_called) * 100)
         self._snv_counters[HET_IN_SNP][het_for_snp] += 1
 
+    def _num_samples_higher_equal_dp(self, depth, snp):
+        vcf_variant = self._vcf_variant
+        n_samples = 0
+        for call in snp.samples:
+            calldata = get_call_data(call, vcf_variant)
+            dp = calldata[DP]
+            if dp >= depth:
+                n_samples += 1
+        return n_samples
+
     def _calculate(self):
         snp_counter = 0
         vcf_variant = self._vcf_variant
@@ -373,6 +394,10 @@ class VcfStats(object):
             self._add_snv_density(snp)
             self._add_snv_het_obs_fraction(snp,
                                           self._min_samples_for_heterozigosity)
+
+            for depth, counter in self.sample_dp_coincidence.viewitems():
+                n_samples = self._num_samples_higher_equal_dp(depth, snp)
+                counter[n_samples] += 1
 
             for call in snp.samples:
                 if not call.called:
