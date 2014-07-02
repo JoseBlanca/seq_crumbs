@@ -23,8 +23,7 @@ HOM_ALT = 2
 HOM = 3
 
 DP = 'depth'
-ACS = 'alt_counts'
-RC = 'ref_count'
+ADS = 'allele_depths'
 GQ = 'genotype_quality'
 GT = 'genotype'
 
@@ -41,6 +40,62 @@ def get_snpcaller_name(reader):
     raise NotImplementedError('Can not get snp caller of the vcf file')
 
 
+class _AlleleDepths(object):
+    def __init__(self, call, snp_caller):
+        self._get_counts(call, snp_caller)
+
+    def _get_counts(self, call, snp_caller):
+        if snp_caller == GATK:
+            self._get_counts_gatk(call)
+        elif snp_caller == VARSCAN:
+            self._get_counts_varscan(call)
+        elif snp_caller == FREEBAYES:
+            self._get_counts_freebayes(call)
+        else:
+            msg = 'SNP caller not supported yet'
+            raise NotImplementedError(msg)
+
+    def _get_counts_gatk(self, call):
+        als = [int(a) for a in call.gt_alleles]
+        al_counts = {al_: al_count for al_count, al_ in zip(call.data.AD, als)}
+        self._al_counts = al_counts
+        sum_alt = sum(alc for al, alc in al_counts.items() if al != 0)
+        self._sum_alternatives = sum_alt
+
+    def _get_counts_varscan(self, call):
+        data = call.data
+        rd = data.RD
+        self._al_counts = {0: rd}
+        self._sum_alternatives = data.AD
+
+    def _get_counts_freebayes(self, call):
+        data = call.data
+        rd = data.RO
+
+        ad = data.AO
+        if isinstance(ad, int):
+            ad = [ad]
+        # the number of alternative alleles should be all alleles - 1
+        assert len(call.site.alleles) - 1 == len(ad)
+
+        al_counts = {allele + 1: count for allele, count in enumerate(ad)}
+        self._sum_alternatives = sum(al_counts.values())
+        al_counts[0] = rd
+        self._al_counts = al_counts
+
+    @property
+    def alt_sum_depths(self):
+        return self._sum_alternatives
+
+    @property
+    def ref_depth(self):
+        return self._al_counts.get(0, None)
+
+    @property
+    def allele_depths(self):
+        return self._al_counts
+
+
 def get_call_data(call, vcf_variant):
     data = call.data
     gt = data.GT
@@ -49,26 +104,9 @@ def get_call_data(call, vcf_variant):
     except AttributeError:
         gq = None
     dp = data.DP
-    if vcf_variant == GATK:
-        alleles = [int(a) for a in gt.split('/')]
-        rd = 0
-        ad = []
-        for allele_count, allele in zip(data.AD, alleles):
-            if allele == 0:
-                rd = allele_count
-            else:
-                ad.append(allele_count)
-    elif vcf_variant == VARSCAN:
-        rd = data.RD
-        ad = [data.AD]
-    elif vcf_variant == FREEBAYES:
-        rd = data.RO
-        ad = data.AO
-        if isinstance(ad, int):
-            ad = [ad]
-    else:
-        raise NotImplementedError('Not using one of the supported snp callers')
-    calldata = {GT: gt, GQ: gq, DP: dp, RC: rd, ACS: ad}
+
+    depths = _AlleleDepths(call, snp_caller=vcf_variant)
+    calldata = {GT: gt, GQ: gq, DP: dp, ADS: depths}
     return calldata
 
 
@@ -79,8 +117,9 @@ def calculate_maf(snp, vcf_variant):
     for call in snp.samples:
         if call.called:
             calldata = get_call_data(call, vcf_variant)
-            rd = calldata[RC]
-            ad = sum(calldata[ACS])
+            depths = calldata[ADS]
+            rd = depths.ref_depth
+            ad = depths.alt_sum_depths
             if rd + ad == 0:
                 #freebayes writes some call data although it has no read counts
                 # for this sample. We have to pass those
@@ -406,9 +445,10 @@ class VcfStats(object):
                 calldata = get_call_data(call, vcf_variant)
                 dp = calldata[DP]
                 gq = calldata[GQ]
-                rc = calldata[RC]
+                depths = calldata[ADS]
+                rc = depths.ref_depth
+                acs = depths.alt_sum_depths
                 gt = calldata[GT]
-                acs = sum(calldata[ACS])
                 gt_type = call.gt_type
 
                 gt_broud_type = HET if call.is_het else HOM
