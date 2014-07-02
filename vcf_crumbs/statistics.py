@@ -68,7 +68,7 @@ def get_call_data(call, vcf_variant):
             ad = [ad]
     else:
         raise NotImplementedError('Not using one of the supported snp callers')
-    calldata = {GT: gt, GQ: gq, DP: dp, RC: rd, ACS: ad}
+    calldata = {GQ: gq, DP: dp, RC: rd, ACS: ad}
     return calldata
 
 
