@@ -1,6 +1,7 @@
 import unittest
 from os.path import join
 from tempfile import NamedTemporaryFile
+from subprocess import check_output
 
 from vcf import Reader
 from vcf_crumbs.statistics import (get_snpcaller_name, VARSCAN, GATK,
@@ -9,8 +10,6 @@ from vcf_crumbs.statistics import (get_snpcaller_name, VARSCAN, GATK,
                                    HOM_ALT, HET, HOM)
 
 from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
-from subprocess import check_output
-
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
@@ -123,5 +122,5 @@ class VCFcomparisonsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'AlleleCount2DTest', 'TestVcfStats']
+    #import sys;sys.argv = ['', 'AlleleDepthsTests']
     unittest.main()

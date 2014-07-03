@@ -1,10 +1,6 @@
 from __future__ import division
 
 
-from collections import Counter
-from array import array
-
-
 from  vcf import Reader
 
 from crumbs.seq import get_name, get_length
@@ -105,8 +101,11 @@ def get_call_data(call, vcf_variant):
         gq = None
     dp = data.DP
 
-    depths = _AlleleDepths(call, snp_caller=vcf_variant)
-    calldata = {GT: gt, GQ: gq, DP: dp, ADS: depths}
+    if call.called:
+        depths = _AlleleDepths(call, snp_caller=vcf_variant)
+        calldata = {GT: gt, GQ: gq, DP: dp, ADS: depths}
+    else:
+        calldata = {}
     return calldata
 
 
@@ -417,6 +416,8 @@ class VcfStats(object):
         vcf_variant = self._vcf_variant
         n_samples = 0
         for call in snp.samples:
+            if not call.called:
+                continue
             calldata = get_call_data(call, vcf_variant)
             dp = calldata[DP]
             if dp >= depth:
