@@ -249,7 +249,8 @@ class _AlleleCounts2D(object):
         return self._genotypes
 
     def add(self, rc, acs, gt, gq):
-        if gt != '0/0':
+        gt = tuple(sorted(gt))
+        if gt != ['0', '0']:
             if gt[0] == gt[-1]:
                 self._genotypes[HOM_ALT].add(gt)
             else:
@@ -449,7 +450,6 @@ class VcfStats(object):
                 depths = calldata[ADS]
                 rc = depths.ref_depth
                 acs = depths.alt_sum_depths
-                gt = calldata[GT]
                 gt_type = call.gt_type
 
                 gt_broud_type = HET if call.is_het else HOM
@@ -461,7 +461,7 @@ class VcfStats(object):
                     self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][dp] += 1
                     self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gq] += 1
                     self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
-                self._ac2d.add(rc=rc, acs=acs, gt=gt, gq=gq)
+                self._ac2d.add(rc=rc, acs=acs, gt=call.gt_alleles, gq=gq)
 
     def _get_sample_counter(self, kind, sample=None, gt_broud_type=None):
         counters = self._sample_counters[kind]

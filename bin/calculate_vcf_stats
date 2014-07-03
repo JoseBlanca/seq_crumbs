@@ -295,7 +295,8 @@ def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
                     heights[ref_count] = gt_count
                     bottoms[ref_count] += gt_count
             if any(heights):
-                axes.bar(lefts, heights, bottom=prev_bottoms, label=gt,
+                axes.bar(lefts, heights, bottom=prev_bottoms,
+                         label='/'.join(gt),
                          color=colormap(1. * gt_index / len(gt_bar_counts)),
                          width=0.95)
 
