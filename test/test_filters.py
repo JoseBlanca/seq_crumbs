@@ -83,7 +83,7 @@ class FiltersTest(unittest.TestCase):
 class BinaryTest(unittest.TestCase):
 
     def test_bin_record_filters(self):
-        binary = join(dirname(__file__), '..', 'bin', 'run_vcf_record_filters')
+        binary = join(dirname(__file__), '..', 'bin', 'filter_snvs')
         assert 'usage' in check_output([binary, '-h'])
 
         out_fhand = NamedTemporaryFile()
@@ -101,8 +101,9 @@ class BinaryTest(unittest.TestCase):
             assert gt == 0 or gt == None
             for call in snp:
                 data = get_call_data(call, vcf_variant)
-                if data[GQ] < 20:
-                    assert data[GT] is None
+                gq = data.get(GQ, None)
+                if gq is None or gq < 20:
+                    assert not call.called
 
 if __name__ == "__main__":
     unittest.main()

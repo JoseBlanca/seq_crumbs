@@ -35,14 +35,14 @@ class TestVcfStats(unittest.TestCase):
 class AlleleCount2DTest(unittest.TestCase):
     def test_allele_count2d(self):
         allelecount = _AlleleCounts2D()
-        allelecount.add(2, 3, '0/0', 25)
-        allelecount.add(2, 3, '1/0', 25)
-        allelecount.add(2, 3, '1/1', 25)
-        allelecount.add(2, 3, '0/0', 25)
-        allelecount.add(2, 3, '0/1', 50)
-        allelecount.add(2, 3, '2/2', 25)
-        allelecount.add(2, 3, '1/0', 75)
-        allelecount.add(2, 4, '1/0', 75)
+        allelecount.add(2, 3, (0, 0), 25)
+        allelecount.add(2, 3, (1, 0), 25)
+        allelecount.add(2, 3, (1, 1), 25)
+        allelecount.add(2, 3, (0, 0), 25)
+        allelecount.add(2, 3, (0, 1), 50)
+        allelecount.add(2, 3, (2, 2), 25)
+        allelecount.add(2, 3, (1, 0), 75)
+        allelecount.add(2, 4, (1, 0), 75)
 
         assert allelecount.get_gt_count(2, 3, HOM_ALT) == 2
         assert allelecount.get_gt_count(2, 3, HOM_REF) == 2

@@ -246,7 +246,7 @@ HET_IN_SNP = 'heterozigotes_in_snp'
 class _AlleleCounts2D(object):
     def __init__(self):
         self._data = {}
-        self._genotypes = {HOM_REF: set(['0/0']),
+        self._genotypes = {HOM_REF: set([(0, 0)]),
                            HOM_ALT: set(),
                            HET: set()}
 
@@ -255,8 +255,8 @@ class _AlleleCounts2D(object):
         return self._genotypes
 
     def add(self, rc, acs, gt, gq):
-        gt = tuple(sorted(gt))
-        if gt != ['0', '0']:
+        gt = tuple(map(int, sorted(gt)))
+        if gt != (0, 0):
             if gt[0] == gt[-1]:
                 self._genotypes[HOM_ALT].add(gt)
             else:

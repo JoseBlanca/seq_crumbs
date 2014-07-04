@@ -52,14 +52,6 @@ class AnnotateRecordTests(unittest.TestCase):
                                 0.526315789474)
 
     def test_calculate_alleles(self):
-        records = Reader(filename=VCF_PATH)
-        rec1 = records.next()
-        counts = count_alleles(rec1, sample_names=['pepo', 'mu16'],
-                               vcf_variant=VARSCAN)['mu16']
-        assert counts == {'A': 10}
-        counts = count_alleles(rec1, vcf_variant=VARSCAN)['all']
-        assert counts == {'A': 10, 'C': 9}
-
         records = Reader(filename=GATK_VCF_PATH)
         rec1 = records.next()
         counts = count_alleles(rec1, vcf_variant=GATK)

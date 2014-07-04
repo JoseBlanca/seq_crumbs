@@ -11,7 +11,8 @@ def remove_low_quality_gt(record, gq_threshold, vcf_variant):
     the requierements'''
     for index_, call in enumerate(record):
         call_data = get_call_data(call, vcf_variant)
-        if call_data[GQ] is None or call_data[GQ] < gq_threshold:
+        gq = call_data.get(GQ, None)
+        if gq is None or call_data[GQ] < gq_threshold:
             calldata = make_calldata_tuple(record.FORMAT.split(':'))
             sampdat = []
             for format_def in record.FORMAT.split(':'):
