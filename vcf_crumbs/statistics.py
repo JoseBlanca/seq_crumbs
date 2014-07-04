@@ -38,6 +38,9 @@ def get_snpcaller_name(reader):
 
 class _AlleleDepths(object):
     def __init__(self, call, snp_caller):
+        self._sum_alternatives = None
+        self._al_counts = None
+        self.has_alternative_counts = None
         self._get_counts(call, snp_caller)
 
     def _get_counts(self, call, snp_caller):
@@ -57,12 +60,14 @@ class _AlleleDepths(object):
         self._al_counts = al_counts
         sum_alt = sum(alc for al, alc in al_counts.items() if al != 0)
         self._sum_alternatives = sum_alt
+        self.has_alternative_counts = True
 
     def _get_counts_varscan(self, call):
         data = call.data
         rd = data.RD
         self._al_counts = {0: rd}
         self._sum_alternatives = data.AD
+        self.has_alternative_counts = False
 
     def _get_counts_freebayes(self, call):
         data = call.data
@@ -78,6 +83,7 @@ class _AlleleDepths(object):
         self._sum_alternatives = sum(al_counts.values())
         al_counts[0] = rd
         self._al_counts = al_counts
+        self.has_alternative_counts = True
 
     @property
     def alt_sum_depths(self):

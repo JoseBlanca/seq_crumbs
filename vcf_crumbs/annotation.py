@@ -7,12 +7,13 @@ from __future__ import division
 
 import json
 from os.path import join
+from collections import Counter
 
 from vcf import Reader
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
 
-from vcf_crumbs.statistics import get_call_data, RC, ACS, GQ, choose_samples
+from vcf_crumbs.statistics import get_call_data, GQ, ADS, choose_samples
 from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils import DATA_DIR
@@ -27,7 +28,20 @@ MIN_READS_PER_ALLELE = 3
 
 
 class BaseAnnotator(object):
+    '''Base class for the Filter and Info annotator.
 
+    It can be considered as a mapper for a SNP that modifies its filter and
+    info fields.
+    If an annotator object returns True to is_filter it will write its property
+    name when the __call__ method considers it. If is_filter returns True the
+    annotator won't write in the filter field but only in the info field.
+    It will be also the __call__ method the one that should write in the info
+    field. An annotator could write both in the info and the filter fields at
+    the same time.
+    The properties name and description are used to build the header
+    description for the filters and the info property is used to write the
+    header for the info field.
+    '''
     def __call__(self, record):
         raise NotImplementedError()
 
@@ -68,37 +82,24 @@ def calculate_maf(record, vcf_variant):
 def count_alleles(record, sample_names=None, vcf_variant=None):
     choosen_samples = choose_samples(record, sample_names)
     counts = {}
-    alleles = _str_alleles(record)
+    str_alleles = _str_alleles(record)
     for call in choosen_samples:
-        if call.gt_bases is None:
+        if not call.called:
             continue
-        if call.sample not in counts:
-            counts[call.sample] = {}
-#         if call.gt_alleles == ['1', '2']:
-#             msg = "This code assumes that there aren't genotypes with both"
-#             msg += " alleles being alternate alleles"
-#             print record.CHROM, record.POS
-#             raise NotImplementedError(msg)
-        for genotype in call.gt_alleles:
-            genotype = int(genotype)
-            allele = alleles[genotype]
-            if allele not in counts:
-                counts[call.sample][allele] = 0
-            call_data = get_call_data(call, vcf_variant)
-            if genotype == 0:
-                allele_counts = call_data[RC]
-            else:
-                try:
-                    allele_counts = call_data[ACS][genotype - 1]
-                except IndexError:
-                    allele_counts = call_data[ACS][0]
-            try:
-                counts[call.sample][allele] += allele_counts
-            except TypeError:
-                #print allele_counts
-                raise
-        if not counts[call.sample]:
-            del counts[call.sample]
+
+        call_data = get_call_data(call, vcf_variant)
+        allele_depths = call_data[ADS]
+        if not allele_depths.has_alternative_counts:
+            msg = 'The given SNP record has no alternative alleles counts'
+            raise ValueError(msg)
+
+        sample = call.sample
+        if sample not in counts:
+            counts[sample] = Counter()
+
+        for int_al, count in allele_depths.allele_depths.items():
+            counts[sample][str_alleles[int_al]] += count
+
     if not sample_names:
         return aggregate_allele_counts(counts)
 

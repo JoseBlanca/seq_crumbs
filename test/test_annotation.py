@@ -620,7 +620,7 @@ class TestInfoMappers(unittest.TestCase):
 
 class BinaryTest(unittest.TestCase):
     def test_run_binary(self):
-        binary = join(dirname(__file__), '..', 'bin', 'run_vcf_filters')
+        binary = join(dirname(__file__), '..', 'bin', 'annotate_snvs')
         assert 'usage' in check_output([binary, '-h'])
 
         config = '''[1]
