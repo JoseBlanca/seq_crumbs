@@ -59,23 +59,23 @@ def draw_snv_densities(vcf_stats, out_dir):
                             ylabel='Num. SNVs', fhand=fhand)
 
 
-def draw_mafs(vcf_stats, out_dir):
-    fhand = open(join(out_dir, 'maf_samples.png'), 'w')
+def draw_mafs_dp(vcf_stats, out_dir):
+    fhand = open(join(out_dir, 'maf_dp_samples.png'), 'w')
     counters = []
     distrib_labels = []
     for sample in vcf_stats.samples:
         counters.append(vcf_stats.mafs(sample=sample))
         distrib_labels.append(sample)
-    titles = ['MAF distribution'] * len(counters)
-    xlabel = 'MAF x 100'
+    titles = ['MAF distribution (Depth based)'] * len(counters)
+    xlabel = 'MAF (depth based) x 100'
     ylabel = 'Num. SNVs'
     draw_histograms(counters, distrib_labels=distrib_labels, fhand=fhand,
                     xlabel=xlabel, ylabel=ylabel, titles=titles)
 
     #all_together
-    fhand = open(join(out_dir, 'maf_all_samples.png'), 'w')
+    fhand = open(join(out_dir, 'maf_dp_all_samples.png'), 'w')
     distrib = vcf_stats.mafs().calculate_distribution()
-    title = 'MAF distribution all samples'
+    title = 'MAF (depth based) distribution. All samples'
     draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
                             title=title, xlabel=xlabel, ylabel=ylabel,
                             fhand=fhand, kind=LINE)
@@ -436,7 +436,7 @@ def main():
     draw_gt_hist_vs_allele_counts(vcf_stats, out_dir)
 
     draw_snv_densities(vcf_stats, out_dir)
-    draw_mafs(vcf_stats, out_dir)
+    draw_mafs_dp(vcf_stats, out_dir)
 
     draw_gt_quals(vcf_stats, out_dir)
 

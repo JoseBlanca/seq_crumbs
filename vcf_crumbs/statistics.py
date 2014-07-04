@@ -115,7 +115,7 @@ def get_call_data(call, vcf_variant):
     return calldata
 
 
-def calculate_maf(snp, vcf_variant):
+def calculate_maf_dp(snp, vcf_variant):
     total_ad = 0
     total_rd = 0
     mafs = {}
@@ -389,8 +389,8 @@ class VcfStats(object):
                               SNV_DENSITY: IntCounter()}
         self._calculate()
 
-    def _add_maf(self, snp):
-        mafs = calculate_maf(snp, vcf_variant=self._vcf_variant)
+    def _add_maf_dp(self, snp):
+        mafs = calculate_maf_dp(snp, vcf_variant=self._vcf_variant)
         if mafs:
             for sample, maf in mafs.items():
                 if maf:
@@ -438,7 +438,7 @@ class VcfStats(object):
         vcf_variant = self._vcf_variant
         for snp in self._reader:
             snp_counter += 1
-            self._add_maf(snp)
+            self._add_maf_dp(snp)
             self._add_snv_qual(snp)
             self._add_snv_density(snp)
             self._add_snv_het_obs_fraction(snp,
