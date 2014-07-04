@@ -146,14 +146,18 @@ def draw_histogram_in_fhand(counts, bin_limits, title=None, xlabel=None,
     fhand.flush()
 
 
-def draw_histograms(counters, distrib_labels, fhand, num_cols=2,
-                    plots_per_chart=3, xlabel=None, ylabel=None, titles=None):
+def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
+                    plots_per_chart=3, xlabel=None, ylabel=None, titles=None,
+                    kind=LINE):
+    if plots_per_chart > 1 and kind == BAR:
+        raise ValueError('if kind is BAR only one plot per chart is allowed')
+
     plot_format = _guess_output_for_matplotlib(fhand)
     num_plots, mod = divmod(len(counters), plots_per_chart)
     if mod != 0:
         num_plots += 1
 
-    num_rows, mod = divmod(num_plots, 2)
+    num_rows, mod = divmod(num_plots, num_cols)
     if mod != 0:
         num_rows += 1
     fig, canvas = get_fig_and_canvas(num_rows=num_rows, num_cols=num_cols)
@@ -164,7 +168,10 @@ def draw_histograms(counters, distrib_labels, fhand, num_cols=2,
         for i in range(plots_per_chart):
             try:
                 counter = counters[counter_index]
-                distrib_label = distrib_labels[counter_index]
+                if distrib_labels is None:
+                    distrib_label = None
+                else:
+                    distrib_label = distrib_labels[counter_index]
             except IndexError:
                 break
             title = titles[counter_index] if titles else None
@@ -174,15 +181,25 @@ def draw_histograms(counters, distrib_labels, fhand, num_cols=2,
                 axes.set_title(title + ' (NO DATA)')
                 counter_index += 1
                 continue
+            except AttributeError as error:
+                # if distributions is None
+                err_msg = "'NoneType' object has no attribute "
+                err_msg += "'calculate_distribution'"
+                if err_msg in error:
+                    axes.set_title(title + ' (NO DATA)')
+                    counter_index += 1
+                    continue
+                raise
 
             title = titles[counter_index] if titles else None
             draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                                   kind=LINE, axes=axes, ylabel=ylabel,
+                                   kind=kind, axes=axes, ylabel=ylabel,
                                    distrib_label=distrib_label, xlabel=xlabel,
                                    title=title)
             counter_index += 1
 
-        axes.legend()
+        if distrib_labels is not None:
+            axes.legend()
 
     canvas.print_figure(fhand, format=plot_format)
     fhand.flush()
