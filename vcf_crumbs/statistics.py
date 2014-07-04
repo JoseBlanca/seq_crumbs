@@ -368,6 +368,8 @@ class VcfStats(object):
         for cov in remarkable_depths:
             self.sample_dp_coincidence[cov] = IntCounter()
 
+        self.called_gts = IntCounter()
+
         # sample_counter
         self._sample_counters = {}
 
@@ -446,9 +448,11 @@ class VcfStats(object):
                 n_samples = self._num_samples_higher_equal_dp(depth, snp)
                 counter[n_samples] += 1
 
+            n_gt_called = 0
             for call in snp.samples:
                 if not call.called:
                     continue
+                n_gt_called += 1
                 sample_name = call.sample
                 calldata = get_call_data(call, vcf_variant)
                 dp = calldata[DP]
@@ -468,6 +472,7 @@ class VcfStats(object):
                     self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gq] += 1
                     self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
                 self._ac2d.add(rc=rc, acs=acs, gt=call.gt_alleles, gq=gq)
+            self.called_gts[n_gt_called] += 1
 
     def _get_sample_counter(self, kind, sample=None, gt_broud_type=None):
         counters = self._sample_counters[kind]

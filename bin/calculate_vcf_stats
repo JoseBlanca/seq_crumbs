@@ -296,7 +296,7 @@ def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
                     bottoms[ref_count] += gt_count
             if any(heights):
                 axes.bar(lefts, heights, bottom=prev_bottoms,
-                         label='/'.join(gt),
+                         label='/'.join(map(str, gt)),
                          color=colormap(1. * gt_index / len(gt_bar_counts)),
                          width=0.95)
 
@@ -391,13 +391,18 @@ def draw_het_by_snp(vcf_stats, out_dir):
                             fhand=fhand)
 
 
-def draw_sample_dp_coincidence(vcf_stats, out_dir):
-    fhand = open(join(out_dir, 'sample_dp_coincidence.png'), 'w')
+def draw_missing_data(vcf_stats, out_dir):
+    fhand = open(join(out_dir, 'missing_data.png'), 'w')
 
-    title = 'Num. SNPs read a depth >= than {} in several samples '
     counters = []
     titles = []
 
+    # distribution of number of called SNPs
+    counters.append(vcf_stats.called_gts)
+    titles.append('Num. SNPs called in the given number of samples')
+
+    # distributions of SNPs read with a depth higher than x
+    title = 'Num. SNPs read a depth >= than {} in the given number of samples'
     for depth in sorted(vcf_stats.sample_dp_coincidence.viewkeys()):
         counters.append(vcf_stats.sample_dp_coincidence[depth])
         titles.append(title.format(depth))
@@ -420,7 +425,7 @@ def main():
     vcf_stats = VcfStats(in_vcf_fpath, gq_threshold,
                          min_samples_for_heterozigosity=min_samples)
 
-    draw_sample_dp_coincidence(vcf_stats, out_dir)
+    draw_missing_data(vcf_stats, out_dir)
 
     if len(vcf_stats.samples) >= MIN_NUM_SAMPLES:
         draw_het_by_snp(vcf_stats, out_dir)
