@@ -660,6 +660,7 @@ class BinaryTest(unittest.TestCase):
         assert 'cs60_0.70\t' in result
         assert 'CAP=MmeI' in result
         assert 'HIS1=True' in result
+        assert '\tPASS\t' in result
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'AnnotatorsTest.test_is_variable_annotator']

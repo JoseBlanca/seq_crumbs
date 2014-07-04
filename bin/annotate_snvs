@@ -112,6 +112,8 @@ def main():
     for record in reader:
         for mapper in mappers:
             record = mapper(record)
+        if record.FILTER is None:
+            record.FILTER = []
         writer.write_record(record)
     writer.close()
 if __name__ == '__main__':
