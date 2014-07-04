@@ -1,5 +1,6 @@
 from __future__ import division
 
+from collections import Counter
 
 from  vcf import Reader
 
@@ -141,6 +142,22 @@ def calculate_maf_dp(snp, vcf_variant):
     return mafs
 
 
+def calculate_maf_and_mac(snp):
+    n_chroms_sampled = 0
+    allele_counts = Counter()
+    for call in snp.samples:
+        if call.called:
+            genotype = call.gt_alleles
+            n_chroms_sampled += len(genotype)
+            for al in genotype:
+                allele_counts[al] += 1
+    if not n_chroms_sampled:
+        return None
+    maf = max(allele_counts.values()) / n_chroms_sampled
+    mac = max(allele_counts.values())
+    return maf, mac
+
+
 def _get_seq_lengths(fhand):
     return {get_name(seq): get_length(seq) for seq in read_seqs([fhand])}
 
@@ -232,11 +249,14 @@ class VCFcomparisons(object):
 
 WINDOWS_SIZE = 50
 MAFS = 'mafs'
+MACS = 'macs'
+MAFS_DP = 'mafs_detph'
 GT_DEPTHS = 'gt_depths'
 GT_QUALS = 'gt_quals'
 HETEROZIGOSITY = 'heterozigosity'
 GT_TYPES = 'gt_types'
-SAMPLE_COUNTERS = (MAFS, GT_DEPTHS, GT_QUALS, HETEROZIGOSITY, GT_TYPES)
+SAMPLE_COUNTERS = (MAFS_DP, GT_DEPTHS, GT_QUALS, HETEROZIGOSITY,
+                   GT_TYPES)
 
 SNV_QUALS = 'snv_quals'
 SNV_DENSITY = 'snv_density'
@@ -384,21 +404,31 @@ class VcfStats(object):
                 self._sample_counters[counter_name][sample] = counters
 
         self._snv_counters = {MAFS: IntCounter(),
+                              MACS: IntCounter(),
+                              MAFS_DP: IntCounter(),
                               SNV_QUALS: IntCounter(),
                               HET_IN_SNP: IntCounter(),
                               SNV_DENSITY: IntCounter()}
         self._calculate()
+
+    def _add_maf_and_mac(self, snp):
+        maf, mac = calculate_maf_and_mac(snp)
+        if maf:
+            maf = int(round(maf * 100))
+            self._snv_counters[MAFS][maf] += 1
+        if mac:
+            self._snv_counters[MACS][mac] += 1
 
     def _add_maf_dp(self, snp):
         mafs = calculate_maf_dp(snp, vcf_variant=self._vcf_variant)
         if mafs:
             for sample, maf in mafs.items():
                 if maf:
-                    maf = int(maf * 100)
+                    maf = int(round(maf * 100))
                     if sample == 'all':
-                        self._snv_counters[MAFS][maf] += 1
+                        self._snv_counters[MAFS_DP][maf] += 1
                     else:
-                        self._sample_counters[MAFS][sample][maf] += 1
+                        self._sample_counters[MAFS_DP][sample][maf] += 1
 
     def _add_snv_qual(self, snp):
         snv_qual = snp.QUAL
@@ -439,6 +469,7 @@ class VcfStats(object):
         for snp in self._reader:
             snp_counter += 1
             self._add_maf_dp(snp)
+            self._add_maf_and_mac(snp)
             self._add_snv_qual(snp)
             self._add_snv_density(snp)
             self._add_snv_het_obs_fraction(snp,
@@ -489,10 +520,16 @@ class VcfStats(object):
                 all_counters += sample_counter[gt_broud_type]
         return all_counters
 
-    def mafs(self, sample=None):
+    def macs(self):
+        return self._snv_counters[MACS]
+
+    def mafs(self):
+        return self._snv_counters[MAFS]
+
+    def mafs_dp(self, sample=None):
         if sample is None:
-            return self._snv_counters[MAFS]
-        return self._get_sample_counter(MAFS, sample)
+            return self._snv_counters[MAFS_DP]
+        return self._get_sample_counter(MAFS_DP, sample)
 
     def gt_depths(self, gt_broud_type, sample=None):
         return self._get_sample_counter(GT_DEPTHS, sample,

@@ -59,26 +59,43 @@ def draw_snv_densities(vcf_stats, out_dir):
                             ylabel='Num. SNVs', fhand=fhand)
 
 
-def draw_mafs_dp(vcf_stats, out_dir):
-    fhand = open(join(out_dir, 'maf_dp_samples.png'), 'w')
-    counters = []
-    distrib_labels = []
-    for sample in vcf_stats.samples:
-        counters.append(vcf_stats.mafs(sample=sample))
-        distrib_labels.append(sample)
-    titles = ['MAF distribution (Depth based)'] * len(counters)
+def draw_mafs(vcf_stats, out_dir, maf_kind):
+    names = {'mafs_dp': 'MAF (depth based)',
+             'mafs': 'MAF (genotype based)',
+             'macs': 'MAC (genotype based)'}
+    name = names[maf_kind]
+    fbases = {'mafs_dp': 'maf_dp_',
+             'mafs': 'maf_gt_',
+             'macs': 'mac_gt_'}
+
+    maf_method = getattr(vcf_stats, maf_kind)
     xlabel = 'MAF (depth based) x 100'
     ylabel = 'Num. SNVs'
-    draw_histograms(counters, distrib_labels=distrib_labels, fhand=fhand,
-                    xlabel=xlabel, ylabel=ylabel, titles=titles)
+    if maf_kind == 'mafs_dp':
+        fhand = open(join(out_dir, fbases[maf_kind] + 'samples.png'), 'w')
+        counters = []
+        distrib_labels = []
+        for sample in vcf_stats.samples:
+            counters.append(maf_method(sample=sample))
+            distrib_labels.append(sample)
+
+        titles = [name + ' distribution'] * len(counters)
+        draw_histograms(counters, distrib_labels=distrib_labels, fhand=fhand,
+                        xlabel=xlabel, ylabel=ylabel, titles=titles)
 
     #all_together
-    fhand = open(join(out_dir, 'maf_dp_all_samples.png'), 'w')
-    distrib = vcf_stats.mafs().calculate_distribution()
-    title = 'MAF (depth based) distribution. All samples'
+    fhand = open(join(out_dir, fbases[maf_kind] + 'all_samples.png'), 'w')
+    distrib = maf_method().calculate_distribution()
+    title = name + ' distribution. All samples'
     draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
                             title=title, xlabel=xlabel, ylabel=ylabel,
                             fhand=fhand, kind=LINE)
+
+
+def draw_maf_and_mac(vcf_stats, out_dir):
+    draw_mafs(vcf_stats, out_dir, maf_kind='mafs_dp')
+    draw_mafs(vcf_stats, out_dir, maf_kind='mafs')
+    draw_mafs(vcf_stats, out_dir, maf_kind='macs')
 
 
 def grouper(n, iterable, padvalue=None):
@@ -436,7 +453,7 @@ def main():
     draw_gt_hist_vs_allele_counts(vcf_stats, out_dir)
 
     draw_snv_densities(vcf_stats, out_dir)
-    draw_mafs_dp(vcf_stats, out_dir)
+    draw_maf_and_mac(vcf_stats, out_dir)
 
     draw_gt_quals(vcf_stats, out_dir)
 
