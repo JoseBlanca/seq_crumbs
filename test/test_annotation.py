@@ -28,7 +28,11 @@ GATK_VCF_PATH = join(TEST_DATA_DIR, 'gatk_sample.vcf.gz')
 FREEBAYES_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz')
 FREEBAYES2_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample2.vcf.gz')
 FREEBAYES_MULTI_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_multisample2.vcf.gz')
-FREEBAYES3_VCF_PATH = join(TEST_DATA_DIR, 'variable_in_sample_5.vcf.gz')
+FREEBAYES4_VCF_PATH = join(TEST_DATA_DIR, 'variable_in_sample_5.vcf.gz')
+FREEBAYES3_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample3.vcf.gz')
+FREEBAYES5_VCF_PATH = join(TEST_DATA_DIR, 'freebayes5.vcf.gz')
+FREEBAYES6_VCF_PATH = join(TEST_DATA_DIR, 'freebayes6.vcf.gz')
+REF_FREEBAYES = join(TEST_DATA_DIR, 'calabaza_selection.fasta')
 
 
 def floats_are_equal(num1, num2):
@@ -46,10 +50,12 @@ def floats_are_equal(num1, num2):
 class AnnotateRecordTests(unittest.TestCase):
 
     def test_mac_calcule(self):
-        records = Reader(filename=VCF_PATH)
+        records = Reader(filename=FREEBAYES_VCF_PATH)
+        records.next()
+        records.next()
         rec1 = records.next()
-        assert floats_are_equal(calculate_maf(rec1, vcf_variant=VARSCAN),
-                                0.526315789474)
+        assert floats_are_equal(calculate_maf(rec1, vcf_variant=FREEBAYES),
+                                0.75)
 
     def test_calculate_alleles(self):
         records = Reader(filename=GATK_VCF_PATH)
@@ -81,32 +87,36 @@ class FakeClass(object):
 class AnnotatorsTest(unittest.TestCase):
 
     def test_close_to_filter(self):
-        records = Reader(filename=VCF_PATH)
+        records = Reader(filename=FREEBAYES_VCF_PATH)
+        records.next()
         rec1 = records.next()
-        filter_ = CloseToSnv(distance=60, max_maf=None,
-                                   vcf_fpath=VCF_PATH)
-        filter_.vcf_variant = VARSCAN
+        filter_ = CloseToSnv(distance=300, max_maf=None,
+                             vcf_fpath=FREEBAYES_VCF_PATH)
+        filter_.vcf_variant = FREEBAYES
         rec1 = filter_(rec1)
         assert filter_.name in rec1.FILTER
 
-        records = Reader(filename=VCF_PATH)
+        records = Reader(filename=FREEBAYES_VCF_PATH)
+        records.next()
         rec1 = records.next()
-        filter_ = CloseToSnv(distance=60, max_maf=0.5,
-                                   vcf_fpath=VCF_PATH)
-        filter_.vcf_variant = VARSCAN
+        filter_ = CloseToSnv(distance=300, max_maf=0.5,
+                             vcf_fpath=FREEBAYES_VCF_PATH)
+        filter_.vcf_variant = FREEBAYES
         rec1 = filter_(rec1)
-        assert not filter_.name in rec1.FILTER
+        assert rec1.FILTER is None
 
-        records = Reader(filename=VCF_PATH)
+        records = Reader(filename=FREEBAYES_VCF_PATH)
+        records.next()
         rec1 = records.next()
-        filter_ = CloseToSnv(distance=60, max_maf=0.6,
-                                   vcf_fpath=VCF_PATH)
-        filter_.vcf_variant = VARSCAN
+        filter_ = CloseToSnv(distance=300, max_maf=0.8,
+                             vcf_fpath=FREEBAYES_VCF_PATH)
+        filter_.vcf_variant = FREEBAYES
         rec1 = filter_(rec1)
         assert filter_.name in rec1.FILTER
-        assert filter_.name == 'cs60_0.60'
-        desc = 'The snv is closer than 60 nucleotides to another snv, '
-        desc += 'with maf:0.60'
+
+        assert filter_.name == 'cs300_0.80'
+        desc = 'The snv is closer than 300 nucleotides to another snv, '
+        desc += 'with maf:0.80'
         assert desc in filter_.description
 
     def test_high_variable_region_filter(self):
@@ -176,15 +186,18 @@ class AnnotatorsTest(unittest.TestCase):
         assert  desc in filter_.description
 
     def test_maf_limit(self):
-        records = Reader(filename=VCF_PATH)
+        records = Reader(filename=FREEBAYES_VCF_PATH)
+        records.next()
+        records.next()
         rec1 = records.next()
-        filter_ = MafLimit(max_maf=0.7)
-        filter_.vcf_variant = VARSCAN
+        filter_ = MafLimit(max_maf=0.8)
+        filter_.vcf_variant = FREEBAYES
         rec1 = filter_(rec1)
-        assert not filter_.name in rec1.FILTER
+        assert rec1.FILTER is None
+        #assert not filter_.name in rec1.FILTER
 
         filter_ = MafLimit(max_maf=0.5)
-        filter_.vcf_variant = VARSCAN
+        filter_.vcf_variant = FREEBAYES
         rec1 = filter_(rec1)
         assert filter_.name in rec1.FILTER
 
@@ -288,39 +301,7 @@ class AnnotatorsTest(unittest.TestCase):
         assert f.name in record.FILTER
 
     def test_is_variable_annotator(self):
-        snvs = Reader(filename=VCF_PATH)
-        snv = snvs.next()
-        annotator = IsVariableAnnotator(max_maf=0.7,
-                                        samples=['mu16', 'upv196'],
-                                        filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = annotator(snv)
-        info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'True'
-
-        # in union False
-        snvs = Reader(filename=VCF_PATH)
-        snv = snvs.next()
-        annotator = IsVariableAnnotator(max_maf=0.7,
-                                        samples=['mu16', 'upv196'],
-                                        in_union=False, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = annotator(snv)
-        info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'False'
-
-        # in all_groups False
-        snvs = Reader(filename=VCF_PATH)
-        snv = snvs.next()
-        annotator = IsVariableAnnotator(max_maf=0.7, filter_id=1,
-                                        samples=['mu16', 'upv196'],
-                                        in_union=False, in_all_groups=False)
-        annotator.vcf_variant = VARSCAN
-        snv = annotator(snv)
-        info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'False'
-
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         annotator = IsVariableAnnotator(max_maf=None, samples=['rg1'],
                                         in_union=False,
                                         in_all_groups=True,
@@ -328,7 +309,7 @@ class AnnotatorsTest(unittest.TestCase):
                                         min_reads=None,
                                         min_reads_per_allele=1,
                                         filter_id=1)
-        annotator.vcf_variant = VARSCAN
+        annotator.vcf_variant = FREEBAYES
         snv = annotator(snv)
         info_id = annotator.info_id
         assert snv.INFO[info_id] == 'True'
@@ -339,8 +320,8 @@ class AnnotatorsTest(unittest.TestCase):
                                         min_reads=None, min_reads_per_allele=1,
                                         filter_id=1)
 
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'True'
 
@@ -348,8 +329,8 @@ class AnnotatorsTest(unittest.TestCase):
                                         in_union=True, in_all_groups=True,
                                         reference_free=True, min_reads=None,
                                         min_reads_per_allele=2, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'None'
 
@@ -357,8 +338,8 @@ class AnnotatorsTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'False'
 
@@ -366,8 +347,8 @@ class AnnotatorsTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'None'
 
@@ -375,8 +356,8 @@ class AnnotatorsTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'True'
 
@@ -384,8 +365,8 @@ class AnnotatorsTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=False, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'None'
 
@@ -393,8 +374,8 @@ class AnnotatorsTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=False, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'True'
 
@@ -402,8 +383,8 @@ class AnnotatorsTest(unittest.TestCase):
                              in_union=True, in_all_groups=True,
                              reference_free=True, min_reads=None,
                              min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'False'
 
@@ -411,8 +392,8 @@ class AnnotatorsTest(unittest.TestCase):
                                         in_union=True, reference_free=True,
                                         max_maf=None, min_reads=1,
                                         min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'True'
 
@@ -420,8 +401,8 @@ class AnnotatorsTest(unittest.TestCase):
                                         in_union=True, reference_free=False,
                                         max_maf=None, min_reads=1,
                                         min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'True'
 
@@ -429,8 +410,8 @@ class AnnotatorsTest(unittest.TestCase):
                                         in_union=False,
                                         reference_free=False, max_maf=None,
                                         min_reads=1, min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'True'
 
@@ -438,8 +419,8 @@ class AnnotatorsTest(unittest.TestCase):
                                         in_union=True, reference_free=True,
                                         max_maf=None, min_reads=1,
                                         min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'False'
 
@@ -447,8 +428,8 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'True'
 
@@ -456,8 +437,8 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=False, reference_free=True,
                                 max_maf=None, min_reads=1,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snv = Reader(filename=VARI_VCF_PATH).next()
+        annotator.vcf_variant = FREEBAYES
+        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
         snv = annotator(snv)
         assert snv.INFO[info_id] == 'False'
 
@@ -465,8 +446,8 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snvs = Reader(filename=VARI_VCF_PATH)
+        annotator.vcf_variant = FREEBAYES
+        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
         snv = annotator(snvs.next())
         assert snv.INFO[info_id] == 'None'
 
@@ -474,8 +455,8 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snvs = Reader(filename=VARI_VCF_PATH)
+        annotator.vcf_variant = FREEBAYES
+        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
         snvs.next()
         snv = annotator(snvs.next())
         assert snv.INFO[info_id] == 'None'
@@ -484,18 +465,50 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=True, reference_free=True,
                                 max_maf=None, min_reads=1,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snvs = Reader(filename=VARI_VCF_PATH)
+        annotator.vcf_variant = FREEBAYES
+        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
         snvs.next()
         snv = annotator(snvs.next())
         assert snv.INFO[info_id] == 'None'
+
+        snvs = Reader(filename=FREEBAYES5_VCF_PATH)
+        snv = snvs.next()
+        annotator = IsVariableAnnotator(max_maf=0.7,
+                                        samples=['mu16', 'upv196'],
+                                        filter_id=1)
+        annotator.vcf_variant = FREEBAYES
+        snv = annotator(snv)
+        info_id = annotator.info_id
+        assert snv.INFO[info_id] == 'True'
+
+        # in union False
+        snvs = Reader(filename=FREEBAYES5_VCF_PATH)
+        snv = snvs.next()
+        annotator = IsVariableAnnotator(max_maf=0.7,
+                                        samples=['mu16', 'upv196'],
+                                        in_union=False, filter_id=1)
+        annotator.vcf_variant = FREEBAYES
+        snv = annotator(snv)
+        info_id = annotator.info_id
+        assert snv.INFO[info_id] == 'False'
+
+        # in all_groups False
+        snvs = Reader(filename=FREEBAYES5_VCF_PATH)
+        snv = snvs.next()
+        annotator = IsVariableAnnotator(max_maf=0.7, filter_id=1,
+                                        samples=['mu16', 'upv196'],
+                                        in_union=False, in_all_groups=False)
+        annotator.vcf_variant = FREEBAYES
+        snv = annotator(snv)
+        info_id = annotator.info_id
+        assert snv.INFO[info_id] == 'False'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
                                 in_union=True, reference_free=True,
                                 max_maf=0.95, min_reads=50,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snvs = Reader(filename=VARI_VCF_PATH)
+        annotator.vcf_variant = FREEBAYES
+        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
         snvs.next()
         snvs.next()
         snv = annotator(snvs.next())
@@ -505,8 +518,8 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=True, reference_free=True,
                                 max_maf=0.6, min_reads=50,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snvs = Reader(filename=VARI_VCF_PATH)
+        annotator.vcf_variant = FREEBAYES
+        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
         snvs.next()
         snvs.next()
         snv = annotator(snvs.next())
@@ -516,8 +529,8 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=True, reference_free=True,
                                 max_maf=0.95, min_reads=200,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snvs = Reader(filename=VARI_VCF_PATH)
+        annotator.vcf_variant = FREEBAYES
+        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
         snvs.next()
         snvs.next()
         snv = annotator(snvs.next())
@@ -527,8 +540,8 @@ class AnnotatorsTest(unittest.TestCase):
                                 in_union=True, reference_free=True,
                                 max_maf=0.6, min_reads=200,
                                 min_reads_per_allele=1)
-        annotator.vcf_variant = VARSCAN
-        snvs = Reader(filename=VARI_VCF_PATH)
+        annotator.vcf_variant = FREEBAYES
+        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
         snvs.next()
         snvs.next()
         snv = annotator(snvs.next())
@@ -557,7 +570,7 @@ class AnnotatorsTest(unittest.TestCase):
 class TestInfoMappers(unittest.TestCase):
 
     def test_hetegorigot_percent(self):
-        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        reader = Reader(open(FREEBAYES4_VCF_PATH))
         snp = reader.next()
         het_in_samples = HeterozigoteInSamples(filter_id=1)
         het_in_samples.vcf_variant = FREEBAYES
@@ -573,7 +586,7 @@ class TestInfoMappers(unittest.TestCase):
         info_id = het_in_samples.info_id
         assert snp.INFO[info_id] == 'None'
 
-        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        reader = Reader(open(FREEBAYES4_VCF_PATH))
         snp = reader.next()
         het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=50,
                                                min_num_called=8)
@@ -582,7 +595,7 @@ class TestInfoMappers(unittest.TestCase):
         info_id = het_in_samples.info_id
         assert snp.INFO[info_id] == 'None'
 
-        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        reader = Reader(open(FREEBAYES4_VCF_PATH))
         het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30,
                                                min_num_called=3,
                                                min_percent_het_gt=30)
@@ -594,7 +607,7 @@ class TestInfoMappers(unittest.TestCase):
                 assert snp.INFO[info_id] == 'False'
                 break
 
-        reader = Reader(open(FREEBAYES3_VCF_PATH))
+        reader = Reader(open(FREEBAYES4_VCF_PATH))
         het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30,
                                                min_num_called=3,
                                                min_percent_het_gt=30,
@@ -636,17 +649,16 @@ class BinaryTest(unittest.TestCase):
         filter_id = 1
         samples = ['mu16']
 '''
-        config = config.format(sample_fasta=REF_PATH)
+        config = config.format(sample_fasta=REF_FREEBAYES)
 
         config_fhand = NamedTemporaryFile(suffix='.config')
         config_fhand.write(config)
         config_fhand.flush()
-        cmd = [binary, VCF_PATH, '-f', config_fhand.name]
+        cmd = [binary, FREEBAYES3_VCF_PATH, '-f', config_fhand.name]
         #raw_input(' '.join(cmd))
         result = check_output(cmd)
-        #print result
         assert 'cs60_0.70\t' in result
-        assert 'CAP=SetI' in result
+        assert 'CAP=MmeI' in result
         assert 'HIS1=True' in result
 
 if __name__ == "__main__":
