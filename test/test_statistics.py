@@ -5,7 +5,7 @@ from subprocess import check_output
 
 from vcf import Reader
 from vcf_crumbs.statistics import (get_snpcaller_name, VARSCAN, GATK,
-                                   calculate_maf, FREEBAYES, VcfStats,
+                                   calculate_maf_dp, FREEBAYES, VcfStats,
                                    HOM_REF, VCFcomparisons, _AlleleCounts2D,
                                    HOM_ALT, HET, HOM)
 
@@ -22,9 +22,9 @@ class TestVcfStats(unittest.TestCase):
     def  test_vcf_stats(self):
         vcf_stats = VcfStats(VARSCAN_VCF_PATH,
                              min_samples_for_heterozigosity=2)
-        assert vcf_stats.mafs().count == 153
-        assert vcf_stats.mafs()[63] == 11
-        assert vcf_stats.mafs('pepo').count == 29
+        assert vcf_stats.mafs_dp().count == 153
+        assert vcf_stats.mafs_dp()[63] == 5
+        assert vcf_stats.mafs_dp('pepo').count == 29
         assert vcf_stats.gt_quals(HET)[21] == 2
         assert vcf_stats.gt_quals(HOM)[3] == 25
         assert vcf_stats.gt_quals(HET).count == 53
@@ -68,21 +68,21 @@ class SnvStatTests(unittest.TestCase):
         #varscan
         reader = Reader(filename=VARSCAN_VCF_PATH)
         snp = reader.next()
-        maf = calculate_maf(snp, vcf_variant=VARSCAN)
+        maf = calculate_maf_dp(snp, vcf_variant=VARSCAN)
         assert 0.52 < maf['all'] < 0.53
         assert maf['upv196'] == 1
 
         #gatk
         reader = Reader(filename=GATK_VCF_PATH)
         snp = reader.next()
-        maf = calculate_maf(snp, vcf_variant=GATK)
+        maf = calculate_maf_dp(snp, vcf_variant=GATK)
         assert 0.7 < maf['all'] < 0.72
         assert 0.7 < maf['hib_amarillo'] < 0.72
 
         #freebayes
         reader = Reader(filename=FREEBAYES_VCF_PATH)
         snp = reader.next()
-        maf = calculate_maf(snp, vcf_variant=FREEBAYES)
+        maf = calculate_maf_dp(snp, vcf_variant=FREEBAYES)
         assert maf == {'all': 1.0, 'pep': 1.0}
 
 

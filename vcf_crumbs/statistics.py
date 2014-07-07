@@ -152,7 +152,7 @@ def calculate_maf_and_mac(snp):
             for al in genotype:
                 allele_counts[al] += 1
     if not n_chroms_sampled:
-        return None
+        return None, None
     maf = max(allele_counts.values()) / n_chroms_sampled
     mac = max(allele_counts.values())
     return maf, mac
@@ -381,7 +381,7 @@ class VcfStats(object):
         self._min_samples_for_heterozigosity = min_samples_for_heterozigosity
 
         self.dp_threshold = dp_threshold
-        self._gt_qual_cov_counter = {HOM: IntBoxplot(), HET: IntBoxplot()}
+        self._gt_qual_depth_counter = {HOM: IntBoxplot(), HET: IntBoxplot()}
         self._ac2d = _AlleleCounts2D()
 
         self.sample_dp_coincidence = {1: IntCounter()}
@@ -496,7 +496,7 @@ class VcfStats(object):
                 gt_broud_type = HET if call.is_het else HOM
 
                 if dp < self.dp_threshold:
-                    self._gt_qual_cov_counter[gt_broud_type].append(dp, gq)
+                    self._gt_qual_depth_counter[gt_broud_type].append(dp, gq)
 
                 if gq >= self._gq_threshold:
                     self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][dp] += 1
@@ -570,4 +570,4 @@ class VcfStats(object):
 
     @property
     def gt_depths_by_gt_and_qual(self):
-        return self._gt_qual_cov_counter
+        return self._gt_qual_depth_counter
