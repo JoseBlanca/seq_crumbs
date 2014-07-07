@@ -388,6 +388,7 @@ class VcfStats(object):
         for cov in remarkable_depths:
             self.sample_dp_coincidence[cov] = IntCounter()
 
+        self.called_snvs = 0
         self.called_gts = IntCounter()
 
         # sample_counter
@@ -504,6 +505,7 @@ class VcfStats(object):
                     self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
                 self._ac2d.add(rc=rc, acs=acs, gt=call.gt_alleles, gq=gq)
             self.called_gts[n_gt_called] += 1
+            self.called_snvs += 1
 
     def _get_sample_counter(self, kind, sample=None, gt_broud_type=None):
         counters = self._sample_counters[kind]
@@ -539,7 +541,7 @@ class VcfStats(object):
         return self._get_sample_counter(GT_QUALS, sample,
                                         gt_broud_type=gt_broud_type)
 
-    def heterozigotes_by_sample(self, sample):
+    def heterozigosity_for_sample(self, sample):
         sample_gt_types = self._get_sample_counter(GT_TYPES, sample)
         het_gt = sample_gt_types[HET]
         all_gts = sample_gt_types.count

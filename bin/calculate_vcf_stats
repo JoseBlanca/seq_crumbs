@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import division
 
 import argparse
 import os
@@ -408,6 +409,91 @@ def draw_het_by_snp(vcf_stats, out_dir):
                             fhand=fhand)
 
 
+def draw_per_sample_stats(vcf_stats, out_dir):
+
+    samples = []
+    hets = []
+    ref_gts = []
+    alt_gts = []
+    het_gts = []
+    missing_gts = []
+    missing_per_cent = []
+    tot_snps = vcf_stats.called_snvs
+    for sample in vcf_stats.samples:
+        samples.append(sample)
+        hets.append(vcf_stats.heterozigosity_for_sample(sample))
+        gt_counts = vcf_stats.gt_types(sample=sample)
+        ref_gt = gt_counts[HOM_REF]
+        alt_gt = gt_counts[HOM_ALT]
+        het_gt = gt_counts[HET]
+        ref_gts.append(ref_gt)
+        alt_gts.append(alt_gt)
+        het_gts.append(het_gt)
+        missing_gt = tot_snps - ref_gt - alt_gt - het_gt
+        missing_gts.append(missing_gt)
+        missing_per_cent.append(missing_gt / tot_snps * 100)
+
+    if len(samples) >= MIN_NUM_SAMPLES:
+        num_plots = 3
+    else:
+        num_plots = 2
+
+    fig, canvas = get_fig_and_canvas(num_rows=num_plots)
+    plots_done = 1
+    # het
+    if len(samples) >= MIN_NUM_SAMPLES:
+        left = list(range(len(samples)))
+        height = hets
+        axes = fig.add_subplot(num_plots, 1, plots_done)
+        plots_done += 1
+        axes.bar(left, height)
+        axes.set_title('Heterocigosities per sample')
+        axes.set_ylabel('Heterocigosity')
+        axes.tick_params(axis='x', which='both', bottom='off', top='off',
+                         labelbottom='off')
+
+    # missing data
+    height = missing_per_cent
+    axes = fig.add_subplot(num_plots, 1, plots_done)
+    plots_done += 1
+    axes.bar(left, height)
+    axes.set_title('Missing genotypes per sample')
+    axes.set_ylabel('Missing genotypes (%)')
+    axes.tick_params(axis='x', which='both', bottom='off', top='off',
+                     labelbottom='off')
+
+    # all
+    axes = fig.add_subplot(num_plots, 1, plots_done)
+    plots_done += 1
+    height = ref_gts
+    axes.bar(left, height, label='ref. homo.', color='blue')
+    bottom = height
+
+    height = het_gts
+    axes.bar(left, height, bottom=bottom, label='het.', color='green')
+    bottom = [a + b for a, b in zip(bottom, height)]
+
+    height = alt_gts
+    axes.bar(left, height, bottom=bottom, label='alt. homo.', color='red')
+    bottom = [a + b for a, b in zip(bottom, height)]
+
+    height = missing_gts
+    axes.bar(left, height, bottom=bottom, label='missing', color='gray')
+
+    #axes.legend(bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True,
+    #            ncol=4)
+    axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                ncol=4, mode='expand', borderaxespad=0.)
+
+    axes.set_xticks([i + 0.5 for i in (range(len(samples)))])
+    axes.set_xticklabels(samples, rotation='vertical')
+    axes.set_xlabel('Sample')
+    axes.set_ylabel('Num. SNPs')
+
+    fhand = open(join(out_dir, 'stats_per_sample.png'), 'w')
+    canvas.print_figure(fhand)
+
+
 def draw_missing_data(vcf_stats, out_dir):
     fhand = open(join(out_dir, 'missing_data.png'), 'w')
 
@@ -443,6 +529,8 @@ def main():
                          min_samples_for_heterozigosity=min_samples)
 
     draw_missing_data(vcf_stats, out_dir)
+
+    draw_per_sample_stats(vcf_stats, out_dir)
 
     if len(vcf_stats.samples) >= MIN_NUM_SAMPLES:
         draw_het_by_snp(vcf_stats, out_dir)

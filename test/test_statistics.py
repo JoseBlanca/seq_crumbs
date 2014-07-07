@@ -28,7 +28,7 @@ class TestVcfStats(unittest.TestCase):
         assert vcf_stats.gt_quals(HET)[21] == 2
         assert vcf_stats.gt_quals(HOM)[3] == 25
         assert vcf_stats.gt_quals(HET).count == 53
-        assert (0.28 - vcf_stats.heterozigotes_by_sample('pepo')) < 0.01
+        assert (0.28 - vcf_stats.heterozigosity_for_sample('pepo')) < 0.01
         assert vcf_stats.het_by_snp[0] == 46
 
 
