@@ -25,7 +25,6 @@ from crumbs.mapping import (get_or_create_bowtie2_index, _bowtie2_index_exists,
                             map_process_to_bam, sort_fastx_files)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.utils.bin_utils import get_binary_path
-from test.test_filters import GENOME
 from crumbs.seq import get_name
 import pysam
 
@@ -62,7 +61,7 @@ class Bowtie2Test(unittest.TestCase):
         index_fpath = get_or_create_bowtie2_index(reference_fpath,
                                                   directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        bowtie2 = map_with_bowtie2(index_fpath, unpaired_fpaths=[reads_fpath])
+        bowtie2 = map_with_bowtie2(index_fpath, unpaired_fpath=reads_fpath)
         map_process_to_bam(bowtie2, bam_fhand.name)
         directory.close()
 
@@ -70,7 +69,7 @@ class Bowtie2Test(unittest.TestCase):
         reference_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
         forward_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
         reverse_fpath = NamedTemporaryFile().name
-        paired_fpaths = [[forward_fpath, reverse_fpath]]
+        paired_fpaths = (forward_fpath, reverse_fpath)
         directory = TemporaryDir()
         index_fpath = get_or_create_bowtie2_index(reference_fpath,
                                                   directory.name)
@@ -80,7 +79,7 @@ class Bowtie2Test(unittest.TestCase):
         directory.close()
 
     def test_rev_compl_fragmented_reads(self):
-        reference_seq = GENOME
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
 
         #with unpaired_reads
         query_f = '>seq1\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTG'
@@ -93,14 +92,10 @@ class Bowtie2Test(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(query)
         in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
 
-        index_fpath = get_or_create_bowtie2_index(ref_fhand.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         bowtie2 = map_with_bowtie2(index_fpath, extra_params=['-a', '-f'],
-                                   unpaired_fpaths=[in_fhand.name])
+                                   unpaired_fpath=in_fhand.name)
         map_process_to_bam(bowtie2, bam_fhand.name)
         samfile = pysam.Samfile(bam_fhand.name)
         #for aligned_read in samfile:
@@ -127,12 +122,8 @@ class Bowtie2Test(unittest.TestCase):
         r_fhand = NamedTemporaryFile()
         r_fhand.write(query_r)
         r_fhand.flush()
-        paired_fpaths = [[f_fhand.name, r_fhand.name]]
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
+        paired_fpaths = (f_fhand.name, r_fhand.name)
 
-        index_fpath = get_or_create_bowtie2_index(ref_fhand.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         bowtie2 = map_with_bowtie2(index_fpath, extra_params=['-a', '-f'],
                                    paired_fpaths=paired_fpaths)
@@ -176,7 +167,7 @@ class Bwa2Test(unittest.TestCase):
         directory.close()
 
     def test_rev_compl_fragmented_reads(self):
-        reference_seq = GENOME
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
 
         #with paired_reads.
         #f is reversed r is direct
@@ -205,12 +196,8 @@ class Bwa2Test(unittest.TestCase):
         r_fhand = NamedTemporaryFile()
         r_fhand.write(query_r)
         r_fhand.flush()
-        paired_fpaths = [[f_fhand.name, r_fhand.name]]
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
+        paired_fpaths = (f_fhand.name, r_fhand.name)
 
-        index_fpath = get_or_create_bwa_index(ref_fhand.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         bwa = map_with_bwamem(index_fpath, paired_fpaths=paired_fpaths)
         map_process_to_bam(bwa, bam_fhand.name)
@@ -221,10 +208,7 @@ class Bwa2Test(unittest.TestCase):
 
 class SortSeqsFileTest(unittest.TestCase):
     def test_sort_by_position_in_ref(self):
-        reference = GENOME
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference)
-        ref_fhand.flush()
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
 
         #with fasta format
         query1 = '>seq1\nGAGAATTAAGCCTATCTGGAGAGCGGTACCAACAGGGAAACACCGACTCA\n'
@@ -239,7 +223,7 @@ class SortSeqsFileTest(unittest.TestCase):
         in_fhand.flush()
 
         sorted_names = []
-        for seq in sort_fastx_files([in_fhand], 'coordinate', ref_fhand.name):
+        for seq in sort_fastx_files(in_fhand, 'coordinate', index_fpath):
             sorted_names.append(get_name(seq))
         expected_names = ['seq2', 'seq3', 'seq1', 'seq5', 'seq4', 'seq6']
         assert sorted_names == expected_names
@@ -258,7 +242,7 @@ class SortSeqsFileTest(unittest.TestCase):
         in_fhand.flush()
 
         sorted_names = []
-        for seq in sort_fastx_files([in_fhand], 'coordinate', ref_fhand.name):
+        for seq in sort_fastx_files(in_fhand, 'coordinate', index_fpath):
             sorted_names.append(get_name(seq))
         expected_names = ['seq2', 'seq3', 'seq1', 'seq5', 'seq4', 'seq6']
         assert sorted_names == expected_names
@@ -277,11 +261,12 @@ class SortSeqsFileTest(unittest.TestCase):
         directory = TemporaryDir()
         index_fpath = get_or_create_bwa_index(reference_fpath, directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
-        bwa = map_with_bwamem(index_fpath, unpaired_fpath=reads_fpath)
         lib_name = 'aa'
         readgroup = {'ID': lib_name, 'PL': 'illumina', 'LB': lib_name,
                      'SM': '{0}_illumina_pe'.format(lib_name), 'PU': '0'}
-        map_process_to_bam(bwa, bam_fhand.name, readgroup)
+        bwa = map_with_bwamem(index_fpath, unpaired_fpath=reads_fpath,
+                              readgroup=readgroup)
+        map_process_to_bam(bwa, bam_fhand.name)
         out = subprocess.check_output([get_binary_path('samtools'), 'view',
                                        '-h', bam_fhand.name])
 
