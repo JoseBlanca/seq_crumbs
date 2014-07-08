@@ -16,6 +16,8 @@
 from operator import itemgetter
 from tempfile import NamedTemporaryFile
 
+from pysam import Samfile
+
 from crumbs.utils.optional_modules import Seq
 from crumbs.utils.tags import (TRIMMING_RECOMMENDATIONS, QUALITY, OTHER,
                                VECTOR, TRIMMING_KINDS, SEQS_PASSED,
@@ -37,7 +39,8 @@ from crumbs.filters import (_split_mates, _get_primary_alignment,
                             _read_is_totally_mapped, _get_qstart,
                             _get_qend, _sorted_mapped_reads,
                             _group_alignments_by_reads, _5end_mapped)
-from crumbs.mapping import (alignedread_to_seqitem, get_or_create_bwa_index)
+from crumbs.mapping import (alignedread_to_seqitem, get_or_create_bwa_index,
+    map_with_bwamem, map_process_to_sortedbam)
 
 
 # pylint: disable=R0903
@@ -350,11 +353,10 @@ def _get_longest_5end_alinged_read(aligned_reads, max_clipping):
 class TrimMatePairChimeras(_BaseTrim):
     'It trims chimeric regions in mate pairs reads'
 
-    def __init__(self, ref_fpath, max_clipping=None, tempdir=None):
+    def __init__(self, index_fpath, max_clipping=None, tempdir=None):
         'The initiator'
-        self.ref_fpath = ref_fpath
-        self.tempdir = tempdir
-        self.index_fpath = get_or_create_bwa_index(ref_fpath, self.tempdir)
+        self._tempdir = tempdir
+        self._index_fpath = index_fpath
         if max_clipping is not None:
             self.max_clipping = max_clipping
         else:
@@ -362,14 +364,18 @@ class TrimMatePairChimeras(_BaseTrim):
 
     def _pre_trim(self, trim_packet):
         seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
-        self.subtempdir = TemporaryDir(directory=self.tempdir)
-        reads_fhand = NamedTemporaryFile(dir=self.subtempdir.name,
-                                         suffix='.trimming')
+        reads_fhand = NamedTemporaryFile(dir=self._tempdir, suffix='.trimming')
+
         write_seqs(seqs, reads_fhand)
         reads_fhand.flush()
-        self.bamfile = _sorted_mapped_reads(self.index_fpath, [reads_fhand.name],
-                                            tempdir=self.subtempdir.name,
-                                            interleaved=True)
+        bwa = map_with_bwamem(self._index_fpath,
+                              interleave_fpath=reads_fhand.name)
+        bam_fhand = NamedTemporaryFile(dir=self._tempdir)
+        map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
+                                 tempdir=self._tempdir)
+
+        self._bam_fhand = bam_fhand
+        reads_fhand.close()
 
     def _do_trim(self, aligned_reads):
         max_clipping = self.max_clipping
@@ -392,7 +398,8 @@ class TrimMatePairChimeras(_BaseTrim):
         'It trims the seqs'
         self._pre_trim(trim_packet)
         trimmed_seqs = []
-        for grouped_mates in _group_alignments_by_reads(self.bamfile):
+        bamfile = Samfile(self._bam_fhand.name)
+        for grouped_mates in _group_alignments_by_reads(bamfile):
             for aligned_reads in _split_mates(grouped_mates):
                 trimmed_seqs.append([self._do_trim(aligned_reads)])
         self._post_trim()
@@ -400,7 +407,7 @@ class TrimMatePairChimeras(_BaseTrim):
                 ORPHAN_SEQS: trim_packet[ORPHAN_SEQS]}
 
     def _post_trim(self):
-        self.subtempdir.close()
+        self._bam_fhand.close()
 
 # class TrimNexteraAdapters(_BaseTrim):
 #     "It trims from Nextera adaptors found with blast short algorithm to 3'end"
@@ -409,7 +416,7 @@ class TrimMatePairChimeras(_BaseTrim):
 #         'The initiator'
 #         self.oligos = oligos
 #         super(TrimNexteraAdapters, self).__init__()
-# 
+#
 #     def _pre_trim(self, trim_packet):
 #         seqs = [s for seqs in trim_packet[SEQS_PASSED]for s in seqs]
 #         db_fhand = write_seqs(seqs, file_format='fasta')
@@ -423,7 +430,7 @@ class TrimMatePairChimeras(_BaseTrim):
 #                                              program='blastn', filters=filters,
 #                                              params=params,
 #                                              elongate_for_global=True)
-# 
+#
 #     def _do_trim(self, seq):
 #         'It trims the masked segments of the SeqWrappers.'
 #         segments = self._matcher.get_matched_segments_for_read(get_name(seq))

@@ -34,6 +34,7 @@ from crumbs.seqio import read_seq_packets, read_seqs
 from crumbs.seq import SeqWrapper, SeqItem
 from test.test_filters import GENOME
 from crumbs.filters import _sorted_mapped_reads, _group_alignments_by_reads
+from crumbs.utils.test_utils import TEST_DATA_DIR
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
 FASTQ2 = '@seq1\nATCGT\n+\nA???A\n@seq2\nATCGT\n+\n?????\n'
@@ -536,7 +537,7 @@ class TrimBlastShortTest(unittest.TestCase):
 
 class TrimChimericRegions(unittest.TestCase):
     def test_trim_chimeric_region(self):
-        reference_seq = GENOME
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
         query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
         query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
         query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
@@ -547,11 +548,8 @@ class TrimChimericRegions(unittest.TestCase):
         fhand = NamedTemporaryFile()
         fhand.write(query)
         fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
 
-        trim_chimeras = TrimMatePairChimeras(ref_fhand.name)
+        trim_chimeras = TrimMatePairChimeras(index_fpath)
         seq_packets = list(read_seq_packets([open(fhand.name)]))
         trim_packets = list(seq_to_trim_packets(seq_packets))
         trim_packets2 = trim_chimeras(trim_packets[0])
@@ -564,7 +562,7 @@ class TrimChimericRegions(unittest.TestCase):
     def test_trim_chimeras_bin(self):
         trim_chimeras_bin = os.path.join(BIN_DIR, 'trim_mp_chimeras')
         assert 'usage' in check_output([trim_chimeras_bin, '-h'])
-        reference_seq = GENOME
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
         query1 = '@seq2 f\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT'
         query1 += 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
         query1 += '+\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
@@ -575,14 +573,13 @@ class TrimChimericRegions(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(query)
         in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
+
         out_fhand = NamedTemporaryFile()
         expected_seqs = ['GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT',
                          'CATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACG']
-        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name,
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', index_fpath,
                '-o', out_fhand.name]
+        #raw_input(" ".join(cmd))
         check_output(cmd, stdin=in_fhand)
         counts = 0
         for seq in read_seqs([open(out_fhand.name)]):
@@ -591,7 +588,7 @@ class TrimChimericRegions(unittest.TestCase):
         assert counts != 0
 
         #With several threads
-        cmd = [trim_chimeras_bin, in_fhand.name, '-r', ref_fhand.name,
+        cmd = [trim_chimeras_bin, in_fhand.name, '-r', index_fpath,
                '-o', out_fhand.name, '-p', '2']
         check_output(cmd, stdin=in_fhand)
         counts = 0
@@ -708,5 +705,5 @@ class TrimChimericRegions(unittest.TestCase):
 #             assert get_str_seq(seq) in expected_seqs
 
 if __name__ == '__main__':
-    #import sys; sys.argv = ['', 'TrimChimericRegions.test_trim_chimeras_bin']
+    #import sys; sys.argv = ['', 'TrimChimericRegions']
     unittest.main()

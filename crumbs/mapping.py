@@ -16,19 +16,20 @@ import os.path
 import shutil
 from subprocess import PIPE
 from tempfile import NamedTemporaryFile
+import tempfile
+
+import pysam
 
 from crumbs.utils.bin_utils import (check_process_finishes, get_binary_path,
                                     popen, get_num_threads)
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import TemporaryDir
-import subprocess
-import pysam
+
 from crumbs.utils.file_formats import get_format
 from crumbs.seq import SeqItem, SeqWrapper, get_str_seq, get_name
 from crumbs.utils.tags import SEQITEM
 from crumbs.iterutils import sorted_items
 from crumbs.seqio import read_seqs
-import tempfile
 
 
 def _bwa_index_exists(index_path):
