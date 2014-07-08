@@ -304,7 +304,6 @@ class FilterBowtie2Match(_BaseFilter):
 
     def _setup_checks(self, filterpacket):
         index_fpath = self._index_fpath
-        get_or_create_bowtie2_index(index_fpath)
         seqs = [s for seqs in filterpacket[SEQS_PASSED]for s in seqs]
         seq_class = seqs[0].kind
         extra_params = []
@@ -357,7 +356,7 @@ class FilterDustComplexity(_BaseFilter):
         super(FilterDustComplexity, self).__init__(reverse=reverse,
                                           failed_drags_pair=failed_drags_pair)
 
-    def  _do_check(self, seq):
+    def _do_check(self, seq):
         threshold = self._threshold
         dustscore = calculate_dust_score(seq)
         return True if dustscore < threshold else False
