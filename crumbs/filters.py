@@ -34,7 +34,7 @@ from crumbs.statistics import (calculate_dust_score, IntCounter,
                                draw_histogram_ascii)
 from crumbs.settings import get_setting
 from crumbs.mapping import (get_or_create_bowtie2_index, map_with_bowtie2,
-                            map_process_to_bam, sort_mapped_reads,
+                            map_process_to_bam, map_process_to_sortedbam,
                             get_or_create_bwa_index, map_with_bwamem,
                             alignedread_to_seqitem)
 from crumbs.seqio import write_seqs, read_seqs
@@ -337,7 +337,7 @@ class FilterBowtie2Match(_BaseFilter):
 
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         map_process = map_with_bowtie2(index_fpath,
-                                       unpaired_fpaths=[reads_fhand.name],
+                                       unpaired_fpath=reads_fhand.name,
                                        extra_params=extra_params)
         map_process_to_bam(map_process, bam_fhand.name)
 
@@ -515,7 +515,8 @@ def _sorted_mapped_reads(index_fpath, in_fpaths, interleaved=True,
     bwa = map_with_bwamem(index_fpath, paired_fpaths=in_fpaths,
                          extra_params=extra_params, threads=threads)
     bam_fhand = NamedTemporaryFile(dir=tempdir)
-    sort_mapped_reads(bwa, bam_fhand.name, key='queryname', tempdir=tempdir)
+    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
+                             tempdir=tempdir)
     bamfile = pysam.Samfile(bam_fhand.name)
     return bamfile
 
