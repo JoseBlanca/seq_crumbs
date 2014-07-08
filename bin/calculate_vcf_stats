@@ -10,13 +10,14 @@ from collections import OrderedDict
 import numpy
 from matplotlib.mlab import griddata
 from matplotlib import cm
+from matplotlib.colorbar import make_axes, Colorbar
+from matplotlib.ticker import ScalarFormatter
 
 from vcf_crumbs.statistics import (VcfStats, HET, HOM, WINDOWS_SIZE, HOM_ALT,
                                    HOM_REF, MIN_NUM_SAMPLES)
 from crumbs.plot import  (draw_histogram_in_fhand, draw_histograms, LINE,
                           get_fig_and_canvas, draw_int_boxplot,
                           draw_histogram_in_axes, BAR)
-from matplotlib.colorbar import make_axes, Colorbar
 
 PLOTS_PER_CHART = 3
 
@@ -389,7 +390,7 @@ def draw_quals_vs_depth(vcf_stats, out_dir):
     if distrib is not None:
         axes2 = axes.twinx()
         draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                               kind=LINE, axes=axes2, ylabel='Num. Genotypes',)
+                               kind=LINE, axes=axes2, ylabel='Num. Genotypes')
 
     fhand = open(join(out_dir, 'gt_qual_distribs_vs_depth.png'), 'w')
     canvas.print_figure(fhand)
@@ -397,16 +398,34 @@ def draw_quals_vs_depth(vcf_stats, out_dir):
 
 
 def draw_het_by_snp(vcf_stats, out_dir):
-    fhand = open(join(out_dir, 'heterozigosity_by_snv_distrib.png'), 'w')
-    title = 'Distribution of the heterozigosity by snv'
+    title = 'Heterozigosity Distribution'
     xlabel = '% heterozigote samples / called samples'
     ylabel = 'Num. SNVs'
 
-    distrib = vcf_stats.het_by_snp.calculate_distribution()
+    fig, canvas = get_fig_and_canvas(num_rows=2)
 
-    draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
+    distrib = vcf_stats.het_by_snp.calculate_distribution()
+    axes = fig.add_subplot(211)
+    draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
                             title=title, xlabel=xlabel, ylabel=ylabel,
-                            fhand=fhand)
+                            axes=axes)
+
+    distrib = vcf_stats.inbreeding_by_snp.calculate_distribution()
+    axes2 = fig.add_subplot(212)
+    title = 'Inbreeding Coef. (F) Distribution'
+    xlabel = '(1 - Hobs / H exp) * 100'
+    draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
+                           axes=axes2, ylabel='Num. Genotypes')
+
+    x_formatter = ScalarFormatter()
+    x_formatter.set_powerlimits=(-3, 4)
+    axes2.xaxis.set_major_formatter(x_formatter)
+    for label in axes2.xaxis.get_ticklabels():
+        label.set_rotation(90)
+
+    fhand = open(join(out_dir, 'heterozigosity_by_snv_distrib.png'), 'w')
+    canvas.print_figure(fhand)
+    fhand.flush()
 
 
 def draw_per_sample_stats(vcf_stats, out_dir):

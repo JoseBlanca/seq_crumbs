@@ -261,6 +261,7 @@ SAMPLE_COUNTERS = (MAFS_DP, GT_DEPTHS, GT_QUALS, HETEROZIGOSITY,
 SNV_QUALS = 'snv_quals'
 SNV_DENSITY = 'snv_density'
 HET_IN_SNP = 'heterozigotes_in_snp'
+INBREED_F_IN_SNP = 'inbreeding_coef_f'
 
 
 class _AlleleCounts2D(object):
@@ -409,16 +410,17 @@ class VcfStats(object):
                               MAFS_DP: IntCounter(),
                               SNV_QUALS: IntCounter(),
                               HET_IN_SNP: IntCounter(),
-                              SNV_DENSITY: IntCounter()}
+                              SNV_DENSITY: IntCounter(),
+                              INBREED_F_IN_SNP: IntCounter()}
         self._calculate()
 
     def _add_maf_and_mac(self, snp):
         maf, mac = calculate_maf_and_mac(snp)
         if maf:
-            maf = int(round(maf * 100))
-            self._snv_counters[MAFS][maf] += 1
+            self._snv_counters[MAFS][int(round(maf * 100))] += 1
         if mac:
             self._snv_counters[MACS][mac] += 1
+        return maf, mac
 
     def _add_maf_dp(self, snp):
         mafs = calculate_maf_dp(snp, vcf_variant=self._vcf_variant)
@@ -446,11 +448,17 @@ class VcfStats(object):
 
         self._snv_counters[SNV_DENSITY][num_snvs] += 1
 
-    def _add_snv_het_obs_fraction(self, snp, min_num_samples):
+    def _add_snv_het_obs_fraction(self, snp, maf, min_num_samples):
         if snp.num_called < min_num_samples:
             return
-        het_for_snp = int((snp.num_het / snp.num_called) * 100)
-        self._snv_counters[HET_IN_SNP][het_for_snp] += 1
+        obs_het = (snp.num_het / snp.num_called)
+        self._snv_counters[HET_IN_SNP][int(round(obs_het * 100))] += 1
+
+        # If the SNP is not fixed calculate the inbreeding
+        if not(abs(maf - 0) < 0.0001 or abs(1 - maf) < 0.0001):
+            exp_het = 2.0 * maf * (1 - maf)
+            inbreed_F = 1 - (obs_het / exp_het)
+            self._snv_counters[INBREED_F_IN_SNP][int(round(inbreed_F * 100))] += 1
 
     def _num_samples_higher_equal_dp(self, depth, snp):
         vcf_variant = self._vcf_variant
@@ -470,10 +478,10 @@ class VcfStats(object):
         for snp in self._reader:
             snp_counter += 1
             self._add_maf_dp(snp)
-            self._add_maf_and_mac(snp)
+            maf = self._add_maf_and_mac(snp)[0]
             self._add_snv_qual(snp)
             self._add_snv_density(snp)
-            self._add_snv_het_obs_fraction(snp,
+            self._add_snv_het_obs_fraction(snp, maf,
                                           self._min_samples_for_heterozigosity)
 
             for depth, counter in self.sample_dp_coincidence.viewitems():
@@ -565,6 +573,10 @@ class VcfStats(object):
     @property
     def het_by_snp(self):
         return self._snv_counters[HET_IN_SNP]
+
+    @property
+    def inbreeding_by_snp(self):
+        return self._snv_counters[INBREED_F_IN_SNP]
 
     @property
     def allelecount2d(self):
