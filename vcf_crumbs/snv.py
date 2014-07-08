@@ -1,3 +1,6 @@
+from __future__ import division
+
+from collections import Counter
 
 from vcf import Reader as pyvcf_Reader  # Imported here just for convenience
                                         # when importing from other modules
@@ -16,16 +19,23 @@ FREEBAYES = 'freebayes'
 
 class SNV(object):
     '''A proxy around the pyvcf _Record with some additional functionality'''
-    def __init__(self, record, min_calls_for_het=10, snp_caller=None):
+    def __init__(self, record, min_calls_for_pop_stats=10, snp_caller=None):
         self.record = record
-        self.min_calls_for_het = min_calls_for_het
+        self.min_calls_for_pop_stats = min_calls_for_pop_stats
         self.snp_caller = snp_caller
+        self._mac_analyzed = False
+        self._maf = None
+        self._mac = None
+        self._maf_dp_analyzed = False
+        self._allele_depths = None
+        self._maf_depth = None
+        self._depth = None
 
     @property
     def obs_het(self):
         snp = self.record
         n_called = snp.num_called
-        if n_called >= self.min_calls_for_het:
+        if n_called >= self.min_calls_for_pop_stats:
             return snp.num_het / n_called
         else:
             return None
@@ -33,7 +43,7 @@ class SNV(object):
     @property
     def exp_het(self):
         snp = self.record
-        if snp.num_called >= self.min_calls_for_het:
+        if snp.num_called >= self.min_calls_for_pop_stats:
             return snp.heterozygosity
         else:
             return None
@@ -42,6 +52,80 @@ class SNV(object):
     def samples(self):
         caller = self.snp_caller
         return [Call(sample, caller) for sample in self.record.samples]
+
+    def _calculate_maf_and_mac(self):
+        if self._mac_analyzed:
+            return
+        self._mac_analyzed = True
+        snp = self.record
+
+        n_chroms_sampled = 0
+        allele_counts = Counter()
+        for call in snp.samples:
+            if call.called:
+                genotype = call.gt_alleles
+                n_chroms_sampled += len(genotype)
+                for allele in genotype:
+                    allele_counts[allele] += 1
+        if not n_chroms_sampled:
+            return
+        max_allele_count = max(allele_counts.values())
+        self._maf = max_allele_count / n_chroms_sampled
+        self._mac = n_chroms_sampled - max_allele_count
+
+    @property
+    def maf(self):
+        'Frequency of the most abundant allele'
+        snp = self.record
+        if snp.num_called >= self.min_calls_for_pop_stats:
+            self._calculate_maf_and_mac()
+            return self._maf
+        else:
+            return None
+
+    @property
+    def mac(self):
+        'Sum of the allele count of all alleles but the most abundant'
+        self._calculate_maf_and_mac()
+        return self._mac
+
+    def _calculate_mafs_dp(self):
+        if self._maf_dp_analyzed:
+            return
+        self._maf_dp_analyzed = True
+
+        allele_depths = Counter()
+        for call in self.samples:
+            if not call.has_alternative_counts:
+                continue
+            for allele, depth in call.allele_depths.items():
+                allele_depths[allele] += depth
+        depth = sum(allele_depths.values())
+        maf_dp = max(allele_depths.values()) / depth
+        self._depth = depth
+        self._maf_depth = maf_dp
+        self._allele_depths = allele_depths
+
+    @property
+    def maf_depth(self):
+        self._calculate_mafs_dp()
+        return self._maf_depth
+
+    @property
+    def allele_depths(self):
+        self._calculate_mafs_dp()
+        return self._allele_depths
+
+    @property
+    def depth(self):
+        self._calculate_mafs_dp()
+        return self._depth
+
+    def __str__(self):
+        return str(self.record)
+
+    def __unicode__(self):
+        return self.record.__unicode__()
 
 
 class Call(object):
@@ -126,3 +210,17 @@ class Call(object):
     def has_alternative_counts(self):
         self._get_allele_depths()
         return self._has_alternative_counts
+
+    @property
+    def maf_depth(self):
+        al_dps = self.allele_depths
+        if self.has_alternative_counts:
+            return max(al_dps.values()) / sum(al_dps.values())
+        else:
+            return None
+
+    def __str__(self):
+        return str(self.call)
+
+    def __unicode__(self):
+        return self.call.__unicode__()

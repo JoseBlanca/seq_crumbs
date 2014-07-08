@@ -62,7 +62,7 @@ class AnnotateRecordTests(unittest.TestCase):
         assert snp.obs_het is None
         assert snp.exp_het is None
 
-        snp.min_calls_for_het = 3
+        snp.min_calls_for_pop_stats = 3
         assert snp.obs_het - 0.44444 < 0.001
         assert snp.exp_het - 0.44444 < 0.001
 
@@ -78,6 +78,33 @@ class AnnotateRecordTests(unittest.TestCase):
             else:
                 assert sample.ref_depth == res[0]
                 assert sample.allele_depths[1] == res[1]
+
+    def test_mafs(self):
+        vcf = join(TEST_DATA_DIR, 'freebayes_al_depth.vcf')
+        snps = [SNV(snp, snp_caller=FREEBAYES) for snp in Reader(open(vcf))]
+        assert snps[0].maf_depth - 0.5 < 0.001
+        assert snps[0].allele_depths == {0: 1, 1: 1}
+        assert snps[0].depth == 2
+        assert snps[1].maf_depth - 1.0 < 0.001
+        assert snps[1].allele_depths == {0: 2, 1: 0}
+        assert snps[4].maf_depth - 0.9890 < 0.001
+        assert snps[4].allele_depths == {0: 90, 1: 1}
+        assert snps[4].depth == 91
+
+        result = [1, 1, 1, 1, 1, 0.944444]
+        for call, res in zip(snps[4].samples, result):
+            assert call.maf_depth - res < 0.001
+
+        assert snps[0].mac
+
+        snps[0].min_calls_for_pop_stats = 3
+        assert snps[0].maf is None
+        snps[3].min_calls_for_pop_stats = 3
+        assert snps[3].maf - 0.75 < 0.0001
+        snps[4].min_calls_for_pop_stats = 3
+        assert snps[4].maf - 1.0 < 0.0001
+        assert snps[0].mac == 2
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'AnnotatorsTest.test_is_variable_annotator']
