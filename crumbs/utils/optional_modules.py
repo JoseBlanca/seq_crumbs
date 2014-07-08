@@ -117,3 +117,8 @@ try:
 except ImportError:
     merge_sorted = create_fake_funct(MSG + 'toolz')
     first = create_fake_funct(MSG + 'toolz')
+
+try:
+    from pysam import Samfile
+except ImportError:
+    Samfile = create_fake_funct(MSG + 'pysam')
