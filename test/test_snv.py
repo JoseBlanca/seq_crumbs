@@ -3,6 +3,7 @@ import unittest
 from StringIO import StringIO
 
 from vcf_crumbs.snv import pyvcf_Reader as Reader
+from vcf_crumbs.snv import SNV
 
 # Method could be a function
 # pylint: disable=R0201
@@ -47,6 +48,23 @@ class AnnotateRecordTests(unittest.TestCase):
         assert len(snps) == 5
         assert snps[0].POS == 14370
         assert snps[1].is_snp
+
+    def test_heterozygosity(self):
+        # 0/0 1/0 0/0
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20\t14370\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+20\t14370\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t0|0:48:8:51,51\t1/1:43:5:.,.'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = [SNV(snp) for snp in Reader(vcf)]
+        snp = snps[1]
+        assert snp.obs_het is None
+        assert snp.exp_het is None
+        assert snp.heterozygosity - 0.44444 < 0.001
+
+        snp.min_calls_for_het = 3
+        assert snp.obs_het - 0.44444 < 0.001
+        assert snp.exp_het - 0.44444 < 0.001
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'AnnotatorsTest.test_is_variable_annotator']
