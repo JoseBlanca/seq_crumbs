@@ -2,7 +2,7 @@ from __future__ import division
 
 from collections import Counter
 
-from  vcf import Reader
+from vcf import Reader
 
 from crumbs.seq import get_name, get_length
 from crumbs.seqio import read_seqs

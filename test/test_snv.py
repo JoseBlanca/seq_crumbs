@@ -1,9 +1,11 @@
 
 import unittest
 from StringIO import StringIO
+from os.path import join
 
-from vcf_crumbs.snv import pyvcf_Reader as Reader
+from vcf_crumbs.snv import pyvcf_Reader as Reader, FREEBAYES
 from vcf_crumbs.snv import SNV
+from vcf_crumbs.utils import TEST_DATA_DIR
 
 # Method could be a function
 # pylint: disable=R0201
@@ -59,12 +61,23 @@ class AnnotateRecordTests(unittest.TestCase):
         snp = snps[1]
         assert snp.obs_het is None
         assert snp.exp_het is None
-        assert snp.heterozygosity - 0.44444 < 0.001
 
         snp.min_calls_for_het = 3
         assert snp.obs_het - 0.44444 < 0.001
         assert snp.exp_het - 0.44444 < 0.001
 
+    def test_allele_depths(self):
+        vcf = join(TEST_DATA_DIR, 'freebayes_al_depth.vcf')
+        snps = [SNV(snp, snp_caller=FREEBAYES) for snp in Reader(open(vcf))]
+        snp = snps[0]
+        result = [None, None, (1, 0), None, None, (0, 1)]
+        for sample, res in zip(snp.samples, result):
+            if res is None:
+                assert sample.ref_depth is None
+                assert not sample.allele_depths
+            else:
+                assert sample.ref_depth == res[0]
+                assert sample.allele_depths[1] == res[1]
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'AnnotatorsTest.test_is_variable_annotator']
