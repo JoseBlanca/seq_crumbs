@@ -39,7 +39,7 @@ class Bowtie2Test(unittest.TestCase):
     def test_get_or_create_index(self):
         db_name = 'arabidopsis_genes'
         seq_fpath = os.path.join(TEST_DATA_DIR, db_name)
-        assert not _bowtie2_index_exists(seq_fpath)
+        assert _bowtie2_index_exists(seq_fpath)
 
         directory = TemporaryDir()
         index_fpath = get_or_create_bowtie2_index(seq_fpath, directory.name)

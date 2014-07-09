@@ -32,8 +32,6 @@ from crumbs.seq import (get_str_seq, get_annotations, get_int_qualities,
                         get_name)
 from crumbs.seqio import read_seq_packets, read_seqs
 from crumbs.seq import SeqWrapper, SeqItem
-from test.test_filters import GENOME
-from crumbs.filters import _sorted_mapped_reads, _group_alignments_by_reads
 from crumbs.utils.test_utils import TEST_DATA_DIR
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'
