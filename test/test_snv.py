@@ -49,6 +49,8 @@ class SNVTests(unittest.TestCase):
         assert len(snps) == 5
         assert snps[0].POS == 14370
         assert snps[1].is_snp
+        assert snps[1].num_called == 3
+        assert [call.depth for call in snps[2].samples] == [6, 0, 4]
 
     def test_heterozygosity(self):
         # 0/0 1/0 0/0
@@ -62,8 +64,9 @@ class SNVTests(unittest.TestCase):
         assert snp.exp_het is None
 
         snp.min_calls_for_pop_stats = 3
-        assert snp.obs_het - 0.44444 < 0.001
-        assert snp.exp_het - 0.44444 < 0.001
+        assert abs(snp.obs_het) < 0.001
+        assert abs(snp.exp_het - 0.44444) < 0.001
+        assert abs(snp.inbreed_coef - 1.0000) < 0.001
 
     def test_allele_depths(self):
         vcf = open(join(TEST_DATA_DIR, 'freebayes_al_depth.vcf'))
@@ -104,6 +107,27 @@ class SNVTests(unittest.TestCase):
         assert snps[4].maf - 1.0 < 0.0001
         assert snps[0].mac == 2
 
+        # varscan
+        varscan_fhand = open(join(TEST_DATA_DIR, 'sample.vcf.gz'))
+        reader = VCFReader(fhand=varscan_fhand)
+        snp = list(reader.parse_snps())[0]
+        snp.min_calls_for_pop_stats = 1
+        assert snp.maf_depth is None
+
+        # gatk
+        fhand = open(join(TEST_DATA_DIR, 'gatk_sample.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        snp = list(reader.parse_snps())[0]
+        assert 0.7 < snp.maf_depth < 0.72
+        assert 0.7 < snp.get_call('hib_amarillo').maf_depth < 0.72
+
+        # freebayes
+        fhand = open(join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        snp = list(reader.parse_snps())[0]
+        assert 0.99 < snp.maf_depth < 1.01
+        assert 0.99 < snp.get_call('pep').maf_depth < 1.01
+
 
 class ReaderTest(unittest.TestCase):
     def test_get_snpcaller(self):
@@ -114,6 +138,9 @@ class ReaderTest(unittest.TestCase):
         assert VCFReader(fhand=gatk).snpcaller == GATK
         assert VCFReader(fhand=freebayes).snpcaller == FREEBAYES
 
+    def test_samples(self):
+        freebayes = open(join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz'))
+        assert VCFReader(fhand=freebayes).samples == ['pep']
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']

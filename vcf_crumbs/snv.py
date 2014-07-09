@@ -2,7 +2,7 @@ from __future__ import division
 
 from collections import Counter
 
-from vcf import Reader as pyvcf_Reader
+from vcf import Reader as pyvcfReader
 
 # Missing docstring
 # pylint: disable=C0111
@@ -24,7 +24,7 @@ DEF_MIN_CALLS_FOR_POP_STATS = 10
 class VCFReader(object):
     def __init__(self, fhand,
                  min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS):
-        self.pyvcf_reader = pyvcf_Reader(fsock=fhand)
+        self.pyvcf_reader = pyvcfReader(fsock=fhand)
         self._min_calls_for_pop_stats = min_calls_for_pop_stats
         self._snpcaller = None
 
@@ -52,6 +52,10 @@ class VCFReader(object):
             raise NotImplementedError('Can not get snp caller of the vcf file')
         self._snpcaller = snpcaller
         return snpcaller
+
+    @property
+    def samples(self):
+        return self.pyvcf_reader.samples
 
 
 class SNV(object):
@@ -129,9 +133,20 @@ class SNV(object):
         self._calculate_maf_and_mac()
         return self._mac
 
+    @property
+    def inbreed_coef(self):
+        obs_het = self.obs_het
+        if obs_het is None:
+            return None
+        try:
+            inbreed_f = 1 - (obs_het / self.exp_het)
+            return inbreed_f
+        except ZeroDivisionError:
+            return None
+
     def _calculate_mafs_dp(self):
         if self._maf_dp_analyzed:
-            return
+            return None
         self._maf_dp_analyzed = True
 
         allele_depths = Counter()
@@ -141,6 +156,8 @@ class SNV(object):
             for allele, depth in call.allele_depths.items():
                 allele_depths[allele] += depth
         depth = sum(allele_depths.values())
+        if not depth:
+            return None
         maf_dp = max(allele_depths.values()) / depth
         self._depth = depth
         self._maf_depth = maf_dp
@@ -166,8 +183,20 @@ class SNV(object):
         return self.record.POS
 
     @property
+    def QUAL(self):
+        return self.record.QUAL
+
+    @property
+    def num_called(self):
+        return self.record.num_called
+
+    @property
     def is_snp(self):
         return self.record.is_snp
+
+    def get_call(self, sample):
+        call = self.record.genotype(sample)
+        return Call(call, self)
 
     def __str__(self):
         return str(self.record)
@@ -209,7 +238,7 @@ class Call(object):
         call = self.call
         als = [int(a) for a in call.gt_alleles]
         al_counts = {al_: al_count for al_count, al_ in zip(call.data.AD, als)}
-        self.allele_depths = al_counts
+        self._allele_depths = al_counts
         sum_alt = sum(alc for al, alc in al_counts.items() if al != 0)
         self._alt_sum_depths = sum_alt
         self._has_alternative_counts = True
@@ -240,6 +269,14 @@ class Call(object):
         self._has_alternative_counts = True
 
     @property
+    def depth(self):
+        return self.call.data.DP
+
+    @property
+    def gt_qual(self):
+        return self.call.data.GQ
+
+    @property
     def ref_depth(self):
         self._get_allele_depths()
         return self._allele_depths.get(0, None)
@@ -266,6 +303,14 @@ class Call(object):
             return max(al_dps.values()) / sum(al_dps.values())
         else:
             return None
+
+    @property
+    def sample(self):
+        return self.call.sample
+
+    @property
+    def called(self):
+        return self.call.called
 
     def __str__(self):
         return str(self.call)
