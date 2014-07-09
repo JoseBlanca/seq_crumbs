@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+
+# Copyright 2013 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.bin_utils import main, argparse
+from crumbs.settings import get_setting
+from crumbs.filters import calculate_distance_distribution
+from crumbs.utils.tags import GUESS_FORMAT
+from crumbs.plot import draw_histograms
+
+
+def create_argparse(add_reverse=True, **kwargs):
+    'It returns a cmd parser for the filter executables'
+    parser = argparse.ArgumentParser(**kwargs)
+    parser.add_argument('input', type=argparse.FileType('rt'),
+                        help='Interleaved sequence input file')
+    parser.add_argument('-r', '--bwa_index', default=None,
+                        help='Path to bwa index')
+    hlp_fmt = 'Format of the input files (default: %(default)s)'
+    parser.add_argument('-t', '--in_format', default=GUESS_FORMAT,
+                        help=hlp_fmt)
+    parser.add_argument('-o', '--outfile', required=True,
+                        help='Output file', type=argparse.FileType('wt'))
+
+    parser.add_argument('-m', '--max_distance', default=None, type=int,
+                        help='Max distance to be plotted')
+    parser.add_argument('--tempdir', default='/tmp',
+                        help='Path for temporary files (default /tmp)')
+    parser.add_argument('--threads', default=None, type=int,
+                        help='number of threads for mapping (default 1)')
+
+    settings = get_setting('CHIMERAS_SETTINGS')
+    help2 = 'Proportion of mapping positions required to consider a read '
+    help2 += 'as fully mapped (default: {}'.format(settings['MAX_CLIPPING'])
+    parser.add_argument('--max_clipping', default=settings['MAX_CLIPPING'],
+                        help=help2, type=float)
+    return parser
+
+
+def parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+
+    args = {}
+    args['in_fhand'] = parsed_args.input
+    args['bwa_index'] = parsed_args.bwa_index
+    args['tempdir'] = parsed_args.tempdir
+    args['threads'] = parsed_args.threads
+    args['max_clipping'] = parsed_args.max_clipping
+    args['max_distance'] = parsed_args.max_distance
+    args['out_fhand'] = parsed_args.outfile
+    return args, parsed_args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It draws pair distance distribution per each possible'
+    description += ' orientation'
+    parser = create_argparse(description=description)
+    args = parse_args(parser)[0]
+    in_fhand = args['in_fhand']
+    index_fpath = args['bwa_index']
+    out_fhand = args['out_fhand']
+
+    stats = calculate_distance_distribution(in_fhand, index_fpath,
+                                            max_clipping=args['max_clipping'],
+                                            max_distance=args['max_distance'],
+                                            tempdir=args['tempdir'],
+                                            threads=args['threads'])
+
+    counters = []
+    titles = ['Pair distance Distributions'] * len(stats)
+    distrib_labels = []
+    for name, counter in stats.items():
+        counters.append(counter)
+        distrib_labels.append(name)
+
+    draw_histograms(counters, out_fhand, distrib_labels=distrib_labels,
+                    xlabel='pair_distance(bp)', ylabel='Num of pairs',
+                    titles=titles)
+
+if __name__ == '__main__':
+    sys.exit(main(run))

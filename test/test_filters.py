@@ -24,7 +24,6 @@ from random import choice
 from subprocess import check_output, call, CalledProcessError
 import os.path
 from tempfile import NamedTemporaryFile
-from pysam import Samfile
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -36,7 +35,7 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
                             classify_mapped_reads, filter_chimeras,
-                            draw_distance_distribution)
+                            calculate_distance_distribution)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
@@ -725,18 +724,18 @@ class FilterByMappingType(unittest.TestCase):
 
 
 class DrawDistanceDistribution(unittest.TestCase):
-    def test_draw_distance_distribution(self):
+    def test_calculate_mp_distance_distribution(self):
         index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
         query1 = '>seq1 1:N:0:GATCAG\n'
         query1 += 'GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
         query2 = '>seq1 2:N:0:GATCAG\n'
         query2 += 'AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
-        #Chimeric
+        # Chimeric
         query3 = '>seq2 1:N:0:GATCAG\n'
         query3 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
         query4 = '>seq2 2:N:0:GATCAG\n'
         query4 += 'ACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
-        #unknown
+        # unknown
         query5 = '>seq3 1:N:0:GATCAG\n'
         query5 += 'AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
         query6 = '>seq3 2:N:0:GATCAG\n'
@@ -746,13 +745,11 @@ class DrawDistanceDistribution(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(query)
         in_fhand.flush()
-
-        distribution_fhand = NamedTemporaryFile()
-        draw_distance_distribution([in_fhand.name], index_fpath,
-                                   distribution_fhand, max_clipping=0.05)
-        for line in open(distribution_fhand.name):
-            assert ('outies' in line or 'innies' in line or 'others' in line
-                    or '(1)' in line)
+        stats = calculate_distance_distribution(in_fhand, index_fpath,
+                                                   max_clipping=0.05)
+        assert stats['outies'][1776] == 1
+        assert stats['innies'][82] == 1
+        assert stats['others'][1417] == 1
 
     def test_draw_distance_distribution_bin(self):
         index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
@@ -779,15 +776,13 @@ class DrawDistanceDistribution(unittest.TestCase):
 
         distribution_fhand = NamedTemporaryFile()
         draw_distances_distribution_bin = os.path.join(BIN_DIR,
-                                               'draw_mp_distance_distribution')
+                                               'draw_pair_distance_distribution')
         assert 'usage' in check_output([draw_distances_distribution_bin, '-h'])
-        cmd = [draw_distances_distribution_bin, in_fhand.name, '-r',
-               index_fpath, '-o', distribution_fhand.name]
-        check_output(cmd, stdin=in_fhand)
-        for line in open(distribution_fhand.name):
-            assert ('outies' in line or 'innies' in line or 'others' in line
-                    or '(1)' in line)
+        cmd = [draw_distances_distribution_bin, '-r', index_fpath, '-o',
+               distribution_fhand.name, in_fhand.name]
+        check_output(cmd)
+        #raw_input(distribution_fhand.name)
 
 if __name__ == "__main__":
-    #import sys; sys.argv = ['', 'FilterBowtie2Test']
+    #import sys; sys.argv = ['', 'DrawDistanceDistribution']
     unittest.main()

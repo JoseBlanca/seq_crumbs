@@ -17,6 +17,7 @@
 
 from __future__ import division
 from tempfile import NamedTemporaryFile
+from crumbs.plot import draw_histograms
 
 try:
     from pysam import Samfile
@@ -494,32 +495,6 @@ def _mates_are_innies(mates):
     return (not mates[0].is_reverse) and mates[1].is_reverse
 
 
-def _sorted_mapped_reads(index_fpath, in_fpaths, interleaved=True,
-                         tempdir=None, min_seed_len=None, threads=None):
-    extra_params = ['-a', '-M']
-    if min_seed_len is not None:
-        extra_params.extend(['-k', min_seed_len])
-    if interleaved:
-        in_fpaths = [[interleaved_fpath] for interleaved_fpath in in_fpaths]
-    else:
-        paired_fpaths = []
-        fpaths = []
-        for fpath in in_fpaths:
-            fpaths.append(fpath)
-            if len(fpaths == 2):
-                paired_fpaths.append(fpaths)
-                fpaths = []
-        in_fpaths = paired_fpaths
-
-    bwa = map_with_bwamem(index_fpath, paired_fpaths=in_fpaths,
-                         extra_params=extra_params, threads=threads)
-    bam_fhand = NamedTemporaryFile(dir=tempdir)
-    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
-                             tempdir=tempdir)
-    bamfile = Samfile(bam_fhand.name)
-    return bamfile
-
-
 def _get_totally_mapped_alignments(reads, max_clipping):
     for aligned_read in reads:
         if _read_is_totally_mapped([aligned_read], max_clipping):
@@ -665,45 +640,32 @@ def filter_chimeras(in_fhand, index_fpath, mate_distance, out_fhand,
             write_seqs(pair, unknown_fhand)
 
 
-def show_distances_distributions(bamfile, max_clipping, out_fhand,
-                                   remove_outliers=0.95, max_distance=None):
-    '''It shows distance distribution between pairs of sequences that map
-    completely in the same reference sequence'''
-    stats = {'outies': [], 'innies': [], 'others': []}
+def calculate_distance_distribution(interleave_fhand, index_fpath,
+                                    max_clipping, max_distance=None,
+                                    tempdir=None, threads=None):
+    bam_fhand = NamedTemporaryFile(suffix='.bam')
+    extra_params = ['-a', '-M']
+    bwa = map_with_bwamem(index_fpath, interleave_fpath=interleave_fhand.name,
+                          extra_params=extra_params)
+    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname')
+    bamfile = Samfile(bam_fhand.name)
+    stats = {'outies': IntCounter(), 'innies': IntCounter(),
+             'others': IntCounter()}
     for grouped_mates in _group_alignments_by_reads(bamfile):
         mates = _split_mates(grouped_mates)
         for aligned_read1 in _get_totally_mapped_alignments(mates[0],
                                                             max_clipping):
             for aligned_read2 in _get_totally_mapped_alignments(mates[1],
-                                                            max_clipping):
+                                                                max_clipping):
                 if aligned_read1.rname == aligned_read2.rname:
                     aligned_reads = [aligned_read1, aligned_read2]
                     distance = _find_distance(aligned_reads)
                     if _mates_are_outies(aligned_reads):
-                        stats['outies'].append(distance)
+                        kind = 'outies'
                     elif _mates_are_innies(aligned_reads):
-                        stats['innies'].append(distance)
+                        kind = 'innies'
                     else:
-                        stats['others'].append(distance)
-    for key in stats.keys():
-        out_fhand.write(key + '\n')
-        if stats[key]:
-            counter = IntCounter(iter(stats[key]))
-            distribution = counter.calculate_distribution(max_=max_distance,
-                                             outlier_threshold=remove_outliers)
-            counts = distribution['counts']
-            bin_limits = distribution['bin_limits']
-            out_fhand.write(draw_histogram_ascii(bin_limits, counts))
-    out_fhand.flush()
-
-
-def draw_distance_distribution(in_fpaths, ref_fpath, out_fhand, max_clipping,
-                               remove_outliers=True, max_distance=None,
-                               interleaved=True, tempdir=None, threads=None):
-    index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
-    bamfile = _sorted_mapped_reads(index_fpath, in_fpaths,
-                                   threads=threads, tempdir=tempdir,
-                                   interleaved=interleaved)
-    show_distances_distributions(bamfile, max_clipping, out_fhand,
-                                 remove_outliers=remove_outliers,
-                                 max_distance=max_distance)
+                        kind = 'others'
+                    if max_distance is None or max_distance > distance:
+                        stats[kind][distance] += 1
+    return stats

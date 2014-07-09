@@ -255,8 +255,9 @@ def create_basic_argparse(**kwargs):
                         help='Sequence input files to process (default STDIN)',
                         type=argparse.FileType('rt'))
 
+    hlp_fmt = 'Format of the input files (default: %(default)s)'
     parser.add_argument('-t', '--in_format', default=GUESS_FORMAT,
-                       help='Format of the input files (default: %(default)s)')
+                        help=hlp_fmt)
 
     parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
                         help='Sequence output file (default: STDOUT)',

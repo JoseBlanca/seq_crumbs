@@ -206,7 +206,7 @@ def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
 
 
 def build_histogram(values, fhand, bins=10, range_=None, stacked=False,
-                   color=None, label=None, log=False, **kwargs):
+                    color=None, label=None, log=False, **kwargs):
     'It draws a histogram of a pandas Series into a file'
     canvas, axes = get_canvas_and_axes()
     plot_format = _guess_output_for_matplotlib(fhand)
