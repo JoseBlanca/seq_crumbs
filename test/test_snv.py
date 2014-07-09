@@ -50,7 +50,7 @@ class SNVTests(unittest.TestCase):
         assert snps[0].POS == 14370
         assert snps[1].is_snp
         assert snps[1].num_called == 3
-        assert [call.depth for call in snps[2].samples] == [6, 0, 4]
+        assert [call.depth for call in snps[2].calls] == [6, 0, 4]
 
     def test_heterozygosity(self):
         # 0/0 1/0 0/0
@@ -73,7 +73,7 @@ class SNVTests(unittest.TestCase):
         snps = list(VCFReader(vcf).parse_snps())
         snp = snps[0]
         result = [None, None, (1, 0), None, None, (0, 1)]
-        for sample, res in zip(snp.samples, result):
+        for sample, res in zip(snp.calls, result):
             if res is None:
                 assert sample.ref_depth is None
                 assert not sample.allele_depths
@@ -94,7 +94,7 @@ class SNVTests(unittest.TestCase):
         assert snps[4].depth == 91
 
         result = [1, 1, 1, 1, 1, 0.944444]
-        for call, res in zip(snps[4].samples, result):
+        for call, res in zip(snps[4].calls, result):
             assert call.maf_depth - res < 0.001
 
         assert snps[0].mac

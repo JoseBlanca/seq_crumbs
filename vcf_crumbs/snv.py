@@ -94,7 +94,7 @@ class SNV(object):
             return None
 
     @property
-    def samples(self):
+    def calls(self):
         return [Call(sample, snv=self) for sample in self.record.samples]
 
     def _calculate_maf_and_mac(self):
@@ -150,7 +150,7 @@ class SNV(object):
         self._maf_dp_analyzed = True
 
         allele_depths = Counter()
-        for call in self.samples:
+        for call in self.calls:
             if not call.has_alternative_counts:
                 continue
             for allele, depth in call.allele_depths.items():
