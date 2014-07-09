@@ -2,8 +2,7 @@ from __future__ import division
 
 from collections import Counter
 
-from vcf import Reader as pyvcf_Reader  # Imported here just for convenience
-                                        # when importing from other modules
+from vcf import Reader as pyvcf_Reader
 
 # Missing docstring
 # pylint: disable=C0111
@@ -11,18 +10,60 @@ from vcf import Reader as pyvcf_Reader  # Imported here just for convenience
 VARSCAN = 'VarScan'
 GATK = 'gatk'
 FREEBAYES = 'freebayes'
+HOM_REF = 0
+HET = 1
+HOM_ALT = 2
+HOM = 3
 
+DEF_MIN_CALLS_FOR_POP_STATS = 10
 # TODO check if SNV can be coverted in a proxy using the recipes
 # http://code.activestate.com/recipes/496741-object-proxying/
 # http://code.activestate.com/recipes/496742-shelfproxy/
 
 
+class VCFReader(object):
+    def __init__(self, fhand,
+                 min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS):
+        self.pyvcf_reader = pyvcf_Reader(fsock=fhand)
+        self._min_calls_for_pop_stats = min_calls_for_pop_stats
+        self._snpcaller = None
+
+    def parse_snps(self):
+        min_calls_for_pop_stats = self._min_calls_for_pop_stats
+        for snp in self.pyvcf_reader:
+            snp = SNV(snp, reader=self,
+                      min_calls_for_pop_stats=min_calls_for_pop_stats)
+            yield snp
+
+    @property
+    def snpcaller(self):
+        if self._snpcaller is not None:
+            return self._snpcaller
+
+        metadata = self.pyvcf_reader.metadata
+        if 'source' in metadata:
+            if 'VarScan2' in metadata['source']:
+                snpcaller = VARSCAN
+            elif 'freebayes' in metadata['source'][0].lower():
+                snpcaller = FREEBAYES
+        elif 'UnifiedGenotyper' in metadata:
+            snpcaller = GATK
+        else:
+            raise NotImplementedError('Can not get snp caller of the vcf file')
+        self._snpcaller = snpcaller
+        return snpcaller
+
+
 class SNV(object):
     '''A proxy around the pyvcf _Record with some additional functionality'''
-    def __init__(self, record, min_calls_for_pop_stats=10, snp_caller=None):
+    def __init__(self, record, reader,
+                 min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS):
+        # min_calls_for_pop_stats is defined here because otherwise it would
+        # behave like a global variable for all SNPs read from a common
+        # reader
         self.record = record
+        self.reader = reader
         self.min_calls_for_pop_stats = min_calls_for_pop_stats
-        self.snp_caller = snp_caller
         self._mac_analyzed = False
         self._maf = None
         self._mac = None
@@ -50,8 +91,7 @@ class SNV(object):
 
     @property
     def samples(self):
-        caller = self.snp_caller
-        return [Call(sample, caller) for sample in self.record.samples]
+        return [Call(sample, snv=self) for sample in self.record.samples]
 
     def _calculate_maf_and_mac(self):
         if self._mac_analyzed:
@@ -121,6 +161,14 @@ class SNV(object):
         self._calculate_mafs_dp()
         return self._depth
 
+    @property
+    def POS(self):
+        return self.record.POS
+
+    @property
+    def is_snp(self):
+        return self.record.is_snp
+
     def __str__(self):
         return str(self.record)
 
@@ -129,9 +177,9 @@ class SNV(object):
 
 
 class Call(object):
-    def __init__(self, call, snp_caller=None):
+    def __init__(self, call, snv):
         self.call = call
-        self.snp_caller = snp_caller
+        self.snv = snv
         self._alt_sum_depths = None
         self._allele_depths = {}
         self._has_alternative_counts = None
@@ -143,9 +191,9 @@ class Call(object):
         self._depths_analyzed = True
         if not self.call.called:
             return
-        snp_caller = self.snp_caller
+        snp_caller = self.snv.reader.snpcaller
         if snp_caller is None:
-            msg = 'To parse the read depths you have to set the snp_caller'
+            msg = 'To parse the read depths you have to set the snpcaller'
             raise ValueError(msg)
         elif snp_caller == GATK:
             self._get_depths_gatk()

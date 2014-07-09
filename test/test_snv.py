@@ -3,8 +3,7 @@ import unittest
 from StringIO import StringIO
 from os.path import join
 
-from vcf_crumbs.snv import pyvcf_Reader as Reader, FREEBAYES
-from vcf_crumbs.snv import SNV
+from vcf_crumbs.snv import SNV, VCFReader, FREEBAYES, VARSCAN, GATK
 from vcf_crumbs.utils import TEST_DATA_DIR
 
 # Method could be a function
@@ -36,7 +35,7 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 '''
 
 
-class AnnotateRecordTests(unittest.TestCase):
+class SNVTests(unittest.TestCase):
     def test_init(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
 20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
@@ -46,7 +45,7 @@ class AnnotateRecordTests(unittest.TestCase):
 20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t0/1:35:4\t0/2:17:2\t1/1:40:3
 '''
         vcf = StringIO(VCF_HEADER + vcf)
-        snps = list(Reader(vcf))
+        snps = list(VCFReader(vcf).parse_snps())
         assert len(snps) == 5
         assert snps[0].POS == 14370
         assert snps[1].is_snp
@@ -57,7 +56,7 @@ class AnnotateRecordTests(unittest.TestCase):
 20\t14370\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
 20\t14370\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t0|0:48:8:51,51\t1/1:43:5:.,.'''
         vcf = StringIO(VCF_HEADER + vcf)
-        snps = [SNV(snp) for snp in Reader(vcf)]
+        snps = list(VCFReader(vcf).parse_snps())
         snp = snps[1]
         assert snp.obs_het is None
         assert snp.exp_het is None
@@ -67,8 +66,8 @@ class AnnotateRecordTests(unittest.TestCase):
         assert snp.exp_het - 0.44444 < 0.001
 
     def test_allele_depths(self):
-        vcf = join(TEST_DATA_DIR, 'freebayes_al_depth.vcf')
-        snps = [SNV(snp, snp_caller=FREEBAYES) for snp in Reader(open(vcf))]
+        vcf = open(join(TEST_DATA_DIR, 'freebayes_al_depth.vcf'))
+        snps = list(VCFReader(vcf).parse_snps())
         snp = snps[0]
         result = [None, None, (1, 0), None, None, (0, 1)]
         for sample, res in zip(snp.samples, result):
@@ -80,8 +79,8 @@ class AnnotateRecordTests(unittest.TestCase):
                 assert sample.allele_depths[1] == res[1]
 
     def test_mafs(self):
-        vcf = join(TEST_DATA_DIR, 'freebayes_al_depth.vcf')
-        snps = [SNV(snp, snp_caller=FREEBAYES) for snp in Reader(open(vcf))]
+        vcf = open(join(TEST_DATA_DIR, 'freebayes_al_depth.vcf'))
+        snps = list(VCFReader(vcf).parse_snps())
         assert snps[0].maf_depth - 0.5 < 0.001
         assert snps[0].allele_depths == {0: 1, 1: 1}
         assert snps[0].depth == 2
@@ -106,6 +105,16 @@ class AnnotateRecordTests(unittest.TestCase):
         assert snps[0].mac == 2
 
 
+class ReaderTest(unittest.TestCase):
+    def test_get_snpcaller(self):
+        varscan = open(join(TEST_DATA_DIR, 'sample.vcf.gz'))
+        gatk = open(join(TEST_DATA_DIR, 'gatk_sample.vcf.gz'))
+        freebayes = open(join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz'))
+        assert VCFReader(fhand=varscan).snpcaller == VARSCAN
+        assert VCFReader(fhand=gatk).snpcaller == GATK
+        assert VCFReader(fhand=freebayes).snpcaller == FREEBAYES
+
+
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'AnnotatorsTest.test_is_variable_annotator']
+    # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']
     unittest.main()
