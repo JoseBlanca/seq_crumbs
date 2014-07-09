@@ -47,7 +47,7 @@ class SNVTests(unittest.TestCase):
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snps())
         assert len(snps) == 5
-        assert snps[0].POS == 14370
+        assert snps[0].pos == 14370
         assert snps[1].is_snp
         assert snps[1].num_called == 3
         assert [call.depth for call in snps[2].calls] == [6, 0, 4]

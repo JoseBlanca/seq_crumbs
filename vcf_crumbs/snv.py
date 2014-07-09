@@ -179,11 +179,15 @@ class SNV(object):
         return self._depth
 
     @property
-    def POS(self):
+    def chrom(self):
+        return self.record.CHROM
+
+    @property
+    def pos(self):
         return self.record.POS
 
     @property
-    def QUAL(self):
+    def qual(self):
         return self.record.QUAL
 
     @property
@@ -311,6 +315,18 @@ class Call(object):
     @property
     def called(self):
         return self.call.called
+
+    @property
+    def gt_type(self):
+        return self.call.gt_type
+
+    @property
+    def is_het(self):
+        return self.call.is_het
+
+    @property
+    def gt_alleles(self):
+        return [int(al) for al in self.call.gt_alleles]
 
     def __str__(self):
         return str(self.call)

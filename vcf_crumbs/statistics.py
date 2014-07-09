@@ -7,34 +7,18 @@ from vcf import Reader
 from crumbs.seq import get_name, get_length
 from crumbs.seqio import read_seqs
 from crumbs.statistics import IntCounter, IntBoxplot
+from vcf_crumbs.snv import (VARSCAN, GATK, FREEBAYES, HOM_REF, HET, HOM_ALT,
+                            HOM, DEF_MIN_CALLS_FOR_POP_STATS, VCFReader,
+                            pyvcfReader)
 
+# Missing docstring
+# pylint: disable=C0111
 
-VARSCAN = 'VarScan'
-GATK = 'gatk'
-FREEBAYES = 'freebayes'
-
-# taken from pyvcf
-HOM_REF = 0
-HET = 1
-HOM_ALT = 2
-HOM = 3
-
+REMARKABLE_DEPTHS = (5, 10, 20, 35, 50, 70)
 DP = 'depth'
 ADS = 'allele_depths'
 GQ = 'genotype_quality'
 GT = 'genotype'
-
-
-def get_snpcaller_name(reader):
-    metadata = reader.metadata
-    if 'source' in metadata:
-        if 'VarScan2' in metadata['source']:
-            return VARSCAN
-        elif 'freebayes' in metadata['source'][0].lower():
-            return FREEBAYES
-    if 'UnifiedGenotyper' in metadata:
-        return GATK
-    raise NotImplementedError('Can not get snp caller of the vcf file')
 
 
 class _AlleleDepths(object):
@@ -97,65 +81,6 @@ class _AlleleDepths(object):
     @property
     def allele_depths(self):
         return self._al_counts
-
-
-def get_call_data(call, vcf_variant):
-    data = call.data
-    gt = data.GT
-    try:
-        gq = data.GQ
-    except AttributeError:
-        gq = None
-    dp = data.DP
-
-    if call.called:
-        depths = _AlleleDepths(call, snp_caller=vcf_variant)
-        calldata = {GT: gt, GQ: gq, DP: dp, ADS: depths}
-    else:
-        calldata = {}
-    return calldata
-
-
-def calculate_maf_dp(snp, vcf_variant):
-    total_ad = 0
-    total_rd = 0
-    mafs = {}
-    for call in snp.samples:
-        if call.called:
-            calldata = get_call_data(call, vcf_variant)
-            depths = calldata[ADS]
-            rd = depths.ref_depth
-            ad = depths.alt_sum_depths
-            if rd + ad == 0:
-                #freebayes writes some call data although it has no read counts
-                # for this sample. We have to pass those
-                continue
-            mafs[call.sample] = max([rd, ad]) / sum([rd, ad])
-            total_ad += ad
-            total_rd += rd
-    values = [total_ad, total_rd]
-    total = sum(values)
-    if not total:
-        return None
-    maf = max(values) / total
-    mafs['all'] = maf
-    return mafs
-
-
-def calculate_maf_and_mac(snp):
-    n_chroms_sampled = 0
-    allele_counts = Counter()
-    for call in snp.samples:
-        if call.called:
-            genotype = call.gt_alleles
-            n_chroms_sampled += len(genotype)
-            for al in genotype:
-                allele_counts[al] += 1
-    if not n_chroms_sampled:
-        return None, None
-    maf = max(allele_counts.values()) / n_chroms_sampled
-    mac = max(allele_counts.values())
-    return maf, mac
 
 
 def _get_seq_lengths(fhand):
@@ -361,25 +286,21 @@ class _AlleleCounts2D(object):
             yield ref_count, genotypes
 
 
-MIN_NUM_SAMPLES = 6
-REMARKABLE_DEPTHS = (10, 20, 35, 50, 70)
-
-
 class VcfStats(object):
-    def __init__(self, vcf_path, gq_threshold=None, dp_threshold=100,
-                 min_samples_for_heterozigosity=MIN_NUM_SAMPLES,
-                 remarkable_coverages=None):
+    def __init__(self, vcf_fpath, gq_threshold=None, dp_threshold=100,
+                 min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS,
+                 remarkable_coverages=None, window_size=WINDOWS_SIZE):
         if remarkable_coverages is None:
             remarkable_depths = REMARKABLE_DEPTHS
         self.remarkable_depths = remarkable_depths
 
-        self._reader = Reader(filename=vcf_path)
-        self._random_reader = Reader(filename=vcf_path)
+        self._reader = VCFReader(open(vcf_fpath),
+                               min_calls_for_pop_stats=min_calls_for_pop_stats)
 
-        self._vcf_variant = get_snpcaller_name(self._reader)
-        self._samples = self._reader.samples
+        self._random_reader = pyvcfReader(filename=vcf_fpath)
+
+        self.window_size = window_size
         self._gq_threshold = 0 if gq_threshold is None else gq_threshold
-        self._min_samples_for_heterozigosity = min_samples_for_heterozigosity
 
         self.dp_threshold = dp_threshold
         self._gt_qual_depth_counter = {HOM: IntBoxplot(), HET: IntBoxplot()}
@@ -398,7 +319,7 @@ class VcfStats(object):
         for counter_name in SAMPLE_COUNTERS:
             if counter_name not in self._sample_counters:
                 self._sample_counters[counter_name] = {}
-            for sample in self._samples:
+            for sample in self._reader.samples:
                 if counter_name in (GT_DEPTHS, GT_QUALS):
                     counters = {HOM: IntCounter(), HET: IntCounter()}
                 else:
@@ -415,103 +336,100 @@ class VcfStats(object):
         self._calculate()
 
     def _add_maf_and_mac(self, snp):
-        maf, mac = calculate_maf_and_mac(snp)
+        maf = snp.maf
         if maf:
             self._snv_counters[MAFS][int(round(maf * 100))] += 1
+        mac = snp.mac
         if mac:
             self._snv_counters[MACS][mac] += 1
-        return maf, mac
 
     def _add_maf_dp(self, snp):
-        mafs = calculate_maf_dp(snp, vcf_variant=self._vcf_variant)
-        if mafs:
-            for sample, maf in mafs.items():
-                if maf:
-                    maf = int(round(maf * 100))
-                    if sample == 'all':
-                        self._snv_counters[MAFS_DP][maf] += 1
-                    else:
-                        self._sample_counters[MAFS_DP][sample][maf] += 1
+        maf_dp = snp.maf_depth
+        if maf_dp is not None:
+            self._snv_counters[MAFS_DP][int(round(maf_dp * 100))] += 1
+        for call in snp.calls:
+            maf_depth = call.maf_depth
+            if maf_depth is None:
+                continue
+            sample = call.sample
+            maf_depth = int(round(maf_dp * 100))
+            self._sample_counters[MAFS_DP][sample][maf_depth] += 1
 
     def _add_snv_qual(self, snp):
-        snv_qual = snp.QUAL
+        snv_qual = snp.qual
         if snv_qual is not None:
-            self._snv_counters[SNV_QUALS][int(snv_qual)] += 1
+            self._snv_counters[SNV_QUALS][int(round(snv_qual))] += 1
 
     def _add_snv_density(self, snp):
-        windows_size = WINDOWS_SIZE
-        pos = snp.POS
+        windows_size = self.window_size
+        pos = snp.pos
         start = pos - windows_size if pos - windows_size > windows_size else 0
         end = pos + windows_size
-        chrom = snp.CHROM
+        chrom = snp.chrom
         num_snvs = len(list(self._random_reader.fetch(chrom, start, end))) - 1
 
         self._snv_counters[SNV_DENSITY][num_snvs] += 1
 
-    def _add_snv_het_obs_fraction(self, snp, maf, min_num_samples):
-        if snp.num_called < min_num_samples:
+    def _add_snv_het_obs_fraction(self, snp):
+        obs_het = snp.obs_het
+        if obs_het is None:
             return
-        obs_het = (snp.num_het / snp.num_called)
         self._snv_counters[HET_IN_SNP][int(round(obs_het * 100))] += 1
 
-        # If the SNP is not fixed calculate the inbreeding
-        if not(abs(maf - 0) < 0.0001 or abs(1 - maf) < 0.0001):
-            exp_het = 2.0 * maf * (1 - maf)
-            inbreed_F = 1 - (obs_het / exp_het)
-            self._snv_counters[INBREED_F_IN_SNP][int(round(inbreed_F * 100))] += 1
+        inbreed_coef = snp.inbreed_coef
+        if inbreed_coef is None:
+            return
+        inbreed_coef = int(round(inbreed_coef * 100))
+        self._snv_counters[INBREED_F_IN_SNP][inbreed_coef] += 1
 
-    def _num_samples_higher_equal_dp(self, depth, snp):
-        vcf_variant = self._vcf_variant
+    @staticmethod
+    def _num_samples_higher_equal_dp(depth, snp):
         n_samples = 0
-        for call in snp.samples:
+        for call in snp.calls:
             if not call.called:
                 continue
-            calldata = get_call_data(call, vcf_variant)
-            dp = calldata[DP]
-            if dp >= depth:
+            if call.depth >= depth:
                 n_samples += 1
         return n_samples
 
     def _calculate(self):
         snp_counter = 0
-        vcf_variant = self._vcf_variant
-        for snp in self._reader:
+        for snp in self._reader.parse_snps():
             snp_counter += 1
             self._add_maf_dp(snp)
-            maf = self._add_maf_and_mac(snp)[0]
+            self._add_maf_and_mac(snp)
             self._add_snv_qual(snp)
             self._add_snv_density(snp)
-            self._add_snv_het_obs_fraction(snp, maf,
-                                          self._min_samples_for_heterozigosity)
+            self._add_snv_het_obs_fraction(snp)
 
             for depth, counter in self.sample_dp_coincidence.viewitems():
                 n_samples = self._num_samples_higher_equal_dp(depth, snp)
                 counter[n_samples] += 1
 
             n_gt_called = 0
-            for call in snp.samples:
+            for call in snp.calls:
                 if not call.called:
                     continue
                 n_gt_called += 1
                 sample_name = call.sample
-                calldata = get_call_data(call, vcf_variant)
-                dp = calldata[DP]
-                gq = calldata[GQ]
-                depths = calldata[ADS]
-                rc = depths.ref_depth
-                acs = depths.alt_sum_depths
+                ref_depth = call.ref_depth
+                acs = call.alt_sum_depths
                 gt_type = call.gt_type
 
                 gt_broud_type = HET if call.is_het else HOM
 
-                if dp < self.dp_threshold:
-                    self._gt_qual_depth_counter[gt_broud_type].append(dp, gq)
+                depth = call.depth
+                gt_qual = call.gt_qual
+                if depth < self.dp_threshold:
+                    self._gt_qual_depth_counter[gt_broud_type].append(depth,
+                                                                      gt_qual)
 
-                if gq >= self._gq_threshold:
-                    self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][dp] += 1
-                    self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gq] += 1
+                if gt_qual >= self._gq_threshold:
+                    self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][depth] += 1
+                    self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gt_qual] += 1
                     self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
-                self._ac2d.add(rc=rc, acs=acs, gt=call.gt_alleles, gq=gq)
+                self._ac2d.add(rc=ref_depth, acs=acs, gt=call.gt_alleles,
+                               gq=gt_qual)
             self.called_gts[n_gt_called] += 1
             self.called_snvs += 1
 
@@ -560,7 +478,7 @@ class VcfStats(object):
 
     @property
     def samples(self):
-        return self._samples
+        return self._reader.samples
 
     @property
     def snv_density(self):
