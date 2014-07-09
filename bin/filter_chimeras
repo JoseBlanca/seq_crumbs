@@ -16,73 +16,94 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from crumbs.utils.bin_utils import (main, parse_filter_args, argparse,
-                                    parse_basic_args, create_basic_argparse)
+import tempfile
+
+from crumbs.utils.bin_utils import (main, argparse, parse_basic_args,
+                                    build_version_msg)
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.settings import get_setting
-from crumbs.filters import  filter_chimeras
+from crumbs.filters import filter_chimeras
+from crumbs.utils.tags import GUESS_FORMAT, OUTFILE
 
 
-def create_filter_argparse(add_reverse=True, **kwargs):
+def _setup_argparse(add_reverse=True, **kwargs):
     'It returns a cmd parser for the filter executables'
-    parser = create_basic_argparse(**kwargs)
-    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
-    parser.add_argument('-c', '--chimeras', default=None,
-                        help='File for chimeric sequences')
-    parser.add_argument('-u', '--unknown', default=None,
-                        help='File for unknown sequences')
-    parser.add_argument('-r', '--reference_seq', default=None,
-                        help='fpath with reference sequence')
+    parser = argparse.ArgumentParser(**kwargs)
+    parser.add_argument('input', type=argparse.FileType('rt'),
+                        help='Sequence input file to process')
+    parser.add_argument('-r', '--bwa_index_path', default=None,
+                        help='Path to bwa index')
+    parser.add_argument('-t', '--in_format', default=GUESS_FORMAT,
+                       help='Format of the input files (default: %(default)s)')
+
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+                        help='Sequence output file (default: STDOUT)',
+                        type=argparse.FileType('wt'))
     parser.add_argument('-s', '--insert_size', default=None, type=int,
                         help='Insert size of mate pair library', required=True)
-    parser.add_argument('--tempdir', default='/tmp',
-                        help='Path for temporary files (default /tmp)')
-    help1 = 'Input sequences are not interleaved(default: interleaved)'
-    parser.add_argument('--paired_fpaths', default=False,
-                        help=help1, action='store_true')
+
+    parser.add_argument('-c', '--chimeras', default=None,
+                        help='File for chimeric sequences',
+                        type=argparse.FileType('wt'))
+    parser.add_argument('-u', '--unknown', default=None,
+                        help='File for unknown sequences',
+                        type=argparse.FileType('wt'))
+    tempdir = tempfile.gettempdir()
+    help_tmp = 'Path for temporary files (default {})'
+    parser.add_argument('--tempdir', default=tempdir,
+                        help=help_tmp.format(tempdir))
     parser.add_argument('--threads', default=None, type=int,
-                        help='number of threads for mapping (1)')
+                        help='number of threads for mapping (default 1)')
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-z ', '--gzip', action='store_true',
+                       help='Compress the output in gzip format')
+    group.add_argument('-Z ', '--bgzf', action='store_true',
+                       help='Compress the output in bgzf format')
+    group.add_argument('-B ', '--bzip2', action='store_true',
+                       help='Compress the output in bzip2 format')
+    parent = argparse.ArgumentParser(parents=[parser], add_help=False)
+    parser = argparse.ArgumentParser(parents=[parent],
+                                     conflict_handler='resolve')
+
+
+
     settings = get_setting('CHIMERAS_SETTINGS')
     settings_group = parser.add_argument_group('Settings')
 
     help4 = 'Max distance between pair ends sequences. One chimera fragment'
     help4 += 'should be this close to the mate'
-    help4 += '(default:' + str(settings['MAX_PE_LEN']) + ')'
-    settings_group.add_argument('--max_pe_len', default=None,
-                          help=help4, type=int)
+    help4 += '(default: {})'.format(settings['MAX_PE_LEN'])
+    settings_group.add_argument('--max_pe_len', default=settings['MAX_PE_LEN'],
+                                help=help4, type=int)
     help5 = 'Max variation allowed from the mean size of mate pair library'
-    help5 += '(default:' + str(settings['MATE_DISTANCE_VARIATION']) + ')'
-    settings_group.add_argument('--max_dist_var', default=None, help=help5,
-                                type=int)
+    help5 += '(default: {})'.format(settings['MATE_DISTANCE_VARIATION'])
+    settings_group.add_argument('--max_dist_var', help=help5, type=int,
+                                default=settings['MATE_DISTANCE_VARIATION'])
     help6 = 'Proportion of mapping positions required to consider a read '
     help6 += 'as fully mapped'
-    help6 += '(default:' + str(settings['MAX_CLIPPING']) + ')'
-    settings_group.add_argument('--max_clipping', default=None,
-                          help=help6, type=float)
+    help6 += '(default: {})'.format(settings['MAX_CLIPPING'])
+    settings_group.add_argument('--max_clipping', help=help6, type=float,
+                                default=settings['MAX_CLIPPING'])
+
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
     return parser
 
 
-def parse_filter_args(parser):
+def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_args(parser)
-    args['chimeras_fpath'] = parsed_args.chimeras
-    args['unknown_fpath'] = parsed_args.unknown
+    args['chimeras_fhand'] = parsed_args.chimeras
+    args['unknown_fhand'] = parsed_args.unknown
     args['in_format'] = parsed_args.in_format
-    args['reference'] = parsed_args.reference_seq
+    args['index_fpath'] = parsed_args.bwa_index_path
     args['insert_size'] = parsed_args.insert_size
     args['tempdir'] = parsed_args.tempdir
-    args['interleaved'] = not parsed_args.paired_fpaths
     args['threads'] = parsed_args.threads
-
-    settings = get_setting('CHIMERAS_SETTINGS')
-    setting_args = {}
-    setting_args['MAX_CLIPPING'] = parsed_args.max_clipping
-    setting_args['MAX_PE_LEN'] = parsed_args.max_pe_len
-    setting_args['MATE_DISTANCE_VARIATION'] = parsed_args.max_dist_var
-    for key in setting_args.keys():
-        if setting_args[key] is not None:
-            settings[key] = setting_args[key]
-    args['settings'] = settings
+    args['chimeras_settings'] = {'MAX_CLIPPING': parsed_args.max_clipping,
+                                 'MAX_PE_LEN': parsed_args.max_pe_len,
+                           'MATE_DISTANCE_VARIATION': parsed_args.max_dist_var}
 
     return args, parsed_args
 
@@ -90,36 +111,23 @@ def parse_filter_args(parser):
 def run():
     'The main function of the binary'
     description = 'It filters chimeric sequences from illumina mate pairs seqs'
-    parser = create_filter_argparse(description=description)
-    args = parse_filter_args(parser)[0]
-    ref_fpath = args['reference']
-    chimeras_fpath = args['chimeras_fpath']
+    parser = _setup_argparse(description=description)
+    args = _parse_args(parser)[0]
+    index_fpath = args['index_fpath']
+    chimeras_fhand = args['chimeras_fhand']
     out_fhand = args['out_fhand']
-    unknown_fpath = args['unknown_fpath']
-    settings = args['settings']
-    in_fpaths = [fhand.name for fhand in args['in_fhands']]
+    unknown_fhand = args['unknown_fhand']
+    chimeras_settings = args['chimeras_settings']
+    print args['in_fhands']
+    in_fhand = args['in_fhands'][0]
     mate_distance = args['insert_size']
     tempdir = args['tempdir']
-    interleaved = args['interleaved']
     threads = args['threads']
-    in_fhand_name = in_fpaths[0].split('/')
-    if chimeras_fpath is not None:
-        chimeras_fhand = open(chimeras_fpath, 'w')
-    else:
-        chimeras_fpath = in_fhand_name[-1].split('.')[0] + '.chimeric.fastq'
-        chimeras_fpath = ''.join(in_fhand_name[:-1]) + chimeras_fpath
-        chimeras_fhand = open(chimeras_fpath, 'w')
-    if unknown_fpath is not None:
-        unknown_fhand = open(unknown_fpath, 'w')
-    else:
-        unknown_fpath = in_fhand_name[-1].split('.')[0] + '.unknown.fastq'
-        unknown_fpath = ''.join(in_fhand_name[:-1]) + unknown_fpath
-        unknown_fhand = open(unknown_fpath, 'w')
 
-    filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
-                    unknown_fhand, settings=settings,
-                    mate_distance=mate_distance, tempdir=tempdir,
-                    interleaved=interleaved, threads=threads)
+    filter_chimeras(in_fhand, index_fpath, mate_distance=mate_distance,
+                    out_fhand=out_fhand, chimeras_fhand=chimeras_fhand,
+                    unknown_fhand=unknown_fhand, settings=chimeras_settings,
+                    tempdir=tempdir, threads=threads)
     flush_fhand(out_fhand)
     flush_fhand(chimeras_fhand)
     flush_fhand(unknown_fhand)

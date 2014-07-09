@@ -19,7 +19,7 @@ from __future__ import division
 from tempfile import NamedTemporaryFile
 
 try:
-    import pysam
+    from pysam import Samfile
 except ImportError:
     # This is an optional requirement
     pass
@@ -185,7 +185,7 @@ class FilterById(_BaseFilter):
 
 
 def _get_mapped_reads(bam_fpath, min_mapq=0):
-    bam = pysam.Samfile(bam_fpath)
+    bam = Samfile(bam_fpath)
     return [read.qname for read in bam if not read.is_unmapped and (not min_mapq or read.mapq > min_mapq)]
 
 
@@ -516,7 +516,7 @@ def _sorted_mapped_reads(index_fpath, in_fpaths, interleaved=True,
     bam_fhand = NamedTemporaryFile(dir=tempdir)
     map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
                              tempdir=tempdir)
-    bamfile = pysam.Samfile(bam_fhand.name)
+    bamfile = Samfile(bam_fhand.name)
     return bamfile
 
 
@@ -612,19 +612,20 @@ def _mates_are_chimeric(mates, samfile, max_clipping, max_insert_size,
     return False
 
 
-def classify_mapped_reads(bamfile, mate_distance,
-                          settings=get_setting('CHIMERAS_SETTINGS'),
-                          out_format=SEQITEM):
+def classify_mapped_reads(bam_fhand, mate_distance,
+                          settings=get_setting('CHIMERAS_SETTINGS')):
     '''It classifies sequences from bam file in chimeric, unknown and
     non chimeric, according to its distance and orientation in the reference
     sequence'''
-    #settings. Include in function properties with default values
+    bamfile = Samfile(bam_fhand.name)
+
+    # settings. Include in function properties with default values
     max_clipping = settings['MAX_CLIPPING']
     max_pe_len = settings['MAX_PE_LEN']
     variation = settings['MATE_DISTANCE_VARIATION']
     mate_length_range = [mate_distance - variation, mate_distance + variation]
     reference_lengths = _get_ref_lengths(bamfile)
-    #It tries to find out the kind of each pair of sequences
+    # It tries to find out the kind of each pair of sequences
     for grouped_mates in _group_alignments_by_reads(bamfile):
         mates_alignments = _split_mates(grouped_mates)
         if _mates_are_not_chimeric(mates_alignments, max_clipping,
@@ -636,30 +637,26 @@ def classify_mapped_reads(bamfile, mate_distance,
             kind = CHIMERA
         else:
             kind = UNKNOWN
-        if out_format == SEQITEM:
-            pair = [alignedread_to_seqitem(_get_primary_alignment(read))
-                    for read in mates_alignments]
-        elif out_format == 'aligned_read':
-            pair = mates_alignments
+
+        pair = [alignedread_to_seqitem(_get_primary_alignment(read))
+                for read in mates_alignments]
         yield [pair, kind]
 
 
-def filter_chimeras(ref_fpath, out_fhand, chimeras_fhand, in_fpaths,
-                    unknown_fhand, settings=get_setting('CHIMERAS_SETTINGS'),
-                    min_seed_len=None, mate_distance=3000,
-                    out_format=SEQITEM, tempdir=None, bamfile=False,
-                    interleaved=True, threads=None):
+def filter_chimeras(in_fhand, index_fpath, mate_distance, out_fhand,
+                    chimeras_fhand=None, unknown_fhand=None, tempdir=None,
+                    threads=None, settings=get_setting('CHIMERAS_SETTINGS')):
+
     '''It maps sequences from input files, sorts them and writes to output
     files according to its classification'''
-    if bamfile:
-        bamfile = pysam.Samfile(in_fpaths[0])
-    else:
-        index_fpath = get_or_create_bwa_index(ref_fpath, tempdir)
-        bamfile = _sorted_mapped_reads(index_fpath, in_fpaths, interleaved,
-                                       tempdir, min_seed_len, threads)
-    for pair, kind in classify_mapped_reads(bamfile, settings=settings,
-                                           mate_distance=mate_distance,
-                                           out_format=out_format):
+    bam_fhand = NamedTemporaryFile(suffix='.bam')
+    extra_params = ['-a', '-M']
+    bwa = map_with_bwamem(index_fpath, interleave_fpath=in_fhand.name,
+                          extra_params=extra_params)
+    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname')
+
+    for pair, kind in classify_mapped_reads(bam_fhand, settings=settings,
+                                            mate_distance=mate_distance):
         if kind is NON_CHIMERIC:
             write_seqs(pair, out_fhand)
         elif kind is CHIMERA and chimeras_fhand is not None:

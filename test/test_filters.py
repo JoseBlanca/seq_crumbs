@@ -24,6 +24,7 @@ from random import choice
 from subprocess import check_output, call, CalledProcessError
 import os.path
 from tempfile import NamedTemporaryFile
+from pysam import Samfile
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -35,15 +36,13 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterByRpkm, FilterByBam,
                             FilterBowtie2Match, FilterByFeatureTypes,
                             classify_mapped_reads, filter_chimeras,
-    _sorted_mapped_reads, draw_distance_distribution)
+                            draw_distance_distribution)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
                                SEQRECORD, NON_CHIMERIC, CHIMERA, UNKNOWN)
-from crumbs.utils.file_utils import TemporaryDir
 from crumbs.seq import get_name, get_str_seq, SeqWrapper
-from crumbs.mapping import (get_or_create_bowtie2_index,
-                            get_or_create_bwa_index)
+from crumbs.mapping import map_with_bwamem, map_process_to_sortedbam
 from crumbs.seqio import read_seq_packets
 
 
@@ -551,10 +550,7 @@ class BamFilterTest(unittest.TestCase):
 class FilterBowtie2Test(unittest.TestCase):
     @staticmethod
     def test_filter_by_bowtie2():
-        directory = TemporaryDir()
-        index_fpath = get_or_create_bowtie2_index(os.path.join(TEST_DATA_DIR,
-                                                          'arabidopsis_genes'),
-                                                  directory=directory.name)
+        index_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
         fastq_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
         fasta_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fasta')
 
@@ -570,16 +566,12 @@ class FilterBowtie2Test(unittest.TestCase):
                 assert _seqs_to_names(filter_packets[SEQS_PASSED]) == passed
                 assert _seqs_to_names(filter_packets[SEQS_FILTERED_OUT]) == [
                                                      'read1', 'read2', 'read3']
-        directory.close()
 
     @staticmethod
     def test_filter_by_bowtie2_bin():
         filter_bin = os.path.join(BIN_DIR, 'filter_by_bowtie2')
         assert 'usage' in check_output([filter_bin, '-h'])
-        directory = TemporaryDir()
-        index_fpath = get_or_create_bowtie2_index(os.path.join(TEST_DATA_DIR,
-                                                          'arabidopsis_genes'),
-                                                  directory=directory.name)
+        index_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
 
         fastq_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
         fasta_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fasta')
@@ -591,7 +583,6 @@ class FilterBowtie2Test(unittest.TestCase):
             check_output(cmd)
             assert 'no_arabi' in open(out_fhand.name).read()
             assert 'read1' in open(filtered_fhand.name).read()
-        directory.close()
 
 
 class FilterByFeatureTypeTest(unittest.TestCase):
@@ -639,7 +630,7 @@ TCCCGGGAGTCTTTTCCAAGGTGTGC
 
 class FilterByMappingType(unittest.TestCase):
     def test_classify_paired_reads(self):
-        reference_seq = GENOME
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
         #Non chimeric
         query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
         query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
@@ -654,16 +645,13 @@ class FilterByMappingType(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(query)
         in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-        directory = TemporaryDir()
-        index_fpath = get_or_create_bwa_index(ref_fhand.name, directory.name)
 
-        bamfile = _sorted_mapped_reads(index_fpath,
-                                       in_fpaths=[in_fhand.name],
-                                       interleaved=True)
-        result = classify_mapped_reads(bamfile, mate_distance=2000)
+        bam_fhand = NamedTemporaryFile(suffix='.bam')
+        extra_params = ['-a', '-M']
+        bwa = map_with_bwamem(index_fpath, interleave_fpath=in_fhand.name,
+                              extra_params=extra_params)
+        map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname')
+        result = classify_mapped_reads(bam_fhand, mate_distance=2000)
         for pair, kind in result:
             if kind == NON_CHIMERIC:
                 assert 'seq1' in get_name(pair[0])
@@ -673,23 +661,9 @@ class FilterByMappingType(unittest.TestCase):
                 assert 'seq2' in get_name(pair[0])
             else:
                 self.fail()
-        directory.close()
 
-        #filter_chimeras function
-        out_fhand = NamedTemporaryFile()
-        chimeras_fhand = NamedTemporaryFile()
-        unknown_fhand = NamedTemporaryFile()
-        filter_chimeras(ref_fhand.name, out_fhand, chimeras_fhand,
-                        [in_fhand.name], unknown_fhand, mate_distance=2000)
-        out_fhand.flush()
-        chimeras_fhand.flush()
-        unknown_fhand.flush()
-        assert 'seq1' in open(out_fhand.name).next()
-        assert 'seq2' in open(chimeras_fhand.name).next()
-        assert 'seq3' in open(unknown_fhand.name).next()
-
-    def test_filter_chimeras_bin(self):
-        reference_seq = GENOME
+    def test_filter_chimeras(self):
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
         #Non chimeric
         query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
         query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
@@ -704,16 +678,44 @@ class FilterByMappingType(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(query)
         in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
+
+        #filter_chimeras function
+        out_fhand = NamedTemporaryFile()
+        chimeras_fhand = NamedTemporaryFile()
+        unknown_fhand = NamedTemporaryFile()
+        filter_chimeras(in_fhand, index_fpath, mate_distance=2000,
+                        out_fhand=out_fhand, chimeras_fhand=chimeras_fhand,
+                        unknown_fhand=unknown_fhand)
+        out_fhand.flush()
+        chimeras_fhand.flush()
+        unknown_fhand.flush()
+        assert 'seq1' in open(out_fhand.name).next()
+        assert 'seq2' in open(chimeras_fhand.name).next()
+        assert 'seq3' in open(unknown_fhand.name).next()
+
+    def test_filter_chimeras_bin(self):
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
+        #Non chimeric
+        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
+        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
+        #Chimeric
+        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
+        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
+        #unknown
+        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
+        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
+
+        query = query1 + query2 + query5 + query6 + query3 + query4
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(query)
+        in_fhand.flush()
 
         filter_chimeras_bin = os.path.join(BIN_DIR, 'filter_chimeras')
         assert 'usage' in check_output([filter_chimeras_bin, '-h'])
         chimeras_fhand = NamedTemporaryFile()
         unknown_fhand = NamedTemporaryFile()
         out_fhand = NamedTemporaryFile()
-        cmd = [filter_chimeras_bin, in_fhand.name, '-r', ref_fhand.name]
+        cmd = [filter_chimeras_bin, in_fhand.name, '-r', index_fpath]
         cmd.extend(['-c', chimeras_fhand.name, '-u', unknown_fhand.name,
                     '-s', '2000', '-o', out_fhand.name])
         check_output(cmd, stdin=in_fhand)
@@ -724,7 +726,7 @@ class FilterByMappingType(unittest.TestCase):
 
 class DrawDistanceDistribution(unittest.TestCase):
     def test_draw_distance_distribution(self):
-        reference_seq = GENOME
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
         query1 = '>seq1 1:N:0:GATCAG\n'
         query1 += 'GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
         query2 = '>seq1 2:N:0:GATCAG\n'
@@ -744,30 +746,27 @@ class DrawDistanceDistribution(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(query)
         in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
 
         distribution_fhand = NamedTemporaryFile()
-        draw_distance_distribution([in_fhand.name], ref_fhand.name,
+        draw_distance_distribution([in_fhand.name], index_fpath,
                                    distribution_fhand, max_clipping=0.05)
         for line in open(distribution_fhand.name):
             assert ('outies' in line or 'innies' in line or 'others' in line
                     or '(1)' in line)
 
     def test_draw_distance_distribution_bin(self):
-        reference_seq = GENOME
-        #Non chimeric
+        index_fpath = os.path.join(TEST_DATA_DIR, 'ref_example.fasta')
+        # Non chimeric
         query1 = '>seq1 1:N:0:GATCAG\n'
         query1 += 'GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
         query2 = '>seq1 2:N:0:GATCAG\n'
         query2 += 'AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
-        #Chimeric
+        # Chimeric
         query3 = '>seq2 1:N:0:GATCAG\n'
         query3 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
         query4 = '>seq2 2:N:0:GATCAG\n'
         query4 += 'ACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
-        #unknown
+        # unknown
         query5 = '>seq3 1:N:0:GATCAG\n'
         query5 += 'AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
         query6 = '>seq3 2:N:0:GATCAG\n'
@@ -777,22 +776,18 @@ class DrawDistanceDistribution(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(query)
         in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
 
         distribution_fhand = NamedTemporaryFile()
         draw_distances_distribution_bin = os.path.join(BIN_DIR,
-                                            'draw_mp_distance_distribution')
+                                               'draw_mp_distance_distribution')
         assert 'usage' in check_output([draw_distances_distribution_bin, '-h'])
         cmd = [draw_distances_distribution_bin, in_fhand.name, '-r',
-               ref_fhand.name, '-o', distribution_fhand.name]
+               index_fpath, '-o', distribution_fhand.name]
         check_output(cmd, stdin=in_fhand)
         for line in open(distribution_fhand.name):
             assert ('outies' in line or 'innies' in line or 'others' in line
                     or '(1)' in line)
 
-
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'DrawDistanceDistribution']
+    #import sys; sys.argv = ['', 'FilterBowtie2Test']
     unittest.main()

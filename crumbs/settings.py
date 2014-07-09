@@ -53,7 +53,7 @@ _EXTERNAL_BIN_PREFIX = 'crumbs_'
 _ADD_PATH_TO_EXT_BIN = True
 
 _THIRD_PART_JAVA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                                   'third_party', 'java')
+                                    'third_party', 'java')
 _PICARD_TOOLS_DIR = os.path.join(_THIRD_PART_JAVA_DIR, 'picard-tools')
 
 # how many reads can be hold in memory by default
@@ -95,11 +95,11 @@ _TEMP_DIR = None
 # min_mapq to use as a filter for maped reads
 _DEFAULT_MIN_MAPQ = 0
 
-#buffer size and memory limit for match_pairs
+# buffer size and memory limit for match_pairs
 _MAX_READS_IN_MEMORY = 1000000
 _CHECK_ORDER_BUFFER_SIZE = 100000
 
-#default parameters for chimera finding
+# default parameters for chimera finding
 _CHIMERAS_SETTINGS = {}
 _CHIMERAS_SETTINGS['MAX_CLIPPING'] = 0.05
 _CHIMERAS_SETTINGS['MAX_PE_LEN'] = 750
