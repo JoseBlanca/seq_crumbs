@@ -24,6 +24,7 @@ DEF_MIN_CALLS_FOR_POP_STATS = 10
 class VCFReader(object):
     def __init__(self, fhand,
                  min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS):
+        self.fhand = fhand
         self.pyvcf_reader = pyvcfReader(fsock=fhand)
         self.min_calls_for_pop_stats = min_calls_for_pop_stats
         self._snpcaller = None
@@ -34,6 +35,14 @@ class VCFReader(object):
             snp = SNV(snp, reader=self,
                       min_calls_for_pop_stats=min_calls_for_pop_stats)
             yield snp
+
+    def fetch_snps(self, *args, **kwargs):
+        min_calls_for_pop_stats = self.min_calls_for_pop_stats
+        for snp in self.pyvcf_reader.fetch(*args, **kwargs):
+            snp = SNV(snp, reader=self,
+                      min_calls_for_pop_stats=min_calls_for_pop_stats)
+            yield snp
+
 
     @property
     def snpcaller(self):
@@ -78,6 +87,16 @@ class SNV(object):
         self._maf_depth = None
         self._depth = None
 
+    @property
+    def alleles(self):
+        alleles = []
+        for allele in self.record.alleles:
+            try:
+                allele = allele.sequence
+            except AttributeError:
+                pass
+            alleles.append(allele)
+        return alleles
     @property
     def obs_het(self):
         snp = self.record
@@ -189,6 +208,10 @@ class SNV(object):
         return self.record.POS
 
     @property
+    def end(self):
+        return self.record.end
+
+    @property
     def qual(self):
         return self.record.QUAL
 
@@ -213,6 +236,29 @@ class SNV(object):
 
     def __unicode__(self):
         return self.record.__unicode__()
+
+    @property
+    def filters(self):
+        return self.record.FILTER
+
+    def add_filter(self, filter_name):
+        self.record.add_filter(filter_name)
+
+    @property
+    def infos(self):
+        return self.record.INFO
+
+    def add_info(self, *args, **kwargs):
+        self.record.add_info(*args, **kwargs)
+
+    @property
+    def kind(self):
+        # return snv type. [snp, indel, unknown]
+        return self.record.var_type
+
+    @property
+    def is_indel(self):
+        return self.record.is_indel
 
 
 class Call(object):
@@ -339,7 +385,7 @@ class Call(object):
         return self.call.is_het
 
     @property
-    def gt_alleles(self):
+    def int_alleles(self):
         return [int(al) for al in self.call.gt_alleles]
 
     def __str__(self):

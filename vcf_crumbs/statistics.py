@@ -348,8 +348,8 @@ class VcfStats(object):
         if maf_dp is not None:
             self._snv_counters[MAFS_DP][int(round(maf_dp * 100))] += 1
         for call in snp.calls:
-            maf_depth = call.maf_depth
-            if maf_depth is None:
+            maf_dp = call.maf_depth
+            if maf_dp is None:
                 continue
             sample = call.sample
             maf_depth = int(round(maf_dp * 100))
@@ -428,7 +428,7 @@ class VcfStats(object):
                     self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][depth] += 1
                     self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gt_qual] += 1
                     self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
-                self._ac2d.add(rc=ref_depth, acs=acs, gt=call.gt_alleles,
+                self._ac2d.add(rc=ref_depth, acs=acs, gt=call.int_alleles,
                                gq=gt_qual)
             self.called_gts[n_gt_called] += 1
             self.called_snvs += 1
