@@ -34,14 +34,12 @@ from crumbs.blast import BlasterForFewSubjects
 from crumbs.seqio import write_seqs
 from crumbs.pairs import group_pairs_by_name, group_pairs
 from crumbs.settings import get_setting
-from crumbs.filters import (_split_mates, _get_primary_alignment,
-                            _read_is_totally_mapped, _get_qstart,
-                            _get_qend,
-                            _group_alignments_by_reads, _5end_mapped)
-from crumbs.mapping import alignedread_to_seqitem, map_with_bwamem,\
-    map_process_to_sortedbam
-
-
+from crumbs.mate_chimeras import (_split_mates, _get_primary_alignment,
+                                  _read_is_totally_mapped, _get_qstart,
+                                  _get_qend,
+                                  _group_alignments_by_reads, _5end_mapped)
+from crumbs.mapping import (alignedread_to_seqitem, map_with_bwamem,
+                            map_process_to_sortedbam)
 # pylint: disable=R0903
 
 

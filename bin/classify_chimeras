@@ -22,7 +22,7 @@ from crumbs.utils.bin_utils import (main, argparse, parse_basic_args,
                                     build_version_msg)
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.settings import get_setting
-from crumbs.filters import filter_chimeras
+from crumbs.mate_chimeras import classify_chimeras
 from crumbs.utils.tags import GUESS_FORMAT, OUTFILE
 
 
@@ -123,10 +123,10 @@ def run():
     tempdir = args['tempdir']
     threads = args['threads']
 
-    filter_chimeras(in_fhand, index_fpath, mate_distance=mate_distance,
-                    out_fhand=out_fhand, chimeras_fhand=chimeras_fhand,
-                    unknown_fhand=unknown_fhand, settings=chimeras_settings,
-                    tempdir=tempdir, threads=threads)
+    classify_chimeras(in_fhand, index_fpath, mate_distance=mate_distance,
+                      out_fhand=out_fhand, chimeras_fhand=chimeras_fhand,
+                      unknown_fhand=unknown_fhand, settings=chimeras_settings,
+                      tempdir=tempdir, threads=threads)
     flush_fhand(out_fhand)
     flush_fhand(chimeras_fhand)
     flush_fhand(unknown_fhand)
