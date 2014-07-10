@@ -481,6 +481,10 @@ class VcfStats(object):
         return self._reader.samples
 
     @property
+    def min_calls_for_pop_stats(self):
+        return self._reader.min_calls_for_pop_stats
+
+    @property
     def snv_density(self):
         return self._snv_counters[SNV_DENSITY]
 

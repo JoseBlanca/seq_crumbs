@@ -13,11 +13,12 @@ from matplotlib import cm
 from matplotlib.colorbar import make_axes, Colorbar
 from matplotlib.ticker import ScalarFormatter
 
-from vcf_crumbs.statistics import (VcfStats, HET, HOM, WINDOWS_SIZE, HOM_ALT,
-                                   HOM_REF, MIN_NUM_SAMPLES)
-from crumbs.plot import  (draw_histogram_in_fhand, draw_histograms, LINE,
-                          get_fig_and_canvas, draw_int_boxplot,
-                          draw_histogram_in_axes, BAR)
+from vcf_crumbs.statistics import VcfStats, WINDOWS_SIZE
+from vcf_crumbs.snv import (HET, HOM, HOM_ALT, HOM_REF,
+                            DEF_MIN_CALLS_FOR_POP_STATS)
+from crumbs.plot import (draw_histogram_in_fhand, draw_histograms, LINE,
+                         get_fig_and_canvas, draw_int_boxplot,
+                         draw_histogram_in_axes, BAR)
 
 PLOTS_PER_CHART = 3
 
@@ -67,11 +68,14 @@ def draw_mafs(vcf_stats, out_dir, maf_kind):
              'macs': 'MAC (genotype based)'}
     name = names[maf_kind]
     fbases = {'mafs_dp': 'maf_dp_',
-             'mafs': 'maf_gt_',
-             'macs': 'mac_gt_'}
+              'mafs': 'maf_gt_',
+              'macs': 'mac_gt_'}
+    xlabels = {'mafs_dp': 'MAF (depth based) x 100',
+               'mafs': 'Major Allele Freq. x 100',
+               'macs': 'MAC (chroms. sampled - major allele count)'}
 
     maf_method = getattr(vcf_stats, maf_kind)
-    xlabel = 'MAF (depth based) x 100'
+    xlabel = xlabels[maf_kind]
     ylabel = 'Num. SNVs'
     if maf_kind == 'mafs_dp':
         fhand = open(join(out_dir, fbases[maf_kind] + 'samples.png'), 'w')
@@ -85,7 +89,7 @@ def draw_mafs(vcf_stats, out_dir, maf_kind):
         draw_histograms(counters, distrib_labels=distrib_labels, fhand=fhand,
                         xlabel=xlabel, ylabel=ylabel, titles=titles)
 
-    #all_together
+    # all_together
     fhand = open(join(out_dir, fbases[maf_kind] + 'all_samples.png'), 'w')
     distrib = maf_method().calculate_distribution()
     title = name + ' distribution. All samples'
@@ -131,9 +135,9 @@ def draw_gt_depths(vcf_stats, out_dir, gq_threshold=None):
         distrib_labels.extend(sample_names)
         distrib_labels.extend(sample_names)
         titles.extend(['GT Depths distribution for Heterozigotes'] *
-                                                               PLOTS_PER_CHART)
+                      PLOTS_PER_CHART)
         titles.extend(['GT Depths distribution for Homozigotes'] *
-                                                               PLOTS_PER_CHART)
+                      PLOTS_PER_CHART)
 
     draw_histograms(counters, distrib_labels=distrib_labels, fhand=fhand,
                     xlabel=xlabel, plots_per_chart=PLOTS_PER_CHART,
@@ -178,9 +182,9 @@ def draw_gt_quals(vcf_stats, out_dir, gq_threshold=None):
         distrib_labels.extend(sample_names)
         distrib_labels.extend(sample_names)
         titles.extend(['GT qual distribution for Heterozigotes'] *
-                                                               PLOTS_PER_CHART)
+                      PLOTS_PER_CHART)
         titles.extend(['GT qual distribution for Homozigotes'] *
-                                                               PLOTS_PER_CHART)
+                      PLOTS_PER_CHART)
 
     draw_histograms(counters, distrib_labels=distrib_labels, fhand=fhand,
                     xlabel=xlabel, plots_per_chart=PLOTS_PER_CHART,
@@ -202,8 +206,8 @@ def draw_gt_quals(vcf_stats, out_dir, gq_threshold=None):
 
 def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
                       ac_max=100):
-    #rc_max = 10
-    #ac_max = 10
+    # rc_max = 10
+    # ac_max = 10
     fhand = open(join(out_dir, 'gt_densities.png'), 'w')
     ac2d = vcf_stats.allelecount2d
     fig, canvas = get_fig_and_canvas(num_rows=3, figsize=(25, 25))
@@ -213,7 +217,8 @@ def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
                     HOM_ALT: 'Alternative homozigote'}
     for index, gt_type in enumerate((HOM_REF, HOM_ALT, HET)):
         axes = fig.add_subplot(3, 2, 2 * index + 1)
-        title = 'Ref/alt allele count density in {}'.format(desc_gt_type[gt_type])
+        title = 'Ref/alt allele count density in {}'
+        title = title.format(desc_gt_type[gt_type])
 
         try:
             x, y, gt_counts = zip(*ac2d.get_gt_counts(gt_type, rc_max=rc_max,
@@ -224,7 +229,8 @@ def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
             else:
                 raise
         axes2 = fig.add_subplot(3, 2, 2 * index + 2)
-        titl2 = 'Ref/alt gt quality average in {}'.format(desc_gt_type[gt_type])
+        titl2 = 'Ref/alt gt quality average in {}'
+        titl2 = titl2.format(desc_gt_type[gt_type])
         if x is None:
             title += ' (NO DATA)'
             axes.set_title(title)
@@ -253,7 +259,7 @@ def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
                   'aspect': 'equal'}
 
         x, y, quals = zip(*ac2d.get_avg_gt_quals(gt_type, rc_max=rc_max,
-                                                  ac_max=ac_max))
+                                                 ac_max=ac_max))
         zi = griddata(x, y, quals, xi, yi)
         cs = axes2.contourf(xi, yi, zi, **kwargs)
         color_axes = make_axes(axes2)[0]
@@ -327,11 +333,12 @@ def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
             if ref_count not in gt_quals:
                 continue
             for index in range(len(gt_quals[ref_count]['num_gts'])):
-                partial_gt_sum += gt_quals[ref_count]['num_gts'][index] * gt_quals[ref_count]['sum_gqs'][index]
+                partial_gt_sum += (gt_quals[ref_count]['num_gts'][index] *
+                                   gt_quals[ref_count]['sum_gqs'][index])
                 num_gts += gt_quals[ref_count]['num_gts'][index]
             mean_qual = partial_gt_sum / num_gts
-            xs.append(ref_count + 0.5)  # we add 0.5 to have the point in the
-                                        # middle of the bar
+            xs.append(ref_count + 0.5)      # we add 0.5 to have the point in
+                                            # the middle of the bar
             ys.append(mean_qual)
         axes2 = axes.twinx()
         # make room for the legend
@@ -407,18 +414,19 @@ def draw_het_by_snp(vcf_stats, out_dir):
     distrib = vcf_stats.het_by_snp.calculate_distribution()
     axes = fig.add_subplot(211)
     draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                            title=title, xlabel=xlabel, ylabel=ylabel,
-                            axes=axes)
+                           title=title, xlabel=xlabel, ylabel=ylabel,
+                           axes=axes)
 
     distrib = vcf_stats.inbreeding_by_snp.calculate_distribution()
     axes2 = fig.add_subplot(212)
     title = 'Inbreeding Coef. (F) Distribution'
     xlabel = '(1 - Hobs / H exp) * 100'
     draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                           axes=axes2, ylabel='Num. Genotypes')
+                           axes=axes2, ylabel='Num. SNVs',
+                           title=title, xlabel=xlabel)
 
     x_formatter = ScalarFormatter()
-    x_formatter.set_powerlimits=(-3, 4)
+    x_formatter.set_powerlimits = (-3, 4)
     axes2.xaxis.set_major_formatter(x_formatter)
     for label in axes2.xaxis.get_ticklabels():
         label.set_rotation(90)
@@ -452,7 +460,8 @@ def draw_per_sample_stats(vcf_stats, out_dir):
         missing_gts.append(missing_gt)
         missing_per_cent.append(missing_gt / tot_snps * 100)
 
-    if len(samples) >= MIN_NUM_SAMPLES:
+    min_calls_for_pop_stats = vcf_stats.min_calls_for_pop_stats
+    if len(samples) >= min_calls_for_pop_stats:
         num_plots = 3
     else:
         num_plots = 2
@@ -460,7 +469,7 @@ def draw_per_sample_stats(vcf_stats, out_dir):
     fig, canvas = get_fig_and_canvas(num_rows=num_plots)
     plots_done = 1
     # het
-    if len(samples) >= MIN_NUM_SAMPLES:
+    if len(samples) >= min_calls_for_pop_stats:
         left = list(range(len(samples)))
         height = hets
         axes = fig.add_subplot(num_plots, 1, plots_done)
@@ -499,8 +508,6 @@ def draw_per_sample_stats(vcf_stats, out_dir):
     height = missing_gts
     axes.bar(left, height, bottom=bottom, label='missing', color='gray')
 
-    #axes.legend(bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True,
-    #            ncol=4)
     axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                 ncol=4, mode='expand', borderaxespad=0.)
 
@@ -545,13 +552,13 @@ def main():
     min_samples = args['min_samples']
 
     vcf_stats = VcfStats(in_vcf_fpath, gq_threshold,
-                         min_samples_for_heterozigosity=min_samples)
+                         min_calls_for_pop_stats=min_samples)
 
     draw_missing_data(vcf_stats, out_dir)
 
     draw_per_sample_stats(vcf_stats, out_dir)
 
-    if len(vcf_stats.samples) >= MIN_NUM_SAMPLES:
+    if len(vcf_stats.samples) >= vcf_stats.min_calls_for_pop_stats:
         draw_het_by_snp(vcf_stats, out_dir)
 
     draw_gt_depths(vcf_stats, out_dir)
