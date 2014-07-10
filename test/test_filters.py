@@ -3,13 +3,12 @@ import unittest
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
 
-from vcf import Reader
+from vcf_crumbs.snv import VCFReader
 
-from vcf_crumbs.filters import (GenotypesInSamplesFilter, AlleleNumberFilter,
-                                MissingGenotypesFilter, remove_low_quality_gt)
+from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
+                                CallRateFilter, BiallelicFilter, IsSNPFilter,
+                                GenotypeQualFilter)
 from vcf_crumbs.utils import TEST_DATA_DIR
-from vcf_crumbs.statistics import (VARSCAN,  get_call_data, GQ,
-                                   get_snpcaller_name, GT)
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -18,68 +17,95 @@ VARI_VCF_PATH = join(TEST_DATA_DIR, 'vari_filter.vcf')
 
 
 class FiltersTest(unittest.TestCase):
-    def xtest_vcfparser(self):
-        reader = Reader(open(VCF_INDEL_PATH))
-        for snp in reader:
-            print "***************"
-            print snp.REF
-            print type(snp.ALT[0])
-            print('snv type: ' + snp.var_subtype)
-            print('alleles: ' + ','.join([unicode(al) for al in snp.alleles]))
-            print 'info', snp.INFO
-            for call in snp.samples:
-                if call.gt_bases is None:
-                    continue
-                print('call alleles: ' + ','.join(call.gt_alleles))
-                print call.data
-                print call.site
-            print 'pos', snp.POS
-            print('start: ' + str(snp.start))
-            print 'end', snp.end
-            print snp.is_snp
+    def test_group_in_filter_packets(self):
+        items = list(range(10))
+        packets = list(group_in_filter_packets(items, 4))
+        res = [{FILTERED_OUT: [], PASSED: (0, 1, 2, 3)},
+               {FILTERED_OUT: [], PASSED: (4, 5, 6, 7)},
+               {FILTERED_OUT: [], PASSED: (8, 9)}]
+        assert res == packets
 
-    def test_gt_in_samples(self):
-        records = Reader(filename=VCF_PATH)
-        rec1 = records.next()
-        filter_ = GenotypesInSamplesFilter([0], ['mu16'])
-        filter_.vcf_variant = VARSCAN
-        assert filter_(rec1)
+    @staticmethod
+    def eval_prop_in_packet(packet, prop):
+        eval_prop = lambda snps: [getattr(snp, prop)for snp in snps]
+        packet = {PASSED: eval_prop(packet[PASSED]),
+                  FILTERED_OUT: eval_prop(packet[FILTERED_OUT])}
+        return packet
 
-        filter_ = GenotypesInSamplesFilter([0], ['pepo', 'mu16'], 2)
-        filter_.vcf_variant = VARSCAN
-        assert not filter_(rec1)
-
-    def test_allele_number(self):
-        records = Reader(filename=VCF_PATH)
-        rec1 = records.next()
-        filter_ = AlleleNumberFilter(2)
-        filter_.vcf_variant = VARSCAN
-        assert filter_(rec1)
-
-        filter_ = AlleleNumberFilter(1)
-        filter_.vcf_variant = VARSCAN
-        assert not filter_(rec1)
+    @staticmethod
+    def filter_vcf(vcf_fhand, filter_):
+        snps = VCFReader(vcf_fhand).parse_snps()
+        packet = list(group_in_filter_packets(snps, 10))[0]
+        filtered_packet = filter_(packet)
+        return filtered_packet
 
     def test_missing_genotypes(self):
-        records = Reader(filename=VCF_PATH)
-        rec1 = records.next()
-        filter_ = MissingGenotypesFilter(2)
-        filter_.vcf_variant = VARSCAN
-        assert filter_(rec1)
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=CallRateFilter(min_calls=2))
+        res = self.eval_prop_in_packet(packet, 'num_called')
+        expected = {FILTERED_OUT: [0, 1, 1, 1, 1], PASSED: [2, 2, 2, 2, 2]}
+        assert res == expected
 
-        filter_ = MissingGenotypesFilter(0)
-        filter_.vcf_variant = VARSCAN
-        assert not filter_(rec1)
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=CallRateFilter(min_calls=1))
+        res = self.eval_prop_in_packet(packet, 'num_called')
+        expected = {FILTERED_OUT: [0], PASSED: [2, 2, 2, 2, 1, 2, 1, 1, 1]}
+        assert res == expected
 
-    def test_genotype_quality(self):
-        records = Reader(filename=VCF_PATH)
-        vcf_variant = get_snpcaller_name(records)
-        rec1 = records.next()
-        for call in remove_low_quality_gt(rec1, 20, vcf_variant):
-            if call.sample != 'upv196':
-                assert call.gt_bases is None
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=CallRateFilter(min_calls=1,
+                                                        reverse=True))
+        res = self.eval_prop_in_packet(packet, 'num_called')
+        expected = {PASSED: [0], FILTERED_OUT: [2, 2, 2, 2, 1, 2, 1, 1, 1]}
+        assert res == expected
 
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=CallRateFilter(min_calls=3))
+        res = self.eval_prop_in_packet(packet, 'num_called')
+        expected = {PASSED: [], FILTERED_OUT: [2, 2, 2, 2, 0, 1, 2, 1, 1, 1]}
+        assert res == expected
 
+    def test_biallelic(self):
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=BiallelicFilter())
+        res = self.eval_prop_in_packet(packet, 'alleles')
+        assert not(res[FILTERED_OUT])
+        assert len(res[PASSED]) == 10
+
+        packet = self.filter_vcf(open(VCF_INDEL_PATH),
+                                 filter_=BiallelicFilter())
+        res = self.eval_prop_in_packet(packet, 'alleles')
+        assert len(res[FILTERED_OUT]) == 1
+        assert len(res[PASSED]) == 6
+
+    def test_is_snp(self):
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=IsSNPFilter())
+        res = self.eval_prop_in_packet(packet, 'is_snp')
+        assert not(res[FILTERED_OUT])
+        assert res[PASSED] == [True] * 10
+
+        packet = self.filter_vcf(open(VCF_INDEL_PATH),
+                                 filter_=IsSNPFilter())
+        res = self.eval_prop_in_packet(packet, 'is_snp')
+        assert res[FILTERED_OUT] == [False] * 7
+        assert not res[PASSED]
+
+    def test_gt_qual(self):
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=GenotypeQualFilter(20))
+        res = self.eval_prop_in_packet(packet, 'qual')
+        assert res[FILTERED_OUT] == [None] * 10
+        assert not res[PASSED]
+
+        fpath = join(TEST_DATA_DIR, 'freebayes_al_depth.vcf')
+        packet = self.filter_vcf(open(fpath),
+                                 filter_=GenotypeQualFilter(1))
+        res = self.eval_prop_in_packet(packet, 'qual')
+        assert len(res[FILTERED_OUT]) == 1
+        assert len(res[PASSED]) == 4
+
+# TODO fix binary
 class BinaryTest(unittest.TestCase):
 
     def test_bin_record_filters(self):

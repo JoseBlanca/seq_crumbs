@@ -1,11 +1,10 @@
 from __future__ import division
 
-from vcf.model import make_calldata_tuple, _Call
-
-from vcf_crumbs.annotation import choose_samples
-from vcf_crumbs.statistics import get_call_data, GQ
+from crumbs.iterutils import group_in_packets
 
 
+# TODO. This is not a filter, it's a mapper because sets calls to
+# not called
 def remove_low_quality_gt(record, gq_threshold, vcf_variant):
     ''''Filters by genotype quality and sets to uncalled those that do not meet
     the requierements'''
@@ -27,67 +26,96 @@ def remove_low_quality_gt(record, gq_threshold, vcf_variant):
     return record
 
 
-class GenotypesInSamplesFilter(object):
-    'Filter by genotypes in specific samples'
+PASSED = 'passed'
+FILTERED_OUT = 'filtered_out'
 
-    def __init__(self, genotypes, samples=None, n_min_called=None):
-        self.genotypes = genotypes
-        self.genotypes.append(None)
-        self.samples = samples
-        self.n_min_called = n_min_called
 
-    def __call__(self, snv):
-        chosen_samples = choose_samples(snv, self.samples)
-        n_called = 0
-        for call in chosen_samples:
-            if call.gt_type not in self.genotypes:
+def group_in_filter_packets(items, items_per_packet):
+    for packet in group_in_packets(items, items_per_packet):
+        yield {PASSED: packet, FILTERED_OUT: []}
+
+
+class _BaseFilter(object):
+    def __init__(self, reverse=False):
+        self.reverse = reverse
+
+    def _setup_checks(self, filterpacket):
+        pass
+
+    def _do_check(self, seq):
+        raise NotImplementedError()
+
+    def __call__(self, filterpacket):
+        self._setup_checks(filterpacket)
+        reverse = self.reverse
+        items_passed = []
+        filtered_out = filterpacket[FILTERED_OUT][:]
+        for item in filterpacket[PASSED]:
+            passed = self._do_check(item)
+            if reverse:
+                passed = not passed
+            if passed:
+                items_passed.append(item)
+            else:
+                filtered_out.append(item)
+
+        return {PASSED: items_passed, FILTERED_OUT: filtered_out}
+
+
+class CallRateFilter(_BaseFilter):
+    'Filter by the min. number of genotypes called'
+
+    def __init__(self, min_calls=None, min_call_rate=None, reverse=False):
+        super(CallRateFilter, self).__init__(reverse=reverse)
+        if min_calls is not None and min_call_rate is not None:
+            msg = 'Both min_calls and min_call rate cannot be given'
+            msg += 'at the same time'
+            raise ValueError(msg)
+        elif min_calls is None and min_call_rate is None:
+            msg = 'min_calls or call_rate should be given'
+            raise ValueError(msg)
+        self.min_calls = min_calls
+        self.min_call_rate = min_call_rate
+
+    def _do_check(self, snv):
+        if self.min_calls:
+            if snv.num_called >= self.min_calls:
+                return True
+            else:
                 return False
-            if call.gt_type is not None:
-                n_called += 1
-        if self.n_min_called is None or n_called >= self.n_min_called:
+        else:
+            if snv.call_rate >= self.min_call_rate:
+                return True
+            else:
+                return False
+
+
+class BiallelicFilter(_BaseFilter):
+    'Filter the biallelic SNPs'
+
+    def __init__(self, reverse=False):
+        super(BiallelicFilter, self).__init__(reverse=reverse)
+
+    def _do_check(self, snv):
+        if len(snv.alleles) == 2:
             return True
         else:
             return False
 
 
-class AlleleNumberFilter(object):
-    'Filter by number of different alleles'
-
-    def __init__(self, n_alleles, samples=None):
-        self.n_alleles = n_alleles
-        self.samples = samples
-
-    def __call__(self, snv):
-        chosen_samples = choose_samples(snv, self.samples)
-        alleles = set()
-        for call in chosen_samples:
-            if call.gt_bases is None:
-                continue
-            if call.phased:
-                bases = call.gt_bases.split('|')
-            else:
-                bases = call.gt_bases.split('/')
-            for allele in bases:
-                alleles.add(allele)
-        return len(snv.alleles) == self.n_alleles
+class IsSNPFilter(_BaseFilter):
+    def _do_check(self, snv):
+        return snv.is_snp
 
 
-def get_n_missing_genotypes(record):
-    n_missing = 0
-    for call in record:
-        if not call.called:
-            n_missing += 1
-    return n_missing
+class GenotypeQualFilter(_BaseFilter):
+    def __init__(self, min_qual, reverse=False):
+        super(GenotypeQualFilter, self).__init__(reverse=reverse)
+        self.min_qual = min_qual
 
-
-class MissingGenotypesFilter(object):
-    'Filter by maximim number of missing genotypes'
-
-    def __init__(self, max_missing_genotypes, samples=None):
-        self.max_missing_genotypes = max_missing_genotypes
-        self.samples = samples
-
-    def __call__(self, snv):
-        chosen_samples = choose_samples(snv, self.samples)
-        n_missing = get_n_missing_genotypes(chosen_samples)
-        return n_missing <= self.max_missing_genotypes
+    def _do_check(self, snv):
+        qual = snv.qual
+        if qual is None:
+            return False
+        else:
+            return qual >= self.min_qual
