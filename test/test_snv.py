@@ -43,14 +43,17 @@ class SNVTests(unittest.TestCase):
 20\t1110696\trs6040355\tA\tG,T\t67\tPASS\tNS=2;DP=10;AF=0.333,0.667;AA=T;DB\tGT:GQ:DP:HQ\t1|2:21:6:23,27\t2|1:2:0:18,2\t2/2:35:4
 20\t1230237\t.\tT\t.\t47\tPASS\tNS=3;DP=13;AA=T\tGT:GQ:DP:HQ\t0|0:54:7:56,60\t0|0:48:4:51,51\t0/0:61:2
 20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t0/1:35:4\t0/2:17:2\t1/1:40:3
+20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.:35:4\t0/2:17:2\t1/1:40:3
 '''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snps())
-        assert len(snps) == 5
+        assert len(snps) == 6
         assert snps[0].pos == 14370
         assert snps[1].is_snp
         assert snps[1].num_called == 3
         assert [call.depth for call in snps[2].calls] == [6, 0, 4]
+        assert snps[5].call_rate - 0.6666 < 0.0001
+        assert [snp.num_called for snp in snps] == [3, 3, 3, 3, 3, 2]
 
     def test_heterozygosity(self):
         # 0/0 1/0 0/0

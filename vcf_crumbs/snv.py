@@ -197,6 +197,10 @@ class SNV(object):
         return self.record.num_called
 
     @property
+    def call_rate(self):
+        return self.record.num_called / len(self.reader.samples)
+
+    @property
     def is_snp(self):
         return self.record.is_snp
 
