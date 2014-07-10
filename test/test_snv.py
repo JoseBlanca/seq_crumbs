@@ -96,7 +96,6 @@ class SNVTests(unittest.TestCase):
         result = [1, 1, 1, 1, 1, 0.944444]
         for call, res in zip(snps[4].calls, result):
             assert call.maf_depth - res < 0.001
-
         assert snps[0].mac
 
         snps[0].min_calls_for_pop_stats = 3

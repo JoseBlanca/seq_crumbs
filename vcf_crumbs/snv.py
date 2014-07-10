@@ -16,7 +16,7 @@ HOM_ALT = 2
 HOM = 3
 
 DEF_MIN_CALLS_FOR_POP_STATS = 10
-# TODO check if SNV can be coverted in a proxy using the recipes
+# TODO check if SNV can be converted in a proxy using the recipes
 # http://code.activestate.com/recipes/496741-object-proxying/
 # http://code.activestate.com/recipes/496742-shelfproxy/
 
@@ -25,11 +25,11 @@ class VCFReader(object):
     def __init__(self, fhand,
                  min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS):
         self.pyvcf_reader = pyvcfReader(fsock=fhand)
-        self._min_calls_for_pop_stats = min_calls_for_pop_stats
+        self.min_calls_for_pop_stats = min_calls_for_pop_stats
         self._snpcaller = None
 
     def parse_snps(self):
-        min_calls_for_pop_stats = self._min_calls_for_pop_stats
+        min_calls_for_pop_stats = self.min_calls_for_pop_stats
         for snp in self.pyvcf_reader:
             snp = SNV(snp, reader=self,
                       min_calls_for_pop_stats=min_calls_for_pop_stats)
@@ -46,6 +46,8 @@ class VCFReader(object):
                 snpcaller = VARSCAN
             elif 'freebayes' in metadata['source'][0].lower():
                 snpcaller = FREEBAYES
+            else:
+                snpcaller = metadata['source']
         elif 'UnifiedGenotyper' in metadata:
             snpcaller = GATK
         else:
@@ -274,8 +276,14 @@ class Call(object):
 
     @property
     def depth(self):
-        return self.call.data.DP
-
+        # In freebayes the allele depth (DP) and the sum of allele
+        # observations do not match
+        if self.snv.reader.snpcaller == FREEBAYES:
+            al_dps = self.allele_depths
+            depth = sum(al_dps.values())
+        else:
+            depth = self.call.data.DP
+        return depth
     @property
     def gt_qual(self):
         return self.call.data.GQ
@@ -303,8 +311,10 @@ class Call(object):
     @property
     def maf_depth(self):
         al_dps = self.allele_depths
-        if self.has_alternative_counts:
-            return max(al_dps.values()) / sum(al_dps.values())
+        depth = sum(al_dps.values())
+        if depth:
+            major_allele_depth = max(al_dps.values())
+            return major_allele_depth / depth
         else:
             return None
 
