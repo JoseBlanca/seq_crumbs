@@ -46,7 +46,6 @@ class VCFReader(object):
                       min_calls_for_pop_stats=min_calls_for_pop_stats)
             yield snp
 
-
     @property
     def snpcaller(self):
         if self._snpcaller is not None:
@@ -413,6 +412,9 @@ class Call(object):
         snv = self.snv
         calldata_class = snv.calldata_class
         call = self.call
+        # Access to a protected member. In this case namedtuple _fields
+        # is not a protected member
+        # pylint: disable=W0212
         sampdat = [None if field == 'GT' else getattr(call.data, field) for field in calldata_class._fields]
         pyvcf_call = pyvcfCall(self.snv.record, self.call.sample,
                                calldata_class(*sampdat))
