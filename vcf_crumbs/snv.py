@@ -71,6 +71,13 @@ class VCFReader(object):
     def samples(self):
         return self.pyvcf_reader.samples
 
+    @property
+    def filters(self):
+        return self.pyvcf_reader.filters
+
+    @property
+    def infos(self):
+        return self.pyvcf_reader.infos
 
 class VCFWriter(pyvcfWriter):
 
