@@ -3,6 +3,7 @@ from __future__ import division
 from collections import Counter
 
 from vcf import Reader as pyvcfReader
+from vcf import Writer as pyvcfWriter
 from vcf.model import make_calldata_tuple
 # ouch, _Call is a private class, but we don't know how to modify a Call
 from vcf.model import _Call as pyvcfCall
@@ -32,14 +33,14 @@ class VCFReader(object):
         self.min_calls_for_pop_stats = min_calls_for_pop_stats
         self._snpcaller = None
 
-    def parse_snps(self):
+    def parse_snvs(self):
         min_calls_for_pop_stats = self.min_calls_for_pop_stats
         for snp in self.pyvcf_reader:
             snp = SNV(snp, reader=self,
                       min_calls_for_pop_stats=min_calls_for_pop_stats)
             yield snp
 
-    def fetch_snps(self, *args, **kwargs):
+    def fetch_snvs(self, *args, **kwargs):
         min_calls_for_pop_stats = self.min_calls_for_pop_stats
         for snp in self.pyvcf_reader.fetch(*args, **kwargs):
             snp = SNV(snp, reader=self,
@@ -69,6 +70,17 @@ class VCFReader(object):
     @property
     def samples(self):
         return self.pyvcf_reader.samples
+
+
+class VCFWriter(pyvcfWriter):
+
+    def __init__(self, stream, template_reader, lineterminator="\n"):
+        template = template_reader.pyvcf_reader
+        super(VCFWriter, self).__init__(stream, template,
+                                        lineterminator=lineterminator)
+
+    def write_snv(self, snv):
+        super(VCFWriter, self).write_record(snv.record)
 
 
 class SNV(object):

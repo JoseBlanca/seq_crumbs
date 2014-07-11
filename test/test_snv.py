@@ -3,8 +3,9 @@ import unittest
 from StringIO import StringIO
 from os.path import join
 
-from vcf_crumbs.snv import SNV, VCFReader, FREEBAYES, VARSCAN, GATK
+from vcf_crumbs.snv import SNV, VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter
 from vcf_crumbs.utils import TEST_DATA_DIR
+from tempfile import NamedTemporaryFile
 
 # Method could be a function
 # pylint: disable=R0201
@@ -46,7 +47,7 @@ class SNVTests(unittest.TestCase):
 20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.:35:4\t0/2:17:2\t1/1:40:3
 '''
         vcf = StringIO(VCF_HEADER + vcf)
-        snps = list(VCFReader(vcf).parse_snps())
+        snps = list(VCFReader(vcf).parse_snvs())
         assert len(snps) == 6
         assert snps[0].pos == 14370
         assert snps[1].is_snp
@@ -62,7 +63,7 @@ class SNVTests(unittest.TestCase):
 20\t14370\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
 20\t14370\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t0|0:48:8:51,51\t1/1:43:5:.,.'''
         vcf = StringIO(VCF_HEADER + vcf)
-        snps = list(VCFReader(vcf).parse_snps())
+        snps = list(VCFReader(vcf).parse_snvs())
         snp = snps[1]
         assert snp.obs_het is None
         assert snp.exp_het is None
@@ -74,7 +75,7 @@ class SNVTests(unittest.TestCase):
 
     def test_allele_depths(self):
         vcf = open(join(TEST_DATA_DIR, 'freebayes_al_depth.vcf'))
-        snps = list(VCFReader(vcf).parse_snps())
+        snps = list(VCFReader(vcf).parse_snvs())
         snp = snps[0]
         result = [None, None, (1, 0), None, None, (0, 1)]
         for sample, res in zip(snp.calls, result):
@@ -87,7 +88,7 @@ class SNVTests(unittest.TestCase):
 
     def test_mafs(self):
         vcf = open(join(TEST_DATA_DIR, 'freebayes_al_depth.vcf'))
-        snps = list(VCFReader(vcf).parse_snps())
+        snps = list(VCFReader(vcf).parse_snvs())
         assert snps[0].maf_depth - 0.5 < 0.001
         assert snps[0].allele_depths == {0: 1, 1: 1}
         assert snps[0].depth == 2
@@ -113,21 +114,21 @@ class SNVTests(unittest.TestCase):
         # varscan
         varscan_fhand = open(join(TEST_DATA_DIR, 'sample.vcf.gz'))
         reader = VCFReader(fhand=varscan_fhand)
-        snp = list(reader.parse_snps())[0]
+        snp = list(reader.parse_snvs())[0]
         snp.min_calls_for_pop_stats = 1
         assert snp.maf_depth is None
 
         # gatk
         fhand = open(join(TEST_DATA_DIR, 'gatk_sample.vcf.gz'))
         reader = VCFReader(fhand=fhand)
-        snp = list(reader.parse_snps())[0]
+        snp = list(reader.parse_snvs())[0]
         assert 0.7 < snp.maf_depth < 0.72
         assert 0.7 < snp.get_call('hib_amarillo').maf_depth < 0.72
 
         # freebayes
         fhand = open(join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz'))
         reader = VCFReader(fhand=fhand)
-        snp = list(reader.parse_snps())[0]
+        snp = list(reader.parse_snvs())[0]
         assert 0.99 < snp.maf_depth < 1.01
         assert 0.99 < snp.get_call('pep').maf_depth < 1.01
 
@@ -141,7 +142,7 @@ class SNVTests(unittest.TestCase):
 20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.:35:4\t0/2:17:2\t1/1:40:3
 '''
         vcf = StringIO(VCF_HEADER + vcf)
-        snps = list(VCFReader(vcf).parse_snps())
+        snps = list(VCFReader(vcf).parse_snvs())
         call0 = snps[0].calls[0]
 
         assert call0.called
@@ -161,6 +162,18 @@ class ReaderTest(unittest.TestCase):
     def test_samples(self):
         freebayes = open(join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz'))
         assert VCFReader(fhand=freebayes).samples == ['pep']
+
+    def test_vcf_writer(self):
+        varscan = open(join(TEST_DATA_DIR, 'vari_filter.vcf'))
+        reader = VCFReader(fhand=varscan)
+        out_fhand = NamedTemporaryFile()
+        writer = VCFWriter(out_fhand, reader)
+        for snv in reader.parse_snvs():
+            writer.write_snv(snv)
+        writer.flush()
+        assert 'CUUC00027_TC01' in open(out_fhand.name).read()
+        writer.close()
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']
