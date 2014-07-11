@@ -97,6 +97,7 @@ class SNV(object):
                 pass
             alleles.append(allele)
         return alleles
+
     @property
     def obs_het(self):
         snp = self.record
@@ -236,6 +237,9 @@ class SNV(object):
 
     def __unicode__(self):
         return self.record.__unicode__()
+
+    def __repr__(self):
+        return repr(self.record)
 
     @property
     def filters(self):
@@ -393,3 +397,6 @@ class Call(object):
 
     def __unicode__(self):
         return self.call.__unicode__()
+
+    def __repr__(self):
+        return repr(self.call)
