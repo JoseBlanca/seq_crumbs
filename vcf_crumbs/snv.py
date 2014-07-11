@@ -6,6 +6,7 @@ from vcf import Reader as pyvcfReader
 from vcf.model import make_calldata_tuple
 # ouch, _Call is a private class, but we don't know how to modify a Call
 from vcf.model import _Call as pyvcfCall
+from vcf.model import _Record as pyvcfRecord
 
 # Missing docstring
 # pylint: disable=C0111
@@ -121,6 +122,10 @@ class SNV(object):
     def calls(self):
         return [Call(sample, snv=self) for sample in self.record.samples]
 
+    def get_call(self, sample):
+        call = self.record.genotype(sample)
+        return Call(call, self)
+
     def _calculate_maf_and_mac(self):
         if self._mac_analyzed:
             return
@@ -219,6 +224,14 @@ class SNV(object):
         return self.record.QUAL
 
     @property
+    def id(self):
+        return self.record.ID
+
+    @property
+    def ref(self):
+        return self.record.REF
+
+    @property
     def num_called(self):
         return self.record.num_called
 
@@ -229,10 +242,6 @@ class SNV(object):
     @property
     def is_snp(self):
         return self.record.is_snp
-
-    def get_call(self, sample):
-        call = self.record.genotype(sample)
-        return Call(call, self)
 
     def __str__(self):
         return str(self.record)
@@ -269,6 +278,24 @@ class SNV(object):
     @property
     def calldata_class(self):
         return make_calldata_tuple(self.record.FORMAT.split(':'))
+
+    def remove_gt_from_low_qual_calls(self, min_qual):
+        'It returns a new SNV with low qual call set to uncalled'
+        calls = []
+        sample_indexes = {}
+        for index, call in enumerate(self.calls):
+            if call.gt_qual < min_qual:
+                call = call.copy_setting_gt_to_none(return_pyvcf_call=True)
+            calls.append(call)
+            sample_indexes[call.sample] = index
+        record = self.record
+        record = pyvcfRecord(record.CHROM, record.POS, record.ID,
+                             record.REF, record.ALT, record.QUAL,
+                             record.FILTER, record.INFO, record.FORMAT,
+                             sample_indexes, calls)
+        snv = SNV(record, self.reader,
+                  min_calls_for_pop_stats=self.min_calls_for_pop_stats)
+        return snv
 
 
 class Call(object):
@@ -408,7 +435,7 @@ class Call(object):
     def __repr__(self):
         return repr(self.call)
 
-    def copy_setting_gt_to_none(self):
+    def copy_setting_gt_to_none(self, return_pyvcf_call=False):
         snv = self.snv
         calldata_class = snv.calldata_class
         call = self.call
@@ -416,6 +443,11 @@ class Call(object):
         # is not a protected member
         # pylint: disable=W0212
         sampdat = [None if field == 'GT' else getattr(call.data, field) for field in calldata_class._fields]
+
         pyvcf_call = pyvcfCall(self.snv.record, self.call.sample,
                                calldata_class(*sampdat))
-        return Call(pyvcf_call, snv)
+        if return_pyvcf_call:
+            call = pyvcf_call
+        else:
+            call = Call(pyvcf_call, snv)
+        return call

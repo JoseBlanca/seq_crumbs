@@ -2,29 +2,8 @@ from __future__ import division
 
 from crumbs.iterutils import group_in_packets
 
-
-# TODO. This is not a filter, it's a mapper because sets calls to
-# not called
-def remove_low_quality_gt(record, gq_threshold, vcf_variant):
-    ''''Filters by genotype quality and sets to uncalled those that do not meet
-    the requierements'''
-    for index_, call in enumerate(record):
-        call_data = get_call_data(call, vcf_variant)
-        gq = call_data.get(GQ, None)
-        if gq is None or call_data[GQ] < gq_threshold:
-            calldata = make_calldata_tuple(record.FORMAT.split(':'))
-            sampdat = []
-            for format_def in record.FORMAT.split(':'):
-                if format_def == 'GT':
-                    value = None
-                else:
-                    value = getattr(call.data, format_def)
-                sampdat.append(value)
-            call = _Call(record, call.sample, calldata(*sampdat))
-            call_data = get_call_data(call, vcf_variant)
-            record.samples[index_] = call
-    return record
-
+# Missing docstring
+# pylint: disable=C0111
 
 PASSED = 'passed'
 FILTERED_OUT = 'filtered_out'

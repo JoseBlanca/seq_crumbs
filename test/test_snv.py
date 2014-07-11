@@ -3,7 +3,7 @@ import unittest
 from StringIO import StringIO
 from os.path import join
 
-from vcf_crumbs.snv import SNV, VCFReader, FREEBAYES, VARSCAN, GATK
+from vcf_crumbs.snv import VCFReader, FREEBAYES, VARSCAN, GATK
 from vcf_crumbs.utils import TEST_DATA_DIR
 
 # Method could be a function
@@ -131,7 +131,7 @@ class SNVTests(unittest.TestCase):
         assert 0.99 < snp.maf_depth < 1.01
         assert 0.99 < snp.get_call('pep').maf_depth < 1.01
 
-    def test_modify_call(self):
+    def test_modify_calls(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
 20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
 20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|1:3:5:65,3\t0/0:41:3
@@ -145,8 +145,12 @@ class SNVTests(unittest.TestCase):
         call0 = snps[0].calls[0]
 
         assert call0.called
-        call_mod = call0.copy_setting_gt_to_none()
-        assert not call_mod.called
+        mod_call = call0.copy_setting_gt_to_none()
+        assert not mod_call.called
+
+        assert snps[0].get_call('NA00003').called
+        mod_snp = snps[0].remove_gt_from_low_qual_calls(45)
+        assert not mod_snp.get_call('NA00003').called
 
 
 class ReaderTest(unittest.TestCase):
