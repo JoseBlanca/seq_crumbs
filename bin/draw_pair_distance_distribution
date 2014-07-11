@@ -92,7 +92,7 @@ def run():
 
     draw_histograms(counters, out_fhand, distrib_labels=distrib_labels,
                     xlabel='pair_distance(bp)', ylabel='Num of pairs',
-                    titles=titles)
+                    titles=titles, num_cols=1)
 
 if __name__ == '__main__':
     sys.exit(main(run))
