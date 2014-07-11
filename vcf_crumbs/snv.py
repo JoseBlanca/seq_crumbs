@@ -275,6 +275,10 @@ class SNV(object):
     def filters(self):
         return self.record.FILTER
 
+    @filters.setter
+    def filters(self, value):
+        self.record.FILTER = value
+
     def add_filter(self, filter_name):
         self.record.add_filter(filter_name)
 

@@ -34,7 +34,7 @@ class FiltersTest(unittest.TestCase):
 
     @staticmethod
     def filter_vcf(vcf_fhand, filter_):
-        snps = VCFReader(vcf_fhand).parse_snps()
+        snps = VCFReader(vcf_fhand).parse_snvs()
         packet = list(group_in_filter_packets(snps, 10))[0]
         filtered_packet = filter_(packet)
         return filtered_packet

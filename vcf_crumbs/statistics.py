@@ -394,7 +394,7 @@ class VcfStats(object):
 
     def _calculate(self):
         snp_counter = 0
-        for snp in self._reader.parse_snps():
+        for snp in self._reader.parse_snvs():
             snp_counter += 1
             self._add_maf_dp(snp)
             self._add_maf_and_mac(snp)

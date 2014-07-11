@@ -166,7 +166,7 @@ class CloseToSnv(BaseAnnotator):
         snv_type = self.snv_type
         max_maf_depth = self.max_maf_depth
         passed_snvs = 0
-        for snv_in_window in self.random_reader.fetch_snps(chrom, start, end):
+        for snv_in_window in self.random_reader.fetch_snvs(chrom, start, end):
             if snv_in_window.pos == pos:
                 continue
             if max_maf_depth is None and snv_type is None:
@@ -241,7 +241,7 @@ class HighVariableRegion(BaseAnnotator):
                 end = seq_len - 1
             window_len = self.window
 
-        num_snvs = len(list(self.random_reader.fetch_snps(chrom, start, end)))
+        num_snvs = len(list(self.random_reader.fetch_snvs(chrom, start, end)))
 
         freq = num_snvs / window_len
 

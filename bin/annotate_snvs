@@ -6,11 +6,8 @@ import os.path
 
 from configobj import ConfigObj
 
-from vcf import Reader, Writer
 from vcf.parser import _Filter, _Info
-from vcf_crumbs.statistics import get_snpcaller_name
-
-FILTERS_USING_VCF = ('CloseToSnv', 'HighVariableRegion')
+from vcf_crumbs.snv import VCFReader, VCFWriter
 
 
 def _setup_argparse():
@@ -50,8 +47,6 @@ def _parse_filters_conf(fpath, snv_in_fpath):
         mod = __import__('vcf_crumbs.annotation',
                          fromlist=[filter_class_name])
         filter_class = getattr(mod, filter_class_name)
-        if filter_class_name in FILTERS_USING_VCF:
-            args['vcf_fpath'] = os.path.abspath(snv_in_fpath)
         filter_ = filter_class(**args)
         filters.append(filter_)
     return filters
@@ -59,10 +54,8 @@ def _parse_filters_conf(fpath, snv_in_fpath):
 
 def _manage_mappers(reader, filters_in_conf):
     mappers_to_use = []
-    snp_caller = get_snpcaller_name(reader)
     for mapper in filters_in_conf:
         # we add the snp caller to the mapper
-        mapper.vcf_variant = snp_caller
         if mapper.is_filter:
             if mapper.name in reader.filters:
                 new_conf = mapper.conf
@@ -103,18 +96,18 @@ def main():
     parser = _setup_argparse()
     args = _parse_args(parser)
 
-    reader = Reader(args['in_fhand'])
+    reader = VCFReader(args['in_fhand'])
     filters_in_conf = _parse_filters_conf(args['filter_fhand'],
-                                            args['in_fhand'].name)
+                                          args['in_fhand'].name)
     mappers = _manage_mappers(reader, filters_in_conf)
-    writer = Writer(args['out_fhand'], reader)
+    writer = VCFWriter(args['out_fhand'], reader)
 
-    for record in reader:
+    for snv in reader.parse_snvs():
         for mapper in mappers:
-            record = mapper(record)
-        if record.FILTER is None:
-            record.FILTER = []
-        writer.write_record(record)
+            snv = mapper(snv)
+        if snv.filters is None:
+            snv.filters = []
+        writer.write_snv(snv)
     writer.close()
 if __name__ == '__main__':
     main()

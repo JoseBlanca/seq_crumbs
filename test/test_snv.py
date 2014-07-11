@@ -56,6 +56,9 @@ class SNVTests(unittest.TestCase):
         assert snps[5].call_rate - 0.6666 < 0.0001
         assert [snp.num_called for snp in snps] == [3, 3, 3, 3, 3, 2]
         assert snp.alleles == ['GTC', 'G', 'GTCT']
+        assert snp.filters == []
+        snp.filters = None
+        assert snp.filters is None
 
     def test_heterozygosity(self):
         # 0/0 1/0 0/0
