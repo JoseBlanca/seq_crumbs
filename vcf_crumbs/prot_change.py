@@ -240,10 +240,10 @@ def get_water_alignment(seq1, seq2, gap_open=10.0, gap_extend=0.5,
                         out_fmt='markx10'):
     out_fhand = NamedTemporaryFile()
     _do_water_alignment(seq1, seq2,  out_fhand, gap_open=10.0, gap_extend=0.5,
-                       out_fmt='markx10', reverse2=False)
+                        out_fmt='markx10', reverse2=False)
     out_fhand2 = NamedTemporaryFile()
     _do_water_alignment(seq1, seq2,  out_fhand2, gap_open=10.0, gap_extend=0.5,
-                       out_fmt='markx10', reverse2=True)
+                        out_fmt='markx10', reverse2=True)
     forw_score = _get_water_score(out_fhand)
     rev_score = _get_water_score(out_fhand2)
     if forw_score > rev_score:
@@ -255,7 +255,7 @@ def get_water_alignment(seq1, seq2, gap_open=10.0, gap_extend=0.5,
 
 
 def _do_water_alignment(seq1, seq2,  out_fhand, gap_open=10.0, gap_extend=0.5,
-                       out_fmt='markx10', reverse2=False):
+                        out_fmt='markx10', reverse2=False):
     seq1_fhand = NamedTemporaryFile()
     seq2_fhand = NamedTemporaryFile()
 
@@ -273,11 +273,11 @@ def _do_water_alignment(seq1, seq2,  out_fhand, gap_open=10.0, gap_extend=0.5,
     subprocess.check_call(cmd, stdout=stdout, stderr=stderr)
 
 
-def get_amino_change(seq_ref, seq_estscan, record):
-    if record.is_indel:
+def get_amino_change(seq_ref, seq_estscan, snv):
+    if snv.is_indel:
         raise IsIndelError()
-    position = record.POS - 1
-    alt_allele = record.alleles[1].sequence
+    position = snv.pos - 1
+    alt_allele = snv.alleles[1]
     seq_coord = SeqCoords(seq_ref, seq_estscan)
 
     estscan_pos = seq_coord.to_seq2_pos(position)
@@ -302,8 +302,7 @@ def get_amino_change(seq_ref, seq_estscan, record):
         return None
     aminos = {'ref_amino': ref_aa, 'alt_amino': []}
 
-    for alt_allele in record.alleles[1:]:
-        alt_allele = alt_allele.sequence
+    for alt_allele in snv.alleles[1:]:
 
         alt_seq = [nucl for nucl in (estscan_seq_aa)]
         alt_seq[estscan_frame - 1] = alt_allele

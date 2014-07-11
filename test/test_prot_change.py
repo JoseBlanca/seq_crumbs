@@ -178,18 +178,15 @@ class ProteinChangeTest(unittest.TestCase):
         orf_seq = SeqIO.read(orf_seq, 'fasta')
 
         record = FakeClass()
-        alt_allele = FakeClass()
-        alt_allele.sequence = 'C'
-
         record.is_indel = False
-        record.POS = 112
-        record.alleles = ['T', alt_allele]
+        record.pos = 112
+        record.alleles = ['T', 'C']
         aminos = get_amino_change(seq_ref, orf_seq, record)
         assert aminos == {'ref_amino': 'C', 'alt_amino': ['R']}
 
         record = FakeClass()
         record.is_indel = True
-        record.POS = 111
+        record.pos = 111
         try:
             aminos = get_amino_change(seq_ref, orf_seq, record)
             raise RuntimeError('We should not reach here')
@@ -197,29 +194,22 @@ class ProteinChangeTest(unittest.TestCase):
             pass
 
         record = FakeClass()
-        alt_allele = FakeClass()
-        alt_allele.sequence = 'C'
-        alt_allele2 = FakeClass()
-        alt_allele2.sequence = 'A'
-
         record.is_indel = False
-        record.POS = 112
-        record.alleles = ['T', alt_allele, alt_allele2]
+        record.pos = 112
+        record.alleles = ['T', 'C', 'A']
         aminos = get_amino_change(seq_ref, orf_seq, record)
         assert aminos == {'ref_amino': 'C', 'alt_amino': ['R', 'S']}
 
-        ## Outside orf
+        # Outside orf
         seq_ref = 'ATCTAGGCTGCTACGATTAGCTGACGATGTTATCGTAGATCTAGCTGATCATCTAGCT'
         seq_ref += 'GATCG'
         orf_seq = 'AGGCTCTACGATTAGCTGATCGATGTTATC'
         seq_ref = SeqRecord(seq=Seq(seq_ref), id='ref')
         orf_seq = SeqRecord(seq=Seq(orf_seq), id='orf')
         record = FakeClass()
-        alt_allele = FakeClass()
-        alt_allele.sequence = 'C'
         record.is_indel = False
-        record.POS = 35
-        record.alleles = ['G', alt_allele]
+        record.pos = 35
+        record.alleles = ['G', 'C']
 
         try:
             aminos = get_amino_change(seq_ref, orf_seq, record)
@@ -227,13 +217,11 @@ class ProteinChangeTest(unittest.TestCase):
         except OutsideAlignment:
             pass
 
-        ## frameshift
+        # frameshift
         record = FakeClass()
-        alt_allele = FakeClass()
-        alt_allele.sequence = 'C'
         record.is_indel = False
-        record.POS = 10
-        record.alleles = ['G', alt_allele]
+        record.pos = 10
+        record.alleles = ['G', 'C']
         try:
             aminos = get_amino_change(seq_ref, orf_seq, record)
             self.fail()

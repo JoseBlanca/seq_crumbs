@@ -8,16 +8,18 @@ import unittest
 from os.path import join, dirname
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
+from StringIO import StringIO
 
 from vcf import Reader
 
 from vcf_crumbs.utils import TEST_DATA_DIR
-from vcf_crumbs.annotation import (calculate_maf, count_alleles, CloseToSnv,
-                                   HighVariableRegion, CloseToLimit, MafLimit,
-                                   CapEnzyme, AminoChangeAnnotator,
+from vcf_crumbs.annotation import (CloseToSnv, HighVariableRegion,
+                                   CloseToLimit, MafDepthLimit, CapEnzyme,
+                                   AminoChangeAnnotator, IsVariableAnnotator,
                                    AminoSeverityChangeAnnotator,
-                                   HeterozigoteInSamples, IsVariableAnnotator)
-from vcf_crumbs.statistics import VARSCAN, FREEBAYES, GATK
+                                   HeterozigoteInSamples)
+from vcf_crumbs.snv import VCFReader, SNV
+from test.test_snv import VCF_HEADER
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
@@ -35,176 +37,127 @@ FREEBAYES6_VCF_PATH = join(TEST_DATA_DIR, 'freebayes6.vcf.gz')
 REF_FREEBAYES = join(TEST_DATA_DIR, 'calabaza_selection.fasta')
 
 
-def floats_are_equal(num1, num2):
-    'Given two numbers it returns True if they are similar'
-    if num1 == 0.0:
-        if num2 == 0.0:
-            return True
-        else:
-            return False
-    log1 = math.log(float(num1))
-    log2 = math.log(float(num2))
-    return abs(log1 - log2) < 0.01
-
-
-class AnnotateRecordTests(unittest.TestCase):
-
-    def test_mac_calcule(self):
-        records = Reader(filename=FREEBAYES_VCF_PATH)
-        records.next()
-        records.next()
-        rec1 = records.next()
-        assert floats_are_equal(calculate_maf(rec1, vcf_variant=FREEBAYES),
-                                0.75)
-
-    def test_calculate_alleles(self):
-        records = Reader(filename=GATK_VCF_PATH)
-        rec1 = records.next()
-        counts = count_alleles(rec1, vcf_variant=GATK)
-        assert counts == {'all': {'T': 5, 'G': 2}}
-        for record in Reader(filename=GATK_VCF_PATH):
-            if record.CHROM == 'CAUC00157_TC01' and record.POS == 198:
-                counts = count_alleles(record, vcf_variant=GATK)
-                assert counts == {'all': {'C': 10, 'G': 41}}
-
-        for record in Reader(filename=FREEBAYES_VCF_PATH):
-            if record.CHROM == 'CUUC60606_TC01' and record.POS == 341:
-                counts = count_alleles(record, vcf_variant=FREEBAYES)
-                assert counts == {'all': {'TT': 2, 'TCT': 20, 'CT': 15}}
-
-
 class FakeClass(object):
-    FILTER = []
-    INFO = {}
+    filters = []
+    infos = {}
 
     def add_filter(self, name):
-        self.FILTER.append(name)
+        self.filters.append(name)
 
     def add_info(self, info, value):
-        self.INFO[info] = value
+        self.infos[info] = value
 
 
 class AnnotatorsTest(unittest.TestCase):
 
     def test_close_to_filter(self):
-        records = Reader(filename=FREEBAYES_VCF_PATH)
-        records.next()
-        rec1 = records.next()
-        filter_ = CloseToSnv(distance=300, max_maf=None,
-                             vcf_fpath=FREEBAYES_VCF_PATH)
-        filter_.vcf_variant = FREEBAYES
+        records = list(VCFReader(open(FREEBAYES_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        rec1 = records[1]
+        filter_ = CloseToSnv(distance=300, max_maf_depth=None)
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
-        records = Reader(filename=FREEBAYES_VCF_PATH)
-        records.next()
-        rec1 = records.next()
-        filter_ = CloseToSnv(distance=300, max_maf=0.5,
-                             vcf_fpath=FREEBAYES_VCF_PATH)
-        filter_.vcf_variant = FREEBAYES
+        records = list(VCFReader(open(FREEBAYES_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        rec1 = records[1]
+        filter_ = CloseToSnv(distance=300, max_maf_depth=0.5)
         rec1 = filter_(rec1)
-        assert rec1.FILTER is None
+        assert rec1.filters is None
 
-        records = Reader(filename=FREEBAYES_VCF_PATH)
-        records.next()
-        rec1 = records.next()
-        filter_ = CloseToSnv(distance=300, max_maf=0.8,
-                             vcf_fpath=FREEBAYES_VCF_PATH)
-        filter_.vcf_variant = FREEBAYES
+        records = list(VCFReader(open(FREEBAYES_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        rec1 = records[1]
+
+        filter_ = CloseToSnv(distance=300, max_maf_depth=0.8)
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
         assert filter_.name == 'cs300_0.80'
         desc = 'The snv is closer than 300 nucleotides to another snv, '
         desc += 'with maf:0.80'
         assert desc in filter_.description
 
-    def test_high_variable_region_filter(self):
-        records = Reader(filename=VCF_PATH)
-        rec1 = records.next()
-        filter_ = HighVariableRegion(max_variability=0.002,
-                                           window=None,
-                                           vcf_fpath=VCF_PATH,
-                                           ref_fpath=REF_PATH)
+        records = list(VCFReader(open(FREEBAYES_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        rec1 = records[1]
+
+        filter_ = CloseToSnv(distance=300, max_maf_depth=0.8, snv_type='snp')
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
+
+    def test_high_variable_region_filter(self):
+        records = list(VCFReader(open(VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        rec1 = records[0]
+        filter_ = HighVariableRegion(max_variability=0.002,
+                                     window=None, ref_fpath=REF_PATH)
+        rec1 = filter_(rec1)
+        assert filter_.name in rec1.filters
 
         filter_ = HighVariableRegion(max_variability=0.005,
-                                           window=None,
-                                           vcf_fpath=VCF_PATH,
-                                           ref_fpath=REF_PATH)
+                                     window=None, ref_fpath=REF_PATH)
         rec1 = filter_(rec1)
-        assert not filter_.name in rec1.FILTER
+        assert filter_.name not in rec1.filters
 
-        assert  filter_.name == 'hv0.005'
+        assert filter_.name == 'hv0.005'
         desc = 'The region has more than 0.5 snvs per 100 bases'
         assert desc in filter_.description
-
-        records = Reader(filename=VCF_PATH)
-
-        records = Reader(filename=VCF_PATH)
-        filter_ = HighVariableRegion(max_variability=0.003,
-                                           vcf_fpath=VCF_PATH,
-                                           ref_fpath=REF_PATH)
+        records = list(VCFReader(open(VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        filter_ = HighVariableRegion(max_variability=0.003, ref_fpath=REF_PATH)
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
-        filter_ = HighVariableRegion(max_variability=0.004,
-                                           vcf_fpath=VCF_PATH,
-                                           ref_fpath=REF_PATH)
+        filter_ = HighVariableRegion(max_variability=0.004, ref_fpath=REF_PATH)
         rec1 = filter_(rec1)
-        assert not filter_.name in rec1.FILTER
+        assert filter_.name not in rec1.filters
 
-        filter_ = HighVariableRegion(max_variability=0.003,
-                                           window=10,
-                                           vcf_fpath=VCF_PATH,
-                                           ref_fpath=REF_PATH)
+        filter_ = HighVariableRegion(max_variability=0.003, window=10,
+                                     ref_fpath=REF_PATH)
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
-        filter_ = HighVariableRegion(max_variability=0.003,
-                                           window=100,
-                                           vcf_fpath=VCF_PATH,
-                                           ref_fpath=REF_PATH)
+        filter_ = HighVariableRegion(max_variability=0.003, window=100,
+                                     ref_fpath=REF_PATH)
 
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
     def test_close_to_limit_filter(self):
-        records = Reader(filename=VCF_PATH)
-        rec1 = records.next()
+        records = list(VCFReader(open(VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        rec1 = records[0]
         filter_ = CloseToLimit(distance=60, ref_fpath=REF_PATH)
         rec1 = filter_(rec1)
-        assert not filter_.name in rec1.FILTER
+        assert filter_.name not in rec1.filters
 
         filter_ = CloseToLimit(distance=800, ref_fpath=REF_PATH)
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
         assert filter_.name == 'cl800'
         desc = 'The snv is closer than 800 nucleotides to the reference edge'
-        assert  desc in filter_.description
+        assert desc in filter_.description
 
     def test_maf_limit(self):
-        records = Reader(filename=FREEBAYES_VCF_PATH)
-        records.next()
-        records.next()
-        rec1 = records.next()
-        filter_ = MafLimit(max_maf=0.8)
-        filter_.vcf_variant = FREEBAYES
+        records = list(VCFReader(open(FREEBAYES_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        rec1 = records[2]
+        filter_ = MafDepthLimit(max_maf=0.8)
         rec1 = filter_(rec1)
-        assert rec1.FILTER is None
-        #assert not filter_.name in rec1.FILTER
+        assert rec1.filters is None
 
-        filter_ = MafLimit(max_maf=0.5)
-        filter_.vcf_variant = FREEBAYES
+        # assert not filter_.name in rec1.FILTER
+
+        filter_ = MafDepthLimit(max_maf=0.5)
         rec1 = filter_(rec1)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
-        assert  filter_.name == 'maf0.5'
+        assert filter_.name == 'maf0.5'
         desc = 'The most frequent allele in samples: all.'
         desc += 'frequency greater than 0.5'
-        assert  desc in filter_.description
+        assert desc in filter_.description
 
     def test_cap_enzyme_filter(self):
         seq_str = '>seq1\nATGATGATGgaaattcATGATGATGTGGGAT\n'
@@ -212,34 +165,29 @@ class AnnotatorsTest(unittest.TestCase):
         fhand = NamedTemporaryFile()
         fhand.write(seq_str)
         fhand.flush()
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+seq1\t11\trs6054257\tAA\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+seq2\t12\t.\tA\tAA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|1:3:5:65,3\t0/0:41:3
+20\t1110696\trs6040355\tA\tG,T\t67\tPASS\tNS=2;DP=10;AF=0.333,0.667;AA=T;DB\tGT:GQ:DP:HQ\t1|2:21:6:23,27\t2|1:2:0:18,2\t2/2:35:4
+20\t1230237\t.\tT\t.\t47\tPASS\tNS=3;DP=13;AA=T\tGT:GQ:DP:HQ\t0|0:54:7:56,60\t0|0:48:4:51,51\t0/0:61:2
+20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t0/1:35:4\t0/2:17:2\t1/1:40:3
+20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.:35:4\t0/2:17:2\t1/1:40:3
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf).parse_snps())
+
         filter_ = CapEnzyme(all_enzymes=True, ref_fpath=fhand.name)
         assert filter_.name == 'cet'
         desc = 'SNV is not a CAP detectable by the enzymes: all'
         assert desc in filter_.description
 
-        record = FakeClass()
-        record.POS = 11
-        record.end = 12
-        record.CHROM = 'seq1'
-        record.FILTER = []
-
-        alt_allele = FakeClass()
-        alt_allele.sequence = 'A'
-        record.alleles = ['AA', alt_allele]
-        record.FILTER = []
-        record.add_filter = lambda x: self.FILTER.append(x)
-
+        record = snps[0]
         rec1 = filter_(record)
-        assert not filter_.name in rec1.FILTER
+        assert filter_.name not in rec1.filters
 
-        record = FakeClass()
-        record.POS = 12
-        record.end = 12
-        record.CHROM = 'seq2'
-        record.FILTER = []
-        record.alleles = ['A', alt_allele]
+        record = snps[1]
         rec1 = filter_(record)
-        assert filter_.name in rec1.FILTER
+        assert filter_.name in rec1.filters
 
     def test_amino_change_filter(self):
         seq_ref = """>SEUC00016_TC01
@@ -273,353 +221,307 @@ class AnnotatorsTest(unittest.TestCase):
         orf_fhand = NamedTemporaryFile()
         orf_fhand.write(orf_seq)
         orf_fhand.flush()
-
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf).parse_snps())
         f = AminoChangeAnnotator(ref_fpath=ref_fhand.name,
                                  orf_seq_fpath=orf_fhand.name)
 
-        record = FakeClass()
-        alt_allele = FakeClass()
-        alt_allele.sequence = 'C'
-        record.CHROM = 'SEUC00016_TC01'
-        record.is_indel = False
-        record.POS = 112
-        record.alleles = ['T', alt_allele]
-        record = f(record)
-        assert f.name in record.FILTER
-        assert record.INFO == {'AAC': 'C->R'}
+        snv = snps[0]
+
+        snv = f(snv)
+        assert f.name in snv.filters
+        assert snv.infos['AAC'] == 'C->R'
 
         f = AminoSeverityChangeAnnotator(ref_fpath=ref_fhand.name,
                                          orf_seq_fpath=orf_fhand.name)
-        record = FakeClass()
-        alt_allele = FakeClass()
-        alt_allele.sequence = 'C'
-        record.CHROM = 'SEUC00016_TC01'
-        record.is_indel = False
-        record.POS = 112
-        record.alleles = ['T', alt_allele]
+        record = snps[0]
         record = f(record)
-        assert f.name in record.FILTER
+        assert f.name in record.filters
 
     def test_is_variable_annotator(self):
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg1'],
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = records[0]
+        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg1'],
                                         in_union=False,
                                         in_all_groups=True,
                                         reference_free=True,
                                         min_reads=None,
                                         min_reads_per_allele=1,
                                         filter_id=1)
-        annotator.vcf_variant = FREEBAYES
         snv = annotator(snv)
         info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'True'
+        assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg1'],
+        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg1'],
                                         in_union=True, in_all_groups=True,
                                         reference_free=True,
                                         min_reads=None, min_reads_per_allele=1,
                                         filter_id=1)
 
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = records[0]
         snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
+        assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg1'],
+        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg1'],
                                         in_union=True, in_all_groups=True,
                                         reference_free=True, min_reads=None,
                                         min_reads_per_allele=2, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = records[0]
         snv = annotator(snv)
-        assert snv.INFO[info_id] == 'None'
+        assert snv.infos[info_id] == 'None'
 
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg2', 'rg4'],
-                             in_union=True, in_all_groups=True,
-                             reference_free=True, min_reads=None,
-                             min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
+        annotator = IsVariableAnnotator(max_maf_depth=None,
+                                        samples=['rg2', 'rg4'],
+                                        in_union=True, in_all_groups=True,
+                                        reference_free=True, min_reads=None,
+                                        min_reads_per_allele=1, filter_id=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = records[0]
         snv = annotator(snv)
-        assert snv.INFO[info_id] == 'False'
+        assert snv.infos[info_id] == 'False'
 
-        annotator = IsVariableAnnotator(max_maf=None, samples=['fake'],
-                             in_union=True, in_all_groups=True,
-                             reference_free=True, min_reads=None,
-                             min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'None'
+        annotator = IsVariableAnnotator(max_maf_depth=None,
+                                        samples=['rg2', 'rg3'],
+                                        in_union=True, in_all_groups=True,
+                                        reference_free=True, min_reads=None,
+                                        min_reads_per_allele=1, filter_id=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg2', 'rg3'],
-                             in_union=True, in_all_groups=True,
-                             reference_free=True, min_reads=None,
-                             min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
+        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg2'],
+                                        in_union=True, in_all_groups=True,
+                                        reference_free=False, min_reads=None,
+                                        min_reads_per_allele=1, filter_id=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg5'],
-                             in_union=True, in_all_groups=True,
-                             reference_free=False, min_reads=None,
-                             min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'None'
-
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg2'],
-                             in_union=True, in_all_groups=True,
-                             reference_free=False, min_reads=None,
-                             min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
-
-        annotator = IsVariableAnnotator(max_maf=None, samples=['rg2'],
-                             in_union=True, in_all_groups=True,
-                             reference_free=True, min_reads=None,
-                             min_reads_per_allele=1, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'False'
+        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg2'],
+                                        in_union=True, in_all_groups=True,
+                                        reference_free=True, min_reads=None,
+                                        min_reads_per_allele=1, filter_id=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'False'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
                                         in_union=True, reference_free=True,
-                                        max_maf=None, min_reads=1,
+                                        max_maf_depth=None, min_reads=1,
                                         min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'True'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
                                         in_union=True, reference_free=False,
-                                        max_maf=None, min_reads=1,
+                                        max_maf_depth=None, min_reads=1,
                                         min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'True'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=False,
-                                        reference_free=False, max_maf=None,
+                                        in_union=False, max_maf_depth=None,
+                                        reference_free=False,
                                         min_reads=1, min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'True'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg2', 'rg4'],
                                         in_union=True, reference_free=True,
-                                        max_maf=None, min_reads=1,
+                                        max_maf_depth=None, min_reads=1,
                                         min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'False'
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'False'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg3', 'rg4'],
-                                in_union=True, reference_free=True,
-                                max_maf=None, min_reads=1,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=None, min_reads=1,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'True'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg3', 'rg4'],
-                                in_union=False, reference_free=True,
-                                max_maf=None, min_reads=1,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = Reader(filename=FREEBAYES6_VCF_PATH).next()
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'False'
-
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg5'],
-                                in_union=True, reference_free=True,
-                                max_maf=None, min_reads=1,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
-        snv = annotator(snvs.next())
-        assert snv.INFO[info_id] == 'None'
+                                        in_union=False, reference_free=True,
+                                        max_maf_depth=None, min_reads=1,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'False'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg2'],
-                                in_union=True, reference_free=True,
-                                max_maf=None, min_reads=1,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
-        snvs.next()
-        snv = annotator(snvs.next())
-        assert snv.INFO[info_id] == 'None'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=None, min_reads=1,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[1])
+        assert snv.infos[info_id] == 'None'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg2', 'rg4'],
-                                in_union=True, reference_free=True,
-                                max_maf=None, min_reads=1,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
-        snvs.next()
-        snv = annotator(snvs.next())
-        assert snv.INFO[info_id] == 'None'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=None, min_reads=1,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[1])
+        assert snv.infos[info_id] == 'None'
 
-        snvs = Reader(filename=FREEBAYES5_VCF_PATH)
-        snv = snvs.next()
-        annotator = IsVariableAnnotator(max_maf=0.7,
+        annotator = IsVariableAnnotator(max_maf_depth=0.7,
                                         samples=['mu16', 'upv196'],
                                         filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = annotator(snv)
+        records = list(VCFReader(open(FREEBAYES5_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
         info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'True'
+        assert snv.infos[info_id] == 'True'
 
         # in union False
-        snvs = Reader(filename=FREEBAYES5_VCF_PATH)
-        snv = snvs.next()
-        annotator = IsVariableAnnotator(max_maf=0.7,
+        annotator = IsVariableAnnotator(max_maf_depth=0.7,
                                         samples=['mu16', 'upv196'],
                                         in_union=False, filter_id=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = annotator(snv)
+        records = list(VCFReader(open(FREEBAYES5_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
         info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'False'
+        assert snv.infos[info_id] == 'False'
 
         # in all_groups False
-        snvs = Reader(filename=FREEBAYES5_VCF_PATH)
-        snv = snvs.next()
-        annotator = IsVariableAnnotator(max_maf=0.7, filter_id=1,
+        annotator = IsVariableAnnotator(max_maf_depth=0.7, filter_id=1,
                                         samples=['mu16', 'upv196'],
                                         in_union=False, in_all_groups=False)
-        annotator.vcf_variant = FREEBAYES
-        snv = annotator(snv)
+        records = list(VCFReader(open(FREEBAYES5_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
         info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'False'
+        assert snv.infos[info_id] == 'False'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                in_union=True, reference_free=True,
-                                max_maf=0.95, min_reads=50,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
-        snvs.next()
-        snvs.next()
-        snv = annotator(snvs.next())
-        assert snv.INFO[info_id] == 'True'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=0.95, min_reads=50,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[2])
+        assert snv.infos[info_id] == 'True'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                in_union=True, reference_free=True,
-                                max_maf=0.6, min_reads=50,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
-        snvs.next()
-        snvs.next()
-        snv = annotator(snvs.next())
-        assert snv.INFO[info_id] == 'False'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=0.6, min_reads=50,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[2])
+        assert snv.infos[info_id] == 'False'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                in_union=True, reference_free=True,
-                                max_maf=0.95, min_reads=200,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
-        snvs.next()
-        snvs.next()
-        snv = annotator(snvs.next())
-        assert snv.INFO[info_id] == 'None'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=0.95, min_reads=200,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[2])
+        assert snv.infos[info_id] == 'None'
 
         annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                in_union=True, reference_free=True,
-                                max_maf=0.6, min_reads=200,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snvs = Reader(filename=FREEBAYES6_VCF_PATH)
-        snvs.next()
-        snvs.next()
-        snv = annotator(snvs.next())
-        assert snv.INFO[info_id] == 'None'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=0.6, min_reads=200,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[2])
+        assert snv.infos[info_id] == 'None'
 
-        #freebayes
-        snvs = Reader(filename=FREEBAYES2_VCF_PATH)
-        snv = snvs.next()
         annotator = IsVariableAnnotator(filter_id=1, samples=['sample01_gbs'],
-                                in_union=True, reference_free=True,
-                                max_maf=0.6, min_reads=3,
-                                min_reads_per_allele=1)
-        annotator.vcf_variant = FREEBAYES
-        snv = annotator(snv)
-        assert snv.INFO[info_id] == 'True'
+                                        in_union=True, reference_free=True,
+                                        max_maf_depth=0.6, min_reads=3,
+                                        min_reads_per_allele=1)
+        records = list(VCFReader(open(FREEBAYES2_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
+        assert snv.infos[info_id] == 'True'
 
-        snvs = Reader(filename=FREEBAYES_MULTI_VCF_PATH)
-        snv = snvs.next()
         annotator = IsVariableAnnotator(filter_id=2, samples=['sample06_gbs'])
-        annotator.vcf_variant = FREEBAYES
-        snv = annotator(snv)
+        records = list(VCFReader(open(FREEBAYES_MULTI_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snv = annotator(records[0])
         info_id = annotator.info_id
-        assert snv.INFO[info_id] == 'False'
+        assert snv.infos[info_id] == 'False'
 
 
 class TestInfoMappers(unittest.TestCase):
 
     def test_hetegorigot_percent(self):
-        reader = Reader(open(FREEBAYES4_VCF_PATH))
-        snp = reader.next()
         het_in_samples = HeterozigoteInSamples(filter_id=1)
-        het_in_samples.vcf_variant = FREEBAYES
-        het_in_samples(snp)
+        records = list(VCFReader(open(FREEBAYES4_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snp = het_in_samples(records[0])
         info_id = het_in_samples.info_id
-        assert snp.INFO[info_id] == 'True'
+        assert snp.infos[info_id] == 'True'
 
-        snp = reader.next()
+        snp = records[1]
         het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30,
                                                min_num_called=3)
-        het_in_samples.vcf_variant = FREEBAYES
         het_in_samples(snp)
         info_id = het_in_samples.info_id
-        assert snp.INFO[info_id] == 'None'
+        assert snp.infos[info_id] == 'None'
 
-        reader = Reader(open(FREEBAYES4_VCF_PATH))
-        snp = reader.next()
         het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=50,
                                                min_num_called=8)
-        het_in_samples.vcf_variant = FREEBAYES
-        het_in_samples(snp)
+        records = list(VCFReader(open(FREEBAYES4_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snp = het_in_samples(records[0])
         info_id = het_in_samples.info_id
-        assert snp.INFO[info_id] == 'None'
+        assert snp.infos[info_id] == 'None'
 
-        reader = Reader(open(FREEBAYES4_VCF_PATH))
         het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30,
                                                min_num_called=3,
                                                min_percent_het_gt=30)
-        het_in_samples.vcf_variant = FREEBAYES
-        for snp in reader:
-            if snp.POS == 272668159 and snp.CHROM == 'Pepper.v.1.55.chr01':
+        records = list(VCFReader(open(FREEBAYES4_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
+        snp = het_in_samples(records[0])
+        for snp in records:
+            if snp.pos == 272668159 and snp.chrom == 'Pepper.v.1.55.chr01':
                 het_in_samples(snp)
                 info_id = het_in_samples.info_id
-                assert snp.INFO[info_id] == 'False'
+                assert snp.infos[info_id] == 'False'
                 break
 
-        reader = Reader(open(FREEBAYES4_VCF_PATH))
+        records = list(VCFReader(open(FREEBAYES4_VCF_PATH),
+                                 min_calls_for_pop_stats=1).parse_snps())
         het_in_samples = HeterozigoteInSamples(filter_id=1, gq_threshold=30,
                                                min_num_called=3,
                                                min_percent_het_gt=30,
                                                samples=['sample05_gbs',
                                                         'sample06_gbs',
                                                         'sample07_gbs'])
-        het_in_samples.vcf_variant = FREEBAYES
-        for snp in reader:
-            if snp.POS == 228123401 and snp.CHROM == 'Pepper.v.1.55.chr10':
+        for snp in records:
+            if snp.pos == 228123401 and snp.chrom == 'Pepper.v.1.55.chr10':
                 het_in_samples(snp)
                 info_id = het_in_samples.info_id
-                assert snp.INFO[info_id] == 'None'
+                assert snp.infos[info_id] == 'None'
                 break
 
 
@@ -663,5 +565,5 @@ class BinaryTest(unittest.TestCase):
         assert '\tPASS\t' in result
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'AnnotatorsTest.test_is_variable_annotator']
+    #import sys;sys.argv = ['', 'TestInfoMappers']
     unittest.main()
