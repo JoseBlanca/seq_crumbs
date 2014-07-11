@@ -3,6 +3,9 @@ from __future__ import division
 from collections import Counter
 
 from vcf import Reader as pyvcfReader
+from vcf.model import make_calldata_tuple
+# ouch, _Call is a private class, but we don't know how to modify a Call
+from vcf.model import _Call as pyvcfCall
 
 # Missing docstring
 # pylint: disable=C0111
@@ -264,6 +267,10 @@ class SNV(object):
     def is_indel(self):
         return self.record.is_indel
 
+    @property
+    def calldata_class(self):
+        return make_calldata_tuple(self.record.FORMAT.split(':'))
+
 
 class Call(object):
     def __init__(self, call, snv):
@@ -338,6 +345,7 @@ class Call(object):
         else:
             depth = self.call.data.DP
         return depth
+
     @property
     def gt_qual(self):
         return self.call.data.GQ
@@ -400,3 +408,12 @@ class Call(object):
 
     def __repr__(self):
         return repr(self.call)
+
+    def copy_setting_gt_to_none(self):
+        snv = self.snv
+        calldata_class = snv.calldata_class
+        call = self.call
+        sampdat = [None if field == 'GT' else getattr(call.data, field) for field in calldata_class._fields]
+        pyvcf_call = pyvcfCall(self.snv.record, self.call.sample,
+                               calldata_class(*sampdat))
+        return Call(pyvcf_call, snv)
