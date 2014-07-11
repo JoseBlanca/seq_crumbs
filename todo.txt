@@ -1,3 +1,9 @@
+Distribucion con los EDIT distances
+Distribuciones de coverage por sample
+Calcular y hacer todos las estadistaicas juntas con un solo
+
+
+
 bam_crum that calculates the mapped/unmmpaded read counts by readgroup.
 input can be one or more bam file
 

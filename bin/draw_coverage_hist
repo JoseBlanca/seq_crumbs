@@ -26,9 +26,9 @@ from collections import Counter
 from crumbs.utils.bin_utils import main, build_version_msg
 from bam_crumbs.statistics import get_genome_coverage
 from crumbs.statistics import draw_histogram_ascii
-from crumbs.plot import draw_histogram
+from crumbs.plot import draw_histogram_in_fhand
 
-COVERAGE_RANGE = (1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 24, 48, 96)
+COVERAGE_RANGE = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 75, 100)
 
 
 def _setup_argparse():
@@ -85,19 +85,24 @@ def run():
         for coverage_limit in COVERAGE_RANGE:
             if cov >= coverage_limit:
                 limit_count[coverage_limit] += count
-    sys.stdout.write('Positions with the given coverage: count and %\n')
+    sys.stdout.write('Positions with the given coverage:\n')
+    sys.stdout.write('----------------------------------\n')
+    sys.stdout.write('Coverture\tcount\t%porcentaje bases\t')
+    sys.stdout.write('coverture/positions cov>1\n')
     for limit in sorted(limit_count.keys()):
-        sys.stdout.write("{}\t{}\t{:.2%}\n".format(limit, limit_count[limit],
-                                                   limit_count[limit] /
-                                                   total_base_length))
+        sys.stdout.write("{}\t{}\t{:.2%}\t{}\n".format(limit,
+                                                       limit_count[limit],
+                                       limit_count[limit] / total_base_length,
+                                       limit_count[limit] / limit_count[1]))
     distrib = coverage_counter.calculate_distribution(min_=args['xlim_left'],
                                                       max_=args['xlim_rigth'])
 
     if not args['ascii_output']:
-        draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
-                       fhand=out_fhand, title='Distribution of coverages',
-                       ylabel="Num. Bases with this coverage",
-                       xlabel="Coverage")
+        draw_histogram_in_fhand(distrib['counts'],
+                                bin_limits=distrib['bin_limits'],
+                                fhand=out_fhand, xlabel="Coverage",
+                                title='Distribution of coverages',
+                                ylabel="Num. Bases with this coverage")
     else:
         out_fhand.write('\n')
         out_fhand.write('Distribution of coverages\n')

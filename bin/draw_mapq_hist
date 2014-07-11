@@ -13,7 +13,7 @@ from crumbs.utils.bin_utils import main, build_version_msg
 
 from bam_crumbs.statistics import ReadStats
 from crumbs.statistics import draw_histogram_ascii
-from crumbs.plot import  draw_histogram
+from crumbs.plot import  draw_histogram_in_fhand
 
 
 def _setup_argparse():
@@ -57,9 +57,10 @@ def run():
     distrib = mapq_counter.calculate_distribution()
 
     if not args['ascii_output']:
-        draw_histogram(distrib['counts'], bin_limits=distrib['bin_limits'],
-                       fhand=out_fhand, title='Mapq distribution',
-                       ylabel="Num. Seqs", xlabel="Mapq")
+        draw_histogram_in_fhand(distrib['counts'],
+                                bin_limits=distrib['bin_limits'],
+                                fhand=out_fhand, title='Mapq distribution',
+                                ylabel="Num. Seqs", xlabel="Mapq")
     else:
         out_fhand.write('\n')
         out_fhand.write('Distribution of coverages\n')
