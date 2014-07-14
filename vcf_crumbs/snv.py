@@ -36,10 +36,19 @@ class VCFReader(object):
 
     def parse_snvs(self):
         min_calls_for_pop_stats = self.min_calls_for_pop_stats
-        for snp in self.pyvcf_reader:
-            snp = SNV(snp, reader=self,
-                      min_calls_for_pop_stats=min_calls_for_pop_stats)
-            yield snp
+        last_snp = None
+        try:
+            for snp in self.pyvcf_reader:
+                snp = SNV(snp, reader=self,
+                          min_calls_for_pop_stats=min_calls_for_pop_stats)
+                last_snp = snp
+                yield snp
+        except:
+            if last_snp is not None:
+                chrom = str(last_snp.CHROM)
+                pos = str(last_snp.POS)
+                print 'Last parsed SNP was: ' + chrom + ' ' + pos
+                raise
 
     def fetch_snvs(self, *args, **kwargs):
         min_calls_for_pop_stats = self.min_calls_for_pop_stats
@@ -79,6 +88,7 @@ class VCFReader(object):
     @property
     def infos(self):
         return self.pyvcf_reader.infos
+
 
 class VCFWriter(pyvcfWriter):
 
