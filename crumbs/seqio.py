@@ -36,7 +36,7 @@ from crumbs.utils.file_formats import get_format, peek_chunk_from_file
 
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD, ORPHAN_SEQS,
-    SANGER_FASTQ_FORMATS, ILLUMINA_FASTQ_FORMATS)
+                               SANGER_FASTQ_FORMATS, ILLUMINA_FASTQ_FORMATS)
 from crumbs.settings import get_setting
 from crumbs.seq import SeqItem, get_str_seq, assing_kind_to_seqs
 

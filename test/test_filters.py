@@ -33,17 +33,12 @@ from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterBlastShort,
                             FilterDustComplexity, seq_to_filterpackets,
                             FilterByRpkm, FilterByBam,
-                            FilterBowtie2Match, FilterByFeatureTypes,
-                            classify_mapped_reads, filter_chimeras,
-    _sorted_mapped_reads, draw_distance_distribution)
+                            FilterBowtie2Match, FilterByFeatureTypes)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
-                               SEQRECORD, NON_CHIMERIC, CHIMERA, UNKNOWN)
-from crumbs.utils.file_utils import TemporaryDir
+                               SEQRECORD)
 from crumbs.seq import get_name, get_str_seq, SeqWrapper
-from crumbs.mapping import (get_or_create_bowtie2_index,
-                            get_or_create_bwa_index)
 from crumbs.seqio import read_seq_packets
 
 
@@ -66,7 +61,7 @@ def _create_seqrecord(string):
     'Given an string it returns a SeqRecord'
     # pylint: disable=W0612
     seq = SeqRecord(Seq(string),
-                     id=''.join([choice(ascii_lowercase) for i in range(6)]))
+                    id=''.join([choice(ascii_lowercase) for i in range(6)]))
     return SeqWrapper(kind=SEQRECORD, object=seq, file_format=None)
 
 
@@ -227,10 +222,12 @@ class QualityFilterTest(unittest.TestCase):
     def test_quality_filter(self):
         'It filters the reads given a quality threshold'
         seq1 = SeqRecord(Seq('AAcTg'), id='seq1',
-                    letter_annotations={'phred_quality': [42, 42, 40, 42, 40]})
+                         letter_annotations={'phred_quality':
+                                             [42, 42, 40, 42, 40]})
         seq1 = SeqWrapper(object=seq1, kind=SEQRECORD, file_format=None)
         seq2 = SeqRecord(Seq('AAcTg'), id='seq2',
-                    letter_annotations={'phred_quality': [40, 40, 42, 40, 42]})
+                         letter_annotations={'phred_quality':
+                                             [40, 40, 42, 40, 42]})
         seq2 = SeqWrapper(object=seq2, kind=SEQRECORD, file_format=None)
         seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
 
@@ -302,7 +299,7 @@ class BlastMatchFilterTest(unittest.TestCase):
         filter_ = FilterBlastMatch(blastdb, 'blastn', filters=filters,
                                    dbtype=NUCL)
         new_seqs = filter_(seqs)[SEQS_PASSED]
-        assert  new_seqs == []
+        assert new_seqs == []
 
         filters = [{'kind': 'score_threshold', 'score_key': 'expect',
                     'max_score': 1e-28}]
@@ -314,7 +311,7 @@ class BlastMatchFilterTest(unittest.TestCase):
                     'max_score': 1e-28}]
         filter_ = FilterBlastMatch(blastdb, 'blastn', filters, reverse=True)
         filter_packets = filter_(seqs)
-        assert  filter_packets[SEQS_PASSED] == []
+        assert filter_packets[SEQS_PASSED] == []
         assert len(filter_packets[SEQS_FILTERED_OUT]) == 1
 
     def test_filter_blast_bin(self):
@@ -354,7 +351,7 @@ class BlastMatchFilterTest(unittest.TestCase):
                           '-l', '4'], stderr=stderr)
             self.fail()
         except CalledProcessError:
-            assert 'not allowed with argument'  in open(stderr.name).read()
+            assert 'not allowed with argument' in open(stderr.name).read()
 
         # minlen percentaje_filter
         filtered_fhand = NamedTemporaryFile()
@@ -536,14 +533,15 @@ class BamFilterTest(unittest.TestCase):
     @staticmethod
     def test_bam_filter():
         'it test filter by being mapped in a BAM file'
-        reads = [SeqRecord(seq=Seq('aaa'), id='seq{}'.format(n)) for n in range(16, 23)]
+        reads = [SeqRecord(seq=Seq('aaa'), id='seq{}'.format(n))
+                 for n in range(16, 23)]
         reads = [[SeqWrapper(SEQRECORD, r, None)] for r in reads]
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         filter_ = FilterByBam([bam_fpath])
         filterpacket = {SEQS_PASSED: reads, SEQS_FILTERED_OUT: []}
         new_filterpacket = filter_(filterpacket)
         passed = _seqs_to_names(new_filterpacket[SEQS_PASSED])
-        assert  passed == ['seq16', 'seq17', 'seq18']
+        assert passed == ['seq16', 'seq17', 'seq18']
         filtered_out = _seqs_to_names(new_filterpacket[SEQS_FILTERED_OUT])
         assert filtered_out == ['seq19', 'seq20', 'seq21', 'seq22']
 
@@ -551,10 +549,7 @@ class BamFilterTest(unittest.TestCase):
 class FilterBowtie2Test(unittest.TestCase):
     @staticmethod
     def test_filter_by_bowtie2():
-        directory = TemporaryDir()
-        index_fpath = get_or_create_bowtie2_index(os.path.join(TEST_DATA_DIR,
-                                                          'arabidopsis_genes'),
-                                                  directory=directory.name)
+        index_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
         fastq_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
         fasta_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fasta')
 
@@ -562,24 +557,20 @@ class FilterBowtie2Test(unittest.TestCase):
         for preffered_classes in [[SEQITEM], [SEQRECORD]]:
             for reads_fpath in [fastq_fpath, fasta_fpath]:
                 seq_packets = read_seq_packets([open(reads_fpath)],
-                                        prefered_seq_classes=preffered_classes)
+                                               prefered_seq_classes=preffered_classes)
                 filter_packets = seq_to_filterpackets(seq_packets)
                 filter_ = FilterBowtie2Match(index_fpath)
                 filter_packet = list(filter_packets)[0]
                 filter_packets = filter_(filter_packet)
                 assert _seqs_to_names(filter_packets[SEQS_PASSED]) == passed
                 assert _seqs_to_names(filter_packets[SEQS_FILTERED_OUT]) == [
-                                                     'read1', 'read2', 'read3']
-        directory.close()
+                                                    'read1', 'read2', 'read3']
 
     @staticmethod
     def test_filter_by_bowtie2_bin():
         filter_bin = os.path.join(BIN_DIR, 'filter_by_bowtie2')
         assert 'usage' in check_output([filter_bin, '-h'])
-        directory = TemporaryDir()
-        index_fpath = get_or_create_bowtie2_index(os.path.join(TEST_DATA_DIR,
-                                                          'arabidopsis_genes'),
-                                                  directory=directory.name)
+        index_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
 
         fastq_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
         fasta_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fasta')
@@ -591,7 +582,6 @@ class FilterBowtie2Test(unittest.TestCase):
             check_output(cmd)
             assert 'no_arabi' in open(out_fhand.name).read()
             assert 'read1' in open(filtered_fhand.name).read()
-        directory.close()
 
 
 class FilterByFeatureTypeTest(unittest.TestCase):
@@ -608,191 +598,7 @@ class FilterByFeatureTypeTest(unittest.TestCase):
         assert len(seqs[SEQS_FILTERED_OUT]) == 1
         assert len(seqs[SEQS_PASSED]) == 1
 
-GENOME = '''>reference1\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCCTGTGG
-ACTTTCTATAATATTACTCAGAATTGGCAGTTACTCAGATTAAATTCGATCGTTGTATCGATTGCAGAACATCGTTG
-AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGTTATCGGAAGGGCAACTTCGTCTCTCCAA
-TCAGCTACCGAATTGGGACCTCTACGGGAGTATGGAACGATTGACACTGCTTTCGTCGAATGCAGATCCACGTCACC
-TTGCAGCGTAGATGTAATACGGGCTAGCCGGGGATGCCGACGATTAAACACGCTGTCATAGTAGCGTCTGGTGTCTA
-TGGACTCACTGGTACGGCCGTCCCCCTGCTGCTTATCATCAGGCGACGATAGTCAGCTCCGCGAACATCATTTCACC
-GCAGATAACGTTTCGGGCAGCATTTGCGTGTAACGTAGGGGTGTGTGAGCCGCAATAAGTTCAGCATCAATACCATC
-GAGGCCGATTTAGGTACCGTACGTGCCTTAACATTCGACAAGCGGTAAAAACAGTGTTATTCTACTGTTGTGACCGG
-GGTCAAGCGAGAGAATTAAGCCTATCTGGAGAGCGGTACCAACAGGGAAACACCGACTCAAGGGAGTACTGGAGCCT
-TCGGTTTTCATCTTCCGGTACTTTTTTGGCCTATGTTACTCTCTACCTTGCCTGTATATAGGACTCACCTTAATGCA
-TAGATATCATAGCAAAAGGAGTGCCCGCCAACATTAATTGATGTGTGAAGATTGCATATGAAAGAGTTCTGGAAACA
-AGAGTGTGTAGGCTGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGAGTATACCGCCAATATCCCAGTGCT
-AAAAGCGTGACGGACGCCATTCCTTACAAGGAAAGGCTTTATTGTACGTGGGGCATCATAGAATTTTGAGCTCCTGG
-CAACGTGACTAACCATCGCGGGGAAAATAAGTATTATCTACATGTTACTAGTCTAACGACTACCGCTAACTATGAAA
-CTACATATGAGGAATAAATAATCTGGGTATGTACTCGGAGTCTACGTAAGCGCGCTTAAATTACCATAAGACGAGTC
-TCTGGTCTTCTGAGATATTGGAGTACTCCCATTCATTACAGCTATCGTCGTCTGGCTGTCCGGAATATAGAAGTCAC
-CCAAGTCGTGTGAGAGAAACGTAACAGATTACGCCGCGTTAGCCTACGTAAGACGCCACTGAGACTCGTACTTGCGT
-GAGAATAGTACTTAACGTCACCGCATGAAAGGTCCAAGAGCTGCGGATCGGTCCCCTTACGGCTGCTCCAATTAGAC
-TAATTAGGGGATCCTGCAGAGACCGACATGCGAAAGGAGTGACTATCACCGTCAATGGCGTGCCCTTGTAATGCTGT
-TTGGAAGATGAGTCCAGGTTCGATGCCGCCGGCCACCACAACGGACTAGTATATTTTGCGCATAAATTACGTGTCCT
-TGCTGACGCTGCATAGGTTACGACTCTATTATATGCCCTCTTGGTGTCCACCTAACGCGGGCTAGTCTTAATACAGT
-TAGGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGGTTATCGTGATACGTTAAATTTCAGG
-ACATCATTGCATAAGTAACACTCAACCAACAGTGCTACAGGGTTGTAACGCCCCTCGAAGGTACCTTTGCCAGACTG
-GGCTACAGGACACCCAGTCTCCCGGGAGTCTTTTCCAAGGTGTGCTCCTGATCGCCGTGTTAATCTGCACGGGCTAG
-AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACTACAAATCATCACCAGACCATGTCCGA
-TCCCGGGAGTCTTTTCCAAGGTGTGC
-'''
-
-
-class FilterByMappingType(unittest.TestCase):
-    def test_classify_paired_reads(self):
-        reference_seq = GENOME
-        #Non chimeric
-        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
-        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
-        #Chimeric
-        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
-        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
-        #unknown
-        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
-        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
-
-        query = query1 + query2 + query5 + query6 + query3 + query4
-        in_fhand = NamedTemporaryFile()
-        in_fhand.write(query)
-        in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-        directory = TemporaryDir()
-        index_fpath = get_or_create_bwa_index(ref_fhand.name, directory.name)
-
-        bamfile = _sorted_mapped_reads(index_fpath,
-                                       in_fpaths=[in_fhand.name],
-                                       interleaved=True)
-        result = classify_mapped_reads(bamfile, mate_distance=2000)
-        for pair, kind in result:
-            if kind == NON_CHIMERIC:
-                assert 'seq1' in get_name(pair[0])
-            elif kind == UNKNOWN:
-                assert 'seq3' in get_name(pair[0])
-            elif kind == CHIMERA:
-                assert 'seq2' in get_name(pair[0])
-            else:
-                self.fail()
-        directory.close()
-
-        #filter_chimeras function
-        out_fhand = NamedTemporaryFile()
-        chimeras_fhand = NamedTemporaryFile()
-        unknown_fhand = NamedTemporaryFile()
-        filter_chimeras(ref_fhand.name, out_fhand, chimeras_fhand,
-                        [in_fhand.name], unknown_fhand, mate_distance=2000)
-        out_fhand.flush()
-        chimeras_fhand.flush()
-        unknown_fhand.flush()
-        assert 'seq1' in open(out_fhand.name).next()
-        assert 'seq2' in open(chimeras_fhand.name).next()
-        assert 'seq3' in open(unknown_fhand.name).next()
-
-    def test_filter_chimeras_bin(self):
-        reference_seq = GENOME
-        #Non chimeric
-        query1 = '>seq1 1:N:0:GATCAG\nGGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
-        query2 = '>seq1 2:N:0:GATCAG\nAGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
-        #Chimeric
-        query3 = '>seq2 1:N:0:GATCAG\nAAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
-        query4 = '>seq2 2:N:0:GATCAG\nACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
-        #unknown
-        query5 = '>seq3 1:N:0:GATCAG\nAGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
-        query6 = '>seq3 2:N:0:GATCAG\nGTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
-
-        query = query1 + query2 + query5 + query6 + query3 + query4
-        in_fhand = NamedTemporaryFile()
-        in_fhand.write(query)
-        in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-
-        filter_chimeras_bin = os.path.join(BIN_DIR, 'filter_chimeras')
-        assert 'usage' in check_output([filter_chimeras_bin, '-h'])
-        chimeras_fhand = NamedTemporaryFile()
-        unknown_fhand = NamedTemporaryFile()
-        out_fhand = NamedTemporaryFile()
-        cmd = [filter_chimeras_bin, in_fhand.name, '-r', ref_fhand.name]
-        cmd.extend(['-c', chimeras_fhand.name, '-u', unknown_fhand.name,
-                    '-s', '2000', '-o', out_fhand.name])
-        check_output(cmd, stdin=in_fhand)
-        assert 'seq1' in open(out_fhand.name).next()
-        assert 'seq2' in open(chimeras_fhand.name).next()
-        assert 'seq3' in open(unknown_fhand.name).next()
-
-
-class DrawDistanceDistribution(unittest.TestCase):
-    def test_draw_distance_distribution(self):
-        reference_seq = GENOME
-        query1 = '>seq1 1:N:0:GATCAG\n'
-        query1 += 'GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
-        query2 = '>seq1 2:N:0:GATCAG\n'
-        query2 += 'AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
-        #Chimeric
-        query3 = '>seq2 1:N:0:GATCAG\n'
-        query3 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
-        query4 = '>seq2 2:N:0:GATCAG\n'
-        query4 += 'ACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
-        #unknown
-        query5 = '>seq3 1:N:0:GATCAG\n'
-        query5 += 'AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
-        query6 = '>seq3 2:N:0:GATCAG\n'
-        query6 += 'GTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
-
-        query = query1 + query2 + query5 + query6 + query3 + query4
-        in_fhand = NamedTemporaryFile()
-        in_fhand.write(query)
-        in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-
-        distribution_fhand = NamedTemporaryFile()
-        draw_distance_distribution([in_fhand.name], ref_fhand.name,
-                                   distribution_fhand, max_clipping=0.05)
-        for line in open(distribution_fhand.name):
-            assert ('outies' in line or 'innies' in line or 'others' in line
-                    or '(1)' in line)
-
-    def test_draw_distance_distribution_bin(self):
-        reference_seq = GENOME
-        #Non chimeric
-        query1 = '>seq1 1:N:0:GATCAG\n'
-        query1 += 'GGGATCGCAGACCCATCTCGTCAGCATGTACCCTTGCTACATTGAACTT\n'
-        query2 = '>seq1 2:N:0:GATCAG\n'
-        query2 += 'AGGAGGGATCGGGCACCCACGGCGCGGTAGACTGAGGCCTTCTCGAACT\n'
-        #Chimeric
-        query3 = '>seq2 1:N:0:GATCAG\n'
-        query3 += 'AAGTTCAATGTAGCAAGGGTACATGCTGACGAGATGGGTCTGCGATCCC\n'
-        query4 = '>seq2 2:N:0:GATCAG\n'
-        query4 += 'ACGTGGATGCGGCGACGGCCCTACGGCACATACTGTTATTAGGGTCACT\n'
-        #unknown
-        query5 = '>seq3 1:N:0:GATCAG\n'
-        query5 += 'AGTGACCCTAATAACAGTATGTGCCGTAGGGCCGTCGCCGCATCCACGT\n'
-        query6 = '>seq3 2:N:0:GATCAG\n'
-        query6 += 'GTCGTGCGCAGCCATTGAGACCTTCCTAGGGTTTTCCCCATGGAATCGG\n'
-
-        query = query1 + query2 + query5 + query6 + query3 + query4
-        in_fhand = NamedTemporaryFile()
-        in_fhand.write(query)
-        in_fhand.flush()
-        ref_fhand = NamedTemporaryFile()
-        ref_fhand.write(reference_seq)
-        ref_fhand.flush()
-
-        distribution_fhand = NamedTemporaryFile()
-        draw_distances_distribution_bin = os.path.join(BIN_DIR,
-                                            'draw_mp_distance_distribution')
-        assert 'usage' in check_output([draw_distances_distribution_bin, '-h'])
-        cmd = [draw_distances_distribution_bin, in_fhand.name, '-r',
-               ref_fhand.name, '-o', distribution_fhand.name]
-        check_output(cmd, stdin=in_fhand)
-        for line in open(distribution_fhand.name):
-            assert ('outies' in line or 'innies' in line or 'others' in line
-                    or '(1)' in line)
-
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'DrawDistanceDistribution']
+    #import sys; sys.argv = ['', 'DrawDistanceDistribution']
     unittest.main()
