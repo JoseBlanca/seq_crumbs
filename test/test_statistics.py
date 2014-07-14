@@ -84,5 +84,5 @@ class VCFcomparisonsTest(unittest.TestCase):
         assert stats == result
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'AlleleDepthsTests']
+    # import sys;sys.argv = ['', 'AlleleDepthsTests']
     unittest.main()

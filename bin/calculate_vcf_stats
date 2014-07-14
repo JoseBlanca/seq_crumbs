@@ -273,7 +273,7 @@ def draw_call_density(vcf_stats, out_dir, n_bins=100, rc_max=100,
 
 
 def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
-    fhand = open(join(out_dir, 'gt_type_counts_at_contant_coverage.png'), 'w')
+    fhand = open(join(out_dir, 'gt_type_counts_at_constant_coverage.png'), 'w')
     ac2d = vcf_stats.allelecount2d
     fig, canvas = get_fig_and_canvas(num_rows=3, figsize=(15, 30))
 
@@ -346,7 +346,7 @@ def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
         axes2.set_position([box.x0, box.y0, box.width * box_shinkage,
                            box.height])
         axes2.plot(xs, ys, color='black', linewidth=2.0)
-        axes2.set_ylabel('Num. genotypes')
+        axes2.set_ylabel('Mean Genotype Qual.')
 
         axes.legend(loc='center left', bbox_to_anchor=(1.1, 0.5))
         axes.set_xlim(right=coverage + 1)
@@ -466,7 +466,12 @@ def draw_per_sample_stats(vcf_stats, out_dir):
     else:
         num_plots = 2
 
-    fig, canvas = get_fig_and_canvas(num_rows=num_plots)
+    height = num_plots * 4.2
+    width = len(samples) / 5
+    if width < 6:
+        width = 6
+    fig, canvas = get_fig_and_canvas(num_rows=num_plots,
+                                     figsize=(width, height))
     plots_done = 1
     # het
     if len(samples) >= min_calls_for_pop_stats:
@@ -476,7 +481,7 @@ def draw_per_sample_stats(vcf_stats, out_dir):
         plots_done += 1
         axes.bar(left, height)
         axes.set_title('Heterocigosities per sample')
-        axes.set_ylabel('Heterocigosity')
+        axes.set_ylabel('Obs. Het.')
         axes.tick_params(axis='x', which='both', bottom='off', top='off',
                          labelbottom='off')
 
@@ -553,26 +558,19 @@ def main():
 
     vcf_stats = VcfStats(in_vcf_fpath, gq_threshold,
                          min_calls_for_pop_stats=min_samples)
-
     draw_missing_data(vcf_stats, out_dir)
-
+    print 'per sample stats'
     draw_per_sample_stats(vcf_stats, out_dir)
 
     if len(vcf_stats.samples) >= vcf_stats.min_calls_for_pop_stats:
         draw_het_by_snp(vcf_stats, out_dir)
-
     draw_gt_depths(vcf_stats, out_dir)
     draw_quals_vs_depth(vcf_stats, out_dir)
-
     draw_gt_hist_vs_allele_counts(vcf_stats, out_dir)
-
     draw_snv_densities(vcf_stats, out_dir)
     draw_maf_and_mac(vcf_stats, out_dir)
-
     draw_gt_quals(vcf_stats, out_dir)
-
     draw_call_density(vcf_stats, out_dir)
-
 
 if __name__ == '__main__':
     main()

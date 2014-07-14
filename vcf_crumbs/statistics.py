@@ -338,7 +338,8 @@ class VcfStats(object):
     def _add_maf_and_mac(self, snp):
         maf = snp.maf
         if maf:
-            self._snv_counters[MAFS][int(round(maf * 100))] += 1
+            maf = int(round(maf * 100))
+            self._snv_counters[MAFS][maf] += 1
         mac = snp.mac
         if mac:
             self._snv_counters[MACS][mac] += 1
