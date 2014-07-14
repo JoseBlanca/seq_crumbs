@@ -134,14 +134,14 @@ def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
 
 
 def draw_histogram_in_fhand(counts, bin_limits, title=None, xlabel=None,
-                   ylabel=None, fhand=None, kind=BAR):
+                            ylabel=None, fhand=None, kind=BAR):
     'It draws an histogram and if the fhand is given it saves it'
     plot_format = _guess_output_for_matplotlib(fhand)
     canvas, axes = get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1,
-                                        right=0.9, top=0.9, bottom=0.1)
+                                       right=0.9, top=0.9, bottom=0.1)
     draw_histogram_in_axes(counts, bin_limits, axes=axes, title=title, xlabel=xlabel,
                            ylabel=ylabel, kind=kind)
-
+    axes.set_xlim((min(bin_limits), max(bin_limits)))
     canvas.print_figure(fhand, format=plot_format)
     fhand.flush()
 
@@ -196,6 +196,8 @@ def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
                                    kind=kind, axes=axes, ylabel=ylabel,
                                    distrib_label=distrib_label, xlabel=xlabel,
                                    title=title)
+            bin_limits = distrib['bin_limits']
+            axes.set_xlim((min(bin_limits), max(bin_limits)))
             counter_index += 1
 
         if distrib_labels is not None:
@@ -206,7 +208,7 @@ def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
 
 
 def build_histogram(values, fhand, bins=10, range_=None, stacked=False,
-                   color=None, label=None, log=False, **kwargs):
+                    color=None, label=None, log=False, **kwargs):
     'It draws a histogram of a pandas Series into a file'
     canvas, axes = get_canvas_and_axes()
     plot_format = _guess_output_for_matplotlib(fhand)
