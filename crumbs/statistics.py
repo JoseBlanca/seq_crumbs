@@ -165,7 +165,6 @@ class IntCounter(Counter):
             min_ = self.min
         if max_ is None:
             max_ = self.max
-
         if outlier_threshold:
             left_limit = self.count * outlier_threshold / 100
             rigth_limit = self.count - left_limit
@@ -183,7 +182,7 @@ class IntCounter(Counter):
         min_bins = get_setting('MIN_BINS')
         max_bins = get_setting('MAX_BINS')
         if n_bins is None:
-            num_values = max_ - min_
+            num_values = int(max_ - min_)
             if num_values == 0:
                 n_bins = 1
             elif num_values < min_bins:
