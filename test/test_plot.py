@@ -73,7 +73,7 @@ class PlotTests(unittest.TestCase):
         counters.append(IntCounter(values))
         counters.append(IntCounter(values))
         titles = ['t1', 't2', 't3']
-        draw_histograms(counters, titles, fhand, plots_per_chart=2)
+        draw_histograms(counters, fhand, titles=titles, plots_per_chart=2)
         #raw_input(fhand.name)
 
     def test_int_boxplot(self):
