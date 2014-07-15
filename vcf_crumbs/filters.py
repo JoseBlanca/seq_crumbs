@@ -98,3 +98,27 @@ class GenotypeQualFilter(_BaseFilter):
             return False
         else:
             return qual >= self.min_qual
+
+
+class ObsHetFilter(_BaseFilter):
+    def __init__(self, min_het=None, max_het=None, remove_nd=True,
+                 reverse=False):
+        super(ObsHetFilter, self).__init__(reverse=reverse)
+        if min_het is None and max_het is None:
+            msg = 'At least one value should be given for the min or max het'
+            raise ValueError(msg)
+        self.min_het = min_het
+        self.max_het = max_het
+        self.remove_nd = remove_nd
+
+    def _do_check(self, snv):
+        min_het = self.min_het
+        max_het = self.max_het
+        het = snv.obs_het
+        if het is None and self.remove_nd:
+            return False
+        if min_het is not None and het < min_het:
+            return False
+        if max_het is not None and het > max_het:
+            return False
+        return True

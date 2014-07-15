@@ -7,7 +7,7 @@ from vcf_crumbs.snv import VCFReader
 
 from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
-                                GenotypeQualFilter)
+                                GenotypeQualFilter, ObsHetFilter)
 from vcf_crumbs.utils import TEST_DATA_DIR
 
 
@@ -34,7 +34,7 @@ class FiltersTest(unittest.TestCase):
 
     @staticmethod
     def filter_vcf(vcf_fhand, filter_):
-        snps = VCFReader(vcf_fhand).parse_snvs()
+        snps = VCFReader(vcf_fhand, min_calls_for_pop_stats=1).parse_snvs()
         packet = list(group_in_filter_packets(snps, 10))[0]
         filtered_packet = filter_(packet)
         return filtered_packet
@@ -104,6 +104,27 @@ class FiltersTest(unittest.TestCase):
         res = self.eval_prop_in_packet(packet, 'qual')
         assert len(res[FILTERED_OUT]) == 1
         assert len(res[PASSED]) == 4
+
+    def test_obs_het(self):
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=ObsHetFilter(min_het=0.5))
+        res = self.eval_prop_in_packet(packet, 'obs_het')
+        assert res[FILTERED_OUT] == [0.0, 0.0, 0.0, None, 0.0, 0.0, 0.0]
+        assert res[PASSED] == [0.5, 1.0, 0.5]
+
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=ObsHetFilter(max_het=0.5))
+        res = self.eval_prop_in_packet(packet, 'obs_het')
+        assert res[FILTERED_OUT] == [None, 1.0]
+        assert res[PASSED] == [0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0]
+
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=ObsHetFilter(min_het=0.1,
+                                                      max_het=0.9))
+        res = self.eval_prop_in_packet(packet, 'obs_het')
+        assert res[FILTERED_OUT] == [0.0, 0.0, 0.0, None, 1.0, 0.0, 0.0, 0.0]
+        assert res[PASSED] == [0.5, 0.5]
+
 
 # TODO fix binary
 class BinaryTest(unittest.TestCase):
