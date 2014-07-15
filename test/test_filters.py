@@ -246,6 +246,20 @@ class BinaryFilterTest(unittest.TestCase):
         res = self.get_snv_pos(StringIO(stdout))
         assert res == [14370, 17330, 1230237]
 
+    def test_call_rate_bin(self):
+        binary = join(BIN_DIR, 'filter_vcf_by_missing')
+
+        assert 'positional' in check_output([binary, '-h'])
+
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(VCF_HEADER + VCF)
+        in_fhand.flush()
+        cmd = [binary, '-m', '3', in_fhand.name]
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout, stderr = process.communicate()
+        assert "passsed: 5" in stderr
+        assert 'fileDate' in stdout
+
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'BinaryFilterTest.test_biallelic_binary']
     unittest.main()

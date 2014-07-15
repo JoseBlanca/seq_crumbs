@@ -5,7 +5,7 @@ from vcf_crumbs.utils.bin_utils import setup_filter_argparse, parse_filter_args
 
 
 def main():
-    description = 'Filter the SNVs of a VCF file'
+    description = 'Removes the non bialellic SNVs of a VCF file'
     parser = setup_filter_argparse(description=description)
     kwargs = parse_filter_args(parser)[0]
 

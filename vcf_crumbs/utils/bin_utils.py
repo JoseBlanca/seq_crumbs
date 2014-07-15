@@ -67,5 +67,3 @@ def parse_filter_args(parser):
     filtered_fhand = parsed_args.filtered
     args['filtered_fhand'] = filtered_fhand
     return args, parsed_args
-
-
