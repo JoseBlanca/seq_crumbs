@@ -19,7 +19,7 @@ def setup_basic_argparse(**kwargs):
     msg = 'Template VCF to get the header (default same as input)'
     parser.add_argument('-t', '--template', help=msg)
     msg = 'File to print some statistics (default STDERR)'
-    parser.add_argument('-l', '--log', help=msg, type=argparse.FileType('r'),
+    parser.add_argument('-l', '--log', help=msg, type=argparse.FileType('w'),
                         default=sys.stderr)
     return parser
 

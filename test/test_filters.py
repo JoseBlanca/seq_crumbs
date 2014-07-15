@@ -282,11 +282,12 @@ class BinaryFilterTest(unittest.TestCase):
         in_fhand = NamedTemporaryFile()
         in_fhand.write(VCF_HEADER + VCF)
         in_fhand.flush()
-        cmd = [binary, '-m', '0.7', '-c', '2', in_fhand.name]
+        log_fhand = NamedTemporaryFile()
+        cmd = [binary, '-m', '0.7', '-c', '2', '-l', log_fhand.name,
+               in_fhand.name]
         process = Popen(cmd, stderr=PIPE, stdout=PIPE)
-        stdout, stderr = process.communicate()
-        print stderr
-        assert "passsed: 2" in stderr
+        stdout = process.communicate()[0]
+        assert "passsed: 2" in open(log_fhand.name).read()
         assert 'fileDate' in stdout
 
 if __name__ == "__main__":
