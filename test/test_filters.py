@@ -1,7 +1,7 @@
 from os.path import join, dirname
 import unittest
 from tempfile import NamedTemporaryFile
-from subprocess import check_call
+from subprocess import check_output, Popen, PIPE
 from StringIO import StringIO
 
 from vcf_crumbs.snv import VCFReader
@@ -10,7 +10,7 @@ from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
                                 GenotypeQualFilter, ObsHetFilter, MafFilter,
                                 filter_snvs)
-from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
+from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
 # Method could be a function
 # pylint: disable=R0201
@@ -217,8 +217,10 @@ class BinaryFilterTest(unittest.TestCase):
         assert 'SNVs passsed: 3' in log_fhand.getvalue()
 
     def test_biallelic_binary(self):
-        binary = join(dirname(__file__), '..', 'bin',
-                      'filter_vcf_by_biallelic')
+        binary = join(BIN_DIR, 'filter_vcf_by_biallelic')
+
+        assert 'positional' in check_output([binary, '-h'])
+
         in_fhand = NamedTemporaryFile()
         in_fhand.write(VCF_HEADER + VCF)
         in_fhand.flush()
@@ -226,15 +228,23 @@ class BinaryFilterTest(unittest.TestCase):
         filtered_fhand = NamedTemporaryFile()
         cmd = [binary, '-o', out_fhand.name, '-f', filtered_fhand.name,
                in_fhand.name]
-        stderr = NamedTemporaryFile()
-        check_call(cmd, stderr=stderr)
-        assert "passsed: 3" in open(stderr.name).read()
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stderr = process.communicate()[1]
+        assert "passsed: 3" in stderr
 
         res = self.get_snv_pos(open(out_fhand.name))
         filtered = self.get_snv_pos(open(filtered_fhand.name))
 
         assert res == [14370, 17330, 1230237]
         assert filtered == [1110696, 1234567, 1234567]
+
+        # with stdout
+        cmd = [binary, '-f', filtered_fhand.name, in_fhand.name]
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout, stderr = process.communicate()
+        assert "passsed: 3" in stderr
+        res = self.get_snv_pos(StringIO(stdout))
+        assert res == [14370, 17330, 1230237]
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'BinaryFilterTest.test_biallelic_binary']
