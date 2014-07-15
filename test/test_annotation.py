@@ -12,7 +12,7 @@ from StringIO import StringIO
 
 from vcf import Reader
 
-from vcf_crumbs.utils import TEST_DATA_DIR
+from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
 from vcf_crumbs.annotation import (CloseToSnv, HighVariableRegion,
                                    CloseToLimit, MafDepthLimit, CapEnzyme,
                                    AminoChangeAnnotator, IsVariableAnnotator,

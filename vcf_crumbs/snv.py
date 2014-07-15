@@ -320,7 +320,7 @@ class SNV(object):
         calls = []
         sample_indexes = {}
         for index, call in enumerate(self.calls):
-            if call.gt_qual < min_qual:
+            if min_qual is None or call.gt_qual < min_qual:
                 call = call.copy_setting_gt_to_none(return_pyvcf_call=True)
             calls.append(call)
             sample_indexes[call.sample] = index

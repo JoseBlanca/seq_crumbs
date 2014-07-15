@@ -4,7 +4,7 @@ from StringIO import StringIO
 from os.path import join
 
 from vcf_crumbs.snv import VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter
-from vcf_crumbs.utils import TEST_DATA_DIR
+from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
 from tempfile import NamedTemporaryFile
 
 # Method could be a function

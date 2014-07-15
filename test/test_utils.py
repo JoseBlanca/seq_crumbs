@@ -18,7 +18,7 @@ from tempfile import NamedTemporaryFile
 from os.path import exists
 from os import remove
 
-from vcf_crumbs.utils import (compress_with_bgzip, uncompress_gzip,
+from vcf_crumbs.utils.file_utils import (compress_with_bgzip, uncompress_gzip,
                               index_vcf_with_tabix)
 
 

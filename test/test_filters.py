@@ -10,7 +10,7 @@ from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
                                 GenotypeQualFilter, ObsHetFilter, MafFilter,
                                 filter_snvs)
-from vcf_crumbs.utils import TEST_DATA_DIR
+from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
 
 # Method could be a function
 # pylint: disable=R0201

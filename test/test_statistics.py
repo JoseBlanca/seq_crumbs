@@ -8,7 +8,7 @@ from vcf_crumbs.statistics import (VARSCAN, GATK, FREEBAYES, VcfStats,
                                    HOM_REF, VCFcomparisons, _AlleleCounts2D,
                                    HOM_ALT, HET, HOM)
 
-from vcf_crumbs.utils import TEST_DATA_DIR, BIN_DIR
+from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')

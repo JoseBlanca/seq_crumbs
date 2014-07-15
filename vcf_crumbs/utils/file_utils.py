@@ -17,7 +17,7 @@ import os.path
 from subprocess import check_call, Popen, PIPE
 
 TEST_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                             '..', 'test', 'test_data'))
+                                             '..', '..', 'test', 'test_data'))
 
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bin'))

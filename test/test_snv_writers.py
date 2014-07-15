@@ -9,7 +9,7 @@ from subprocess import check_output
 
 from vcf import Reader
 
-from vcf_crumbs.utils import (TEST_DATA_DIR, compress_with_bgzip,
+from vcf_crumbs.utils.file_utils import (TEST_DATA_DIR, compress_with_bgzip,
                               index_vcf_with_tabix)
 from vcf_crumbs.writers import (IlluminaWriter, _replace_snvs_with_iupac)
 
