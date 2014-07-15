@@ -15,6 +15,8 @@ from crumbs.statistics import (draw_histogram_ascii, IntCounter, LABELS,
 from bam_crumbs.settings import get_setting
 from bam_crumbs.utils.flag import SAM_FLAG_BINARIES, SAM_FLAGS
 from bam_crumbs.utils.bin import get_binary_path
+from pysam.csamtools import Samfile
+from collections import Counter
 
 # pylint: disable=C0111
 
@@ -279,6 +281,40 @@ def get_reference_counts(bam_fpath):
         yield {'reference': ref_name, 'length': ref_length,
                'mapped_reads': int(mapped_reads),
                'unmapped_reads': int(unmapped_reads)}
+
+
+MAPQS_TO_CALCULATE = (0, 20, 30, 40)
+
+
+class GenomeCoverages(object):
+    def __init__(self, bam_fhands, mapqs=MAPQS_TO_CALCULATE):
+        self._bam_fhands = bam_fhands
+        self.mapqs_to_calculate = mapqs
+        self._counters = {mapq: IntCounter() for mapq in mapqs}
+        self._calculate()
+
+    def __len__(self):
+        return len(self._counters)
+
+    def _calculate(self):
+        for bam_fhand in self._bam_fhands:
+            samfile = Samfile(bam_fhand.name)
+            for column in samfile.pileup(stepper='all', max_depth=100000):
+                self._add(column)
+
+    def _add(self, column):
+        column_coverages = Counter()
+        mapqs_in_column = [r.alignment.mapq for r in column.pileups]
+        for read_mapq in mapqs_in_column:
+            for mapq_to_calc in self.mapqs_to_calculate:
+                if read_mapq > mapq_to_calc:
+                    column_coverages[mapq_to_calc] += 1
+
+        for map_to_calc, count in column_coverages.items():
+            self._counters[map_to_calc][count] += 1
+
+    def get_mapq_counter(self, mapq):
+        return self._counters.get(mapq, None)
 
 
 def get_genome_coverage(bam_fhands):

@@ -66,7 +66,7 @@ def run():
         out_fhand.write('Distribution of coverages\n')
         out_fhand.write('-------------------------\n')
         out_fhand.write(draw_histogram_ascii(distrib['bin_limits'],
-                                       distrib['counts']))
+                                             distrib['counts']))
 
 
 if __name__ == '__main__':

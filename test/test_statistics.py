@@ -12,7 +12,7 @@ from bam_crumbs.statistics import (count_reads, ReferenceStats, ReadStats,
                                    get_reference_counts,
                                    get_reference_counts_dict,
                                    get_genome_coverage, get_bam_readgroups,
-                                   mapped_count_by_rg)
+                                   mapped_count_by_rg, GenomeCoverages)
 
 # pylint: disable=R0201
 # pylint: disable=R0904
@@ -78,6 +78,13 @@ class StatsTest(unittest.TestCase):
         assert cov.min == 6
         assert cov.max == 9
 
+    def test_genome_coverage_distrib(self):
+        bam_fhand = open(os.path.join(TEST_DATA_DIR, 'seqs.bam'))
+        cov = GenomeCoverages([bam_fhand])
+        assert repr(cov.get_mapq_counter(0)) == 'IntCounter({9: 146, 6: 1})'
+        assert repr(cov.get_mapq_counter(20)) == 'IntCounter({9: 146, 6: 1})'
+        assert repr(cov.get_mapq_counter(30)) == 'IntCounter({9: 73, 3: 73, 6: 1})'
+
     def test_flag_to_binary(self):
         assert not _flag_to_binary(0)
         assert _flag_to_binary(1) == [0]
@@ -125,7 +132,7 @@ class StatsTest(unittest.TestCase):
         bin_ = os.path.join(BIN_DIR, 'count_mapped_by_rg')
         cmd = [bin_, bam_fpath]
         output = check_output(cmd)
-        assert "group2+454" in  output
+        assert "group2+454" in output
 
 
 class GenomeCoverageTest(unittest.TestCase):
@@ -137,5 +144,5 @@ class GenomeCoverageTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'StatsTest.test_ref_counts']
+    # import sys;sys.argv = ['', 'StatsTest.test_genome_coverage_distrib']
     unittest.main()
