@@ -103,13 +103,14 @@ class VCFWriter(pyvcfWriter):
 
 class SNV(object):
     '''A proxy around the pyvcf _Record with some additional functionality'''
-    def __init__(self, record, reader,
+    def __init__(self, record, reader, ploidy=2,
                  min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS):
         # min_calls_for_pop_stats is defined here because otherwise it would
         # behave like a global variable for all SNPs read from a common
         # reader
         self.record = record
         self.reader = reader
+        self.ploidy = ploidy
         self.min_calls_for_pop_stats = min_calls_for_pop_stats
         self._mac_analyzed = False
         self._maf = None
@@ -159,6 +160,7 @@ class SNV(object):
         if self._mac_analyzed:
             return
         self._mac_analyzed = True
+        ploidy = self.ploidy
         snp = self.record
 
         n_chroms_sampled = 0
@@ -166,7 +168,8 @@ class SNV(object):
         for call in snp.samples:
             if call.called:
                 genotype = call.gt_alleles
-                n_chroms_sampled += len(genotype)
+                assert len(genotype) == ploidy
+                n_chroms_sampled += ploidy
                 for allele in genotype:
                     allele_counts[allele] += 1
         if not n_chroms_sampled:

@@ -2,16 +2,46 @@ from __future__ import division
 
 from crumbs.iterutils import group_in_packets
 
+from vcf_crumbs.snv import VCFReader, VCFWriter
+
 # Missing docstring
 # pylint: disable=C0111
+# Too few pulic methods
+# pylint: disable=R0903
 
 PASSED = 'passed'
 FILTERED_OUT = 'filtered_out'
+
+SNPS_PER_FILTER_PACKET = 100
 
 
 def group_in_filter_packets(items, items_per_packet):
     for packet in group_in_packets(items, items_per_packet):
         yield {PASSED: packet, FILTERED_OUT: []}
+
+
+def filter_snvs(in_fhand, out_fhand, filter_, filtered_fhand=None,
+                template_fhand=None):
+    # TODO implement logger
+    reader = VCFReader(in_fhand)
+    template_reader = reader if template_fhand is None else VCFReader(template_fhand)
+    writer = VCFWriter(out_fhand, template_reader=template_reader)
+    if filtered_fhand:
+        filtered_writer = VCFWriter(filtered_fhand,
+                                    template_reader=template_reader)
+    else:
+        filtered_writer = None
+
+    packets = group_in_filter_packets(reader.parse_snvs(),
+                                      SNPS_PER_FILTER_PACKET)
+    for packet in packets:
+        filtered_packet = filter_(packet)
+        for snv in filtered_packet[PASSED]:
+            writer.write_snv(snv)
+        if filtered_writer:
+            for snv in filtered_packet[FILTERED_OUT]:
+                filtered_writer.write_snv(snv)
+    writer.flush()
 
 
 class _BaseFilter(object):
