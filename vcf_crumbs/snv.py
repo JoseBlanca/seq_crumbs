@@ -45,8 +45,8 @@ class VCFReader(object):
                 yield snp
         except:
             if last_snp is not None:
-                chrom = str(last_snp.CHROM)
-                pos = str(last_snp.POS)
+                chrom = str(last_snp.chrom)
+                pos = str(last_snp.pos)
                 print 'Last parsed SNP was: ' + chrom + ' ' + pos
                 raise
 
