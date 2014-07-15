@@ -274,6 +274,21 @@ class BinaryFilterTest(unittest.TestCase):
         assert "passsed: 3" in stderr
         assert 'fileDate' in stdout
 
+    def test_maf_bin(self):
+        binary = join(BIN_DIR, 'filter_vcf_by_maf')
+
+        assert 'positional' in check_output([binary, '-h'])
+
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(VCF_HEADER + VCF)
+        in_fhand.flush()
+        cmd = [binary, '-m', '0.7', '-c', '2', in_fhand.name]
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout, stderr = process.communicate()
+        print stderr
+        assert "passsed: 2" in stderr
+        assert 'fileDate' in stdout
+
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'BinaryFilterTest.test_biallelic_binary']
     unittest.main()
