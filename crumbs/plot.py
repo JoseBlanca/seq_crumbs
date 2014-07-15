@@ -70,7 +70,8 @@ def get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1, right=0.9, top=0.9,
 
 
 def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
-                           xlabel=None, ylabel=None, distrib_label=None):
+                           xlabel=None, ylabel=None, distrib_label=None,
+                           linestyle=None):
 
     if axes is None:
         canvas, axes = get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1,
@@ -89,7 +90,7 @@ def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
         xvalues = range(len(counts))
         axes.bar(xvalues, counts)
 
-        #the x axis label
+        # the x axis label
         xticks_pos = [value + 0.5 for value in xvalues]
 
         left_val = None
@@ -109,7 +110,7 @@ def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
                 xticks_labels.append(xticks_label)
             left_val = right_val
 
-        #we don't want to clutter the plot
+        # we don't want to clutter the plot
         num_of_xlabels = 15
         step = int(len(counts) / float(num_of_xlabels))
         step = 1 if step == 0 else step
@@ -119,8 +120,11 @@ def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
         axes.set_xticklabels(xticks_labels)
     elif LINE:
         kwargs = {}
-        if distrib_label:
+        if distrib_label is not None:
             kwargs['label'] = distrib_label
+        if linestyle is not None:
+            kwargs['linestyle'] = linestyle
+
         x_values = []
         for index, i in enumerate(bin_limits):
             try:
@@ -134,13 +138,13 @@ def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
 
 
 def draw_histogram_in_fhand(counts, bin_limits, title=None, xlabel=None,
-                   ylabel=None, fhand=None, kind=BAR):
+                            ylabel=None, fhand=None, kind=BAR):
     'It draws an histogram and if the fhand is given it saves it'
     plot_format = _guess_output_for_matplotlib(fhand)
     canvas, axes = get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1,
-                                        right=0.9, top=0.9, bottom=0.1)
-    draw_histogram_in_axes(counts, bin_limits, axes=axes, title=title, xlabel=xlabel,
-                           ylabel=ylabel, kind=kind)
+                                       right=0.9, top=0.9, bottom=0.1)
+    draw_histogram_in_axes(counts, bin_limits, axes=axes, title=title,
+                           xlabel=xlabel, ylabel=ylabel, kind=kind)
 
     canvas.print_figure(fhand, format=plot_format)
     fhand.flush()
@@ -148,7 +152,7 @@ def draw_histogram_in_fhand(counts, bin_limits, title=None, xlabel=None,
 
 def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
                     plots_per_chart=3, xlabel=None, ylabel=None, titles=None,
-                    kind=LINE):
+                    kind=LINE, xmax=None, xmin=None, linestyles=None):
     if plots_per_chart > 1 and kind == BAR:
         raise ValueError('if kind is BAR only one plot per chart is allowed')
 
@@ -172,11 +176,16 @@ def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
                     distrib_label = None
                 else:
                     distrib_label = distrib_labels[counter_index]
+                if linestyles is None:
+                    linestyle = None
+                else:
+                    linestyle = linestyles[counter_index]
             except IndexError:
                 break
             title = titles[counter_index] if titles else None
             try:
-                distrib = counter.calculate_distribution()
+                distrib = counter.calculate_distribution(max_=xmax,
+                                                         min_=xmin)
             except RuntimeError:
                 axes.set_title(title + ' (NO DATA)')
                 counter_index += 1
@@ -190,12 +199,12 @@ def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
                     counter_index += 1
                     continue
                 raise
-
+            print distrib_label
             title = titles[counter_index] if titles else None
             draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
                                    kind=kind, axes=axes, ylabel=ylabel,
                                    distrib_label=distrib_label, xlabel=xlabel,
-                                   title=title)
+                                   title=title, linestyle=linestyle)
             counter_index += 1
 
         if distrib_labels is not None:
@@ -348,7 +357,7 @@ def draw_int_boxplot(boxplot, fhand=None, axes=None, title=None,
 
     # for the following line to work we would have to create all points in
     # memory, this is why we have reimplemented the boxplot
-    #axes.boxplot([list(boxplot.counts[x_val].elements()) for x_val in x_vals])
+    # axes.boxplot([list(boxplot.counts[x_val].elements()) for x_val in x_vals]
 
     # we don't want more than 50 bars
     max_n_boxes = 40
@@ -362,8 +371,9 @@ def draw_int_boxplot(boxplot, fhand=None, axes=None, title=None,
             continue
 
         xticks_lables.append(str(x_val))
-        xticks.append(index + 0.5)  # we add 0.5 to have the x ticks in  the
-                                    # middle of the bar
+        # we add 0.5 to have the x ticks in  the
+        # middle of the bar
+        xticks.append(index + 0.5)
 
         intcounter = boxplot.counts[x_val]
         if intcounter.count < 5:
