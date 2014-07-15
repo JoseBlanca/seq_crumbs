@@ -1,15 +1,23 @@
 from os.path import join, dirname
 import unittest
 from tempfile import NamedTemporaryFile
-from subprocess import check_output
+from subprocess import check_call
+from StringIO import StringIO
 
 from vcf_crumbs.snv import VCFReader
 
 from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
-                                GenotypeQualFilter, ObsHetFilter, MafFilter)
+                                GenotypeQualFilter, ObsHetFilter, MafFilter,
+                                filter_snvs)
 from vcf_crumbs.utils import TEST_DATA_DIR
 
+# Method could be a function
+# pylint: disable=R0201
+# Too many public methods
+# pylint: disable=R0904
+# Missing docstring
+# pylint: disable=C0111
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 VCF_INDEL_PATH = join(TEST_DATA_DIR, 'sample_indel.vcf.gz')
@@ -144,32 +152,90 @@ class FiltersTest(unittest.TestCase):
         assert res[FILTERED_OUT] == [0.5, 0.5, 0.5, None, 0.5, 1.0, 1.0, 1.0]
         assert res[PASSED] == [0.75, 0.75]
 
+VCF_HEADER = '''##fileformat=VCFv4.1
+##fileDate=20090805
+##source=myImputationProgramV3.1
+##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
+##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species="Homo sapiens",taxonomy=x>
+##phasing=partial
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">
+##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">
+##FILTER=<ID=q10,Description="Quality below 10">
+##FILTER=<ID=s50,Description="Less than 50% of samples have data">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+'''
+VCF = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|1:3:5:65,3\t0/0:41:3
+20\t1110696\trs6040355\tA\tG,T\t67\tPASS\tNS=2;DP=10;AF=0.333,0.667;AA=T;DB\tGT:GQ:DP:HQ\t1|2:21:6:23,27\t2|1:2:0:18,2\t2/2:35:4
+20\t1230237\t.\tT\t.\t47\tPASS\tNS=3;DP=13;AA=T\tGT:GQ:DP:HQ\t0|0:54:7:56,60\t0|0:48:4:51,51\t0/0:61:2
+20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t0/1:35:4\t0/2:17:2\t1/1:40:3
+20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.:35:4\t0/2:17:2\t1/1:40:3
+'''
 
-# TODO fix binary
-class BinaryTest(unittest.TestCase):
 
-    def test_bin_record_filters(self):
-        binary = join(dirname(__file__), '..', 'bin', 'filter_snvs')
-        assert 'usage' in check_output([binary, '-h'])
+class BinaryFilterTest(unittest.TestCase):
 
+    def get_snv_pos(self, vcf_fhand):
+        pos = []
+        for line in vcf_fhand:
+            if line.startswith('#'):
+                continue
+            pos.append(int(line.split()[1]))
+        return pos
+
+    def test_filter_fhand(self):
+        in_fhand = StringIO(VCF_HEADER + VCF)
+        out_fhand = StringIO()
+        template_fhand = StringIO(VCF_HEADER + VCF)
+        filter_snvs(in_fhand, out_fhand, filters=[],
+                    template_fhand=template_fhand)
+        res = self.get_snv_pos(StringIO(out_fhand.getvalue()))
+        in_pos = self.get_snv_pos(StringIO(in_fhand.getvalue()))
+        assert in_pos == res
+
+        in_fhand = StringIO(VCF_HEADER + VCF)
+        out_fhand = StringIO()
+        filtered_fhand = StringIO()
+        log_fhand = StringIO()
+        template_fhand = StringIO(VCF_HEADER + VCF)
+        filter_snvs(in_fhand, out_fhand, filters=[BiallelicFilter()],
+                    template_fhand=template_fhand,
+                    filtered_fhand=filtered_fhand, log_fhand=log_fhand)
+        res = self.get_snv_pos(StringIO(out_fhand.getvalue()))
+        filtered = self.get_snv_pos(StringIO(filtered_fhand.getvalue()))
+        in_pos = self.get_snv_pos(StringIO(in_fhand.getvalue()))
+        assert res == [14370, 17330, 1230237]
+        assert filtered == [1110696, 1234567, 1234567]
+        assert 'SNVs passsed: 3' in log_fhand.getvalue()
+
+    def test_biallelic_binary(self):
+        binary = join(dirname(__file__), '..', 'bin',
+                      'filter_vcf_by_biallelic')
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(VCF_HEADER + VCF)
+        in_fhand.flush()
         out_fhand = NamedTemporaryFile()
-        in_fpath = VCF_PATH
-        samples_fhand = NamedTemporaryFile()
-        samples_fhand.write('mu16\n')
-        samples_fhand.flush()
-        cmd = [binary, in_fpath, '-o', out_fhand.name, '-g', '0', '-s',
-               samples_fhand.name, '-t', '20']
-        check_output(cmd)
-        reader = Reader(filename=out_fhand.name)
-        vcf_variant = get_snpcaller_name(reader)
-        for snp in reader:
-            gt = snp.genotype('mu16').gt_type
-            assert gt == 0 or gt == None
-            for call in snp:
-                data = get_call_data(call, vcf_variant)
-                gq = data.get(GQ, None)
-                if gq is None or gq < 20:
-                    assert not call.called
+        filtered_fhand = NamedTemporaryFile()
+        cmd = [binary, '-o', out_fhand.name, '-f', filtered_fhand.name,
+               in_fhand.name]
+        stderr = NamedTemporaryFile()
+        check_call(cmd, stderr=stderr)
+        assert "passsed: 3" in open(stderr.name).read()
+
+        res = self.get_snv_pos(open(out_fhand.name))
+        filtered = self.get_snv_pos(open(filtered_fhand.name))
+
+        assert res == [14370, 17330, 1230237]
+        assert filtered == [1110696, 1234567, 1234567]
 
 if __name__ == "__main__":
+    # import sys;sys.argv = ['', 'BinaryFilterTest.test_biallelic_binary']
     unittest.main()
