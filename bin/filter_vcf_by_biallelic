@@ -5,7 +5,8 @@ from vcf_crumbs.filters import (BiallelicFilter, filter_snvs,
 
 
 def main():
-    parser = setup_filter_argparse()
+    description = 'Filter the SNVs of a VCF file'
+    parser = setup_filter_argparse(description=description)
     kwargs = parse_filter_args(parser)
 
     filter_ = BiallelicFilter()
