@@ -3,22 +3,20 @@ Created on 2014 mai 28
 
 @author: peio
 '''
-import math
 import unittest
-from os.path import join, dirname
+from os.path import join
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
 from StringIO import StringIO
 
-from vcf import Reader
 
-from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
+from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 from vcf_crumbs.annotation import (CloseToSnv, HighVariableRegion,
                                    CloseToLimit, MafDepthLimit, CapEnzyme,
                                    AminoChangeAnnotator, IsVariableAnnotator,
                                    AminoSeverityChangeAnnotator,
                                    HeterozigoteInSamples)
-from vcf_crumbs.snv import VCFReader, SNV
+from vcf_crumbs.snv import VCFReader
 from test.test_snv import VCF_HEADER
 
 
@@ -527,7 +525,7 @@ class TestInfoMappers(unittest.TestCase):
 
 class BinaryTest(unittest.TestCase):
     def test_run_binary(self):
-        binary = join(dirname(__file__), '..', 'bin', 'annotate_snvs')
+        binary = join(BIN_DIR, 'annotate_snvs')
         assert 'usage' in check_output([binary, '-h'])
 
         config = '''[1]
