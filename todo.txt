@@ -1,3 +1,6 @@
+Fix mac calculation. Take into account the ploidy.
+
+
 Del paper del stacks:
 
 paralogous stacks because all individuals homozygous for a specific sequence at one paralog and homozygous for a slightly different sequence in the other paralog would appear to be heterozygotes for the relevant SNP.

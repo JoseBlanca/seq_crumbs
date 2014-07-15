@@ -7,7 +7,7 @@ from vcf_crumbs.snv import VCFReader
 
 from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
-                                GenotypeQualFilter, ObsHetFilter)
+                                GenotypeQualFilter, ObsHetFilter, MafFilter)
 from vcf_crumbs.utils import TEST_DATA_DIR
 
 
@@ -124,6 +124,25 @@ class FiltersTest(unittest.TestCase):
         res = self.eval_prop_in_packet(packet, 'obs_het')
         assert res[FILTERED_OUT] == [0.0, 0.0, 0.0, None, 1.0, 0.0, 0.0, 0.0]
         assert res[PASSED] == [0.5, 0.5]
+
+    def test_maf(self):
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=MafFilter(min_maf=0.6))
+        res = self.eval_prop_in_packet(packet, 'maf')
+        assert res[FILTERED_OUT] == [0.5, 0.5, 0.5, None, 0.5]
+        assert res[PASSED] == [0.75, 0.75, 1.0, 1.0, 1.0]
+
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=MafFilter(max_maf=0.6))
+        res = self.eval_prop_in_packet(packet, 'maf')
+        assert res[FILTERED_OUT] == [0.75, None, 0.75, 1.0, 1.0, 1.0]
+        assert res[PASSED] == [0.5, 0.5, 0.5, 0.5]
+
+        packet = self.filter_vcf(open(VCF_PATH),
+                                 filter_=MafFilter(min_maf=0.6, max_maf=0.8))
+        res = self.eval_prop_in_packet(packet, 'maf')
+        assert res[FILTERED_OUT] == [0.5, 0.5, 0.5, None, 0.5, 1.0, 1.0, 1.0]
+        assert res[PASSED] == [0.75, 0.75]
 
 
 # TODO fix binary
