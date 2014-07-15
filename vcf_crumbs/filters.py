@@ -37,8 +37,11 @@ def _write_log(log_fhand, tot_snps, passed_snps):
 
 
 def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
-                template_fhand=None, log_fhand=None):
-    reader = VCFReader(in_fhand)
+                template_fhand=None, log_fhand=None, reader_kwargs=None):
+    if reader_kwargs is None:
+        reader_kwargs = {}
+    reader = VCFReader(in_fhand, **reader_kwargs)
+
     template_reader = reader if template_fhand is None else VCFReader(template_fhand)
     writer = VCFWriter(out_fhand, template_reader=template_reader)
     if filtered_fhand:
@@ -162,9 +165,6 @@ class ObsHetFilter(_BaseFilter):
     def __init__(self, min_het=None, max_het=None, remove_nd=True,
                  reverse=False):
         super(ObsHetFilter, self).__init__(reverse=reverse)
-        if min_het is None and max_het is None:
-            msg = 'At least one value should be given for the min or max het'
-            raise ValueError(msg)
         self.min_het = min_het
         self.max_het = max_het
         self.remove_nd = remove_nd

@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+from vcf_crumbs.filters import ObsHetFilter, filter_snvs
+from vcf_crumbs.utils.bin_utils import setup_filter_argparse, parse_filter_args
+from vcf_crumbs.snv import DEF_MIN_CALLS_FOR_POP_STATS
+
+
+def _setup_argparse(**kwargs):
+    'It prepares the command line argument parsing.'
+    parser = setup_filter_argparse(**kwargs)
+
+    msg = 'The SNV should have at least this observed heterozygosity'
+    parser.add_argument('-m', '--min_het', type=float, help=msg)
+    msg = 'The SNV should have at most this observed heterozygosity'
+    parser.add_argument('-x', '--max_het', type=float, help=msg)
+    msg = 'Min. num. of called genotypes to consider the SNV (Default '
+    msg += str(DEF_MIN_CALLS_FOR_POP_STATS) + ')'
+    parser.add_argument('-c', '--min_calls', type=int, help=msg,
+                        default=DEF_MIN_CALLS_FOR_POP_STATS)
+    return parser
+
+
+def _parse_args(parser):
+    args, parsed_args = parse_filter_args(parser)
+    min_het = parsed_args.min_het
+    max_het = parsed_args.max_het
+
+    filter_args = {}
+    if min_het is not None:
+        filter_args['min_het'] = min_het
+    if max_het is not None:
+        filter_args['max_het'] = max_het
+
+    reader_args = {}
+    min_calls = parsed_args.min_calls
+    if min_calls:
+        reader_args['min_calls_for_pop_stats'] = min_calls
+    return args, filter_args, reader_args
+
+
+def main():
+    description = 'Removes the SNVs according to its observed heterozygosity '
+    description += 'from a VCF file'
+    parser = _setup_argparse(description=description)
+    kwargs, filter_kwargs, reader_args = _parse_args(parser)
+
+    filter_ = ObsHetFilter(**filter_kwargs)
+    kwargs['filters'] = [filter_]
+    filter_snvs(reader_kwargs=reader_args, **kwargs)
+
+if __name__ == '__main__':
+    main()
