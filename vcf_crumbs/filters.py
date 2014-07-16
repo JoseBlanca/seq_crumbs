@@ -14,7 +14,7 @@ from vcf_crumbs.snv import VCFReader, VCFWriter
 PASSED = 'passed'
 FILTERED_OUT = 'filtered_out'
 
-SNPS_PER_FILTER_PACKET = 100
+SNPS_PER_FILTER_PACKET = 50
 
 
 def group_in_filter_packets(items, items_per_packet):
