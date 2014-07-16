@@ -199,7 +199,6 @@ def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
                     counter_index += 1
                     continue
                 raise
-            print distrib_label
             title = titles[counter_index] if titles else None
             draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
                                    kind=kind, axes=axes, ylabel=ylabel,
