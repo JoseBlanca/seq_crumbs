@@ -12,12 +12,14 @@ def setup_basic_argparse(**kwargs):
 
     parser = argparse.ArgumentParser(**kwargs)
     in_help = 'Input VCF file (default STDIN)'
-    parser.add_argument('input', help=in_help)
+    parser.add_argument('input', help=in_help, nargs='?',
+                        type=argparse.FileType('r'), default=sys.stdin)
     parser.add_argument('-o', '--output', default=sys.stdout,
                         help='Output VCF file (default STDOUT)',
                         type=argparse.FileType('w'))
     msg = 'Template VCF to get the header (default same as input)'
-    parser.add_argument('-t', '--template', help=msg)
+    parser.add_argument('-t', '--template', help=msg,
+                        type=argparse.FileType('r'))
     msg = 'File to print some statistics (default STDERR)'
     parser.add_argument('-l', '--log', help=msg, type=argparse.FileType('w'),
                         default=sys.stderr)
@@ -35,21 +37,16 @@ def setup_filter_argparse(**kwargs):
 
 def parse_basic_args(parser):
     parsed_args = parser.parse_args()
-    in_fpath = parsed_args.input
-    template_fpath = parsed_args.template
+    in_fhand = parsed_args.input
+    template_fhand = parsed_args.template
 
-    if in_fpath is None:
-        in_fhand = sys.stdin
-        if template_fpath is None:
-            msg = 'The template file is required if the input is STDIN'
+    if template_fhand is None:
+        in_fname = in_fhand.name
+        if in_fname == '<stdin>':
+            msg = 'A template file has to be provided when the input is given '
+            msg += 'via STDIN'
             parser.error(msg)
-    else:
-        in_fhand = open(in_fpath)
-
-    if template_fpath is None:
-        template_fhand = open(in_fpath)
-    else:
-        template_fhand = open(template_fhand)
+        template_fhand = open(in_fname)
 
     out_fhand = parsed_args.output
     log_fhand = parsed_args.log

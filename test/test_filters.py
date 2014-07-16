@@ -246,6 +246,23 @@ class BinaryFilterTest(unittest.TestCase):
         res = self.get_snv_pos(StringIO(stdout))
         assert res == [14370, 17330, 1230237]
 
+        # with stdin
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(VCF_HEADER + VCF)
+        in_fhand.flush()
+        stdin = open(in_fhand.name)
+        cmd = [binary, '-f', filtered_fhand.name]
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=stdin)
+        stdout, stderr = process.communicate()
+        # fails because there's no template
+        assert 'A template file has ' in stderr
+        stdin = open(in_fhand.name)
+        cmd = [binary, '-f', filtered_fhand.name, '-t', in_fhand.name]
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=stdin)
+        stdout, stderr = process.communicate()
+        assert "passsed: 3" in stderr
+        in_fhand.close()
+
     def test_call_rate_bin(self):
         binary = join(BIN_DIR, 'filter_vcf_by_missing')
 
