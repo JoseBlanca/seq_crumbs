@@ -1,5 +1,6 @@
 from __future__ import division
 
+import sys
 from collections import Counter
 
 from vcf import Reader as pyvcfReader
@@ -47,7 +48,8 @@ class VCFReader(object):
             if last_snp is not None:
                 chrom = str(last_snp.chrom)
                 pos = str(last_snp.pos)
-                print 'Last parsed SNP was: ' + chrom + ' ' + pos
+                msg = 'Last parsed SNP was: ' + str(chrom) + ' ' + str(pos)
+                sys.stderr.write(msg)
                 raise
 
     def fetch_snvs(self, *args, **kwargs):
