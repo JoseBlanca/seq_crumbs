@@ -15,7 +15,7 @@ from bam_crumbs.utils.test import TEST_DATA_DIR
 
 class BinTests(unittest.TestCase):
     def test_draw_coverage(self):
-        bin_ = os.path.join(BIN_DIR, 'draw_coverage_hist')
+        bin_ = os.path.join(BIN_DIR, 'draw_coverage_hist2')
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         fhand = NamedTemporaryFile(suffix='.png')
         out = check_output([bin_, bam_fpath, '-o', fhand.name])
