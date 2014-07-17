@@ -117,7 +117,6 @@ def run():
     out_fhand = args['out_fhand']
     unknown_fhand = args['unknown_fhand']
     chimeras_settings = args['chimeras_settings']
-    print args['in_fhands']
     in_fhand = args['in_fhands'][0]
     mate_distance = args['insert_size']
     tempdir = args['tempdir']
