@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+
+'It draws a histogram with the coverage of a bam file'
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of bam_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import division
+
+import argparse
+import sys
+from collections import Counter
+
+from crumbs.utils.bin_utils import main, build_version_msg
+from bam_crumbs.statistics import get_genome_coverage
+from crumbs.statistics import draw_histogram_ascii
+from crumbs.plot import draw_histogram_in_fhand
+
+COVERAGE_RANGE = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 75, 100)
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Draw coverage histogram'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', help='BAM or SAM file to process',
+                        type=argparse.FileType('rt'), nargs='*')
+    parser.add_argument('-o', '--outfile', dest='outfile', required=True,
+                        help='Output file. File to write the graph',
+                        type=argparse.FileType('wt'))
+    parser.add_argument('-t', '--ascii_output', action='store_true',
+                        help='Output an ascci graph')
+    parser.add_argument('-m', '--xlim_left', type=int,
+                        help='Limit of the x axes in the left')
+    parser.add_argument('-M', '--xlim_rigth', type=int,
+                        help='Limit of the x axes in the rigth')
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+
+    parsed_args = parser.parse_args()
+    in_fhands = parsed_args.input
+    out_fhand = getattr(parsed_args, 'outfile')
+    xlim_left = parsed_args.xlim_left
+    xlim_rigth = parsed_args.xlim_rigth
+    ascii_output = parsed_args.ascii_output
+    return {'in_fhands': in_fhands, 'out_fhand': out_fhand,
+            'xlim_left': xlim_left, 'xlim_rigth': xlim_rigth,
+            'ascii_output': ascii_output}
+
+
+def run():
+    'It makes the actual job'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+
+    coverage_counter = get_genome_coverage(in_fhands)
+    stdout = 'Minimum coverage value: {}\n'.format(coverage_counter.min)
+    stdout += 'Maximum coverage value: {}\n'.format(coverage_counter.max)
+    stdout += 'Median value: {}\n'.format(coverage_counter.median)
+    sys.stdout.write(stdout)
+
+    total_base_length = coverage_counter.count
+    limit_count = Counter()
+    for cov, count in coverage_counter.items():
+        for coverage_limit in COVERAGE_RANGE:
+            if cov >= coverage_limit:
+                limit_count[coverage_limit] += count
+    sys.stdout.write('Positions with the given coverage:\n')
+    sys.stdout.write('----------------------------------\n')
+    sys.stdout.write('Coverture\tcount\t%porcentaje bases\t')
+    sys.stdout.write('coverture/positions cov>1\n')
+    for limit in sorted(limit_count.keys()):
+        sys.stdout.write("{}\t{}\t{:.2%}\t{}\n".format(limit,
+                                                       limit_count[limit],
+                                       limit_count[limit] / total_base_length,
+                                       limit_count[limit] / limit_count[1]))
+    distrib = coverage_counter.calculate_distribution(min_=args['xlim_left'],
+                                                      max_=args['xlim_rigth'])
+
+    if not args['ascii_output']:
+        draw_histogram_in_fhand(distrib['counts'],
+                                bin_limits=distrib['bin_limits'],
+                                fhand=out_fhand, xlabel="Coverage",
+                                title='Distribution of coverages',
+                                ylabel="Num. Bases with this coverage")
+    else:
+        out_fhand.write('\n')
+        out_fhand.write('Distribution of coverages\n')
+        out_fhand.write('-------------------------\n')
+        out_fhand.write(draw_histogram_ascii(distrib['bin_limits'],
+                                       distrib['counts']))
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(run))
