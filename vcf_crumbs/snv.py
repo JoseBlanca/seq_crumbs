@@ -2,6 +2,7 @@ from __future__ import division
 
 import sys
 from collections import Counter, OrderedDict
+import gzip
 
 from vcf import Reader as pyvcfReader
 from vcf import Writer as pyvcfWriter
@@ -11,6 +12,8 @@ from vcf.model import _Call as pyvcfCall
 from vcf.model import _Record as pyvcfRecord
 
 from vcf_crumbs.iterutils import generate_windows
+from crumbs.seqio import read_seqs
+from crumbs.seq import get_name, get_length
 
 # Missing docstring
 # pylint: disable=C0111
@@ -40,9 +43,14 @@ class _SNPQueue(object):
 
     def pop(self, location):
         queue = self.queue
-        for snp in queue:
-            if snp.loc < location:
-                queue.pop()
+        index_to_remove = None
+        for index, snp in enumerate(queue):
+            if snp.pos < location:
+                index_to_remove = index
+            else:
+                break
+        if index_to_remove is not None:
+            del queue[:index_to_remove + 1]
 
     def extend(self, snps):
         self.queue.extend(snps)
@@ -50,12 +58,13 @@ class _SNPQueue(object):
 
 class _SNPSlidingWindow(object):
     def __init__(self, snp_reader, win_size, win_step, min_num_snps,
-                 vcf_fhand):
-        self._snp_queue = []
+                 ref_fhand=None):
+        self._snp_queue = _SNPQueue()
         self._reader = snp_reader
         self.win_size = win_size
         self.win_step = win_step
-        self._vcf_fhand = vcf_fhand
+        self.min_num_snps = min_num_snps
+        self._ref_fhand = ref_fhand
 
     def _snp_in_window(self, snp, win):
         if win[0] <= snp.pos < win[1]:
@@ -65,49 +74,47 @@ class _SNPSlidingWindow(object):
 
     def _get_chrom_lengths(self):
         chrom_lens = OrderedDict()
-        for line in self._vcf_fhand:
-            if line.startswith('#'):
-                continue
-            items = line.split()
-            chrom = items[0]
-            loc = int(items[1])
-            if chrom not in chrom_lens:
-                chrom_lens[chrom] = {'start': loc, 'end': loc}
-            else:
-                chrom_span = chrom_lens[chrom]
-                if loc > chrom_span['end']:
-                    chrom_span['end'] = loc
-                if loc < chrom_span['start']:
-                    chrom_span['start'] = loc
+        if self._ref_fhand is None:
+            vcf_fhand = gzip.open(self._reader.fhand.name)
+            for line in vcf_fhand:
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+                items = line.split()
+                chrom = items[0]
+                loc = int(items[1])
+                if chrom not in chrom_lens:
+                    chrom_lens[chrom] = loc
+                else:
+                    if loc > chrom_lens[chrom]:
+                        chrom_lens[chrom] = loc
+
+        else:
+            for read in read_seqs([self._ref_fhand]):
+                chrom_lens[get_name(read)] = get_length(read)
         return chrom_lens
 
     def windows(self):
         chrom_lengths = self._get_chrom_lengths()
         snp_queue = self._snp_queue
-        for chrom, chrom_span in chrom_lengths.items():
-            wins = generate_windows(start=chrom_span['start'],
+        for chrom, chrom_length in chrom_lengths.items():
+            wins = generate_windows(start=0,
                                     size=self.win_size, step=self.win_step,
-                                    end=chrom_span['end'] + 1)
-            snp_queue = snp_queue.empty()
+                                    end=chrom_length + 1)
+            snp_queue.empty()
             for win in wins:
                 snp_queue.pop(win.start)
                 if snp_queue.queue:
-                    new_strech_start = snp_queue.queue[-1].pos
+                    new_strech_start = snp_queue.queue[-1].pos + 1
                 else:
                     new_strech_start = win.start
-                # TODO check that we're not getting the snp in win.end
-                new_snps = self._reader.fecth(chrom, new_strech_start, win.end)
+                new_snps = self._reader.fetch_snvs(chrom, new_strech_start,
+                                                   win.end)
                 snp_queue.extend(new_snps)
-                yield {'start': win.start, 'end': win.end,
-                       'snps': snp_queue.queue[:]}
+                if len(snp_queue.queue) >= self.min_num_snps:
+                    yield {'chrom': chrom, 'start': win.start, 'end': win.end,
+                           'snps': snp_queue.queue[:]}
 
-    def _pop(self, loc):
-        snps = self.snps
-        for snp in snps:
-            if snp.loc < loc:
-                snps.pop()
-            else:
-                break
 
 class VCFReader(object):
     def __init__(self, fhand,
@@ -135,16 +142,27 @@ class VCFReader(object):
                 sys.stderr.write(msg)
                 raise
 
-    def fetch_snvs(self, *args, **kwargs):
+    def fetch_snvs(self, chrom, start, end=None):
         min_calls_for_pop_stats = self.min_calls_for_pop_stats
-        for snp in self.pyvcf_reader.fetch(*args, **kwargs):
+        try:
+            snvs = self.pyvcf_reader.fetch(chrom, start + 1, end=end)
+        except KeyError:
+            snvs = []
+
+        for snp in snvs:
             snp = SNV(snp, reader=self,
                       min_calls_for_pop_stats=min_calls_for_pop_stats)
             yield snp
 
-    def sliding_windows(self, size, step=None,
+    def sliding_windows(self, size, step=None, ref_fhand=None,
                         min_num_snps=DEF_MIN_NUM_SNPS_IN_WIN):
-        pass
+        random_snp_reader = VCFReader(open(self.fhand.name))
+        sliding_window = _SNPSlidingWindow(snp_reader=random_snp_reader,
+                                           win_size=size, win_step=step,
+                                           min_num_snps=min_num_snps,
+                                           ref_fhand=ref_fhand)
+        for window in sliding_window.windows():
+            yield window
 
     @property
     def snpcaller(self):
@@ -334,7 +352,7 @@ class SNV(object):
 
     @property
     def pos(self):
-        return self.record.POS
+        return self.record.POS - 1
 
     @property
     def end(self):

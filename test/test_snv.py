@@ -6,6 +6,7 @@ from os.path import join
 from vcf_crumbs.snv import VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
 from tempfile import NamedTemporaryFile
+import itertools
 
 # Method could be a function
 # pylint: disable=R0201
@@ -49,7 +50,7 @@ class SNVTests(unittest.TestCase):
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
         assert len(snps) == 6
-        assert snps[0].pos == 14370
+        assert snps[0].pos == 14369
         assert snps[1].is_snp
         assert snps[1].num_called == 3
         assert [call.depth for call in snps[2].calls] == [6, 0, 4]
@@ -158,6 +159,12 @@ class SNVTests(unittest.TestCase):
 
 
 class ReaderTest(unittest.TestCase):
+    def get_snv_pos(self, snps):
+        pos = []
+        for snp in snps:
+            pos.append(snp.pos)
+        return pos
+
     def test_get_snpcaller(self):
         varscan = open(join(TEST_DATA_DIR, 'sample.vcf.gz'))
         gatk = open(join(TEST_DATA_DIR, 'gatk_sample.vcf.gz'))
@@ -181,6 +188,75 @@ class ReaderTest(unittest.TestCase):
         assert 'CUUC00027_TC01' in open(out_fhand.name).read()
         writer.close()
 
+    def test_sliding_window(self):
+        fhand = open(join(TEST_DATA_DIR, 'sample_to_window.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        # snps in this vcf [9, 19, 29, 0, 11, 20]
+        windows = list(reader.sliding_windows(size=10, min_num_snps=1))
+        assert [snp.pos for snp in windows[0]['snps']] == [9]
+        assert [snp.pos for snp in windows[1]['snps']] == [19]
+        assert [snp.pos for snp in windows[2]['snps']] == [29]
+        assert [snp.pos for snp in windows[3]['snps']] == [0]
+        assert [snp.pos for snp in windows[4]['snps']] == [11]
+
+        windows = list(reader.sliding_windows(size=20, min_num_snps=1))
+        assert [snp.pos for snp in windows[0]['snps']] == [9, 19]
+        assert [snp.pos for snp in windows[1]['snps']] == [0, 11]
+
+        ref = '>CUUC00007_TC01\nCTGATGCTGATCGTGATCGAGTCGTAGTCTAGTCGATGTCGACG\n'
+        ref += '>CUUC00029_TC01\nCTGATGCTGATCGTGATCGAGTCGTAGTCTAGTCGATGTCGAA\n'
+        fhand = open(join(TEST_DATA_DIR, 'sample_to_window.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        windows = list(reader.sliding_windows(size=10, min_num_snps=1,
+                                              ref_fhand=StringIO(ref)))
+        assert [snp.pos for snp in windows[0]['snps']] == [9]
+        assert [snp.pos for snp in windows[1]['snps']] == [19]
+        assert [snp.pos for snp in windows[2]['snps']] == [29]
+        assert [snp.pos for snp in windows[3]['snps']] == [0]
+        assert [snp.pos for snp in windows[4]['snps']] == [11]
+        assert [snp.pos for snp in windows[5]['snps']] == [20]
+
+        # with fasta
+        fhand = open(join(TEST_DATA_DIR, 'sample_to_window.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        windows = list(reader.sliding_windows(size=20, min_num_snps=1,
+                                              ref_fhand=StringIO(ref)))
+        assert [snp.pos for snp in windows[0]['snps']] == [9, 19]
+        assert [snp.pos for snp in windows[1]['snps']] == [29]
+        assert [snp.pos for snp in windows[2]['snps']] == [0, 11]
+        assert [snp.pos for snp in windows[3]['snps']] == [20]
+
+        # we skip windows that have no snps
+        fhand = open(join(TEST_DATA_DIR, 'sample_to_window.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        windows = list(reader.sliding_windows(size=5, min_num_snps=1,
+                                              ref_fhand=StringIO(ref)))
+        assert [snp.pos for snp in windows[0]['snps']] == [9]
+        assert [snp.pos for snp in windows[1]['snps']] == [19]
+        assert [snp.pos for snp in windows[2]['snps']] == [29]
+        assert [snp.pos for snp in windows[3]['snps']] == [0]
+        assert [snp.pos for snp in windows[4]['snps']] == [11]
+        assert [snp.pos for snp in windows[5]['snps']] == [20]
+
+        # we skip no window
+        fhand = open(join(TEST_DATA_DIR, 'sample_to_window.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        windows = list(reader.sliding_windows(size=5, min_num_snps=0,
+                                              ref_fhand=StringIO(ref)))
+        assert [snp.pos for snp in windows[0]['snps']] == []
+        assert [snp.pos for snp in windows[1]['snps']] == [9]
+        assert [snp.pos for snp in windows[2]['snps']] == []
+        assert [snp.pos for snp in windows[3]['snps']] == [19]
+
+        fhand = open(join(TEST_DATA_DIR, 'sample_to_window.vcf.gz'))
+        reader = VCFReader(fhand=fhand)
+        windows = list(reader.sliding_windows(size=10, min_num_snps=0,
+                                              ref_fhand=StringIO(ref),
+                                              step=5))
+        assert [snp.pos for snp in windows[0]['snps']] == [9]
+        assert [snp.pos for snp in windows[1]['snps']] == [9]
+        assert [snp.pos for snp in windows[2]['snps']] == [19]
+        assert [snp.pos for snp in windows[3]['snps']] == [19]
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']
