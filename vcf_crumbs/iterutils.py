@@ -1,4 +1,9 @@
 
+from collections import namedtuple
+
+Window = namedtuple('Window', ['start', 'end'])
+
+
 def generate_windows(size, step=None, start=0, end=None):
     if step is None:
         step = size
@@ -13,7 +18,7 @@ def generate_windows(size, step=None, start=0, end=None):
         if end:
             if win_end > end:
                 break
-        yield win_start, win_end
+        yield Window(win_start, win_end)
 
 
 class PeekableIterator(object):

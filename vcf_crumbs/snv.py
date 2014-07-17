@@ -1,7 +1,7 @@
 from __future__ import division
 
 import sys
-from collections import Counter
+from collections import Counter, OrderedDict
 
 from vcf import Reader as pyvcfReader
 from vcf import Writer as pyvcfWriter
@@ -9,6 +9,8 @@ from vcf.model import make_calldata_tuple
 # ouch, _Call is a private class, but we don't know how to modify a Call
 from vcf.model import _Call as pyvcfCall
 from vcf.model import _Record as pyvcfRecord
+
+from vcf_crumbs.iterutils import generate_windows
 
 # Missing docstring
 # pylint: disable=C0111
@@ -22,10 +24,90 @@ HOM_ALT = 2
 HOM = 3
 
 DEF_MIN_CALLS_FOR_POP_STATS = 10
+DEF_MIN_NUM_SNPS_IN_WIN = 5
+
 # TODO check if SNV can be converted in a proxy using the recipes
 # http://code.activestate.com/recipes/496741-object-proxying/
 # http://code.activestate.com/recipes/496742-shelfproxy/
 
+
+class _SNPQueue(object):
+    def __init__(self):
+        self.queue = []
+
+    def empty(self):
+        self.queue = []
+
+    def pop(self, location):
+        queue = self.queue
+        for snp in queue:
+            if snp.loc < location:
+                queue.pop()
+
+    def extend(self, snps):
+        self.queue.extend(snps)
+
+
+class _SNPSlidingWindow(object):
+    def __init__(self, snp_reader, win_size, win_step, min_num_snps,
+                 vcf_fhand):
+        self._snp_queue = []
+        self._reader = snp_reader
+        self.win_size = win_size
+        self.win_step = win_step
+        self._vcf_fhand = vcf_fhand
+
+    def _snp_in_window(self, snp, win):
+        if win[0] <= snp.pos < win[1]:
+            return True
+        else:
+            return False
+
+    def _get_chrom_lengths(self):
+        chrom_lens = OrderedDict()
+        for line in self._vcf_fhand:
+            if line.startswith('#'):
+                continue
+            items = line.split()
+            chrom = items[0]
+            loc = int(items[1])
+            if chrom not in chrom_lens:
+                chrom_lens[chrom] = {'start': loc, 'end': loc}
+            else:
+                chrom_span = chrom_lens[chrom]
+                if loc > chrom_span['end']:
+                    chrom_span['end'] = loc
+                if loc < chrom_span['start']:
+                    chrom_span['start'] = loc
+        return chrom_lens
+
+    def windows(self):
+        chrom_lengths = self._get_chrom_lengths()
+        snp_queue = self._snp_queue
+        for chrom, chrom_span in chrom_lengths.items():
+            wins = generate_windows(start=chrom_span['start'],
+                                    size=self.win_size, step=self.win_step,
+                                    end=chrom_span['end'] + 1)
+            snp_queue = snp_queue.empty()
+            for win in wins:
+                snp_queue.pop(win.start)
+                if snp_queue.queue:
+                    new_strech_start = snp_queue.queue[-1].pos
+                else:
+                    new_strech_start = win.start
+                # TODO check that we're not getting the snp in win.end
+                new_snps = self._reader.fecth(chrom, new_strech_start, win.end)
+                snp_queue.extend(new_snps)
+                yield {'start': win.start, 'end': win.end,
+                       'snps': snp_queue.queue[:]}
+
+    def _pop(self, loc):
+        snps = self.snps
+        for snp in snps:
+            if snp.loc < loc:
+                snps.pop()
+            else:
+                break
 
 class VCFReader(object):
     def __init__(self, fhand,
@@ -49,6 +131,7 @@ class VCFReader(object):
                 chrom = str(last_snp.chrom)
                 pos = str(last_snp.pos)
                 msg = 'Last parsed SNP was: ' + str(chrom) + ' ' + str(pos)
+                msg += '\n'
                 sys.stderr.write(msg)
                 raise
 
@@ -58,6 +141,10 @@ class VCFReader(object):
             snp = SNV(snp, reader=self,
                       min_calls_for_pop_stats=min_calls_for_pop_stats)
             yield snp
+
+    def sliding_windows(self, size, step=None,
+                        min_num_snps=DEF_MIN_NUM_SNPS_IN_WIN):
+        pass
 
     @property
     def snpcaller(self):
