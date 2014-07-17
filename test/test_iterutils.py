@@ -26,6 +26,9 @@ class GenerateWindowsTests(unittest.TestCase):
         assert self.generate_wins(10, None, 3) == [(0, 10), (10, 20), (20, 30)]
         assert self.generate_wins(10, 5, 3) == [(0, 10), (5, 15), (10, 20)]
 
+        res = [(0, 10), (10, 20), (20, 30)]
+        assert list(generate_windows(size=10, step=10, end=30)) == res
+
     def test_peek(self):
         stream = iter(range(5))
         stream = PeekableIterator(stream)

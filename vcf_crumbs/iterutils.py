@@ -1,5 +1,5 @@
 
-def generate_windows(size, step=None, start=0):
+def generate_windows(size, step=None, start=0, end=None):
     if step is None:
         step = size
 
@@ -10,6 +10,9 @@ def generate_windows(size, step=None, start=0):
         else:
             win_start += step
         win_end = win_start + size
+        if end:
+            if win_end > end:
+                break
         yield win_start, win_end
 
 
