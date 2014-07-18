@@ -33,7 +33,7 @@ def seq_to_filterpackets(seq_packets, group_paired_reads=False):
         yield {SEQS_PASSED: packet, SEQS_FILTERED_OUT: []}
 
 
-def _group_alignments_by_reads(sorted_alignments):
+def _group_alignments_reads_by_qname(sorted_alignments):
     prev_name = None
     group = None
     for alignment in sorted_alignments:
@@ -52,16 +52,16 @@ def _group_alignments_by_reads(sorted_alignments):
 def _split_mates(alignments_group):
     # We add a tag to differenciate between mates afterwards. This tag should
     # be probably taken from the file
-    forward = []
-    reverse = []
+    forwards = []
+    reverses = []
     for alignment_read in alignments_group:
         if alignment_read.is_read1:
             alignment_read.qname += ' 1:N:0:GATCAG'
-            forward.append(alignment_read)
+            forwards.append(alignment_read)
         elif alignment_read.is_read2:
             alignment_read.qname += ' 2:N:0:GATCAG'
-            reverse.append(alignment_read)
-    return [forward, reverse]
+            reverses.append(alignment_read)
+    return [forwards, reverses]
 
 
 def _get_primary_alignment(alignments_group):
@@ -271,7 +271,7 @@ def classify_mapped_reads(bam_fhand, mate_distance,
     mate_length_range = [mate_distance - variation, mate_distance + variation]
     reference_lengths = _get_ref_lengths(bamfile)
     # It tries to find out the kind of each pair of sequences
-    for grouped_mates in _group_alignments_by_reads(bamfile):
+    for grouped_mates in _group_alignments_reads_by_qname(bamfile):
         mates_alignments = _split_mates(grouped_mates)
         if _mates_are_not_chimeric(mates_alignments, max_clipping,
                                    mate_length_range, bamfile,
@@ -283,9 +283,11 @@ def classify_mapped_reads(bam_fhand, mate_distance,
         else:
             kind = UNKNOWN
 
-        pair = [alignedread_to_seqitem(_get_primary_alignment(read))
-                for read in mates_alignments]
-        yield [pair, kind]
+        pair = [alignedread_to_seqitem(_get_primary_alignment(mates))
+                for mates in mates_alignments]
+
+        if None not in pair:
+            yield pair, kind
 
 
 def classify_chimeras(in_fhand, index_fpath, mate_distance, out_fhand,
@@ -321,7 +323,7 @@ def calculate_distance_distribution(interleave_fhand, index_fpath,
     bamfile = Samfile(bam_fhand.name)
     stats = {'outies': IntCounter(), 'innies': IntCounter(),
              'others': IntCounter()}
-    for grouped_mates in _group_alignments_by_reads(bamfile):
+    for grouped_mates in _group_alignments_reads_by_qname(bamfile):
         mates = _split_mates(grouped_mates)
         for aligned_read1 in _get_totally_mapped_alignments(mates[0],
                                                             max_clipping):

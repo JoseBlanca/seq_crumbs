@@ -37,7 +37,7 @@ from crumbs.settings import get_setting
 from crumbs.mate_chimeras import (_split_mates, _get_primary_alignment,
                                   _read_is_totally_mapped, _get_qstart,
                                   _get_qend,
-                                  _group_alignments_by_reads, _5end_mapped)
+                                  _group_alignments_reads_by_qname, _5end_mapped)
 from crumbs.mapping import (alignedread_to_seqitem, map_with_bwamem,
                             map_process_to_sortedbam)
 # pylint: disable=R0903
@@ -396,7 +396,7 @@ class TrimMatePairChimeras(_BaseTrim):
         self._pre_trim(trim_packet)
         trimmed_seqs = []
         bamfile = Samfile(self._bam_fhand.name)
-        for grouped_mates in _group_alignments_by_reads(bamfile):
+        for grouped_mates in _group_alignments_reads_by_qname(bamfile):
             for aligned_reads in _split_mates(grouped_mates):
                 trimmed_seqs.append([self._do_trim(aligned_reads)])
         self._post_trim()

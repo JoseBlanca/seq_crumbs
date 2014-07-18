@@ -255,6 +255,8 @@ def _complementary(sequence):
 
 
 def alignedread_to_seqitem(aligned_read, start_pos=0, end_pos=None):
+    if aligned_read is None or aligned_read.seq is None:
+        return None
     name = aligned_read.qname
     seq = aligned_read.seq[start_pos: end_pos]
     quals = aligned_read.qual
