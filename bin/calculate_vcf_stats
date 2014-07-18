@@ -90,12 +90,14 @@ def draw_mafs(vcf_stats, out_dir, maf_kind):
                         xlabel=xlabel, ylabel=ylabel, titles=titles)
 
     # all_together
-    fhand = open(join(out_dir, fbases[maf_kind] + 'all_samples.png'), 'w')
-    distrib = maf_method().calculate_distribution()
-    title = name + ' distribution. All samples'
-    draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
-                            title=title, xlabel=xlabel, ylabel=ylabel,
-                            fhand=fhand, kind=LINE)
+    # Only draw graphs if there is data
+    if len(vcf_stats.samples) > DEF_MIN_CALLS_FOR_POP_STATS:
+        distrib = maf_method().calculate_distribution()
+        fhand = open(join(out_dir, fbases[maf_kind] + 'all_samples.png'), 'w')
+        title = name + ' distribution. All samples'
+        draw_histogram_in_fhand(distrib['counts'], distrib['bin_limits'],
+                                title=title, xlabel=xlabel, ylabel=ylabel,
+                                fhand=fhand, kind=LINE)
 
 
 def draw_maf_and_mac(vcf_stats, out_dir):
