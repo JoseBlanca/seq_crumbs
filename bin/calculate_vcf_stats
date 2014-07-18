@@ -473,9 +473,10 @@ def draw_per_sample_stats(vcf_stats, out_dir):
     fig, canvas = get_fig_and_canvas(num_rows=num_plots,
                                      figsize=(width, height))
     plots_done = 1
+    left = list(range(len(samples)))
+
     # het
     if len(samples) >= min_calls_for_pop_stats:
-        left = list(range(len(samples)))
         height = hets
         axes = fig.add_subplot(num_plots, 1, plots_done)
         plots_done += 1
