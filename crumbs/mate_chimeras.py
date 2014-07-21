@@ -300,7 +300,8 @@ def classify_chimeras(in_fhand, index_fpath, mate_distance, out_fhand,
     extra_params = ['-a', '-M']
     bwa = map_with_bwamem(index_fpath, interleave_fpath=in_fhand.name,
                           extra_params=extra_params)
-    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname')
+    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
+                             tempdir=tempdir)
 
     for pair, kind in classify_mapped_reads(bam_fhand, settings=settings,
                                             mate_distance=mate_distance):
@@ -319,7 +320,8 @@ def calculate_distance_distribution(interleave_fhand, index_fpath,
     extra_params = ['-a', '-M']
     bwa = map_with_bwamem(index_fpath, interleave_fpath=interleave_fhand.name,
                           extra_params=extra_params)
-    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname')
+    map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
+                             temdir=tempdir)
     bamfile = Samfile(bam_fhand.name)
     stats = {'outies': IntCounter(), 'innies': IntCounter(),
              'others': IntCounter()}
