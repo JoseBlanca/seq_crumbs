@@ -6,7 +6,6 @@ from os.path import join
 from vcf_crumbs.snv import VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
 from tempfile import NamedTemporaryFile
-import itertools
 
 # Method could be a function
 # pylint: disable=R0201
@@ -156,6 +155,22 @@ class SNVTests(unittest.TestCase):
         assert snps[0].get_call('NA00003').called
         mod_snp = snps[0].remove_gt_from_low_qual_calls(45)
         assert not mod_snp.get_call('NA00003').called
+
+    def test_filter_calls(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|1:3:5:65,3\t0/0:41:3
+20\t1110696\trs6040355\tA\tG,T\t67\tPASS\tNS=2;DP=10;AF=0.333,0.667;AA=T;DB\tGT:GQ:DP:HQ\t1|2:21:6:23,27\t2|1:2:0:18,2\t2/2:35:4
+20\t1230237\t.\tT\t.\t47\tPASS\tNS=3;DP=13;AA=T\tGT:GQ:DP:HQ\t0|0:54:7:56,60\t0|0:48:4:51,51\t0/0:61:2
+20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t0/1:35:4\t0/2:17:2\t1/1:40:3
+20\t1234567\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.:35:4\t0/2:17:2\t1/1:40:3
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf).parse_snvs())
+        snp = snps[4]
+        assert len(snp.alleles) == 3
+        snp_filtered = snp.filter_calls_by_sample(samples=('NA00003',))
+        assert len(snp_filtered.alleles) == 2
 
 
 class ReaderTest(unittest.TestCase):
