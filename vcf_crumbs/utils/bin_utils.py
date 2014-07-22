@@ -38,7 +38,7 @@ def setup_filter_argparse(**kwargs):
     parser.add_arguments('-p', '--samples_file',
                          help='File with samples to use. One per line',
                          type=argparse.FileType('r'))
-    parser.add_arguments('-r', '--reverse', store='true', default=False,
+    parser.add_arguments('-r', '--reverse', action='store_true', default=False,
                          help='File with samples to use. One per line')
     return parser
 
