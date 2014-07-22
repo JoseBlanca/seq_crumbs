@@ -1,10 +1,9 @@
-'''
-Created on 2014 uzt 15
 
-@author: peio
-'''
 import argparse
 import sys
+
+# Missing docstring
+# pylint: disable=C0111
 
 
 def setup_basic_argparse(**kwargs):
@@ -33,13 +32,11 @@ def setup_filter_argparse(**kwargs):
     parser.add_argument('-f', '--filtered',
                         help='Output for filtered SNVs',
                         type=argparse.FileType('w'))
-    parser.add_arguments('-s', '--samples', action='append',
-                         help='samples to use')
-    parser.add_arguments('-p', '--samples_file',
-                         help='File with samples to use. One per line',
-                         type=argparse.FileType('r'))
-    parser.add_arguments('-r', '--reverse', action='store_true', default=False,
-                         help='File with samples to use. One per line')
+    parser.add_argument('-s', '--samples', action='append',
+                        help='samples to use')
+    parser.add_argument('-p', '--samples_file',
+                        help='File with samples to use. One per line',
+                        type=argparse.FileType('r'))
     return parser
 
 
@@ -68,19 +65,19 @@ def parse_basic_args(parser):
 def _parse_sample_file(fhand):
     samples = []
     for line in fhand:
-            line = line.strip()
-            if not line:
-                continue
-            samples.append(line)
+        line = line.strip()
+        if not line:
+            continue
+        samples.append(line)
     return samples
 
 
 def parse_filter_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
-    args, parsed_args = parse_basic_args(parser)
+    filter_snvs_args, parsed_args = parse_basic_args(parser)
 
     filtered_fhand = parsed_args.filtered
-    args['filtered_fhand'] = filtered_fhand
+    filter_snvs_args['filtered_fhand'] = filtered_fhand
 
     samples = set()
     if parsed_args.samples is not None:
@@ -88,7 +85,6 @@ def parse_filter_args(parser):
     if parsed_args.samples_file is not None:
         samples.update(_parse_sample_file(parsed_args.samples_file))
 
-    args['samples'] = samples if samples else None
-    args['reverse'] = parsed_args.reverse
+    filter_class_kwargs = {'samples_to_consider': samples if samples else None}
 
-    return args, parsed_args
+    return filter_snvs_args, filter_class_kwargs, parsed_args 

@@ -284,12 +284,11 @@ class BinaryFilterTest(unittest.TestCase):
         cmd = [binary, '-o', out_fhand.name, '-f', filtered_fhand.name,
                in_fhand.name]
         process = Popen(cmd, stderr=PIPE, stdout=PIPE)
-        stderr = process.communicate()[1]
+        stderr = process.communicate()[-1]
         assert "passsed: 3" in stderr
 
         res = self.get_snv_pos(open(out_fhand.name))
         filtered = self.get_snv_pos(open(filtered_fhand.name))
-
         assert res == [14370, 17330, 1230237]
         assert filtered == [1110696, 1234567, 1234567]
 

@@ -21,21 +21,20 @@ def _setup_argparse(**kwargs):
 
 
 def _parse_args(parser):
-    args, parsed_args = parse_filter_args(parser)
+    filter_snvs_kwargs, filter_class_kwargs, parsed_args = parse_filter_args(parser)
     min_maf = parsed_args.min_maf
     max_maf = parsed_args.max_maf
 
-    filter_args = {}
     if min_maf is not None:
-        filter_args['min_maf'] = min_maf
+        filter_class_kwargs['min_maf'] = min_maf
     if max_maf is not None:
-        filter_args['max_maf'] = max_maf
+        filter_class_kwargs['max_maf'] = max_maf
 
     reader_args = {}
     min_calls = parsed_args.min_calls
     if min_calls:
         reader_args['min_calls_for_pop_stats'] = min_calls
-    return args, filter_args, reader_args
+    return filter_snvs_kwargs, filter_class_kwargs, reader_args
 
 
 def main():

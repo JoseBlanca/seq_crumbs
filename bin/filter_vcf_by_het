@@ -21,21 +21,20 @@ def _setup_argparse(**kwargs):
 
 
 def _parse_args(parser):
-    args, parsed_args = parse_filter_args(parser)
+    filter_snvs_kwargs, filter_class_kwargs, parsed_args = parse_filter_args(parser)
     min_het = parsed_args.min_het
     max_het = parsed_args.max_het
 
-    filter_args = {}
     if min_het is not None:
-        filter_args['min_het'] = min_het
+        filter_class_kwargs['min_het'] = min_het
     if max_het is not None:
-        filter_args['max_het'] = max_het
+        filter_class_kwargs['max_het'] = max_het
 
     reader_args = {}
     min_calls = parsed_args.min_calls
     if min_calls:
         reader_args['min_calls_for_pop_stats'] = min_calls
-    return args, filter_args, reader_args
+    return filter_snvs_kwargs, filter_class_kwargs, reader_args
 
 
 def main():

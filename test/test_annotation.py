@@ -1,8 +1,4 @@
-'''
-Created on 2014 mai 28
 
-@author: peio
-'''
 import unittest
 from os.path import join
 from tempfile import NamedTemporaryFile
@@ -18,6 +14,13 @@ from vcf_crumbs.annotation import (CloseToSnv, HighVariableRegion,
                                    HeterozigoteInSamples)
 from vcf_crumbs.snv import VCFReader
 from test.test_snv import VCF_HEADER
+
+# Method could be a function
+# pylint: disable=R0201
+# Too many public methods
+# pylint: disable=R0904
+# Missing docstring
+# pylint: disable=C0111
 
 
 VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')

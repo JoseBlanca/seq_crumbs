@@ -1,23 +1,19 @@
-'''
-Created on 2014 mai 28
-
-@author: peio
-'''
 from __future__ import division
 
 import json
 from os.path import join
 from collections import Counter
 
-from vcf import Reader
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
 
-from vcf_crumbs.statistics import GQ, ADS, choose_samples
 from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
 from vcf_crumbs.utils.file_utils import DATA_DIR
 from vcf_crumbs.snv import VCFReader
+
+# Missing docstring
+# pylint: disable=C0111
 
 COMMON_ENZYMES = ['EcoRI', 'SmaI', 'BamHI', 'AluI', 'BglII', 'SalI', 'BglI',
                   'ClaI', 'TaqI', 'PstI', 'PvuII', 'HindIII', 'EcoRV',
@@ -82,63 +78,6 @@ class BaseAnnotator(object):
         random_reader = VCFReader(open(fpath),
                                min_calls_for_pop_stats=min_calls_for_pop_stats)
         return random_reader
-
-# def calculate_maf(record, vcf_variant):
-#     counts = count_alleles(record, vcf_variant=vcf_variant)['all']
-#     return _calculate_maf_for_counts(counts)
-#
-#
-# def count_alleles(record, sample_names=None, vcf_variant=None):
-#     choosen_samples = choose_samples(record, sample_names)
-#     counts = {}
-#     str_alleles = _str_alleles(record)
-#     for call in choosen_samples:
-#         if not call.called:
-#             continue
-#
-#         call_data = get_call_data(call, vcf_variant)
-#         allele_depths = call_data[ADS]
-#         if not allele_depths.has_alternative_counts:
-#             msg = 'The given SNP record has no alternative alleles counts'
-#             raise ValueError(msg)
-#
-#         sample = call.sample
-#         if sample not in counts:
-#             counts[sample] = Counter()
-#
-#         for int_al, count in allele_depths.allele_depths.items():
-#             counts[sample][str_alleles[int_al]] += count
-#
-#     if not sample_names:
-#         return aggregate_allele_counts(counts)
-#
-#     return counts
-#
-#
-# def _calculate_maf_for_counts(counts):
-#     counts = counts.values()
-#     dp = sum(counts)
-#     if dp == 0:
-#         return None
-#     freqs = sorted([count / float(dp) for count in counts])
-#     return freqs[-1] if freqs else None
-#
-#
-# def aggregate_allele_counts(allele_counts):
-#     all_counts = {}
-#     for values in allele_counts.values():
-#         for allele, count in values.items():
-#             if allele not in all_counts:
-#                 all_counts[allele] = 0
-#             all_counts[allele] += count
-#     return {'all': all_counts}
-#
-#
-# def _str_alleles(record):
-#     alleles = [record.alleles[0]]
-#     for alt_allele in record.alleles[1:]:
-#         alleles.append(alt_allele.sequence)
-#     return alleles
 
 
 class CloseToSnv(BaseAnnotator):

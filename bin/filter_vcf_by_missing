@@ -17,7 +17,8 @@ def _setup_argparse(**kwargs):
 
 
 def _parse_args(parser):
-    args, parsed_args = parse_filter_args(parser)
+    filter_snvs_kwargs, filter_class_kwargs, parsed_args = parse_filter_args(parser)
+
     min_calls = parsed_args.min_calls
     min_call_rate = parsed_args.min_call_rate
     if min_calls is not None and min_call_rate is not None:
@@ -27,12 +28,12 @@ def _parse_args(parser):
         msg = 'min_calls or min_call_rate has to be given'
         parser.error(msg)
 
-    filter_args = {}
     if min_calls is not None:
-        filter_args['min_calls'] = min_calls
+        filter_class_kwargs['min_calls'] = min_calls
     if min_call_rate is not None:
-        filter_args['min_call_rate'] = min_call_rate
-    return args, filter_args
+        filter_class_kwargs['min_call_rate'] = min_call_rate
+
+    return filter_snvs_kwargs, filter_class_kwargs
 
 
 def main():

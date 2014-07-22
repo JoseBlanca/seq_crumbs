@@ -7,11 +7,11 @@ from vcf_crumbs.utils.bin_utils import setup_filter_argparse, parse_filter_args
 def main():
     description = 'Removes the non bialellic SNVs of a VCF file'
     parser = setup_filter_argparse(description=description)
-    kwargs = parse_filter_args(parser)[0]
+    filter_snvs_kwargs, filter_class_kwargs = parse_filter_args(parser)[:2]
 
-    filter_ = BiallelicFilter()
-    kwargs['filters'] = [filter_]
-    filter_snvs(**kwargs)
+    filter_ = BiallelicFilter(**filter_class_kwargs)
+    filter_snvs_kwargs['filters'] = [filter_]
+    filter_snvs(**filter_snvs_kwargs)
 
 
 if __name__ == '__main__':
