@@ -2,24 +2,19 @@
 
 from vcf_crumbs.utils.bin_utils import (setup_basic_argparse,
                                         parse_basic_args)
-from vcf_crumbs.genotype_filters import (LowQualityGenotypeFilter,
+from vcf_crumbs.genotype_filters import (HetGenotypeFilter,
                                          run_genotype_filters)
-
-MIN_QUAL = 100
 
 
 def main():
-    description = 'It removes the genotypes of the low quality snvs'
+    description = 'It removes the heterozygous genotypes'
     parser = setup_basic_argparse(description=description)
-    parser.add_argument('-m', '--min_qual', type=int, default=MIN_QUAL)
 
-    args, parsed_args = parse_basic_args(parser)
-    args['min_qual'] = parsed_args.min_qual
+    args = parse_basic_args(parser)[0]
 
-    gt_filters = [LowQualityGenotypeFilter(min_qual=args['min_qual'])]
     run_genotype_filters(args['in_fhand'], args['out_fhand'],
                          template_fhand=args['template_fhand'],
-                         gt_filters=gt_filters)
+                         gt_filters=[HetGenotypeFilter()])
 
 
 if __name__ == '__main__':

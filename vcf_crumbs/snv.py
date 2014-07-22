@@ -422,12 +422,11 @@ class SNV(object):
     def calldata_class(self):
         return make_calldata_tuple(self.record.FORMAT.split(':'))
 
-    def remove_gt_from_low_qual_calls(self, min_qual):
-        'It returns a new SNV with low qual call set to uncalled'
+    def _filter_out_calls(self, filter_):
         calls = []
         sample_indexes = {}
         for index, call in enumerate(self.calls):
-            if min_qual is not None and call.gt_qual < min_qual:
+            if filter_(call):
                 call = call.copy_setting_gt_to_none(return_pyvcf_call=True)
             else:
                 call = call.call
@@ -441,6 +440,23 @@ class SNV(object):
         snv = SNV(record, self.reader,
                   min_calls_for_pop_stats=self.min_calls_for_pop_stats)
         return snv
+
+    def remove_gt_from_het_calls(self):
+        def filter_(call):
+            if call.is_het:
+                return True
+            else:
+                return False
+        return self._filter_out_calls(filter_)
+
+    def remove_gt_from_low_qual_calls(self, min_qual):
+        'It returns a new SNV with low qual call set to uncalled'
+        def filter_(call):
+            if min_qual is not None and call.gt_qual < min_qual:
+                return True
+            else:
+                return False
+        return self._filter_out_calls(filter_)
 
 
 class Call(object):
@@ -569,7 +585,11 @@ class Call(object):
 
     @property
     def int_alleles(self):
-        return [int(al) for al in self.call.gt_alleles]
+        call = self.call
+        if call.called:
+            return [int(al) for al in call.gt_alleles]
+        else:
+            return []
 
     def __str__(self):
         return str(self.call)

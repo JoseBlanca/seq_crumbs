@@ -1,4 +1,10 @@
+
 from vcf_crumbs.snv import VCFReader, VCFWriter
+
+# Missing docstring
+# pylint: disable=C0111
+# Too few public methods
+# pylint: disable=R0903
 
 
 def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None):
@@ -19,3 +25,9 @@ class LowQualityGenotypeFilter(object):
 
     def __call__(self, snv):
         return snv.remove_gt_from_low_qual_calls(min_qual=self._min_qual)
+
+
+class HetGenotypeFilter(object):
+
+    def __call__(self, snv):
+        return snv.remove_gt_from_het_calls()

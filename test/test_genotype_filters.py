@@ -1,14 +1,19 @@
-'''
-Created on 2014 uzt 15
 
-@author: peio
-'''
 import os
 import unittest
 from tempfile import NamedTemporaryFile
+from StringIO import StringIO
 
 from vcf_crumbs.utils.file_utils import BIN_DIR
 from subprocess import check_call
+from vcf_crumbs.snv import VCFReader
+
+# Method could be a function
+# pylint: disable=R0201
+# Too many public methods
+# pylint: disable=R0904
+# Missing docstring
+# pylint: disable=C0111
 
 VCF_HEADER = '''##fileformat=VCFv4.1
 ##fileDate=20090805
@@ -32,6 +37,30 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 
 
 class GenotypeFilterTests(unittest.TestCase):
+    def test_het_filter(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+'''
+        in_fhand = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(in_fhand).parse_snvs())
+        exp = [[0, 0], [1, 0], [1, 1]]
+        assert [call.int_alleles for call in snps[0].calls] == exp
+        res = [call.int_alleles for call in snps[0].remove_gt_from_het_calls().calls]
+        assert res == [[0, 0], [], [1, 1]]
+
+    def test_het_filter_binary(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+'''
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(VCF_HEADER + vcf)
+        in_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        binary = os.path.join(BIN_DIR, 'filter_het_genotypes')
+        cmd = [binary, in_fhand.name, '-o', out_fhand.name]
+        check_call(cmd)
+        assert './.:48:8:51,51' in open(out_fhand.name).read()
+
     def test_low_qual_gt_filter_binary(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
 20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
