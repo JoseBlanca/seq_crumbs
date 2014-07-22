@@ -465,12 +465,17 @@ class SNV(object):
         else:
             check = lambda call: call.sample in samples
 
-        calls = [call for call in self.calls if check(call)]
+        calls = [call.call for call in self.calls if check(call)]
         sample_indexes = {call.sample: idx for idx, call in enumerate(calls)}
-        int_alleles = set([int_a for c in calls for int_a in c.int_alleles])
+        int_alleles = set()
+        for call in calls:
+            if call.called:
+                int_alleles.update([int(allele) for allele in call.gt_alleles])
 
         record = self.record
         alt_alleles = [a for i, a in enumerate(record.ALT) if i + 1 in int_alleles]
+        if not alt_alleles:
+            alt_alleles.append(None)
         info = record.INFO if keep_info else {}
         record = pyvcfRecord(record.CHROM, record.POS, record.ID,
                              record.REF, alt_alleles, record.QUAL,

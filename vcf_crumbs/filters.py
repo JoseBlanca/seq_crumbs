@@ -96,6 +96,9 @@ class _BaseFilter(object):
             if samples_to_consider:
                 snv_to_check = snv.filter_calls_by_sample(samples=samples_to_consider,
                                                           reverse=True)
+            else:
+                snv_to_check = snv
+
             passed = self._do_check(snv_to_check)
             if reverse:
                 passed = not passed
@@ -110,8 +113,11 @@ class _BaseFilter(object):
 class CallRateFilter(_BaseFilter):
     'Filter by the min. number of genotypes called'
 
-    def __init__(self, min_calls=None, min_call_rate=None, reverse=False):
-        super(CallRateFilter, self).__init__(reverse=reverse)
+    def __init__(self, min_calls=None, min_call_rate=None, reverse=False,
+                 samples_to_consider=None):
+        parent_kwargs = {'reverse': reverse,
+                         'samples_to_consider': samples_to_consider}
+        super(CallRateFilter, self).__init__(**parent_kwargs)
         if min_calls is not None and min_call_rate is not None:
             msg = 'Both min_calls and min_call rate cannot be given'
             msg += 'at the same time'
@@ -138,8 +144,10 @@ class CallRateFilter(_BaseFilter):
 class BiallelicFilter(_BaseFilter):
     'Filter the biallelic SNPs'
 
-    def __init__(self, reverse=False):
-        super(BiallelicFilter, self).__init__(reverse=reverse)
+    def __init__(self, reverse=False, samples_to_consider=None):
+        parent_kwargs = {'reverse': reverse,
+                         'samples_to_consider': samples_to_consider}
+        super(BiallelicFilter, self).__init__(**parent_kwargs)
 
     def _do_check(self, snv):
         if len(snv.alleles) == 2:
@@ -153,9 +161,11 @@ class IsSNPFilter(_BaseFilter):
         return snv.is_snp
 
 
-class GenotypeQualFilter(_BaseFilter):
-    def __init__(self, min_qual, reverse=False):
-        super(GenotypeQualFilter, self).__init__(reverse=reverse)
+class SnvQualFilter(_BaseFilter):
+    def __init__(self, min_qual, reverse=False, samples_to_consider=None):
+        parent_kwargs = {'reverse': reverse,
+                         'samples_to_consider': samples_to_consider}
+        super(SnvQualFilter, self).__init__(**parent_kwargs)
         self.min_qual = min_qual
 
     def _do_check(self, snv):
@@ -168,8 +178,10 @@ class GenotypeQualFilter(_BaseFilter):
 
 class ObsHetFilter(_BaseFilter):
     def __init__(self, min_het=None, max_het=None, remove_nd=True,
-                 reverse=False):
-        super(ObsHetFilter, self).__init__(reverse=reverse)
+                 reverse=False, samples_to_consider=None):
+        parent_kwargs = {'reverse': reverse,
+                         'samples_to_consider': samples_to_consider}
+        super(ObsHetFilter, self).__init__(**parent_kwargs)
         self.min_het = min_het
         self.max_het = max_het
         self.remove_nd = remove_nd
@@ -189,8 +201,10 @@ class ObsHetFilter(_BaseFilter):
 
 class MafFilter(_BaseFilter):
     def __init__(self, min_maf=None, max_maf=None, remove_nd=True,
-                 reverse=False):
-        super(MafFilter, self).__init__(reverse=reverse)
+                 reverse=False, samples_to_consider=None):
+        parent_kwargs = {'reverse': reverse,
+                         'samples_to_consider': samples_to_consider}
+        super(MafFilter, self).__init__(**parent_kwargs)
         if min_maf is None and max_maf is None:
             msg = 'At least one value should be given for the min or max het'
             raise ValueError(msg)

@@ -23,6 +23,7 @@ def setup_basic_argparse(**kwargs):
     msg = 'File to print some statistics (default STDERR)'
     parser.add_argument('-l', '--log', help=msg, type=argparse.FileType('w'),
                         default=sys.stderr)
+
     return parser
 
 
@@ -32,6 +33,13 @@ def setup_filter_argparse(**kwargs):
     parser.add_argument('-f', '--filtered',
                         help='Output for filtered SNVs',
                         type=argparse.FileType('w'))
+    parser.add_arguments('-s', '--samples', action='append',
+                         help='samples to use')
+    parser.add_arguments('-p', '--samples_file',
+                         help='File with samples to use. One per line',
+                         type=argparse.FileType('r'))
+    parser.add_arguments('-r', '--reverse', store='true', default=False,
+                         help='File with samples to use. One per line')
     return parser
 
 
@@ -57,10 +65,30 @@ def parse_basic_args(parser):
     return args, parsed_args
 
 
+def _parse_sample_file(fhand):
+    samples = []
+    for line in fhand:
+            line = line.strip()
+            if not line:
+                continue
+            samples.append(line)
+    return samples
+
+
 def parse_filter_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_basic_args(parser)
 
     filtered_fhand = parsed_args.filtered
     args['filtered_fhand'] = filtered_fhand
+
+    samples = set()
+    if parsed_args.samples is not None:
+        samples.update(parsed_args.samples)
+    if parsed_args.samples_file is not None:
+        samples.update(_parse_sample_file(parsed_args.samples_file))
+
+    args['samples'] = samples if samples else None
+    args['reverse'] = parsed_args.reverse
+
     return args, parsed_args
