@@ -1,4 +1,4 @@
-from os.path import join, dirname
+from os.path import join
 import unittest
 from tempfile import NamedTemporaryFile
 from subprocess import check_output, Popen, PIPE

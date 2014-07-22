@@ -458,6 +458,26 @@ class SNV(object):
                 return False
         return self._filter_out_calls(filter_)
 
+    def filter_calls_by_sample(self, samples, reverse=False, keep_info=False):
+
+        if reverse:
+            check = lambda call: call.sample not in samples
+        else:
+            check = lambda call: call.sample in samples
+
+        calls = [call for call in self.calls if check(call)]
+        sample_indexes = {call.sample: idx for idx, call in enumerate(calls)}
+
+        record = self.record
+        info = record.INFO if keep_info else {}
+        record = pyvcfRecord(record.CHROM, record.POS, record.ID,
+                             record.REF, record.ALT, record.QUAL,
+                             record.FILTER, info, record.FORMAT,
+                             sample_indexes, calls)
+        snv = SNV(record, self.reader,
+                  min_calls_for_pop_stats=self.min_calls_for_pop_stats)
+        return snv
+
 
 class Call(object):
     def __init__(self, call, snv):

@@ -76,8 +76,9 @@ def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
 
 
 class _BaseFilter(object):
-    def __init__(self, reverse=False):
+    def __init__(self, samples_to_consider=None, reverse=False):
         self.reverse = reverse
+        self.samples_to_consider = samples_to_consider
 
     def _setup_checks(self, filterpacket):
         pass
@@ -90,14 +91,18 @@ class _BaseFilter(object):
         reverse = self.reverse
         items_passed = []
         filtered_out = filterpacket[FILTERED_OUT][:]
-        for item in filterpacket[PASSED]:
-            passed = self._do_check(item)
+        samples_to_consider = self.samples_to_consider
+        for snv in filterpacket[PASSED]:
+            if samples_to_consider:
+                snv_to_check = snv.filter_calls_by_sample(samples=samples_to_consider,
+                                                          reverse=True)
+            passed = self._do_check(snv_to_check)
             if reverse:
                 passed = not passed
             if passed:
-                items_passed.append(item)
+                items_passed.append(snv)
             else:
-                filtered_out.append(item)
+                filtered_out.append(snv)
 
         return {PASSED: items_passed, FILTERED_OUT: filtered_out}
 
