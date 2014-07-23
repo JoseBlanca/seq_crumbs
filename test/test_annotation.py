@@ -231,7 +231,6 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
                                  orf_seq_fpath=orf_fhand.name)
 
         snv = snps[0]
-
         snv = f(snv)
         assert f.name in snv.filters
         assert snv.infos['AAC'] == 'C->R'

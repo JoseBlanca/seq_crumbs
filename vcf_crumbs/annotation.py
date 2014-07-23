@@ -311,6 +311,8 @@ def _cap_enzymes_between_alleles(allele1, allele2, reference, start, end,
 
     It returns a set.
     '''
+
+    start += 1
     # we have to build the two sequences
     if all_enzymes:
         restriction_batch = CommOnly

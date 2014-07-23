@@ -459,14 +459,15 @@ class SNV(object):
         return self._filter_out_calls(filter_)
 
     def filter_calls_by_sample(self, samples, reverse=False, keep_info=False):
-
+        calls = [self.get_call(sample).call for sample in samples]
         if reverse:
-            check = lambda call: call.sample not in samples
-        else:
-            check = lambda call: call.sample in samples
+            all_samples = set([c.sample for c in self.calls])
+            chosen_samples = set([c.sample for c in calls])
+            unchosen_samples = all_samples.difference(chosen_samples)
+            calls = [self.get_call(sample).call for sample in unchosen_samples]
 
-        calls = [call.call for call in self.calls if check(call)]
         sample_indexes = {call.sample: idx for idx, call in enumerate(calls)}
+
         int_alleles = set()
         for call in calls:
             if call.called:

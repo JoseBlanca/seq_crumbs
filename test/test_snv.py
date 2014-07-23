@@ -172,6 +172,23 @@ class SNVTests(unittest.TestCase):
         snp_filtered = snp.filter_calls_by_sample(samples=('NA00003',))
         assert len(snp_filtered.alleles) == 2
 
+        snp = snps[1]
+        snp_filtered = snp.filter_calls_by_sample(samples=('NA00003',))
+        assert len(snp_filtered.calls) == 1
+
+        snp = snps[1]
+        snp_filtered = snp.filter_calls_by_sample(samples=('NA00003',),
+                                                  reverse=True)
+        assert len(snp_filtered.calls) == 2
+
+        try:
+            snp_filtered = snp.filter_calls_by_sample(samples=('NA0003',),
+                                                      reverse=True)
+            self.fail("KeyError Expected")
+        except KeyError:
+            pass
+        assert len(snp_filtered.calls) == 2
+
 
 class ReaderTest(unittest.TestCase):
     def get_snv_pos(self, snps):

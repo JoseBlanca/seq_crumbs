@@ -179,14 +179,14 @@ class ProteinChangeTest(unittest.TestCase):
 
         record = FakeClass()
         record.is_indel = False
-        record.pos = 112
+        record.pos = 111
         record.alleles = ['T', 'C']
         aminos = get_amino_change(seq_ref, orf_seq, record)
         assert aminos == {'ref_amino': 'C', 'alt_amino': ['R']}
 
         record = FakeClass()
         record.is_indel = True
-        record.pos = 111
+        record.pos = 110
         try:
             aminos = get_amino_change(seq_ref, orf_seq, record)
             raise RuntimeError('We should not reach here')
@@ -195,7 +195,7 @@ class ProteinChangeTest(unittest.TestCase):
 
         record = FakeClass()
         record.is_indel = False
-        record.pos = 112
+        record.pos = 111
         record.alleles = ['T', 'C', 'A']
         aminos = get_amino_change(seq_ref, orf_seq, record)
         assert aminos == {'ref_amino': 'C', 'alt_amino': ['R', 'S']}
@@ -208,7 +208,7 @@ class ProteinChangeTest(unittest.TestCase):
         orf_seq = SeqRecord(seq=Seq(orf_seq), id='orf')
         record = FakeClass()
         record.is_indel = False
-        record.pos = 35
+        record.pos = 34
         record.alleles = ['G', 'C']
 
         try:
@@ -220,7 +220,7 @@ class ProteinChangeTest(unittest.TestCase):
         # frameshift
         record = FakeClass()
         record.is_indel = False
-        record.pos = 10
+        record.pos = 9
         record.alleles = ['G', 'C']
         try:
             aminos = get_amino_change(seq_ref, orf_seq, record)
