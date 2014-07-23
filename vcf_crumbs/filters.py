@@ -31,7 +31,7 @@ def _write_log(log_fhand, tot_snps, passed_snps):
     log_fhand.write(msg)
     log_fhand.write('Number of SNVs that passed each filter\n')
     for filter_, count in passed_snps.items():
-        msg = filter_ + ': ' + str(count)
+        msg = filter_ + ': ' + str(count) + '\n'
         log_fhand.write(msg)
     log_fhand.flush()
 

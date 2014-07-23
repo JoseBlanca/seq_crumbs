@@ -137,7 +137,7 @@ class VCFReader(object):
             if last_snp is not None:
                 chrom = str(last_snp.chrom)
                 pos = str(last_snp.pos)
-                msg = 'Last parsed SNP was: ' + str(chrom) + ' ' + str(pos)
+                msg = 'Last parsed SNP was: ' + str(chrom) + ' ' + str(pos + 1)
                 msg += '\n'
                 sys.stderr.write(msg)
                 raise
