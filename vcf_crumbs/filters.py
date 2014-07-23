@@ -95,7 +95,7 @@ class _BaseFilter(object):
         for snv in filterpacket[PASSED]:
             if samples_to_consider is not None:
                 snv_to_check = snv.filter_calls_by_sample(samples=samples_to_consider,
-                                                          reverse=True)
+                                                          reverse=False)
             else:
                 snv_to_check = snv
 

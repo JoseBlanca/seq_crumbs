@@ -76,7 +76,7 @@ class FiltersTest(unittest.TestCase):
         # some samples
         packet = self.filter_vcf(open(VCF_PATH),
                                  filter_=CallRateFilter(min_calls=2,
-                                        samples_to_consider=('pepo', 'mu16')))
+                                         samples_to_consider=('pepo', 'mu16')))
         res = self.eval_prop_in_packet(packet, 'num_called')
         expected = {PASSED: [], FILTERED_OUT: [2, 2, 2, 2, 0, 1, 2, 1, 1, 1]}
         assert res == expected
