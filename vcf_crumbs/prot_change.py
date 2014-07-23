@@ -276,7 +276,7 @@ def _do_water_alignment(seq1, seq2,  out_fhand, gap_open=10.0, gap_extend=0.5,
 def get_amino_change(seq_ref, seq_estscan, snv):
     if snv.is_indel:
         raise IsIndelError()
-    position = snv.pos - 1
+    position = snv.pos
     alt_allele = snv.alleles[1]
     seq_coord = SeqCoords(seq_ref, seq_estscan)
 
