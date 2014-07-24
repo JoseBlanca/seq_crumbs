@@ -321,7 +321,7 @@ def calculate_distance_distribution(interleave_fhand, index_fpath,
     bwa = map_with_bwamem(index_fpath, interleave_fpath=interleave_fhand.name,
                           extra_params=extra_params)
     map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
-                             temdir=tempdir)
+                             tempdir=tempdir)
     bamfile = Samfile(bam_fhand.name)
     stats = {'outies': IntCounter(), 'innies': IntCounter(),
              'others': IntCounter()}
