@@ -54,7 +54,7 @@ def get_fig_and_canvas(num_rows=1, num_cols=1, figsize=None):
 
 
 def get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1, right=0.9, top=0.9,
-                         bottom=0.1, plot_type=111):
+                        bottom=0.1, plot_type=111):
     'It returns a matplotlib canvas and axes instance'
     try:
         fig = Figure(figsize=FIGURE_SIZE)
