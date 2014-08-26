@@ -358,3 +358,19 @@ class FilterDustComplexity(_BaseFilter):
         return True if dustscore < threshold else False
 
 
+class FilterAllNs(_BaseFilter):
+    'It filters a sequence completely composed by Ns'
+    def __init__(self, reverse=False, failed_drags_pair=True):
+        super(FilterAllNs, self).__init__(reverse=reverse,
+                                          failed_drags_pair=failed_drags_pair)
+
+    def _do_check(self, seq):
+        seq = get_str_seq(seq)
+        if not seq:
+            return True
+        chars = set(seq)
+        good_chars = chars.difference(set(('N', 'n', '-', '*')))
+        if good_chars:
+            return True
+        else:
+            return False
