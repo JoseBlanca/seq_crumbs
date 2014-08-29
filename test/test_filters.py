@@ -32,7 +32,7 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
                             FilterBlastMatch, FilterBlastShort,
                             FilterDustComplexity, seq_to_filterpackets,
-                            FilterByRpkm, FilterByBam,
+                            FilterByRpkm, FilterByBam, FilterAllNs,
                             FilterBowtie2Match, FilterByFeatureTypes)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
@@ -597,6 +597,58 @@ class FilterByFeatureTypeTest(unittest.TestCase):
         seqs = filter_(seqs)
         assert len(seqs[SEQS_FILTERED_OUT]) == 1
         assert len(seqs[SEQS_PASSED]) == 1
+
+
+class NsFilterTest(unittest.TestCase):
+    'It tests the filtering by N content'
+    @staticmethod
+    def test_ns_filter():
+        seq1 = 'N' * 50 + 'n' * 50 + '-' * 50 + '*' * 50
+        seq2 = 'CATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGCTAGCTAGTT'
+        seq1 = SeqRecord(Seq(seq1), id='seq1')
+        seq2 = SeqRecord(Seq(seq2), id='seq2')
+        seq1 = SeqWrapper(SEQRECORD, seq1, None)
+        seq2 = SeqWrapper(SEQRECORD, seq2, None)
+        seqs = {SEQS_PASSED: [[seq1], [seq2]], SEQS_FILTERED_OUT: []}
+
+        filter_ns = FilterAllNs()
+        filter_packet = filter_ns(seqs)
+        assert len(filter_packet[SEQS_PASSED]) == 1
+        assert len(filter_packet[SEQS_FILTERED_OUT]) == 1
+
+        assert _seqs_to_names(filter_packet[SEQS_PASSED])[0] == 'seq2'
+        assert _seqs_to_names(filter_packet[SEQS_FILTERED_OUT])[0] == 'seq1'
+
+        # reverse
+        filter_ns = FilterAllNs(reverse=True)
+        filter_packet = filter_ns(seqs)
+        assert len(filter_packet[SEQS_PASSED]) == 1
+        assert len(filter_packet[SEQS_FILTERED_OUT]) == 1
+
+        assert _seqs_to_names(filter_packet[SEQS_PASSED])[0] == 'seq1'
+        assert _seqs_to_names(filter_packet[SEQS_FILTERED_OUT])[0] == 'seq2'
+
+    @staticmethod
+    def test_filter_ns_bin():
+        filter_bin = os.path.join(BIN_DIR, 'filter_all_ns')
+        assert 'usage' in check_output([filter_bin, '-h'])
+
+        fasta = '>s1\nNNNNNnnnnn----------------nnnnnnnnnnnNNNNNNNNnnn***\n'
+        fasta += '>s2\nCATCGATTGCGATCGATCTTGTTGCACGACTAGCTATCGATTGCTAGCTTAGT\n'
+        fasta_fhand = _make_fhand(fasta)
+        result = check_output([filter_bin, fasta_fhand.name])
+        assert '>s1\n' not in result
+        assert '>s2\n' in result
+
+        result = check_output([filter_bin, '-r', fasta_fhand.name])
+        assert '>s1\n' in result
+        assert '>s2\n' not in result
+
+        filtered_fhand = NamedTemporaryFile()
+        result = check_output([filter_bin, fasta_fhand.name,
+                               '-e', filtered_fhand.name])
+        assert '>s1\n' in open(filtered_fhand.name).read()
+        assert '>s2\n' in result
 
 
 if __name__ == "__main__":
