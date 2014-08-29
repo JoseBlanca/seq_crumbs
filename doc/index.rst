@@ -27,8 +27,7 @@ seq_crumbs is `free software`_. Licensed mainly under the General Public License
 For more details on the licensing take a look at the LICENSE.txt file included in the seq_crumbs distribution.
 
 .. toctree::
-   :maxdepth: 2
-   :hidden:
+   :maxdepth: 1
 
    available_crumbs
    download
