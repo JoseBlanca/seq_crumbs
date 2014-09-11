@@ -14,12 +14,12 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import random
-from itertools import izip_longest, islice, groupby
+from itertools import izip_longest, islice, tee, izip
 import cPickle as pickle
 from tempfile import NamedTemporaryFile
 import sqlite3
 
-from crumbs.utils.optional_modules import merge_sorted, first
+from crumbs.utils.optional_modules import merge_sorted
 from crumbs.exceptions import SampleSizeError
 
 
@@ -284,3 +284,11 @@ def unique_unordered(items, key=None):
         if current_size > prev_size:
             yield item
             prev_size = current_size
+
+
+# Taken from a itertools stdlib recipe
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
