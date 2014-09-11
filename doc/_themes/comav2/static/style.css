@@ -302,3 +302,24 @@ footer{
   min-width:480px;
   width:85%;
 }
+table
+{
+    background: #fff;
+    margin: 45px;
+    border-collapse: collapse;
+    text-align: left;
+}
+table th
+{
+    color: #3465a4;
+    padding: 10px 8px;
+    border-bottom: 2px solid #aaa;
+}
+table td
+{
+    border-bottom: 1px solid #ccc;
+    color: #666;
+    padding: 6px 8px;
+}
+table tbody tr:hover td
+
