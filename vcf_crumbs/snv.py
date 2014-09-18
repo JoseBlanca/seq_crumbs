@@ -21,6 +21,7 @@ from crumbs.seq import get_name, get_length
 VARSCAN = 'VarScan'
 GATK = 'gatk'
 FREEBAYES = 'freebayes'
+GENERIC = 'generic'
 HOM_REF = 0
 HET = 1
 HOM_ALT = 2
@@ -180,7 +181,7 @@ class VCFReader(object):
         elif 'UnifiedGenotyper' in metadata:
             snpcaller = GATK
         else:
-            raise NotImplementedError('Can not get snp caller of the vcf file')
+            snpcaller = GENERIC
         self._snpcaller = snpcaller
         return snpcaller
 
@@ -512,9 +513,16 @@ class Call(object):
             self._get_depths_varscan()
         elif snp_caller == FREEBAYES:
             self._get_depths_freebayes()
+        elif snp_caller == GENERIC:
+            self._get_depths_generic()
         else:
             msg = 'SNP caller not supported yet'
             raise NotImplementedError(msg)
+
+    def _get_depths_generic(self):
+        self._allele_depths = {}
+        self._alt_sum_depths = None
+        self._has_alternative_counts = None
 
     def _get_depths_gatk(self):
         call = self.call
@@ -558,12 +566,18 @@ class Call(object):
             al_dps = self.allele_depths
             depth = sum(al_dps.values())
         else:
-            depth = self.call.data.DP
+            try:
+                depth = self.call.data.DP
+            except AttributeError:
+                depth = None
         return depth
 
     @property
     def gt_qual(self):
-        return self.call.data.GQ
+        try:
+            return self.call.data.GQ
+        except AttributeError:
+            return None
 
     @property
     def ref_depth(self):
@@ -636,6 +650,26 @@ class Call(object):
         # is not a protected member
         # pylint: disable=W0212
         sampdat = [None if field == 'GT' else getattr(call.data, field) for field in calldata_class._fields]
+
+        pyvcf_call = pyvcfCall(self.snv.record, self.call.sample,
+                               calldata_class(*sampdat))
+        if return_pyvcf_call:
+            call = pyvcf_call
+        else:
+            call = Call(pyvcf_call, snv)
+        return call
+
+    def copy_calldata(self, dict_with_data, return_pyvcf_call=False):
+        snv = self.snv
+        calldata_class = snv.calldata_class
+        call = self.call
+        sampdat = []
+        for field in calldata_class._fields:
+            if field in dict_with_data:
+                value = dict_with_data[field]
+            else:
+                value = getattr(call.data, field)
+            sampdat.append(value)
 
         pyvcf_call = pyvcfCall(self.snv.record, self.call.sample,
                                calldata_class(*sampdat))
