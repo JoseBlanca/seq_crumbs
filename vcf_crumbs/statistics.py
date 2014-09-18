@@ -201,13 +201,15 @@ class _AlleleCounts2D(object):
         return self._genotypes
 
     def add(self, rc, acs, gt, gq):
+
         gt = tuple(map(int, sorted(gt)))
         if gt != (0, 0):
             if gt[0] == gt[-1]:
                 self._genotypes[HOM_ALT].add(gt)
             else:
                 self._genotypes[HET].add(gt)
-
+        if rc is None or acs is None:
+            return None
         data = self._data
         if rc not in data:
             data[rc] = {}
@@ -421,14 +423,19 @@ class VcfStats(object):
 
                 depth = call.depth
                 gt_qual = call.gt_qual
-                if depth < self.dp_threshold:
+                if depth is not None and depth < self.dp_threshold:
                     self._gt_qual_depth_counter[gt_broud_type].append(depth,
                                                                       gt_qual)
-
-                if gt_qual >= self._gq_threshold:
-                    self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][depth] += 1
-                    self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gt_qual] += 1
+                # CHECK THIS. This is an special case where the only info we
+                # have is the genotype
+                if gt_qual is None:
                     self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
+                    if depth is not None:
+                        self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][depth] += 1
+                elif gt_qual >= self._gq_threshold:
+                    self._sample_counters[GT_TYPES][sample_name][gt_type] += 1
+                    self._sample_counters[GT_QUALS][sample_name][gt_broud_type][gt_qual] += 1
+                    self._sample_counters[GT_DEPTHS][sample_name][gt_broud_type][depth] += 1
                 self._ac2d.add(rc=ref_depth, acs=acs, gt=call.int_alleles,
                                gq=gt_qual)
             self.called_gts[n_gt_called] += 1
@@ -470,9 +477,14 @@ class VcfStats(object):
 
     def heterozigosity_for_sample(self, sample):
         sample_gt_types = self._get_sample_counter(GT_TYPES, sample)
+
         het_gt = sample_gt_types[HET]
         all_gts = sample_gt_types.count
-        return het_gt / all_gts
+        try:
+            heterozigosity = het_gt / all_gts
+        except ZeroDivisionError:
+            heterozigosity = 0
+        return heterozigosity
 
     def gt_types(self, sample=None):
         return self._get_sample_counter(GT_TYPES, sample)

@@ -6,7 +6,7 @@ from subprocess import check_output
 from vcf import Reader
 from vcf_crumbs.statistics import (VARSCAN, GATK, FREEBAYES, VcfStats,
                                    HOM_REF, VCFcomparisons, _AlleleCounts2D,
-                                   HOM_ALT, HET, HOM)
+                                   HOM_ALT, HET, HOM, MAFS)
 
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
@@ -15,6 +15,7 @@ REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')
 GATK_VCF_PATH = join(TEST_DATA_DIR, 'gatk_sample.vcf.gz')
 FREEBAYES_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz')
 FREEBAYES_MULTI_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_multisample.vcf.gz')
+GENERIC_VCF = join(TEST_DATA_DIR, 'generic.vcf.gz')
 
 
 class TestVcfStats(unittest.TestCase):
@@ -25,6 +26,10 @@ class TestVcfStats(unittest.TestCase):
         assert vcf_stats.gt_quals(HET).count == 53
         assert (0.28 - vcf_stats.heterozigosity_for_sample('pepo')) < 0.01
         assert vcf_stats.het_by_snp[0] == 46
+
+    def xtest_only_gt_vcf(self):
+        vcf_stats = VcfStats(GENERIC_VCF, min_calls_for_pop_stats=2)
+        vcf_stats.heterozigosity_for_sample('BH_T_122_C4EGEACXX_6_250311606_X4') == 0
 
 
 class AlleleCount2DTest(unittest.TestCase):
@@ -83,6 +88,11 @@ class VCFcomparisonsTest(unittest.TestCase):
         result += 'uncalled : 69\n'
         assert stats == result
 
+    def test_binary(self):
+        binary = join(BIN_DIR, 'calculat_vcf_stats')
+
+
+
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'AlleleDepthsTests']
+    import sys;sys.argv = ['', 'TestVcfStats.test_only_gt_vcf']
     unittest.main()

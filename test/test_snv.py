@@ -3,7 +3,8 @@ import unittest
 from StringIO import StringIO
 from os.path import join
 
-from vcf_crumbs.snv import VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter
+from vcf_crumbs.snv import (VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter,
+                            GENERIC)
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
 from tempfile import NamedTemporaryFile
 
@@ -88,6 +89,22 @@ class SNVTests(unittest.TestCase):
             else:
                 assert sample.ref_depth == res[0]
                 assert sample.allele_depths[1] == res[1]
+
+    def test_vcf_only_with_gt(self):
+        vcf = open(join(TEST_DATA_DIR, 'generic.vcf.gz'))
+        snvs = list(VCFReader(vcf).parse_snvs())
+        snv = snvs[0]
+        for call in snv.calls:
+            assert call.depth is None
+            assert call.gt_qual is None
+            assert call.ref_depth is None
+            assert call.alt_sum_depths is None
+            assert call.allele_depths == {}
+            assert call.has_alternative_counts is None
+            assert call.maf_depth is None
+        assert snv.depth is None
+        assert snv.maf_depth is None
+        assert snv.allele_depths is None
 
     def test_mafs(self):
         vcf = open(join(TEST_DATA_DIR, 'freebayes_al_depth.vcf'))
@@ -204,6 +221,8 @@ class ReaderTest(unittest.TestCase):
         assert VCFReader(fhand=varscan).snpcaller == VARSCAN
         assert VCFReader(fhand=gatk).snpcaller == GATK
         assert VCFReader(fhand=freebayes).snpcaller == FREEBAYES
+        tassel = open(join(TEST_DATA_DIR, 'generic.vcf.gz'))
+        assert VCFReader(fhand=tassel).snpcaller == GENERIC
 
     def test_samples(self):
         freebayes = open(join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz'))
