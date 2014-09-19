@@ -177,7 +177,7 @@ class VCFReader(object):
             elif 'freebayes' in metadata['source'][0].lower():
                 snpcaller = FREEBAYES
             else:
-                snpcaller = metadata['source']
+                snpcaller = GENERIC
         elif 'UnifiedGenotyper' in metadata:
             snpcaller = GATK
         else:

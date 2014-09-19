@@ -378,7 +378,6 @@ def draw_quals_vs_depth(vcf_stats, out_dir):
 
     axes = fig.add_subplot(211)
     if vcf_stats.gt_depths_by_gt_and_qual[HOM]:
-        print 'a', vcf_stats.gt_depths_by_gt_and_qual[HOM].counts
         draw_int_boxplot(vcf_stats.gt_depths_by_gt_and_qual[HOM], axes=axes,
                       title='Genotype Qual. distribs vs Genotype Depth (HOMO)',
                          ylabel='Genotype Quality', xlabel='Genoype Depth')
