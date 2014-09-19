@@ -1,7 +1,11 @@
-Del paper del stacks:
+Statistics of the total coverage for SNP
 
-paralogous stacks because all individuals homozygous for a specific sequence at one paralog and homozygous for a slightly different sequence in the other paralog would appear to be heterozygotes for the relevant SNP.
-In addition, a diploid individual will never have more than two alleles of a single locus, so if individuals are discovered with three or more alleles, paralogs are likely to blame.
-loci exhibited segregation distortion in segregation or HW in population. Especialmente exceso de heterocigotos.
+Text for the statistic results
 
+Filtros SNPs para evitar falsos snps debidos a parálogos
 
+- Coverage filter. A false snp due to a paralog sequence should have more total
+coverage. We could draw the total coverage distribution and remove the ones
+with to much coverage
+- Not linked with the snps close to the studied snp in a small window (See Tassel
+recomendations).
