@@ -1,7 +1,8 @@
 
 import unittest
 
-from vcf_crumbs.iterutils import generate_windows, PeekableIterator
+from vcf_crumbs.iterutils import (generate_windows, PeekableIterator,
+                                  RandomAccessIterator)
 
 # Method could be a function
 # pylint: disable=R0201
@@ -45,6 +46,69 @@ class GenerateWindowsTests(unittest.TestCase):
         except StopIteration:
             pass
 
+
+
+class RandomAccessTest(unittest.TestCase):
+    def test_iter_access(self):
+        seq1 = range(100)
+        seq2 = RandomAccessIterator(iter(seq1), 11)
+        assert list(seq1) == list(seq2)
+
+    def test_next_items(self):
+        seq1 = range(100)
+        seq2 = RandomAccessIterator(iter(seq1), 11)
+        first = seq2.next()
+        assert first == 0
+        assert seq2.next_items(1) == 1
+        assert seq2.next_items(1, 2) == [1]
+
+        try:
+            seq2.next_items(6)
+            self.fail('IndexError expected')
+        except:
+            pass
+        assert seq2.next_items(1, 6) == [1, 2, 3, 4, 5]
+        assert seq2.next_items(1, 6) == seq2.next_items(1, 7)
+        assert seq2.next_items(1, 6) == seq2.next_items(1, None)
+
+        assert list(seq2) == list(range(1, 100))
+
+        try:
+            seq2.next_items(1)
+            self.fail('IndexError expected')
+        except:
+            pass
+
+    def test_prev_items(self):
+        seq1 = range(100)
+        seq2 = RandomAccessIterator(iter(seq1), 11)
+        
+        assert not seq2.prev_items(-1, None)
+        
+        first = seq2.next()
+        assert first == 0
+        assert seq2.prev_items(-1) == 0
+        assert seq2.prev_items(-1, -2) == [0]
+
+        try:
+            seq2.prev_items(-2)
+            self.fail('IndexError expected')
+        except:
+            pass
+
+        seq2.next()
+        seq2.next()
+        assert seq2.prev_items(-1, -4) == [0, 1, 2]
+        assert seq2.prev_items(-1, -4) == seq2.prev_items(-1, -5)
+        assert seq2.prev_items(-1, -4) == seq2.prev_items(-1, None)
+
+        assert list(seq2) == list(range(3, 100))
+
+        assert seq2.prev_items(-1, None) == [95, 96, 97, 98, 99]
+
+    # def test_buffered_items(-5, 5)
+    # buffered_items(None, None)
+
 if __name__ == '__main__':
-    # import sys; sys.argv = ['', 'TrimChimericRegions']
+    # import sys; sys.argv = ['', 'RandomAccessTest.test_prev_items']
     unittest.main()
