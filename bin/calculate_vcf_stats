@@ -447,7 +447,10 @@ def draw_het_by_snp(vcf_stats, out_dir):
 
 
 def draw_per_sample_stats(vcf_stats, out_dir):
-
+    stats_fh = open(join(out_dir, 'stats_per_sample.txt'), 'w')
+    header = "Sample\tNumHomREF\tNumHomALT\tNumHET\tNumMissing\tPercentMissing"
+    stats_fh.write(header + '\n')
+    stats_fh.write("-" * len(header) + '-------' + '\n')
     samples = []
     hets = []
     ref_gts = []
@@ -469,6 +472,17 @@ def draw_per_sample_stats(vcf_stats, out_dir):
         missing_gt = tot_snps - ref_gt - alt_gt - het_gt
         missing_gts.append(missing_gt)
         missing_per_cent.append(missing_gt / tot_snps * 100)
+        values_to_txt = [sample, ref_gt, alt_gt, het_gt, missing_gt,
+                         (missing_gt / tot_snps)]
+        stats_fh.write("{}\t{}\t{}\t{}\t{}\t{:.2%}\n".format(*values_to_txt))
+
+    total_missinpcent = sum(missing_gts) / (len(samples) * tot_snps)
+    stats_fh.write('TOTAL\t{}\t{}\t{}\t{}\t{:.2%}\n'.format(sum(ref_gts),
+                                                            sum(alt_gts),
+                                                            sum(het_gts),
+                                                            sum(missing_gts),
+                                                            total_missinpcent))
+    stats_fh.close()
 
     min_calls_for_pop_stats = vcf_stats.min_calls_for_pop_stats
     if len(samples) >= min_calls_for_pop_stats:
@@ -570,7 +584,6 @@ def main():
     vcf_stats = VcfStats(in_vcf_fpath, gq_threshold,
                          min_calls_for_pop_stats=min_samples)
     draw_missing_data(vcf_stats, out_dir)
-    print 'per sample stats'
     draw_per_sample_stats(vcf_stats, out_dir)
     if len(vcf_stats.samples) >= vcf_stats.min_calls_for_pop_stats:
         draw_het_by_snp(vcf_stats, out_dir)
