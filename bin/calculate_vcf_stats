@@ -115,6 +115,18 @@ def grouper(n, iterable, padvalue=None):
     return izip(*[chain(iterable, repeat(padvalue, n - 1))] * n)
 
 
+def draw_snv_depth(vcf_stats, out_dir):
+    fhand = open(join(out_dir, 'snv_coverages_distrib.png'), 'w')
+    distrib = vcf_stats.depths.calculate_distribution()
+    counts = distrib['counts']
+    bin_limits = distrib['bin_limits']
+    title = 'Snv Coverage distribution'
+    xlabel = 'Coverage'
+    ylabel = 'Num. Snvs'
+    draw_histogram_in_fhand(counts, bin_limits, title=title, xlabel=xlabel,
+                            ylabel=ylabel, fhand=fhand, kind=LINE)
+
+
 def draw_gt_depths(vcf_stats, out_dir, gq_threshold=None):
     gq_str = '_{}'.format(gq_threshold) if gq_threshold else ''
     fhand = open(join(out_dir, 'qt_depth_samples{}.png'.format(gq_str)), 'w')
@@ -585,6 +597,7 @@ def main():
                          min_calls_for_pop_stats=min_samples)
     draw_missing_data(vcf_stats, out_dir)
     draw_per_sample_stats(vcf_stats, out_dir)
+    draw_snv_depth(vcf_stats, out_dir)
     if len(vcf_stats.samples) >= vcf_stats.min_calls_for_pop_stats:
         draw_het_by_snp(vcf_stats, out_dir)
     draw_gt_depths(vcf_stats, out_dir)

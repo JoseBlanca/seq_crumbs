@@ -187,6 +187,7 @@ SNV_QUALS = 'snv_quals'
 SNV_DENSITY = 'snv_density'
 HET_IN_SNP = 'heterozigotes_in_snp'
 INBREED_F_IN_SNP = 'inbreeding_coef_f'
+DEPTHS = 'depths'
 
 
 class _AlleleCounts2D(object):
@@ -334,8 +335,15 @@ class VcfStats(object):
                               SNV_QUALS: IntCounter(),
                               HET_IN_SNP: IntCounter(),
                               SNV_DENSITY: IntCounter(),
-                              INBREED_F_IN_SNP: IntCounter()}
+                              INBREED_F_IN_SNP: IntCounter(),
+                              DEPTHS: IntCounter()}
         self._calculate()
+
+    def _add_depth(self, snp):
+        depth = snp.depth
+        if depth is None:
+            depth = 0
+        self._snv_counters[DEPTHS][depth] += 1
 
     def _add_maf_and_mac(self, snp):
         maf = snp.maf
@@ -404,6 +412,7 @@ class VcfStats(object):
             self._add_snv_qual(snp)
             self._add_snv_density(snp)
             self._add_snv_het_obs_fraction(snp)
+            self._add_depth(snp)
 
             for depth, counter in self.sample_dp_coincidence.viewitems():
                 n_samples = self._num_samples_higher_equal_dp(depth, snp)
@@ -520,3 +529,8 @@ class VcfStats(object):
     @property
     def gt_depths_by_gt_and_qual(self):
         return self._gt_qual_depth_counter
+
+    @property
+    def depths(self):
+        return self._snv_counters[DEPTHS]
+
