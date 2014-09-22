@@ -83,7 +83,7 @@ class _BaseFilter(object):
     def _setup_checks(self, filterpacket):
         pass
 
-    def _do_check(self, seq):
+    def _do_check(self, snv):
         raise NotImplementedError()
 
     def __call__(self, filterpacket):
