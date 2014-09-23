@@ -30,6 +30,8 @@ class GenerateWindowsTests(unittest.TestCase):
         res = [(0, 10), (10, 20), (20, 30)]
         assert list(generate_windows(size=10, step=10, end=30)) == res
 
+
+class PeekableIterTest(unittest.TestCase):
     def test_peek(self):
         stream = iter(range(5))
         stream = PeekableIterator(stream)
@@ -47,7 +49,6 @@ class GenerateWindowsTests(unittest.TestCase):
             pass
 
 
-
 class RandomAccessTest(unittest.TestCase):
     def test_iter_access(self):
         seq1 = range(100)
@@ -55,60 +56,107 @@ class RandomAccessTest(unittest.TestCase):
         assert list(seq1) == list(seq2)
 
     def test_next_items(self):
-        seq1 = range(100)
-        seq2 = RandomAccessIterator(iter(seq1), 11)
+        seq1 = range(10)
+        seq2 = RandomAccessIterator(iter(seq1), 7)
+        assert seq1[0] == seq1[0]
+        assert seq2[0:3] == seq1[0:3]
+        assert seq2[:3] == seq1[:3]
+
         first = seq2.next()
         assert first == 0
-        assert seq2.next_items(1) == 1
-        assert seq2.next_items(1, 2) == [1]
+        assert seq2[0:4] == seq1[0:4]
+
+        item = seq2.next()
+        assert item == 1
+        assert seq2[0:5] == seq1[0:5]
+
+        item = seq2.next()
+        assert item == 2
+        assert seq2[0:6] == seq1[0:6]
+
+        item = seq2.next()
+        assert item == 3
+        assert seq2[0:7] == seq1[0:7]
 
         try:
-            seq2.next_items(6)
-            self.fail('IndexError expected')
-        except:
+            seq2[0:8]
+            self.fail('IndexError expexted')
+        except IndexError:
             pass
-        assert seq2.next_items(1, 6) == [1, 2, 3, 4, 5]
-        assert seq2.next_items(1, 6) == seq2.next_items(1, 7)
-        assert seq2.next_items(1, 6) == seq2.next_items(1, None)
 
-        assert list(seq2) == list(range(1, 100))
+        item = seq2.next()
+        assert item == 4
+        assert seq2[1:8] == seq1[1:8]
+
+        item = seq2.next()
+        assert item == 5
+        assert seq2[2:9] == seq1[2:9]
 
         try:
-            seq2.next_items(1)
-            self.fail('IndexError expected')
-        except:
+            seq2[1:8]
+            self.fail('IndexError expexted')
+        except IndexError:
             pass
 
-    def test_prev_items(self):
-        seq1 = range(100)
-        seq2 = RandomAccessIterator(iter(seq1), 11)
-        
-        assert not seq2.prev_items(-1, None)
-        
+        item = seq2.next()
+        assert item == 6
+        assert seq2[3:10] == seq1[3:10]
+
+        item = seq2.next()
+        assert item == 7
+        assert seq2[3:10] == seq1[3:10]
+        item = seq2.next()
+        assert item == 8
+        item = seq2.next()
+        assert item == 9
+        assert seq2[3:10] == seq1[3:10]
+
+    def test_short_iter(self):
+        seq1 = range(3)
+        seq2 = RandomAccessIterator(iter(seq1), 7)
+        assert seq1[0] == seq1[0]
+        assert seq2[0:3] == seq1[0:3]
+        assert seq2[:3] == seq1[:3]
+
+        assert seq1[0] == seq1[0]
+        assert seq2[0:3] == seq1[0:3]
+        assert seq2[:3] == seq1[:3]
+
         first = seq2.next()
         assert first == 0
-        assert seq2.prev_items(-1) == 0
-        assert seq2.prev_items(-1, -2) == [0]
+        assert seq2[0:4] == seq1[0:4]
+
+        item = seq2.next()
+        assert item == 1
+        assert seq2[0:4] == seq1[0:4]
+
+        item = seq2.next()
+        assert item == 2
+        assert seq2[0:4] == seq1[0:4]
 
         try:
-            seq2.prev_items(-2)
-            self.fail('IndexError expected')
-        except:
+            item = seq2.next()
+            self.fail('StopIteration expected')
+        except StopIteration:
             pass
 
-        seq2.next()
-        seq2.next()
-        assert seq2.prev_items(-1, -4) == [0, 1, 2]
-        assert seq2.prev_items(-1, -4) == seq2.prev_items(-1, -5)
-        assert seq2.prev_items(-1, -4) == seq2.prev_items(-1, None)
+        seq1 = range(2)
+        seq2 = RandomAccessIterator(iter(seq1), 7)
+        assert seq1[0] == seq1[0]
+        assert seq2[0:3] == seq1[0:3]
+        assert seq2[:3] == seq1[:3]
 
-        assert list(seq2) == list(range(3, 100))
+    def test_empty_iter(self):
+        seq1 = []
+        seq2 = RandomAccessIterator(iter(seq1), 7)
+        assert seq2[0:3] == seq1[0:3]
 
-        assert seq2.prev_items(-1, None) == [95, 96, 97, 98, 99]
-
-    # def test_buffered_items(-5, 5)
-    # buffered_items(None, None)
-
+        try:
+            item = seq2.next()
+            self.fail('StopIteration expected')
+        except StopIteration:
+            pass
+        
 if __name__ == '__main__':
     # import sys; sys.argv = ['', 'RandomAccessTest.test_prev_items']
     unittest.main()

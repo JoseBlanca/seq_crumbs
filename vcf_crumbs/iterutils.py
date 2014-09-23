@@ -1,5 +1,6 @@
 
 from collections import namedtuple
+from itertools import islice
 
 # Missing docstring
 # pylint: disable=C0111
@@ -52,75 +53,77 @@ class RandomAccessIterator(object):
         if not rnd_access_win % 2:
             msg = 'rnd_access_win should be odd'
             raise ValueError(msg)
-        self._rnd_access_win = (rnd_access_win  - 1) / 2
-        self._next_buff = []
-        self._prev_buff = []
-        self._fill_buffers()
+        self._rnd_access_win = rnd_access_win
+        self._buff = []
+        self._curr_item_in_buff = None
+        self._buffer_pos = 0
+        self._stream_consumed = False
+        self._fill_buffer()
 
-    def _fill_buffers(self):
-        rnd_access_win = self._rnd_access_win
-        next_buff = self._next_buff
-        while True:
-            if len(next_buff) >= rnd_access_win:
-                break
-            try:
-                nxt_item = self._stream.next()
-            except StopIteration:
-                break
-            next_buff.append(nxt_item)
+    def _fill_buffer(self):
+        half_win = (self._rnd_access_win - 1) // 2
+        self._buff = list(islice(self._stream, half_win))
+        if len(self._buff) < half_win:
+            self._stream_consumed = True
 
     def __iter__(self):
         return self
 
     def next(self):
-        next_buffer = self._next_buff
-        prev_buff = self._prev_buff
-        if not next_buffer:
-            raise StopIteration()
-        nxt_item = next_buffer.pop(0)
-        # fill the buffers
-        stream_empty = False
+        in_buffer = self._buff
         try:
-            nxt_nxt_item = self._stream.next()
+            stream_next = self._stream.next()
         except StopIteration:
-            stream_empty = True
+            self._stream_consumed = True
 
-        # next buffer is refilled
-        if not stream_empty:
-            next_buffer.append(nxt_nxt_item)
+        if not self._stream_consumed:
+            in_buffer.append(stream_next)
 
-        # prev buffer is updated
-        if len(prev_buff) >= self._rnd_access_win:
-            prev_buff.pop(0)
-        prev_buff.append(nxt_item)
-        return nxt_item
-
-    def next_items(self, start, end=0):
-        next_buffer = self._next_buff
-        if start == 0:
-            msg = 'Returning the current item is not implemented'
-            raise NotImplementedError(msg)
-
-        start -= 1
-        if start >= len(next_buffer):
-            msg = 'Index outside the buffered next window'
-            raise IndexError(msg)
-        if end == 0:
-            return next_buffer[start]
+        if self._curr_item_in_buff is None:
+            self._curr_item_in_buff = 0
         else:
-            if end is not None:
-                end -= 1
-            return next_buffer[start: end]
+            self._curr_item_in_buff += 1
 
+        try:
+            item_to_yield = in_buffer[self._curr_item_in_buff]
+        except IndexError:
+            raise StopIteration
 
-    def prev_items(self, start, end=0):
-        prev_buff = self._prev_buff
-        if start > 0 or end > 0:
-            raise ValueError('Only negative indexes allowed')
-        if end == 0:
-            return prev_buff[start]
+        if len(in_buffer) > self._rnd_access_win:
+            in_buffer.pop(0)
+            self._curr_item_in_buff -= 1
+            self._buffer_pos += 1
+
+        return item_to_yield
+
+    def _getitem(self, start):
+        if start < 0:
+            raise IndexError('Negative indexes not supported')
+        return self._buff[start]
+
+    def __getitem__(self, index):
+        if isinstance(index, int):
+            start = index
+            return self._getitem(start)
         else:
-            start += 1
-            if start == 0:
-                start = None
-            return prev_buff[end: start]
+            start = index.start
+            stop = index.stop
+            step = index.step
+        if start is None:
+            start = 0
+
+        if start < 0 or stop < 0:
+            raise IndexError('Negative indexes not supported')
+
+        buff_pos = self._buffer_pos
+        start -= buff_pos
+        stop -= buff_pos
+
+        buff = self._buff
+        if start < 0:
+            raise IndexError('Index outside buffered window')
+        if (not self._stream_consumed and
+           (stop is None or stop > len(buff))):
+            raise IndexError('Index outside buffered window')
+
+        return buff[start:stop:step]
