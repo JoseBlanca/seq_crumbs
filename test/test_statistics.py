@@ -26,8 +26,13 @@ class TestVcfStats(unittest.TestCase):
         assert vcf_stats.gt_quals(HET).count == 53
         assert (0.28 - vcf_stats.heterozigosity_for_sample('pepo')) < 0.01
         assert vcf_stats.het_by_snp[0] == 46
+        fpath = join(TEST_DATA_DIR, 'freebayes6.vcf.gz')
+        vcf_stats = VcfStats(fpath)
+        covertures = vcf_stats.depths.keys()
+        for i in [8, 2, 100, 7]:
+            assert i in covertures
 
-    def xtest_only_gt_vcf(self):
+    def test_only_gt_vcf(self):
         vcf_stats = VcfStats(GENERIC_VCF, min_calls_for_pop_stats=2)
         vcf_stats.heterozigosity_for_sample('BH_T_122_C4EGEACXX_6_250311606_X4') == 0
 
@@ -94,5 +99,5 @@ class VCFcomparisonsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'TestVcfStats.test_only_gt_vcf']
+    #import sys;sys.argv = ['', 'TestVcfStats.test_only_gt_vcf']
     unittest.main()
