@@ -1,12 +1,37 @@
 from __future__ import division
 
+from scipy.stats import fisher_exact as scipy_fisher
+
 from vcf_crumbs.statistics import choose_samples
 from collections import Counter, namedtuple
 
 # Missing docstring
 # pylint: disable=C0111
 
-HaploCount = namedtuple('HaploCount', ['AB', 'ab', 'Ab', 'aB'])
+HaploCount = namedtuple('HaploCount', ['AB', 'Ab', 'aB', 'ab'])
+LDStats = namedtuple('LDStats', ['fisher', 'r_sqr'])
+
+
+def calculate_ld_stats(snp1, snp2, samples=None):
+    calls1 = choose_samples(snp1.record, sample_names=samples)
+    calls2 = choose_samples(snp2.record, sample_names=samples)
+    haplo_counts = _count_biallelic_haplotypes(calls1, calls2)
+    fisher = _fisher_exact(haplo_counts)
+    rsqr = _calculate_r_sqr(haplo_counts)
+    return LDStats(fisher, rsqr)
+
+
+def _fisher_exact(haplo_counts):
+    fish = scipy_fisher(([haplo_counts.AB, haplo_counts.Ab],
+                         [haplo_counts.aB, haplo_counts.ab]))[1]
+    return fish
+
+
+def fisher_exact(snp1, snp2, samples=None):
+    calls1 = choose_samples(snp1.record, sample_names=samples)
+    calls2 = choose_samples(snp2.record, sample_names=samples)
+    haplo_counts = _count_biallelic_haplotypes(calls1, calls2)
+    return _fisher_exact(haplo_counts)
 
 
 def calculate_r_sqr(snp1, snp2, samples=None):
@@ -102,4 +127,4 @@ def _count_biallelic_haplotypes(calls1, calls2):
     count_aB = haplo_count.get((allele_a, allele_B), 0)
     count_ab = haplo_count.get((allele_a, allele_b), 0)
 
-    return HaploCount(count_AB, count_ab, count_Ab, count_aB)
+    return HaploCount(count_AB, count_Ab, count_aB, count_ab)
