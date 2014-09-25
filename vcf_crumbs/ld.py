@@ -141,8 +141,8 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
                       p_val=DEF_P_VAL, bonferroni=True, snv_win=DEF_SNV_WIN,
                       min_phys_dist=MIN_PHYS_DIST):
     if not snv_win % 2:
-            msg = 'The window should have an odd number of snvs'
-            raise ValueError(msg)
+        msg = 'The window should have an odd number of snvs'
+        raise ValueError(msg)
     half_win = (snv_win - 1) // 2
 
     if bonferroni:

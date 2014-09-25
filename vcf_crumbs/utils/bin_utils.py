@@ -62,7 +62,7 @@ def parse_basic_args(parser):
     return args, parsed_args
 
 
-def _parse_sample_file(fhand):
+def parse_sample_file(fhand):
     samples = []
     for line in fhand:
         line = line.strip()
@@ -83,7 +83,7 @@ def parse_filter_args(parser):
     if parsed_args.samples is not None:
         samples.update(parsed_args.samples)
     if parsed_args.samples_file is not None:
-        samples.update(_parse_sample_file(parsed_args.samples_file))
+        samples.update(parse_sample_file(parsed_args.samples_file))
 
     filter_class_kwargs = {'samples_to_consider': samples if samples else None}
 
