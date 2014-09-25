@@ -10,7 +10,7 @@ from collections import Counter, namedtuple
 # pylint: disable=C0111
 
 DEF_R_SQR_THRESHOLD = 0.01
-DEF_BONFERRONI_P_VAL = 0.01
+DEF_P_VAL = 0.01
 DEF_SNV_WIN = 101
 MIN_PHYS_DIST =700 # it should be double of the read length
 
@@ -137,15 +137,17 @@ def _count_biallelic_haplotypes(calls1, calls2):
 
 
 def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
-                      p_bonferroni=DEF_BONFERRONI_P_VAL, snv_win=DEF_SNV_WIN,
+                      p_val=DEF_P_VAL, bonferroni=True, snv_win=DEF_SNV_WIN,
                       min_phys_dist=MIN_PHYS_DIST):
     if not snv_win % 2:
             msg = 'The window should have an odd number of snvs'
             raise ValueError(msg)
     half_win = (snv_win - 1) // 2
-    
+
+    if bonferroni:
+        p_val /= (snv_win - 1)
+
     snvs = RandomAccessIterator(snvs, rnd_access_win=snv_win)
-    p_bonfe = p_bonferroni
 
     linked_snvs = set()
     for snv_i, snv in enumerate(snvs):
@@ -170,7 +172,7 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
                 linked = None
             else:
                 stats = calculate_ld_stats(snv, snv_2, samples=samples)
-                if stats.r_sqr >= r_sqr and stats.fisher < p_bonfe:
+                if stats.r_sqr >= r_sqr and stats.fisher < p_val:
                     linked = True
                     if snv_j > snv_i:
                         linked_snvs.add(snv_j)

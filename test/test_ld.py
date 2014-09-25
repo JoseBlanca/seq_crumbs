@@ -198,7 +198,7 @@ class FilterTest(unittest.TestCase):
 21\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
-        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        snvs = filter_snvs_by_ld(snps, p_val=0.03)
         assert not list(snvs)
 
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
@@ -206,7 +206,7 @@ class FilterTest(unittest.TestCase):
 20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
-        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        snvs = filter_snvs_by_ld(snps, p_val=0.03)
         assert not list(snvs)
 
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
@@ -214,7 +214,7 @@ class FilterTest(unittest.TestCase):
 20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
-        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        snvs = filter_snvs_by_ld(snps, p_val=0.03)
         #print [s.pos for s in snvs]
         assert len(list(snvs)) == 2
 
@@ -224,7 +224,7 @@ class FilterTest(unittest.TestCase):
 20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
-        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        snvs = filter_snvs_by_ld(snps, p_val=0.03)
         assert [s.pos for s in snvs] == [1, 702]
 
     def test_check_backwards(self):
@@ -234,7 +234,7 @@ class FilterTest(unittest.TestCase):
 20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
-        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        snvs = filter_snvs_by_ld(snps, p_val=0.03)
         assert [s.pos for s in snvs] == [1, 702, 2002]
 
 if __name__ == "__main__":
