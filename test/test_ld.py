@@ -22,7 +22,7 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 ##fileDate=20090805
 ##source=myImputationProgramV3.1
 ##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
-##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species="Homo sapiens",taxonomy=x>
+##contig=<ID=20,length=62435964,assembly=B36>
 ##phasing=partial
 ##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
 ##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
@@ -47,8 +47,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
         assert counts.AB == 3
         assert counts.ab == 2
@@ -59,8 +59,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
         assert counts.AB == 4
         assert counts.ab == 3
@@ -71,8 +71,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
         assert counts.AB == 4
         assert counts.ab == 3
@@ -86,8 +86,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
 
         r_sqr = calculate_r_sqr(snps[0], snps[1])
@@ -99,8 +99,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
 
         r_sqr = calculate_r_sqr(snps[0], snps[1])
@@ -113,8 +113,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         assert _count_biallelic_haplotypes(call1, call2) is None
         r_sqr = calculate_r_sqr(snps[0], snps[1])
         assert r_sqr is None
@@ -126,8 +126,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
         assert counts.AB == 3
         assert counts.ab == 2
@@ -141,8 +141,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
         assert counts.AB == 4
         assert counts.ab == 2
@@ -156,8 +156,8 @@ class LDTests(unittest.TestCase):
 
         vcf = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf).parse_snvs())
-        call1 =  snps[0].record.samples
-        call2 =  snps[1].record.samples
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
         counts = _count_biallelic_haplotypes(call1, call2)
         assert counts.AB == 3
         assert counts.ab == 2
@@ -211,30 +211,41 @@ class FilterTest(unittest.TestCase):
 
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
-20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
-        snvs = filter_snvs_by_ld(snps, p_val=0.03)
-        #print [s.pos for s in snvs]
+        snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
         assert len(list(snvs)) == 2
 
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
 20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
-20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t'''
+'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
         snvs = filter_snvs_by_ld(snps, p_val=0.03)
+        assert not list(snvs)
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
         assert [s.pos for s in snvs] == [1, 702]
 
     def test_check_backwards(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
 20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
-20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+'''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
-        snvs = filter_snvs_by_ld(snps, p_val=0.03)
+        snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
         assert [s.pos for s in snvs] == [1, 702, 2002]
 
 if __name__ == "__main__":

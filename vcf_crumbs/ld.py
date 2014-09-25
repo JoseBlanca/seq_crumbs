@@ -12,7 +12,7 @@ from collections import Counter, namedtuple
 DEF_R_SQR_THRESHOLD = 0.01
 DEF_P_VAL = 0.01
 DEF_SNV_WIN = 101
-MIN_PHYS_DIST =700 # it should be double of the read length
+MIN_PHYS_DIST = 700  # it should be double of the read length
 
 HaploCount = namedtuple('HaploCount', ['AB', 'Ab', 'aB', 'ab'])
 LDStats = namedtuple('LDStats', ['fisher', 'r_sqr'])
@@ -83,7 +83,7 @@ def _remove_no_calls_and_hets(calls1, calls2):
     filtered_calls2 = []
     for call1, call2 in zip(calls1, calls2):
         if (not call1.called or not call2.called or call1.is_het or
-            call2.is_het):
+                call2.is_het):
             continue
         filtered_calls1.append(call1)
         filtered_calls2.append(call2)
@@ -112,7 +112,8 @@ def _count_biallelic_haplotypes(calls1, calls2):
         haplo = (al_snp_1, al_snp_2)
         haplo_count[haplo] += 1
 
-    alleles_snp1, alleles_snp2 = zip(*[(haplo[0], haplo[1]) for haplo in haplo_count.keys()])
+    alleles_snp1, alleles_snp2 = zip(*[(haplo[0], haplo[1])
+                                       for haplo in haplo_count.keys()])
     alleles_snp1 = set(alleles_snp1)
     alleles_snp2 = set(alleles_snp2)
 
@@ -181,4 +182,3 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
                     linked = False
         if linked:
             yield snv
-       
