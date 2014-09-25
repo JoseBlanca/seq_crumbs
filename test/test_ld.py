@@ -9,7 +9,7 @@ from StringIO import StringIO
 from vcf_crumbs.snv import VCFReader
 from vcf_crumbs.ld import (_count_biallelic_haplotypes, calculate_r_sqr,
                            HaploCount, _calculate_r_sqr, _fisher_exact,
-                           calculate_ld_stats)
+                           calculate_ld_stats, filter_snvs_by_ld)
 
 # Method could be a function
 # pylint: disable=R0201
@@ -41,7 +41,7 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 
 class LDTests(unittest.TestCase):
     def test_count_homo_haplotypes(self):
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1'''
 
@@ -52,8 +52,8 @@ class LDTests(unittest.TestCase):
         counts = _count_biallelic_haplotypes(call1, call2)
         assert counts.AB == 3
         assert counts.ab == 2
-        
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7 S8
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1\t1/1\t0/0
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1\t1/1\t0/0'''
 
@@ -65,7 +65,7 @@ class LDTests(unittest.TestCase):
         assert counts.AB == 4
         assert counts.ab == 3
 
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7 S8
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1\t1/1\t0/0
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t2/2\t1/1\t0/0\t0/0\t0/1\t1/1\t0/0'''
 
@@ -80,7 +80,7 @@ class LDTests(unittest.TestCase):
         r_sqr = calculate_r_sqr(snps[0], snps[1])
         self.assertAlmostEqual(r_sqr,  1)
 
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7 S8
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1\t1/1\t0/0
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t1/1\t1/1\t0/0\t1/1\t0/0\t1/1'''
 
@@ -92,8 +92,8 @@ class LDTests(unittest.TestCase):
 
         r_sqr = calculate_r_sqr(snps[0], snps[1])
         assert r_sqr - 1.0 < 0.0001
-        
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7 S8
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1\t1/1\t0/0
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1\t1/1\t1/1'''
 
@@ -107,7 +107,7 @@ class LDTests(unittest.TestCase):
         assert r_sqr - 1.0 < 0.0001
 
         # monomorphic
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7 S8
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0
 20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0'''
 
@@ -120,7 +120,7 @@ class LDTests(unittest.TestCase):
         assert r_sqr is None
 
         # Ab and aB
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t0/0\t
 20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t1/1\t1/1\t0/0\t1/1\t'''
 
@@ -135,7 +135,7 @@ class LDTests(unittest.TestCase):
         assert counts.Ab == 1
 
         # different major allele names in snp1 (1, 2) and snp2 (2,3)
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t0/0\t
 20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t3/3\t3/3\t3/3\t2/2\t2/2\t3/3\t3/3\t'''
 
@@ -150,7 +150,7 @@ class LDTests(unittest.TestCase):
         assert counts.Ab == 0
 
         # missing data
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t./.\t
 20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t3/3\t3/3\t3/3\t2/2\t2/2\t3/3\t3/3\t'''
 
@@ -180,7 +180,7 @@ class LDTests(unittest.TestCase):
         self.assertAlmostEqual(_fisher_exact(HaploCount(5, 23, 1, 20)),
                                0.219157345)
 
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT S1 S2 S3 S4 S5 S6 S7
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t./.\t
 20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t3/3\t3/3\t3/3\t2/2\t2/2\t3/3\t3/3\t'''
 
@@ -189,6 +189,53 @@ class LDTests(unittest.TestCase):
         ld_stats = calculate_ld_stats(snps[0], snps[1])
         self.assertAlmostEqual(ld_stats.fisher, 0.39999999999)
         self.assertAlmostEqual(ld_stats.r_sqr, 0.49999999)
+
+
+class FilterTest(unittest.TestCase):
+    def test_filter(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+21\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        assert not list(snvs)
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        assert not list(snvs)
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        #print [s.pos for s in snvs]
+        assert len(list(snvs)) == 2
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t1/1\t0/0\t'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        assert [s.pos for s in snvs] == [1, 702]
+
+    def test_check_backwards(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_bonferroni=0.03)
+        assert [s.pos for s in snvs] == [1, 702, 2002]
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'ImputationTest.test_stars']

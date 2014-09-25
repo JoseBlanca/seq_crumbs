@@ -3,10 +3,16 @@ from __future__ import division
 from scipy.stats import fisher_exact as scipy_fisher
 
 from vcf_crumbs.statistics import choose_samples
+from vcf_crumbs.iterutils import RandomAccessIterator
 from collections import Counter, namedtuple
 
 # Missing docstring
 # pylint: disable=C0111
+
+DEF_R_SQR_THRESHOLD = 0.01
+DEF_BONFERRONI_P_VAL = 0.01
+DEF_SNV_WIN = 101
+MIN_PHYS_DIST =700 # it should be double of the read length
 
 HaploCount = namedtuple('HaploCount', ['AB', 'Ab', 'aB', 'ab'])
 LDStats = namedtuple('LDStats', ['fisher', 'r_sqr'])
@@ -113,7 +119,7 @@ def _count_biallelic_haplotypes(calls1, calls2):
     haplo_AB = haplo_count.most_common(1)[0][0]
     allele_A = haplo_AB[0]
     allele_B = haplo_AB[1]
-    
+
     non_A_alleles = list(alleles_snp1.difference(allele_A))
     non_B_alleles = list(alleles_snp2.difference(allele_B))
 
@@ -128,3 +134,49 @@ def _count_biallelic_haplotypes(calls1, calls2):
     count_ab = haplo_count.get((allele_a, allele_b), 0)
 
     return HaploCount(count_AB, count_Ab, count_aB, count_ab)
+
+
+def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
+                      p_bonferroni=DEF_BONFERRONI_P_VAL, snv_win=DEF_SNV_WIN,
+                      min_phys_dist=MIN_PHYS_DIST):
+    if not snv_win % 2:
+            msg = 'The window should have an odd number of snvs'
+            raise ValueError(msg)
+    half_win = (snv_win - 1) // 2
+    
+    snvs = RandomAccessIterator(snvs, rnd_access_win=snv_win)
+    p_bonfe = p_bonferroni
+
+    linked_snvs = set()
+    for snv_i, snv in enumerate(snvs):
+        if snv_i in linked_snvs:
+            yield snv
+            linked_snvs.remove(snv_i)
+            break
+        linked = None
+        for snv_j in range(snv_i + half_win, snv_i - half_win, -1):
+            try:
+                snv_2 = snvs[snv_j]
+            except IndexError:
+                continue
+            if snv_i == snv_j:
+                continue
+            elif snv.chrom != snv_2.chrom:
+                # different chroms, they're not linked
+                linked = False
+            elif abs(snv.pos - snv_2.pos) < min_phys_dist:
+                # Too close, they could be errors due to the same reads
+                # so no independent errors
+                linked = None
+            else:
+                stats = calculate_ld_stats(snv, snv_2, samples=samples)
+                if stats.r_sqr >= r_sqr and stats.fisher < p_bonfe:
+                    linked = True
+                    if snv_j > snv_i:
+                        linked_snvs.add(snv_j)
+                    break
+                else:
+                    linked = False
+        if linked:
+            yield snv
+       
