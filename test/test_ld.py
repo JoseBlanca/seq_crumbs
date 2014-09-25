@@ -4,12 +4,17 @@ Created on 23/09/2014
 @author: jose
 '''
 import unittest
+from os.path import join
 from StringIO import StringIO
+from tempfile import NamedTemporaryFile
 
 from vcf_crumbs.snv import VCFReader
 from vcf_crumbs.ld import (_count_biallelic_haplotypes, calculate_r_sqr,
                            HaploCount, _calculate_r_sqr, _fisher_exact,
                            calculate_ld_stats, filter_snvs_by_ld)
+
+from vcf_crumbs.utils.file_utils import BIN_DIR
+from subprocess import check_call
 
 # Method could be a function
 # pylint: disable=R0201
@@ -248,7 +253,23 @@ class FilterTest(unittest.TestCase):
         snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
         assert [s.pos for s in snvs] == [1, 702, 2002]
 
+    def test_binary(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+'''
+        fhand = NamedTemporaryFile()
+        fhand.write(VCF_HEADER + vcf)
+        fhand.flush()
+        out_fhand = NamedTemporaryFile()
+
+        binary = join(BIN_DIR, 'filter_by_ld')
+        cmd = [binary, '-o', out_fhand.name, fhand.name,
+               '--no_bonferroni_correction', '--p_val', '0.03']
+        check_call(cmd)
+        assert len(list(VCFReader(open(out_fhand.name)).parse_snvs())) == 3
+
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'ImputationTest.test_stars']
-    # import sys;sys.argv = ['', 'VCFReadingPerChr']
+    #import sys; sys.argv = ['', 'FilterTest.test_binary']
     unittest.main()
