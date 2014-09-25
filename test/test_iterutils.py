@@ -61,6 +61,7 @@ class RandomAccessTest(unittest.TestCase):
         assert seq1[0] == seq1[0]
         assert seq2[0:3] == seq1[0:3]
         assert seq2[:3] == seq1[:3]
+        assert seq2[2] == seq1[2]
 
         first = seq2.next()
         assert first == 0
@@ -87,6 +88,12 @@ class RandomAccessTest(unittest.TestCase):
         item = seq2.next()
         assert item == 4
         assert seq2[1:8] == seq1[1:8]
+        assert seq2[1] == seq1[1]
+        try:
+            seq2[0]
+            self.fail('IndexError expexted')
+        except IndexError:
+            pass
 
         item = seq2.next()
         assert item == 5
@@ -152,11 +159,11 @@ class RandomAccessTest(unittest.TestCase):
         assert seq2[0:3] == seq1[0:3]
 
         try:
-            item = seq2.next()
+            seq2.next()
             self.fail('StopIteration expected')
         except StopIteration:
             pass
-        
+
 if __name__ == '__main__':
     # import sys; sys.argv = ['', 'RandomAccessTest.test_prev_items']
     unittest.main()

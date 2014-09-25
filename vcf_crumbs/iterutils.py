@@ -97,6 +97,7 @@ class RandomAccessIterator(object):
         return item_to_yield
 
     def _getitem(self, start):
+        start -= self._buffer_pos
         if start < 0:
             raise IndexError('Negative indexes not supported')
         return self._buff[start]
