@@ -11,7 +11,7 @@ from tempfile import NamedTemporaryFile
 from vcf_crumbs.snv import VCFReader
 from vcf_crumbs.ld import (_count_biallelic_haplotypes, calculate_r_sqr,
                            HaploCount, _calculate_r_sqr, _fisher_exact,
-                           calculate_ld_stats, filter_snvs_by_ld)
+                           calculate_ld_stats, filter_snvs_by_ld, fisher_exact)
 
 from vcf_crumbs.utils.file_utils import BIN_DIR
 from subprocess import check_call
@@ -45,6 +45,18 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 
 
 class LDTests(unittest.TestCase):
+    def test_empy_snv(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t./.\t./.\t./.\t./.\t./.\t./.
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1'''
+
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf).parse_snvs())
+        call1 = snps[0].record.samples
+        call2 = snps[1].record.samples
+        counts = _count_biallelic_haplotypes(call1, call2)
+        assert counts is None
+
     def test_count_homo_haplotypes(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1
@@ -123,6 +135,7 @@ class LDTests(unittest.TestCase):
         assert _count_biallelic_haplotypes(call1, call2) is None
         r_sqr = calculate_r_sqr(snps[0], snps[1])
         assert r_sqr is None
+        assert fisher_exact(snps[0], snps[1]) is None
 
         # Ab and aB
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7
@@ -241,6 +254,24 @@ class FilterTest(unittest.TestCase):
         snps = VCFReader(vcf).parse_snvs()
         snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
         assert [s.pos for s in snvs] == [1, 702]
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0
+20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0'''
+
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
+        assert not list(snvs)
+
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0
+20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0'''
+
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
+        assert not list(snvs)
 
     def test_check_backwards(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8

@@ -28,6 +28,8 @@ def calculate_ld_stats(snp1, snp2, samples=None):
 
 
 def _fisher_exact(haplo_counts):
+    if not haplo_counts:
+        return None
     fish = scipy_fisher(([haplo_counts.AB, haplo_counts.Ab],
                          [haplo_counts.aB, haplo_counts.ab]))[1]
     return fish
@@ -111,6 +113,9 @@ def _count_biallelic_haplotypes(calls1, calls2):
 
         haplo = (al_snp_1, al_snp_2)
         haplo_count[haplo] += 1
+
+    if not haplo_count:
+        return None
 
     alleles_snp1, alleles_snp2 = zip(*[(haplo[0], haplo[1])
                                        for haplo in haplo_count.keys()])
