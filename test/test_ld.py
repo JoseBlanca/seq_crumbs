@@ -278,11 +278,26 @@ class FilterTest(unittest.TestCase):
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
 20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
 20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2403\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
 '''
         vcf = StringIO(VCF_HEADER + vcf)
         snps = VCFReader(vcf).parse_snvs()
         snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False)
-        assert [s.pos for s in snvs] == [1, 702, 2002]
+        assert [s.pos for s in snvs] == [1, 702, 2002, 2402]
+
+    def test_nobreak_generator(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t3003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t3403\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_val=0.03, bonferroni=False,
+                                 snv_win=3)
+        assert [s.pos for s in snvs] == [1, 702, 2002, 3002]
 
     def test_binary(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
@@ -302,5 +317,5 @@ class FilterTest(unittest.TestCase):
         assert len(list(VCFReader(open(out_fhand.name)).parse_snvs())) == 3
 
 if __name__ == "__main__":
-    #import sys; sys.argv = ['', 'FilterTest.test_binary']
+    #import sys; sys.argv = ['', 'FilterTest.test_nobreak_generator']
     unittest.main()

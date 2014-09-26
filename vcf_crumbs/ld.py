@@ -156,19 +156,22 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
         p_val /= (snv_win - 1)
 
     snvs = RandomAccessIterator(snvs, rnd_access_win=snv_win)
-
     linked_snvs = set()
     for snv_i, snv in enumerate(snvs):
         if snv_i in linked_snvs:
             yield snv
             linked_snvs.remove(snv_i)
-            break
+            continue
         linked = None
-        for snv_j in range(snv_i + half_win, snv_i - half_win, -1):
+        win_start = snv_i - half_win
+        if win_start < 0:
+            win_start = 0
+        for snv_j in range(snv_i + half_win, win_start, -1):
             try:
                 snv_2 = snvs[snv_j]
             except IndexError:
                 continue
+
             if snv_i == snv_j:
                 continue
             elif snv.chrom != snv_2.chrom:

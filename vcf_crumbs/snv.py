@@ -129,17 +129,24 @@ class VCFReader(object):
         min_calls_for_pop_stats = self.min_calls_for_pop_stats
         last_snp = None
         try:
+            counter =0
             for snp in self.pyvcf_reader:
+                counter +=1
                 snp = SNV(snp, reader=self,
                           min_calls_for_pop_stats=min_calls_for_pop_stats)
                 last_snp = snp
                 yield snp
-        except:
+        except BaseException:
+            from traceback import print_exc, print_stack, print_exception
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+            print_exception(exc_type, exc_value, exc_traceback,
+                            limit=20, file=sys.stderr)
+
             if last_snp is not None:
                 chrom = str(last_snp.chrom)
-                pos = str(last_snp.pos)
-                msg = 'Last parsed SNP was: ' + str(chrom) + ' ' + str(pos + 1)
-                msg += '\n'
+                pos = last_snp.pos
+                msg = 'Last parsed SNP was: {} {}\n'.format(chrom, pos + 1)
                 sys.stderr.write(msg)
                 raise
 
