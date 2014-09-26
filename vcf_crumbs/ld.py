@@ -55,6 +55,8 @@ def calculate_r_sqr(snp1, snp2, samples=None):
 def _calculate_r_sqr(haplo_counts):
     # Invalid name. Due to using uppercases
     # pylint: disable=C0103
+    if haplo_counts is None:
+        return None
     total_samples = sum(haplo_counts)
     cnt_AB = haplo_counts.AB
     cnt_Ab = haplo_counts.Ab
