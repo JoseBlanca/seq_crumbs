@@ -146,7 +146,7 @@ def _count_biallelic_haplotypes(calls1, calls2):
 
 def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
                       p_val=DEF_P_VAL, bonferroni=True, snv_win=DEF_SNV_WIN,
-                      min_phys_dist=MIN_PHYS_DIST):
+                      min_phys_dist=MIN_PHYS_DIST, log_fhand=None):
     if not snv_win % 2:
         msg = 'The window should have an odd number of snvs'
         raise ValueError(msg)
@@ -157,9 +157,13 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
 
     snvs = RandomAccessIterator(snvs, rnd_access_win=snv_win)
     linked_snvs = set()
+    total_snvs = 0
+    passed_snvs = 0
     for snv_i, snv in enumerate(snvs):
+        total_snvs += 1
         if snv_i in linked_snvs:
             yield snv
+            passed_snvs += 1
             linked_snvs.remove(snv_i)
             continue
         linked = None
@@ -192,3 +196,15 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
                     linked = False
         if linked:
             yield snv
+            passed_snvs += 1
+
+    if log_fhand is not None:
+        _write_log(log_fhand, total_snvs, passed_snvs)
+
+
+def _write_log(log_fhand, total_snvs, passed_snvs):
+    log_fhand.write('SNVs processed: ' + str(total_snvs) + '\n')
+    msg = 'SNVs passsed: ' + str(passed_snvs) + '\n'
+    log_fhand.write(msg)
+    msg = 'SNVs filtered out: ' + str(total_snvs - passed_snvs) + '\n'
+    log_fhand.write(msg)

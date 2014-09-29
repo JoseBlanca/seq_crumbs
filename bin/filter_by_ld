@@ -52,7 +52,7 @@ def _parse_args(parser):
     filter_kwargs['bonferroni'] = parsed_args.no_bonferroni_correction
     filter_kwargs['p_val'] = parsed_args.p_val
     filter_kwargs['min_phys_dist'] = parsed_args.min_phys_dist
-
+    filter_kwargs['log_fhand'] = args['log_fhand']
     return args, filter_kwargs
 
 

@@ -308,13 +308,22 @@ class FilterTest(unittest.TestCase):
         fhand = NamedTemporaryFile()
         fhand.write(VCF_HEADER + vcf)
         fhand.flush()
+        stderr = NamedTemporaryFile()
         out_fhand = NamedTemporaryFile()
 
         binary = join(BIN_DIR, 'filter_by_ld')
         cmd = [binary, '-o', out_fhand.name, fhand.name,
                '--no_bonferroni_correction', '--p_val', '0.03']
-        check_call(cmd)
+        check_call(cmd, stderr=stderr)
         assert len(list(VCFReader(open(out_fhand.name)).parse_snvs())) == 3
+
+        log_fhand = NamedTemporaryFile()
+        binary = join(BIN_DIR, 'filter_by_ld')
+        cmd = [binary, '-o', out_fhand.name, fhand.name,
+               '--no_bonferroni_correction', '--p_val', '0.03',
+               '-l', log_fhand.name]
+        check_call(cmd, stderr=stderr)
+        assert 'filtered' in open(log_fhand.name).read()
 
 if __name__ == "__main__":
     #import sys; sys.argv = ['', 'FilterTest.test_nobreak_generator']
