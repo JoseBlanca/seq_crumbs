@@ -227,8 +227,8 @@ class IntCounter(Counter):
                 if index2 > rigth_edge:
                     break
 
-                elif (left_edge <= index2  and index2 < rigth_edge or
-                     left_edge <= index2 and index2 == max_):
+                elif (left_edge <= index2 and index2 < rigth_edge or
+                      left_edge <= index2 and index2 == max_):
                     sum_values += value
 
             distrib.append(sum_values)
@@ -241,7 +241,7 @@ class IntCounter(Counter):
     def count_relative_to_value(self, value, comparison):
         'It counts the ints greater, equal, etc, relative to the given value.'
         return sum([counts for val, counts in self.items()
-                                                    if comparison(val, value)])
+                    if comparison(val, value)])
 
     def __add__(self, other):
         'Add counts from two counters.'

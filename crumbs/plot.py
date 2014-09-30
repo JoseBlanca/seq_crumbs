@@ -71,7 +71,7 @@ def get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1, right=0.9, top=0.9,
 
 def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
                            xlabel=None, ylabel=None, distrib_label=None,
-                           linestyle=None):
+                           linestyle=None, ylimits=None):
 
     if axes is None:
         canvas, axes = get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1,
@@ -134,17 +134,22 @@ def draw_histogram_in_axes(counts, bin_limits, kind=BAR, axes=None, title=None,
             x_values.append((i + i2) / 2.0)
         y_values = counts
         axes.plot(x_values, y_values, **kwargs)
+
+    if ylimits is not None:
+        axes.set_ylim(ylimits)
+
     return axes, canvas
 
 
 def draw_histogram_in_fhand(counts, bin_limits, title=None, xlabel=None,
-                            ylabel=None, fhand=None, kind=BAR):
+                            ylabel=None, fhand=None, kind=BAR, ylimits=None):
     'It draws an histogram and if the fhand is given it saves it'
     plot_format = _guess_output_for_matplotlib(fhand)
     canvas, axes = get_canvas_and_axes(figure_size=FIGURE_SIZE, left=0.1,
                                        right=0.9, top=0.9, bottom=0.1)
     draw_histogram_in_axes(counts, bin_limits, axes=axes, title=title,
-                           xlabel=xlabel, ylabel=ylabel, kind=kind)
+                           xlabel=xlabel, ylabel=ylabel, kind=kind,
+                           ylimits=ylimits)
 
     canvas.print_figure(fhand, format=plot_format)
     fhand.flush()
@@ -152,7 +157,8 @@ def draw_histogram_in_fhand(counts, bin_limits, title=None, xlabel=None,
 
 def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
                     plots_per_chart=3, xlabel=None, ylabel=None, titles=None,
-                    kind=LINE, xmax=None, xmin=None, linestyles=None):
+                    kind=LINE, xmax=None, xmin=None, linestyles=None,
+                    ylimits=None):
     if plots_per_chart > 1 and kind == BAR:
         raise ValueError('if kind is BAR only one plot per chart is allowed')
 
@@ -203,7 +209,8 @@ def draw_histograms(counters, fhand, distrib_labels=None, num_cols=2,
             draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
                                    kind=kind, axes=axes, ylabel=ylabel,
                                    distrib_label=distrib_label, xlabel=xlabel,
-                                   title=title, linestyle=linestyle)
+                                   title=title, linestyle=linestyle,
+                                   ylimits=ylimits)
             counter_index += 1
 
         if distrib_labels is not None:

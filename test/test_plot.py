@@ -66,6 +66,22 @@ class PlotTests(unittest.TestCase):
         axes.legend()
         canvas.print_figure(fhand, format='png')
         fhand.flush()
+        # raw_input(fhand.name)
+
+        # ylimit test
+        values = [1, 2, 3, 1, 2, 3, 2, 3, 2, 3, 2, 1, 4, 0, 5, 4, 4, 4, 4, 4]
+        fhand = NamedTemporaryFile(suffix='.png')
+        counter = IntCounter(values)
+        distrib = counter.calculate_distribution()
+        axes, canvas = draw_histogram_in_axes(distrib['counts'],
+                                              distrib['bin_limits'],
+                                              kind=LINE,
+                                              distrib_label='test',
+                                              ylimits=(None, 4))
+        axes.legend()
+        canvas.print_figure(fhand, format='png')
+        fhand.flush()
+        # raw_input(fhand.name)
 
     def tests_draw_histograms(self):
         fhand = NamedTemporaryFile(suffix='.png')
@@ -77,6 +93,16 @@ class PlotTests(unittest.TestCase):
         titles = ['t1', 't2', 't3']
         draw_histograms(counters, fhand, titles=titles, plots_per_chart=2)
         # raw_input(fhand.name)
+
+        values = [1, 2, 3, 1, 2, 3, 2, 3, 2, 3, 2, 1, 4, 0, 5, 4, 4, 4, 4, 4]
+        counters = []
+        counters.append(IntCounter(values))
+        counters.append(IntCounter(values))
+        counters.append(IntCounter(values))
+        titles = ['t1', 't2', 't3']
+        draw_histograms(counters, fhand, titles=titles, plots_per_chart=2,
+                        ylimits=(0, 14))
+        #raw_input(fhand.name)
 
     def test_int_boxplot(self):
         box = IntBoxplot()
