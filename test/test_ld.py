@@ -1,8 +1,3 @@
-'''
-Created on 23/09/2014
-
-@author: jose
-'''
 import unittest
 from os.path import join
 from StringIO import StringIO
@@ -11,7 +6,8 @@ from tempfile import NamedTemporaryFile
 from vcf_crumbs.snv import VCFReader
 from vcf_crumbs.ld import (_count_biallelic_haplotypes, calculate_r_sqr,
                            HaploCount, _calculate_r_sqr, _fisher_exact,
-                           calculate_ld_stats, filter_snvs_by_ld, fisher_exact)
+                           calculate_ld_stats, filter_snvs_by_ld, fisher_exact,
+                           _LDStatsCache)
 
 from vcf_crumbs.utils.file_utils import BIN_DIR
 from subprocess import check_call
@@ -299,6 +295,20 @@ class FilterTest(unittest.TestCase):
                                  snv_win=3)
         assert [s.pos for s in snvs] == [1, 702, 2002, 3002]
 
+    def test_cache(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t3003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t3403\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = VCFReader(vcf).parse_snvs()
+        snvs = filter_snvs_by_ld(snps, p_val=0.001, bonferroni=False,
+                                 snv_win=3)
+        assert not list(snvs)
+
     def test_binary(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
 20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
@@ -325,6 +335,20 @@ class FilterTest(unittest.TestCase):
         check_call(cmd, stderr=stderr)
         assert 'filtered' in open(log_fhand.name).read()
 
+
+class _LDStatsCacheTest(unittest.TestCase):
+    def test_ld_stats(self):
+        stats = _LDStatsCache()
+        stats.set_stat(2, 1, 'result')
+        assert stats.get_stat(1, 2) == 'result'
+        stats.del_lower_than(10)
+        try:
+            stats.get_stat(1, 2)
+            self.fail('KeyError expected')
+        except KeyError:
+            pass
+
+
 if __name__ == "__main__":
-    #import sys; sys.argv = ['', 'FilterTest.test_nobreak_generator']
+    # import sys; sys.argv = ['', 'FilterTest.test_cache']
     unittest.main()

@@ -144,6 +144,38 @@ def _count_biallelic_haplotypes(calls1, calls2):
     return HaploCount(count_AB, count_Ab, count_aB, count_ab)
 
 
+class _LDStatsCache(object):
+    def __init__(self):
+        self.cache = {}
+
+    @staticmethod
+    def _sort_index(snv1, snv2):
+        return tuple(sorted((snv1, snv2)))
+
+    def set_stat(self, snv1, snv2, value):
+        index = self._sort_index(snv1, snv2)
+        try:
+            cache_indx1 = self.cache[index[0]]
+        except KeyError:
+            cache_indx1 = {}
+            self.cache[index[0]] = cache_indx1
+        cache_indx1[index[1]] = value
+
+    def get_stat(self, snv1, snv2):
+        index = self._sort_index(snv1, snv2)
+        cache_indx1 = self.cache[index[0]]
+        return cache_indx1[index[1]]
+
+    def del_lower_than(self, min_index0):
+        cache = self.cache
+        to_del = []
+        for key in cache.keys():
+            if key < min_index0:
+                to_del.append(key)
+        for key in to_del:
+            del cache[key]
+
+
 def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
                       p_val=DEF_P_VAL, bonferroni=True, snv_win=DEF_SNV_WIN,
                       min_phys_dist=MIN_PHYS_DIST, log_fhand=None):
@@ -159,6 +191,8 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
     linked_snvs = set()
     total_snvs = 0
     passed_snvs = 0
+    prev_chrom = None
+    stats_cache = _LDStatsCache()
     for snv_i, snv in enumerate(snvs):
         total_snvs += 1
         if snv_i in linked_snvs:
@@ -168,9 +202,16 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
             continue
         linked = None
         win_start = snv_i - half_win
+
+        this_chrom = snv.chrom
+        if prev_chrom is None:
+            prev_chrom = this_chrom
+        if prev_chrom != this_chrom:
+            stats_cache = _LDStatsCache()
+
         if win_start < 0:
             win_start = 0
-        for snv_j in range(snv_i + half_win, win_start, -1):
+        for snv_j in range(snv_i + half_win, win_start - 1, -1):
             try:
                 snv_2 = snvs[snv_j]
             except IndexError:
@@ -178,6 +219,15 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
 
             if snv_i == snv_j:
                 continue
+
+            try:
+                linked = stats_cache.get_stat(snv_i, snv_j)
+                in_cache = True
+            except KeyError:
+                in_cache = False
+
+            if in_cache:
+                pass
             elif snv.chrom != snv_2.chrom:
                 # different chroms, they're not linked
                 linked = False
@@ -194,9 +244,13 @@ def filter_snvs_by_ld(snvs, samples=None, r_sqr=DEF_R_SQR_THRESHOLD,
                     break
                 else:
                     linked = False
+            if not linked:
+                stats_cache.set_stat(snv_i, snv_j, linked)
+
         if linked:
             yield snv
             passed_snvs += 1
+        stats_cache.del_lower_than(win_start)
 
     if log_fhand is not None:
         _write_log(log_fhand, total_snvs, passed_snvs)
