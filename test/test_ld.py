@@ -321,14 +321,14 @@ class FilterTest(unittest.TestCase):
         stderr = NamedTemporaryFile()
         out_fhand = NamedTemporaryFile()
 
-        binary = join(BIN_DIR, 'filter_by_ld')
+        binary = join(BIN_DIR, 'filter_vcf_by_ld')
         cmd = [binary, '-o', out_fhand.name, fhand.name,
                '--no_bonferroni_correction', '--p_val', '0.03']
         check_call(cmd, stderr=stderr)
         assert len(list(VCFReader(open(out_fhand.name)).parse_snvs())) == 3
 
         log_fhand = NamedTemporaryFile()
-        binary = join(BIN_DIR, 'filter_by_ld')
+        binary = join(BIN_DIR, 'filter_vcf_by_ld')
         cmd = [binary, '-o', out_fhand.name, fhand.name,
                '--no_bonferroni_correction', '--p_val', '0.03',
                '-l', log_fhand.name]
