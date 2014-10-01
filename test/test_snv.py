@@ -309,6 +309,24 @@ class ReaderTest(unittest.TestCase):
         assert [snp.pos for snp in windows[2]['snps']] == [19]
         assert [snp.pos for snp in windows[3]['snps']] == [19]
 
+    def test_het_unknown(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t./.\t1/.\t
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        reader = VCFReader(vcf)
+        snps = list(reader.parse_snvs())
+        snp = snps[0]
+        expected = [[0, 0], [0, 0], [0, 0], [0, 0], [1, 1], [1, 1], [],
+                    [1, None]]
+        assert [call.int_alleles for call in snps[0].calls] == expected
+        assert snp.num_called == 7
+        out_fhand = StringIO()
+        writer = VCFWriter(out_fhand, reader)
+        for snv in snps:
+            writer.write_snv(snv)
+        assert '1/1\t./.\t1/.' in out_fhand.getvalue()
+
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']
     unittest.main()

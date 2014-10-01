@@ -26,6 +26,7 @@ HOM_REF = 0
 HET = 1
 HOM_ALT = 2
 HOM = 3
+MISSING_ALLELE_CHAR = '.'
 
 DEF_MIN_CALLS_FOR_POP_STATS = 10
 DEF_MIN_NUM_SNPS_IN_WIN = 5
@@ -632,11 +633,20 @@ class Call(object):
     def is_het(self):
         return self.call.is_het
 
+    @staticmethod
+    def _to_int(allele):
+        try:
+            return int(allele)
+        except ValueError:
+            if allele == MISSING_ALLELE_CHAR:
+                return None
+            raise
+
     @property
     def int_alleles(self):
         call = self.call
         if call.called:
-            return [int(al) for al in call.gt_alleles]
+            return [self._to_int(al) for al in call.gt_alleles]
         else:
             return []
 
