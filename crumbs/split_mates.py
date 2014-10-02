@@ -89,12 +89,10 @@ class MatePairSplitter(object):
                 new_seq2 = slice_seq(seq, segment_end + 1, None)
                 if elongated_match:
                     name = get_name(seq) + '_pl'
-                    new_seq1 = copy_seq(new_seq1, name=name + '.part1')
-                    new_seq2 = copy_seq(new_seq2, name=name + '.part2')
                 else:
                     name = get_name(seq)
-                    new_seq1 = copy_seq(new_seq1, name=name + r'\1')
-                    new_seq2 = copy_seq(new_seq2, name=name + r'\2')
+                new_seq1 = copy_seq(new_seq1, name=name + r'\1')
+                new_seq2 = copy_seq(new_seq2, name=name + r'\2')
                 return [new_seq1, new_seq2]
         else:
             seqs = []

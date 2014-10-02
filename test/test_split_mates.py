@@ -74,12 +74,12 @@ class MateSplitterTest(unittest.TestCase):
         assert  get_str_seq(seqs[0]) == 'aaatttc'
         assert get_name(seqs[0]) == 'seq'
 
-        # segmnent in the middle
+        # segment in the middle
         seqs = splitter._split_by_mate_linker(seq, ([(4, 7)], True))
         assert get_str_seq(seqs[0]) == 'aaat'
         assert get_str_seq(seqs[1]) == 'ctt'
-        assert get_name(seqs[0]) == 'seq_pl.part1'
-        assert get_name(seqs[1]) == 'seq_pl.part2'
+        assert get_name(seqs[0]) == r'seq_pl\1'
+        assert get_name(seqs[1]) == r'seq_pl\2'
 
         seqs = splitter._split_by_mate_linker(seq, ([(4, 7)], False))
         assert get_name(seqs[0]) == r'seq\1'
@@ -169,9 +169,11 @@ class MateSplitterTest(unittest.TestCase):
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq2\n'
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTGAC\n'
-        xpect += '>seq3_pl.part1\n'
+        xpect += r'>seq3_pl\1'
+        xpect += '\n'
         xpect += 'CTAGTCTAGTCGTAGTCATGGCTGTAGTCTAGTCTACGATTCGTATCAGTTGTGTG\n'
-        xpect += '>seq3_pl.part2\n'
+        xpect += r'>seq3_pl\2'
+        xpect += '\n'
         xpect += 'GTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
         xpect += '>seq4\n'
         xpect += 'ATCGATCATGTTGTATTGTGTACTATACACACACGTAGGTCGACTATCGTAGCTAGT\n'
