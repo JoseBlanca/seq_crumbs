@@ -506,6 +506,14 @@ class SNV(object):
                   min_calls_for_pop_stats=self.min_calls_for_pop_stats)
         return snv
 
+    @property
+    def allele_freqs(self):
+        allele_counts = self.allele_counts
+        if allele_counts is None:
+            return None
+        tot_obs = sum(allele_counts.values())
+        return {allele: cnt / tot_obs for allele, cnt in allele_counts.viewitems()}
+
 
 class Call(object):
     def __init__(self, call, snv):

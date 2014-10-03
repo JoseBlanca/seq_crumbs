@@ -36,6 +36,28 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 ##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
 '''
 
+VCF_HEADER2 = '''##fileformat=VCFv4.1
+##fileDate=20090805
+##source=freebayes
+##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
+##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species="Homo sapiens",taxonomy=x>
+##phasing=partial
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">
+##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">
+##FILTER=<ID=q10,Description="Quality below 10">
+##FILTER=<ID=s50,Description="Less than 50% of samples have data">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Read Depth">
+'''
+
 
 class SNVTests(unittest.TestCase):
     def test_init(self):
@@ -61,6 +83,38 @@ class SNVTests(unittest.TestCase):
         snps[5].filters = None
         assert snps[5].filters is None
 
+    def test_allele_freq(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|0:3:5:65,3\t0/0:41:3
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t1|1:49:3:58,50\t1|1:3:5:65,3\t1/1:41:3
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t.\t.\t.
+'''
+        vcf = StringIO(VCF_HEADER2 + vcf)
+        snps = list(VCFReader(vcf, min_calls_for_pop_stats=1).parse_snvs())
+
+        assert snps[0].allele_freqs == {0: 0.5, 1: 0.5}
+        assert snps[1].allele_freqs == {0: 1}
+        assert snps[2].allele_freqs == {1: 1}
+        assert snps[3].allele_freqs is None
+
+    def xtest_is_polymorphic(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:\t0/0:48:1:51,51\t0/0:48:8:51,51\t0/0:43:5:.,.
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t1/1:48:1:51,51\t1/1:48:8:51,51\t1/1:43:5:.,.
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t.\t.\t.
+'''
+        vcf = StringIO(VCF_HEADER2 + vcf)
+        snps = list(VCFReader(vcf).parse_snvs())
+
+        # solo alleleo ref
+        print snps[0].is_polymorphic
+        # solo allele alt
+        print snps[1].is_polymorphic
+        # si no hay nada
+        print snps[2].is_polymorphic
+        # hay que considerar la freq allelica(pasar codigo a snv)
+        # defector allelefreq =1, probar 0.95
     def test_heterozygosity(self):
         # 0/0 1/0 0/0
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003

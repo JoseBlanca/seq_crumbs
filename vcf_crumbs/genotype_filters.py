@@ -44,11 +44,8 @@ class LowEvidenceAlleleFilter(object):
         self.genotypic_freqs_method = genotypic_freqs_method
 
     def __call__(self, snv):
-        allele_counts = snv.allele_counts
-        if allele_counts:
-            tot_obs = sum(allele_counts.values())
-            allele_freqs = {allele: cnt / tot_obs for allele, cnt in allele_counts.viewitems()}
-        else:
+        allele_freqs = snv.allele_freqs
+        if not allele_freqs:
             def set_all_gt_to_none(call):
                 return call.copy_setting_gt(gt=None, return_pyvcf_call=True)
             return snv.copy_mapping_calls(set_all_gt_to_none)
@@ -84,7 +81,8 @@ class LowEvidenceAlleleFilter(object):
                         filtered_call = call.copy_setting_gt(gt=geno,
                                                         return_pyvcf_call=True)
             calls.append(filtered_call)
-        return snv.copy_mapping_calls(calls)    
+        return snv.copy_mapping_calls(calls)
+
 
 def prob_aa_given_n_a_reads(num_a_reads, freq_a_in_pop):
     'It assumes HW'
