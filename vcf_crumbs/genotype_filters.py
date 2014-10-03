@@ -11,8 +11,12 @@ DEF_PROB_AA_THRESHOLD=0.9999
 HW = 'hw'
 
 
-def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None):
-    reader = VCFReader(in_fhand)
+def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None,
+                         reader_kwargs=None):
+    if reader_kwargs is None:
+        reader_kwargs = {}
+    reader = VCFReader(in_fhand, **reader_kwargs)
+
     templa_reader = reader if template_fhand is None else VCFReader(template_fhand)
     writer = VCFWriter(out_fhand, template_reader=templa_reader)
 

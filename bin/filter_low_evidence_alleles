@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+from vcf_crumbs.utils.bin_utils import (setup_basic_argparse,
+                                        parse_basic_args)
+from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter,
+                                         run_genotype_filters,
+                                         DEF_PROB_AA_THRESHOLD, HW)
+from vcf_crumbs.snv import DEF_MIN_CALLS_FOR_POP_STATS
+
+
+def main():
+    description = 'It removes alleles in homo calls with low depth'
+    parser = setup_basic_argparse(description=description)
+    
+    parser.add_argument('-m', '--min_homo_prob', type=float,
+                        default=DEF_PROB_AA_THRESHOLD)
+    parser.add_argument('-g', '--geno_freqs_method', type=str,
+                        default=HW)
+    msg = 'Min. num. of called genotypes to consider the SNV (Default '
+    msg += str(DEF_MIN_CALLS_FOR_POP_STATS) + ')'
+    parser.add_argument('-c', '--min_calls', type=int, help=msg,
+                        default=DEF_MIN_CALLS_FOR_POP_STATS)
+
+    args, parsed_args = parse_basic_args(parser)
+    args['min_homo_prob'] = parsed_args.min_homo_prob
+    args['geno_freqs_method'] = parsed_args.geno_freqs_method
+
+    reader_args = {}
+    min_calls = parsed_args.min_calls
+    if min_calls:
+        reader_args['min_calls_for_pop_stats'] = min_calls
+
+    flt = LowEvidenceAlleleFilter(prob_aa_threshold=args['min_homo_prob'],
+                              genotypic_freqs_method=args['geno_freqs_method'])
+    run_genotype_filters(args['in_fhand'], args['out_fhand'],
+                         template_fhand=args['template_fhand'],
+                         gt_filters=[flt], reader_kwargs=reader_args)
+
+
+if __name__ == '__main__':
+    main()
