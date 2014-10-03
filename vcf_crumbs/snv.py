@@ -444,12 +444,13 @@ class SNV(object):
         sample_indexes = {}
         is_list = True if isinstance(call_mapper, list) else False
         for index, call in enumerate(self.calls):
+            sample = call.sample
             if is_list:
                 call = call_mapper[index]
             else:
                 call = call_mapper(call)
             calls.append(call)
-            sample_indexes[call.sample] = index
+            sample_indexes[sample] = index
         record = self.record
         record = pyvcfRecord(record.CHROM, record.POS, record.ID,
                              record.REF, record.ALT, record.QUAL,
