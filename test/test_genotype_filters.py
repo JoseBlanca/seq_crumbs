@@ -152,6 +152,21 @@ class LowQualAlleleTest(unittest.TestCase):
         res = prob_aa_given_n_a_reads(1, freq_a_in_pop=0.99)
         self.assertAlmostEqual(res, 0.99, 4)
 
+    def test_low_qual_gt_filter_binary(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
+20\t11\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t./.\t./.\t./.\t./.\t./.\t./.
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t0/0:14:0\t1/1:0:15\t1/1:0:1\t0/0:1:0\t0/0:9:0\t0/1:1:1'''
+
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(VCF_HEADER + vcf)
+        in_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        binary = os.path.join(BIN_DIR, 'filter_low_evidence_alleles')
+        cmd = [binary, in_fhand.name, '-o', out_fhand.name, '-c', '2']
+        check_call(cmd)
+        exp = '0/0:14:0\t1/1:0:15\t1/.:0:1\t0/.:1:0\t0/.:9:0\t0/1:1:1'
+        assert exp in open(out_fhand.name).read()
+
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']
     unittest.main()

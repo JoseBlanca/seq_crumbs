@@ -18,7 +18,7 @@ def _setup_argparse(**kwargs):
                         type=argparse.FileType('r'))
     hlp_win = 'Snv windows size to check ld (default {})'.format(DEF_SNV_WIN)
     parser.add_argument('--snv_win', default=DEF_SNV_WIN, help=hlp_win)
-    help_r_sqr = 'R_seq threslhold (default {})'.format(DEF_R_SQR_THRESHOLD)
+    help_r_sqr = 'R_sqr threslhold (default {})'.format(DEF_R_SQR_THRESHOLD)
     parser.add_argument('--r_sqr', default=DEF_R_SQR_THRESHOLD,
                         help=help_r_sqr)
     help_pval = 'P-val Threshold (default {})'.format(DEF_P_VAL)
