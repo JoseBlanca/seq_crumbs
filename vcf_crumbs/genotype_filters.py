@@ -58,7 +58,7 @@ class LowEvidenceAlleleFilter(object):
         calls = []
         for call in snv.calls:
             if not call.called:
-                filtered_call = call
+                filtered_call = call.call
             else:
                 alleles = call.int_alleles
                 if len(set(alleles)) > 1:
