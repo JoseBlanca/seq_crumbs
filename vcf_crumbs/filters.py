@@ -110,6 +110,19 @@ class _BaseFilter(object):
         return {PASSED: items_passed, FILTERED_OUT: filtered_out}
 
 
+class MonomorphicFilter(_BaseFilter):
+    "Filters monomorphic snvs"
+    def __init__(self, reverse=False, samples_to_consider=None,
+                 freq_threshold=1):
+        parent_kwargs = {'reverse': reverse,
+                         'samples_to_consider': samples_to_consider}
+        super(MonomorphicFilter, self).__init__(**parent_kwargs)
+        self._freq_threslhold = freq_threshold
+
+    def _do_check(self, snv):
+        return snv.is_polymorphic(self._freq_threslhold)
+
+
 class CallRateFilter(_BaseFilter):
     'Filter by the min. number of genotypes called'
 

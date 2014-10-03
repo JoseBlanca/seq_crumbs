@@ -142,14 +142,14 @@ class FiltersTest(unittest.TestCase):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
 20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0/0:48:1:51,51\t0/0:48:8:51,51\t0/0:43:5:.,.
 20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0/0:49:3:58,50\t0/1:3:5:65,3\t0/0:41:3
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0/0:49:3:58,50\t0/1:3:5:65,3\t0/0:41:3
         '''
         fhand.write(VCF_HEADER + vcf)
         fhand.flush()
         packet = self.filter_vcf(open(fhand.name),
                                  filter_=MonomorphicFilter())
-        
-        print res
-        print packet
+        assert len(packet[PASSED]) == 2
+        assert len(packet[FILTERED_OUT]) == 1
 
     def test_is_snp(self):
         packet = self.filter_vcf(open(VCF_PATH),
