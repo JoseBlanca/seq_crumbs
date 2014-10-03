@@ -98,23 +98,29 @@ class SNVTests(unittest.TestCase):
         assert snps[2].allele_freqs == {1: 1}
         assert snps[3].allele_freqs is None
 
-    def xtest_is_polymorphic(self):
+    def test_is_polymorphic(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
-20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:\t0/0:48:1:51,51\t0/0:48:8:51,51\t0/0:43:5:.,.
-20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t1/1:48:1:51,51\t1/1:48:8:51,51\t1/1:43:5:.,.
-20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t.\t.\t.
+20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|0:3:5:65,3\t0/0:41:3
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t1|1:49:3:58,50\t1|1:3:5:65,3\t1/1:41:3
+20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t.\t.\t.
 '''
         vcf = StringIO(VCF_HEADER2 + vcf)
-        snps = list(VCFReader(vcf).parse_snvs())
+        snps = list(VCFReader(vcf, min_calls_for_pop_stats=1).parse_snvs())
 
+        # polimorfico
+        assert snps[0].is_polymorphic()
         # solo alleleo ref
-        print snps[0].is_polymorphic
+        assert not snps[1].is_polymorphic()
         # solo allele alt
-        print snps[1].is_polymorphic
+        assert not snps[2].is_polymorphic()
         # si no hay nada
-        print snps[2].is_polymorphic
+        assert snps[3].is_polymorphic() is None
+
         # hay que considerar la freq allelica(pasar codigo a snv)
         # defector allelefreq =1, probar 0.95
+        assert not snps[0].is_polymorphic(freq_threshold=0.45)
+
     def test_heterozygosity(self):
         # 0/0 1/0 0/0
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003

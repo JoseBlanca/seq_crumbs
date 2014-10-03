@@ -512,7 +512,23 @@ class SNV(object):
         if allele_counts is None:
             return None
         tot_obs = sum(allele_counts.values())
-        return {allele: cnt / tot_obs for allele, cnt in allele_counts.viewitems()}
+        return {alle: cnt / tot_obs for alle, cnt in allele_counts.viewitems()}
+
+    def is_polymorphic(self, freq_threshold=1):
+        allele_freqs = self.allele_freqs
+        if not allele_freqs:
+            return None
+        if len(allele_freqs) == 1:
+            return False
+        else:
+            if freq_threshold == 1:
+                return True
+            else:
+                max_allele_freq = max(allele_freqs.values())
+                if max_allele_freq > freq_threshold:
+                    return False
+                else:
+                    return True
 
 
 class Call(object):
