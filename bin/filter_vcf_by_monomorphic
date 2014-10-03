@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+
+from vcf_crumbs.filters import MonomorphicFilter, filter_snvs
+from vcf_crumbs.utils.bin_utils import setup_filter_argparse, parse_filter_args
+
+
+def main():
+    description = 'Removes the monomorphic snvs'
+    parser = setup_filter_argparse(description=description)
+
+    hlp = 'Min freq threshold to consider max freq allele as the unique allele'
+    parser.add_argument('-r', '--freq_threshold', default=1, type=float,
+                        help=hlp)
+
+    filter_snvs_kwargs, filter_class_kwargs, parsed_args = parse_filter_args(parser)
+    filter_class_kwargs['freq_threshold'] = parsed_args.freq_threshold
+
+    filter_ = MonomorphicFilter(**filter_class_kwargs)
+    filter_snvs_kwargs['filters'] = [filter_]
+    filter_snvs(**filter_snvs_kwargs)
+
+
+if __name__ == '__main__':
+    main()
