@@ -71,6 +71,7 @@ class GenotypeFilterTests(unittest.TestCase):
         assert [call.int_alleles for call in snps[0].calls] == exp
         res = [call.int_alleles for call in snps[0].remove_gt_from_het_calls().calls]
         assert res == [[0, 0], [], [1, 1]]
+        
 
     def test_het_filter_binary(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
