@@ -231,6 +231,7 @@ class SNV(object):
         self._mac_analyzed = False
         self._maf = None
         self._mac = None
+        self._allele_counts = None
         self._maf_dp_analyzed = False
         self._allele_depths = None
         self._maf_depth = None
@@ -283,7 +284,7 @@ class SNV(object):
         allele_counts = Counter()
         for call in snp.samples:
             if call.called:
-                genotype = call.gt_alleles
+                genotype = map(int, call.gt_alleles)
                 assert len(genotype) == ploidy
                 n_chroms_sampled += ploidy
                 for allele in genotype:
@@ -291,8 +292,15 @@ class SNV(object):
         if not n_chroms_sampled:
             return
         max_allele_count = max(allele_counts.values())
+        self._allele_counts = allele_counts
         self._maf = max_allele_count / n_chroms_sampled
         self._mac = n_chroms_sampled - max_allele_count
+
+    @property
+    def allele_counts(self):
+        if self.record.num_called >= self.min_calls_for_pop_stats:
+            self._calculate_maf_and_mac()
+        return self._allele_counts
 
     @property
     def maf(self):
@@ -431,14 +439,15 @@ class SNV(object):
     def calldata_class(self):
         return make_calldata_tuple(self.record.FORMAT.split(':'))
 
-    def _filter_out_calls(self, filter_):
+    def copy_mapping_calls(self, call_mapper):
         calls = []
         sample_indexes = {}
+        is_list = True if isinstance(call_mapper, list) else False
         for index, call in enumerate(self.calls):
-            if filter_(call):
-                call = call.copy_setting_gt_to_none(return_pyvcf_call=True)
+            if is_list:
+                call = call_mapper[index]
             else:
-                call = call.call
+                call = call_mapper(call)
             calls.append(call)
             sample_indexes[call.sample] = index
         record = self.record
@@ -451,21 +460,23 @@ class SNV(object):
         return snv
 
     def remove_gt_from_het_calls(self):
-        def filter_(call):
+        def call_mapper(call):
             if call.is_het:
-                return True
+                call = call.copy_setting_gt(gt=None, return_pyvcf_call=True)
             else:
-                return False
-        return self._filter_out_calls(filter_)
+                call = call.call
+            return call
+        return self.copy_mapping_calls(call_mapper)
 
     def remove_gt_from_low_qual_calls(self, min_qual):
         'It returns a new SNV with low qual call set to uncalled'
-        def filter_(call):
+        def call_mapper(call):
             if min_qual is not None and call.gt_qual < min_qual:
-                return True
+                call = call.copy_setting_gt(gt=None, return_pyvcf_call=True)
             else:
-                return False
-        return self._filter_out_calls(filter_)
+                call = call.call
+            return call
+        return self.copy_mapping_calls(call_mapper)
 
     def filter_calls_by_sample(self, samples, reverse=False, keep_info=False):
         calls = [self.get_call(sample).call for sample in samples]
@@ -659,14 +670,14 @@ class Call(object):
     def __repr__(self):
         return repr(self.call)
 
-    def copy_setting_gt_to_none(self, return_pyvcf_call=False):
+    def copy_setting_gt(self, gt, return_pyvcf_call=False):
         snv = self.snv
         calldata_class = snv.calldata_class
         call = self.call
         # Access to a protected member. In this case namedtuple _fields
         # is not a protected member
         # pylint: disable=W0212
-        sampdat = [None if field == 'GT' else getattr(call.data, field) for field in calldata_class._fields]
+        sampdat = [gt if field == 'GT' else getattr(call.data, field) for field in calldata_class._fields]
 
         pyvcf_call = pyvcfCall(self.snv.record, self.call.sample,
                                calldata_class(*sampdat))

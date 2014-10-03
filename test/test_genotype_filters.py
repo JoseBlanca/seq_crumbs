@@ -3,10 +3,12 @@ import os
 import unittest
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
+from subprocess import check_call
 
 from vcf_crumbs.utils.file_utils import BIN_DIR
-from subprocess import check_call
 from vcf_crumbs.snv import VCFReader
+from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter,
+                                         prob_aa_given_n_a_reads)
 
 # Method could be a function
 # pylint: disable=R0201
@@ -17,7 +19,7 @@ from vcf_crumbs.snv import VCFReader
 
 VCF_HEADER = '''##fileformat=VCFv4.1
 ##fileDate=20090805
-##source=myImputationProgramV3.1
+##source=freebayes
 ##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
 ##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species="Homo sapiens",taxonomy=x>
 ##phasing=partial
@@ -33,8 +35,30 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 ##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
 ##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
 ##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Read Depth">
 '''
-
+VCF_HEADER2 = '''##fileformat=VCFv4.1
+##fileDate=20090805
+##source=mysnpprogram
+##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
+##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species="Homo sapiens",taxonomy=x>
+##phasing=partial
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">
+##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">
+##FILTER=<ID=q10,Description="Quality below 10">
+##FILTER=<ID=s50,Description="Less than 50% of samples have data">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Read Depth">
+'''
 
 class GenotypeFilterTests(unittest.TestCase):
     def test_het_filter(self):
@@ -78,6 +102,55 @@ class GenotypeFilterTests(unittest.TestCase):
         cmd = [binary, in_fhand.name, '-o', out_fhand.name, '-m', '20']
         check_call(cmd)
         assert './.:17:2' in open(out_fhand.name).read()
+
+
+class LowQualAlleleTest(unittest.TestCase):
+    def test_no_geno_no_alle_freq(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t./.\t./.\t./.\t./.\t./.\t./.
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1'''
+
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf).parse_snvs())
+        filter_ = LowEvidenceAlleleFilter(0.99)
+        snps = [filter_(snp) for snp in snps]
+        expected = [False] * 12
+        res = [call.called for snp in snps for call in snp.calls]
+        assert expected == res
+
+    def test_no_allele_depths(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t0/1'''
+
+        vcf = StringIO(VCF_HEADER2 + vcf)
+        snps = list(VCFReader(vcf, min_calls_for_pop_stats=4).parse_snvs())
+        filter_ = LowEvidenceAlleleFilter(0.99)
+        try:
+            snps = [filter_(snp) for snp in snps]
+            self.fail('RuntimeError expected')
+        except RuntimeError:
+            pass
+
+    def test_filter_low_alle_evidence(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t0/0:14:0\t1/1:0:15\t1/1:0:1\t0/0:1:0\t0/0:9:0\t0/1:1:1'''
+
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf, min_calls_for_pop_stats=4).parse_snvs())
+        filter_ = LowEvidenceAlleleFilter()
+        snps = [filter_(snp) for snp in snps]
+        res = [call.call.data.GT for snp in snps for call in snp.calls]
+        assert res == ['0/0', '1/1', '1/.', '0/.', '0/.', '0/1']
+
+    def test_prob_aa_given_a_reads(self):
+        res = prob_aa_given_n_a_reads(30, freq_a_in_pop=0.1)
+        self.assertAlmostEqual(res, 0.999999983236, 4)
+        res = prob_aa_given_n_a_reads(3, freq_a_in_pop=0.1)
+        self.assertAlmostEqual(res, 0.307692307692, 4)
+        res = prob_aa_given_n_a_reads(3, freq_a_in_pop=0.99)
+        self.assertAlmostEqual(res, 0.997481108312, 4)
+        res = prob_aa_given_n_a_reads(1, freq_a_in_pop=0.99)
+        self.assertAlmostEqual(res, 0.99, 4)
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']

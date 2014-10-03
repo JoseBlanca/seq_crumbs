@@ -166,7 +166,7 @@ class SNVTests(unittest.TestCase):
         call0 = snps[0].calls[0]
 
         assert call0.called
-        mod_call = call0.copy_setting_gt_to_none()
+        mod_call = call0.copy_setting_gt(gt=None)
         assert not mod_call.called
 
         assert snps[0].get_call('NA00003').called
