@@ -8,6 +8,7 @@ from vcf_crumbs.snv import VCFReader, VCFWriter
 # pylint: disable=R0903
 
 DEF_PROB_AA_THRESHOLD=0.9999
+HW = 'hw'
 
 
 def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None):
@@ -37,8 +38,10 @@ class HetGenotypeFilter(object):
 
 
 class LowEvidenceAlleleFilter(object):
-    def __init__(self, prob_aa_threshold=DEF_PROB_AA_THRESHOLD):
+    def __init__(self, prob_aa_threshold=DEF_PROB_AA_THRESHOLD,
+                 genotypic_freqs_method=HW):
         self._min_prob = prob_aa_threshold
+        self.genotypic_freqs_method = genotypic_freqs_method
 
     def __call__(self, snv):
         allele_counts = snv.allele_counts
@@ -50,6 +53,7 @@ class LowEvidenceAlleleFilter(object):
                 return call.copy_setting_gt(gt=None, return_pyvcf_call=True)
             return snv.copy_mapping_calls(set_all_gt_to_none)
 
+        genotypic_freqs_method = self.genotypic_freqs_method
         calls = []
         for call in snv.calls:
             if not call.called:
@@ -67,7 +71,12 @@ class LowEvidenceAlleleFilter(object):
                         msg += 'Allele filter'
                         raise RuntimeError(msg)
                     depth = call.allele_depths[allele]
-                    prob = prob_aa_given_n_a_reads(depth, freq)
+                    if genotypic_freqs_method == HW:
+                        prob = prob_aa_given_n_a_reads(depth, freq)
+                    else:
+                        msg = 'Method not implemented for genotypic freqs: '
+                        msg += genotypic_freqs_method
+                        raise NotImplementedError(msg)
                     if prob >= self._min_prob:
                         filtered_call = call.call
                     else:
