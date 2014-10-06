@@ -244,3 +244,9 @@ class RQTLWriter(object):
 
         self._fhand.write(self.sep.join(line))
         self._fhand.write(unicode('\n'))
+
+    def flush(self):
+        self._fhand.flush()
+
+    def close(self):
+        self._fhand.close()

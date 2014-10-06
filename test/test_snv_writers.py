@@ -14,6 +14,7 @@ from vcf_crumbs.utils.file_utils import (TEST_DATA_DIR, compress_with_bgzip,
                                          index_vcf_with_tabix)
 from vcf_crumbs.writers import (IlluminaWriter, _replace_snvs_with_iupac,
                                 RQTLWriter, DEF_PHYS_TO_GENET_DIST)
+from vcf_crumbs.utils.file_utils import BIN_DIR
 
 # Method could be a function
 # pylint: disable=R0201
@@ -183,8 +184,7 @@ ref 10 . A C 10 PASS .
             pass
 
     def test_run_binary(self):
-        binary = pjoin(dirname(__file__), '..', 'bin',
-                       'write_snps_for_illumina')
+        binary = pjoin(BIN_DIR, 'write_snps_for_illumina')
         assert 'usage' in check_output([binary, '-h'])
 
         reference = pjoin(TEST_DATA_DIR, 'sample_ref.fasta')
@@ -195,8 +195,7 @@ ref 10 . A C 10 PASS .
         assert 'GAAAT[A/C]AA' in stdout
 
 class RQTLWriterTest(unittest.TestCase):
-    def test_rqtl_writer(self):
-        VCF_HEADER = '''##fileformat=VCFv4.1
+    VCF_HEADER = '''##fileformat=VCFv4.1
 ##fileDate=20090805
 ##source=mysnpprogram
 ##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
@@ -217,23 +216,48 @@ class RQTLWriterTest(unittest.TestCase):
 ##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Read Depth">
 ##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Read Depth">
 '''
-        vcf = '''#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS1\tS2\tS3\tS4\tS5\tS6
+    vcf = '''#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS1\tS2\tS3\tS4\tS5\tS6
 20\t11\t.\tG\tA\t29\tPASS\tNS=3\tGT\t./.\t./.\t./.\t./.\t./.\t./.
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/.\t0/.\t0/.\t0/1'''
 
-        expected = '''phenot,,,1,2,3,4,5,6
+    expected = '''phenot,,,1,2,3,4,5,6
 1,20,1.100000e-05,NA,NA,NA,NA,NA,NA
 2,20,1.400000e-05,AA,BB,B-,A-,A-,AB
 '''
 
-        vcf = StringIO(unicode(VCF_HEADER + vcf))
+    def test_rqtl_writer(self):
+        vcf = StringIO(unicode(self.VCF_HEADER + self.vcf))
         snps = list(VCFReader(vcf).parse_snvs())
 
         fhand = StringIO()
         writer = RQTLWriter(fhand, phys_to_genet_dist=DEF_PHYS_TO_GENET_DIST)
         for snp in snps:
             writer.write(snp)
-        assert fhand.getvalue() == expected
+        assert fhand.getvalue() == self.expected
+
+    def test_bin(self):
+        vcf = self.VCF_HEADER + self.vcf
+        vcf_fhand = NamedTemporaryFile(suffix='.vcf')
+        vcf_fhand.write(vcf)
+        vcf_fhand.flush()
+
+        binary = pjoin(BIN_DIR, 'write_snps_for_rqtl')
+        assert 'usage' in check_output([binary, '-h'])
+
+        cmd = [binary, vcf_fhand.name]
+        stdout = check_output(cmd)
+        assert stdout == self.expected
+
+        binary = pjoin(BIN_DIR, 'write_snps_for_rqtl')
+        assert 'usage' in check_output([binary, '-h'])
+
+        cmd = [binary, '-d', '100000', vcf_fhand.name]
+        stdout = check_output(cmd)
+        expected = '''phenot,,,1,2,3,4,5,6
+1,20,1.100000e-04,NA,NA,NA,NA,NA,NA
+2,20,1.400000e-04,AA,BB,B-,A-,A-,AB
+'''
+        assert stdout == expected
 
 if __name__ == "__main__":
 #     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']
