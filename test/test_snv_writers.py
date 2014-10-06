@@ -9,10 +9,18 @@ from subprocess import check_output
 
 from vcf import Reader
 
+from vcf_crumbs.snv import VCFReader
 from vcf_crumbs.utils.file_utils import (TEST_DATA_DIR, compress_with_bgzip,
-                              index_vcf_with_tabix)
-from vcf_crumbs.writers import (IlluminaWriter, _replace_snvs_with_iupac)
+                                         index_vcf_with_tabix)
+from vcf_crumbs.writers import (IlluminaWriter, _replace_snvs_with_iupac,
+                                RQTLWriter, DEF_PHYS_TO_GENET_DIST)
 
+# Method could be a function
+# pylint: disable=R0201
+# Too many public methods
+# pylint: disable=R0904
+# Missing docstring
+# pylint: disable=C0111
 
 VCF_PATH = pjoin(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = pjoin(TEST_DATA_DIR, 'sample_ref.fasta')
@@ -185,7 +193,48 @@ ref 10 . A C 10 PASS .
         cmd = [binary, '-r', reference, '-m', '0', vcf]
         stdout = check_output(cmd)
         assert 'GAAAT[A/C]AA' in stdout
-        
+
+class RQTLWriterTest(unittest.TestCase):
+    def test_rqtl_writer(self):
+        VCF_HEADER = '''##fileformat=VCFv4.1
+##fileDate=20090805
+##source=mysnpprogram
+##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
+##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species="Homo sapiens",taxonomy=x>
+##phasing=partial
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">
+##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">
+##FILTER=<ID=q10,Description="Quality below 10">
+##FILTER=<ID=s50,Description="Less than 50% of samples have data">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Read Depth">
+'''
+        vcf = '''#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS1\tS2\tS3\tS4\tS5\tS6
+20\t11\t.\tG\tA\t29\tPASS\tNS=3\tGT\t./.\t./.\t./.\t./.\t./.\t./.
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/.\t0/.\t0/.\t0/1'''
+
+        expected = '''phenot,,,1,2,3,4,5,6
+1,20,1.100000e-05,NA,NA,NA,NA,NA,NA
+2,20,1.400000e-05,AA,BB,B-,A-,A-,AB
+'''
+
+        vcf = StringIO(unicode(VCF_HEADER + vcf))
+        snps = list(VCFReader(vcf).parse_snvs())
+
+        fhand = StringIO()
+        writer = RQTLWriter(fhand, phys_to_genet_dist=DEF_PHYS_TO_GENET_DIST)
+        for snp in snps:
+            writer.write(snp)
+        assert fhand.getvalue() == expected
+
 if __name__ == "__main__":
 #     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']
     unittest.main()
