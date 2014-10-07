@@ -92,7 +92,7 @@ def prob_aa_given_n_a_reads(num_a_reads, freq_a_in_pop):
     'It assumes HW'
     # TODO fix for Backcross
     proba = freq_a_in_pop
-    res = proba**2
-    res /= proba**2 + 0.5**(num_a_reads - 1) * proba * (1 - proba)
+    res = proba
+    res /= proba + 0.5 ** (num_a_reads - 1) * (1 - proba)
     return res
 
