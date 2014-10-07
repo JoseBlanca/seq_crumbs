@@ -1,4 +1,5 @@
 from __future__ import division
+from collections import Counter
 
 from vcf_crumbs.snv import VCFReader, VCFWriter
 
@@ -80,6 +81,7 @@ class LowEvidenceAlleleFilter(object):
         if genotypic_freqs_kwargs is None:
             genotypic_freqs_kwargs = {}
         self.genotypic_freqs_kwargs = genotypic_freqs_kwargs
+        self.log = Counter()
 
     def __call__(self, snv):
         genotypic_freqs_method = self.genotypic_freqs_method
@@ -87,6 +89,9 @@ class LowEvidenceAlleleFilter(object):
         if genotypic_freqs_method == HW:
             allele_freqs = snv.allele_freqs
             if not allele_freqs:
+                num_samples = len(snv.record.samples)
+                self.log['not_enough_individuals'] += num_samples
+                self.log['tot'] += num_samples
                 def set_all_gt_to_none(call):
                     return call.copy_setting_gt(gt=None,
                                                 return_pyvcf_call=True)
@@ -94,13 +99,16 @@ class LowEvidenceAlleleFilter(object):
 
         calls = []
         kwargs = self.genotypic_freqs_kwargs
+        log = self.log
         for call in snv.calls:
             if not call.called:
                 filtered_call = call.call
+                log['was_not_called'] += 1
             else:
                 alleles = call.int_alleles
                 if len(set(alleles)) > 1:
                     filtered_call = call.call
+                    log['was_het'] += 1
                 else:
                     allele = alleles[0]
                     allele_depths = call.allele_depths
@@ -121,9 +129,12 @@ class LowEvidenceAlleleFilter(object):
                         raise NotImplementedError(msg)
                     if prob >= self._min_prob:
                         filtered_call = call.call
+                        log['enough_evidence'] += 1
                     else:
                         geno = call.call.data.GT[:-1] + '.'
                         filtered_call = call.copy_setting_gt(gt=geno,
                                                         return_pyvcf_call=True)
+                        log['not_enough_evidence'] += 1
+                log['tot'] += 1
             calls.append(filtered_call)
         return snv.copy_mapping_calls(calls)

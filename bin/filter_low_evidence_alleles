@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from sys import stdout
+
 from vcf_crumbs.utils.bin_utils import (setup_basic_argparse,
                                         parse_basic_args)
 from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter,
@@ -7,6 +9,17 @@ from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter,
                                          DEF_PROB_AA_THRESHOLD, HW, RIL_SELF)
 from vcf_crumbs.snv import DEF_MIN_CALLS_FOR_POP_STATS
 
+
+def print_log(log):
+    tot = log.pop('tot')
+    stdout.write('Tot. SNVs: %i\n' % tot)
+
+    keys = sorted(log.keys())
+    for key in keys:
+        val = log[key]
+        stdout.write(key.replace('_', ' ').capitalize() + ': ')
+        stdout.write(str(val) + '\n')
+    
 
 def main():
     description = 'It removes alleles in homo calls with low depth'
@@ -48,7 +61,7 @@ def main():
     run_genotype_filters(args['in_fhand'], args['out_fhand'],
                          template_fhand=args['template_fhand'],
                          gt_filters=[flt], reader_kwargs=reader_args)
-
+    print_log(flt.log)
 
 if __name__ == '__main__':
     main()

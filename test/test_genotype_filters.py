@@ -3,7 +3,7 @@ import os
 import unittest
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
-from subprocess import check_call, CalledProcessError
+from subprocess import check_call, CalledProcessError, check_output
 
 from vcf_crumbs.utils.file_utils import BIN_DIR
 from vcf_crumbs.snv import VCFReader
@@ -117,6 +117,7 @@ class LowQualAlleleTest(unittest.TestCase):
         snps = [filter_(snp) for snp in snps]
         expected = [False] * 12
         res = [call.called for snp in snps for call in snp.calls]
+        assert filter_.log == {'not_enough_individuals': 12, 'tot': 12}
         assert expected == res
 
     def test_no_allele_depths(self):
@@ -140,6 +141,8 @@ class LowQualAlleleTest(unittest.TestCase):
         snps = list(VCFReader(vcf_f, min_calls_for_pop_stats=4).parse_snvs())
         filter_ = LowEvidenceAlleleFilter()
         snps = [filter_(snp) for snp in snps]
+        assert filter_.log == {'tot': 6, 'not_enough_evidence': 3,
+                               'enough_evidence': 2, 'was_het': 1}
         res = [call.call.data.GT for snp in snps for call in snp.calls]
         assert res == ['0/0', '1/1', '1/.', '0/.', '0/.', '0/1']
 
@@ -154,6 +157,8 @@ class LowQualAlleleTest(unittest.TestCase):
         filter_ = LowEvidenceAlleleFilter(genotypic_freqs_method=RIL_SELF,
                                           genotypic_freqs_kwargs=kwargs)
         snps = [filter_(snp) for snp in snps]
+        assert filter_.log == {'tot': 6, 'enough_evidence': 3,
+                               'not_enough_evidence': 2, 'was_het': 1}
         res = [call.call.data.GT for snp in snps for call in snp.calls]
         assert res == ['0/0', '1/1', '1/.', '0/.', '0/0', '0/1']
 
@@ -178,7 +183,8 @@ class LowQualAlleleTest(unittest.TestCase):
         out_fhand = NamedTemporaryFile()
         binary = os.path.join(BIN_DIR, 'filter_low_evidence_alleles')
         cmd = [binary, in_fhand.name, '-o', out_fhand.name, '-c', '2']
-        check_call(cmd)
+        stdout = check_output(cmd)
+        assert 'Tot. SNVs' in stdout
         exp = '0/0:14:0\t1/1:0:15\t1/.:0:1\t0/.:1:0\t0/.:9:0\t0/1:1:1'
         assert exp in open(out_fhand.name).read()
 
@@ -194,7 +200,8 @@ class LowQualAlleleTest(unittest.TestCase):
         binary = os.path.join(BIN_DIR, 'filter_low_evidence_alleles')
         cmd = [binary, in_fhand.name, '-o', out_fhand.name, '-n', '7',
                '-g', 'ril_self']
-        check_call(cmd)
+        stdout = check_output(cmd)
+        assert 'Tot. SNVs' in stdout
         exp = '0/0:14:0\t1/1:0:15\t1/.:0:1\t0/.:1:0\t0/0:9:0\t0/1:1:1'
         assert exp in open(out_fhand.name).read()
 
