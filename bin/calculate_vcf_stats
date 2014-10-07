@@ -31,10 +31,12 @@ def _setup_argparse():
     parser.add_argument('input', help=in_help, type=argparse.FileType('rt'))
     parser.add_argument('-o', '--out_dir', default=os.getcwd(),
                         help='Directory to write all output files')
+    msq_qual = 'Genotype quelity threshold to take into account a genotype'
     parser.add_argument('-q', '--gt_qual_threshold', default=0.0, type=float,
-            help='Genotype quelity threshold to take into account a genotype')
+                        help=msq_qual)
+    msg_samples = 'Min num. called samples to calculate heterocigosity by snv'
     parser.add_argument('-s', '--min_samples', default=6, type=int,
-            help='Min num. called samples to calculate heterocigosity by snv')
+                        help=msg_samples)
     return parser
 
 
@@ -356,8 +358,8 @@ def draw_gt_hist_vs_allele_counts(vcf_stats, out_dir):
                                    gt_quals[ref_count]['sum_gqs'][index])
                 num_gts += gt_quals[ref_count]['num_gts'][index]
             mean_qual = partial_gt_sum / num_gts
-            xs.append(ref_count + 0.5)      # we add 0.5 to have the point in
-                                            # the middle of the bar
+            # we add 0.5 to have the point in  the middle of the bar
+            xs.append(ref_count + 0.5)
             ys.append(mean_qual)
         axes2 = axes.twinx()
         # make room for the legend
@@ -402,7 +404,8 @@ def draw_quals_vs_depth(vcf_stats, out_dir):
         if distrib is not None:
             axes2 = axes.twinx()
             draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                                kind=LINE, axes=axes2, ylabel='Num. Genotypes')
+                                   kind=LINE, axes=axes2,
+                                   ylabel='Num. Genotypes')
 
     axes = fig.add_subplot(212)
     if vcf_stats.gt_depths_by_gt_and_qual[HET]:
@@ -419,7 +422,8 @@ def draw_quals_vs_depth(vcf_stats, out_dir):
         if distrib is not None:
             axes2 = axes.twinx()
             draw_histogram_in_axes(distrib['counts'], distrib['bin_limits'],
-                                kind=LINE, axes=axes2, ylabel='Num. Genotypes')
+                                   kind=LINE, axes=axes2,
+                                   ylabel='Num. Genotypes')
 
     fhand = open(join(out_dir, 'gt_qual_distribs_vs_depth.png'), 'w')
     canvas.print_figure(fhand)
@@ -564,7 +568,6 @@ def draw_per_sample_stats(vcf_stats, out_dir):
 
 def draw_missing_data(vcf_stats, out_dir):
     fhand = open(join(out_dir, 'missing_data.png'), 'w')
-
     counters = []
     titles = []
 
@@ -574,13 +577,32 @@ def draw_missing_data(vcf_stats, out_dir):
 
     # distributions of SNPs read with a depth higher than x
     title = 'Num. SNPs read a depth >= than {} in the given number of samples'
-    for depth in sorted(vcf_stats.sample_dp_coincidence.viewkeys()):
-        counters.append(vcf_stats.sample_dp_coincidence[depth])
+    missing_calcs = OrderedDict()
+    depths = sorted(vcf_stats.sample_dp_coincidence.viewkeys())
+    for depth in depths:
+        missing_for_depth = vcf_stats.sample_dp_coincidence[depth]
+        counters.append(missing_for_depth)
         titles.append(title.format(depth))
+        missing_calcs[depth] = missing_for_depth.values()
 
     draw_histograms(counters, fhand=fhand, xlabel='Num. samples',
                     plots_per_chart=1, num_cols=1, ylabel='Num. SNPs',
                     titles=titles, kind=BAR)
+
+    t_fhand = open(join(out_dir, 'missing_values_per_sample.txt'), 'w')
+    t_fhand.write('MISSING VALUES\n--------------\n')
+
+    n_samples = len(missing_calcs.values()[0])
+    sample_numbers = ['0'] + [str(i + 1) for i in range(n_samples)]
+    t_fhand.write('dp/n_sm\t' + '\t'.join(sample_numbers) + '\n')
+
+    for depth, values in missing_calcs.items():
+        line = [depth]
+        if depth == 1:
+            line += [0]
+        line += values
+        t_fhand.write('\t'.join([str(item) for item in line]) + '\n')
+    t_fhand.close()
 
 
 def main():

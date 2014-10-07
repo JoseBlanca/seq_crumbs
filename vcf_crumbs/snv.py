@@ -138,7 +138,7 @@ class VCFReader(object):
                 last_snp = snp
                 yield snp
         except BaseException:
-            from traceback import print_exc, print_stack, print_exception
+            from traceback import print_exception
             exc_type, exc_value, exc_traceback = sys.exc_info()
 
             print_exception(exc_type, exc_value, exc_traceback,
