@@ -1,7 +1,10 @@
+from __future__ import division
 
 from Bio import SeqIO
 from vcf import Reader
 
+# Missing docstring
+# pylint: disable=C0111
 
 IUPAC_CODES = {('A', 'C'): 'M',
               ('A', 'G'): 'R',
@@ -161,3 +164,89 @@ class IlluminaWriter(object):
 
     def close(self):
         self._out_fhand.close()
+
+
+DEF_PHYS_TO_GENET_DIST = 1000000
+
+
+class RQTLWriter(object):
+    geno_coding = {('A', 'A'): 'AA',
+                   ('A', '-'): 'A-',
+                   ('-', 'A'): 'A-',
+                   ('B', 'B'): 'BB',
+                   ('B', '-'): 'B-',
+                   ('-', 'B'): 'B-',
+                   ('A', 'B'): 'AB',
+                   ('B', 'A'): 'AB'}
+    
+    def __init__(self, out_fhand, phys_to_genet_dist=None):
+        self._fhand = out_fhand
+        self._snv_count = 0
+        self.sep = ','
+        self._first_snp = True
+        self._phys_to_genet_dist = phys_to_genet_dist
+
+    def _write_header_line(self, snv):
+        line = ['phenot', '', '']
+        line.extend(unicode(idx) for idx in range(1, len(snv.calls) + 1))
+        self._fhand.write(self.sep.join(line))
+        self._fhand.write(unicode('\n'))
+
+    def _calls_to_ab(self, snv):
+        if self._first_snp:
+            self._write_header_line(snv)
+            self._first_snp = False
+        
+        genotype = []
+        ab_coding = {'.': '-'}
+        
+        for call in snv.record.samples:
+            if not call.called:
+                ab_geno = 'NA'
+            else:
+                geno = call.gt_alleles
+                ab_geno = []
+                for allele in geno:
+                    if allele not in ab_coding:
+                        # We do not know the phase of the parents so
+                        # AB won't be related with the parent phases
+                        ab_allele = chr(len(ab_coding) + 64)
+                        ab_coding[allele] = ab_allele
+                    else:
+                        ab_allele = ab_coding[allele]
+                    ab_geno.append(ab_allele)
+                # we have to destroy the phase of the individual
+                try:
+                    ab_geno = self.geno_coding[tuple(ab_geno)]
+                except KeyError:
+                    msg = 'Until now, there is only support for bialleic SNPs'
+                    raise NotImplementedError(msg)
+            genotype.append(ab_geno)
+        return genotype
+
+    def write(self, snv):
+        line = []
+        self._snv_count += 1
+        line.append(unicode(self._snv_count))
+        line.append(unicode(snv.chrom))
+
+        pos = snv.pos + 1
+        if self._phys_to_genet_dist is not None:
+            pos /=  self._phys_to_genet_dist
+        else:
+            msg = 'The genetic map availability has not been implemented yet'
+            raise NotImplementedError(msg)
+        pos = '%.6e' % (pos,)
+        line.append(pos)
+
+        ab_genotypes = self._calls_to_ab(snv)
+        line.extend(ab_genotypes)
+
+        self._fhand.write(self.sep.join(line))
+        self._fhand.write(unicode('\n'))
+
+    def flush(self):
+        self._fhand.flush()
+
+    def close(self):
+        self._fhand.close()
