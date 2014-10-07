@@ -3,12 +3,12 @@ import os
 import unittest
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
-from subprocess import check_call
+from subprocess import check_call, CalledProcessError
 
 from vcf_crumbs.utils.file_utils import BIN_DIR
 from vcf_crumbs.snv import VCFReader
-from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter,
-                                         prob_aa_given_n_a_reads)
+from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter, RIL_SELF,
+                                         prob_aa_given_n_a_reads_hw)
 
 # Method could be a function
 # pylint: disable=R0201
@@ -132,25 +132,39 @@ class LowQualAlleleTest(unittest.TestCase):
         except RuntimeError:
             pass
 
-    def test_filter_low_alle_evidence(self):
+    def test_filter_low_alle_evidence_hw(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t0/0:14:0\t1/1:0:15\t1/1:0:1\t0/0:1:0\t0/0:9:0\t0/1:1:1'''
 
-        vcf = StringIO(VCF_HEADER + vcf)
-        snps = list(VCFReader(vcf, min_calls_for_pop_stats=4).parse_snvs())
+        vcf_f = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf_f, min_calls_for_pop_stats=4).parse_snvs())
         filter_ = LowEvidenceAlleleFilter()
         snps = [filter_(snp) for snp in snps]
         res = [call.call.data.GT for snp in snps for call in snp.calls]
         assert res == ['0/0', '1/1', '1/.', '0/.', '0/.', '0/1']
 
+    def test_filter_low_alle_evidence_ril(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t0/0:14:0\t1/1:0:15\t1/1:0:1\t0/0:1:0\t0/0:9:0\t0/1:1:1'''
+        
+        # ril n 7
+        vcf_f = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf_f).parse_snvs())
+        kwargs = {'n_generation': 7}
+        filter_ = LowEvidenceAlleleFilter(genotypic_freqs_method=RIL_SELF,
+                                          genotypic_freqs_kwargs=kwargs)
+        snps = [filter_(snp) for snp in snps]
+        res = [call.call.data.GT for snp in snps for call in snp.calls]
+        assert res == ['0/0', '1/1', '1/.', '0/.', '0/0', '0/1']
+
     def test_prob_aa_given_a_reads(self):
-        res = prob_aa_given_n_a_reads(30, freq_a_in_pop=0.1)
+        res = prob_aa_given_n_a_reads_hw(30, freq_a_in_pop=0.1)
         self.assertAlmostEqual(res, 0.999999983236, 4)
-        res = prob_aa_given_n_a_reads(3, freq_a_in_pop=0.1)
+        res = prob_aa_given_n_a_reads_hw(3, freq_a_in_pop=0.1)
         self.assertAlmostEqual(res, 0.307692307692, 4)
-        res = prob_aa_given_n_a_reads(3, freq_a_in_pop=0.99)
+        res = prob_aa_given_n_a_reads_hw(3, freq_a_in_pop=0.99)
         self.assertAlmostEqual(res, 0.997481108312, 4)
-        res = prob_aa_given_n_a_reads(1, freq_a_in_pop=0.99)
+        res = prob_aa_given_n_a_reads_hw(1, freq_a_in_pop=0.99)
         self.assertAlmostEqual(res, 0.99, 4)
 
     def test_low_qual_gt_filter_binary(self):
@@ -168,6 +182,31 @@ class LowQualAlleleTest(unittest.TestCase):
         exp = '0/0:14:0\t1/1:0:15\t1/.:0:1\t0/.:1:0\t0/.:9:0\t0/1:1:1'
         assert exp in open(out_fhand.name).read()
 
+    def test_low_qual_gt_filter_binary_ril(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
+20\t11\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t./.\t./.\t./.\t./.\t./.\t./.
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t0/0:14:0\t1/1:0:15\t1/1:0:1\t0/0:1:0\t0/0:9:0\t0/1:1:1'''
+
+        in_fhand = NamedTemporaryFile()
+        in_fhand.write(VCF_HEADER + vcf)
+        in_fhand.flush()
+        out_fhand = NamedTemporaryFile()
+        binary = os.path.join(BIN_DIR, 'filter_low_evidence_alleles')
+        cmd = [binary, in_fhand.name, '-o', out_fhand.name, '-n', '7',
+               '-g', 'ril_self']
+        check_call(cmd)
+        exp = '0/0:14:0\t1/1:0:15\t1/.:0:1\t0/.:1:0\t0/0:9:0\t0/1:1:1'
+        assert exp in open(out_fhand.name).read()
+
+        binary = os.path.join(BIN_DIR, 'filter_low_evidence_alleles')
+        cmd = [binary, in_fhand.name, '-o', out_fhand.name, '-g', 'ril_self']
+        err_fhand = NamedTemporaryFile()
+        try:
+            check_call(cmd, stderr=err_fhand)
+            self.fail('Error expected')
+        except CalledProcessError:
+            pass
+
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'SNVTests.test_allele_depths']
+    # import sys;sys.argv = ['', 'test_filter_low_alle_evidence_ril']
     unittest.main()

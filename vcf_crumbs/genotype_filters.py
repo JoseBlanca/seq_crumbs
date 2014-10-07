@@ -9,6 +9,7 @@ from vcf_crumbs.snv import VCFReader, VCFWriter
 
 DEF_PROB_AA_THRESHOLD=0.9999
 HW = 'hw'
+RIL_SELF = 'ril_self'
 
 
 def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None,
@@ -41,21 +42,58 @@ class HetGenotypeFilter(object):
         return snv.remove_gt_from_het_calls()
 
 
+def prob_aa_given_n_a_reads_hw(num_a_reads, freq_a_in_pop):
+    'It assumes HW'
+    # TODO fix for Backcross
+    proba = freq_a_in_pop
+    res = proba
+    res /= proba + 0.5 ** (num_a_reads - 1) * (1 - proba)
+    return res
+
+RIL_FREQ_AA_CACHE = {}
+
+
+def _prob_aa_ril_self(n_generation):
+    if n_generation in RIL_FREQ_AA_CACHE:
+        return RIL_FREQ_AA_CACHE[n_generation]
+
+    freq_aa = (2**n_generation - 1) / 2 ** (n_generation + 1)
+    RIL_FREQ_AA_CACHE[n_generation] = freq_aa
+    return freq_aa
+
+
+def prob_aa_given_n_a_reads_ril_self(num_a_reads, n_generation):
+    probaa = _prob_aa_ril_self(n_generation)
+    res = probaa
+    res /= probaa + (0.5 ** num_a_reads) * (1 - 2 * probaa)
+    return res
+
+PROB_AA_FUNCS = {RIL_SELF: prob_aa_given_n_a_reads_ril_self,
+                 HW: prob_aa_given_n_a_reads_hw}
+
+
 class LowEvidenceAlleleFilter(object):
     def __init__(self, prob_aa_threshold=DEF_PROB_AA_THRESHOLD,
-                 genotypic_freqs_method=HW):
+                 genotypic_freqs_method=HW, genotypic_freqs_kwargs=None):
         self._min_prob = prob_aa_threshold
         self.genotypic_freqs_method = genotypic_freqs_method
+        if genotypic_freqs_kwargs is None:
+            genotypic_freqs_kwargs = {}
+        self.genotypic_freqs_kwargs = genotypic_freqs_kwargs
 
     def __call__(self, snv):
-        allele_freqs = snv.allele_freqs
-        if not allele_freqs:
-            def set_all_gt_to_none(call):
-                return call.copy_setting_gt(gt=None, return_pyvcf_call=True)
-            return snv.copy_mapping_calls(set_all_gt_to_none)
-
         genotypic_freqs_method = self.genotypic_freqs_method
+        
+        if genotypic_freqs_method == HW:
+            allele_freqs = snv.allele_freqs
+            if not allele_freqs:
+                def set_all_gt_to_none(call):
+                    return call.copy_setting_gt(gt=None,
+                                                return_pyvcf_call=True)
+                return snv.copy_mapping_calls(set_all_gt_to_none)
+
         calls = []
+        kwargs = self.genotypic_freqs_kwargs
         for call in snv.calls:
             if not call.called:
                 filtered_call = call.call
@@ -65,15 +103,18 @@ class LowEvidenceAlleleFilter(object):
                     filtered_call = call.call
                 else:
                     allele = alleles[0]
-                    freq = allele_freqs[allele]
                     allele_depths = call.allele_depths
                     if not allele_depths:
                         msg = 'Allele depths are required for the lowEvidence'
                         msg += 'Allele filter'
                         raise RuntimeError(msg)
                     depth = call.allele_depths[allele]
-                    if genotypic_freqs_method == HW:
-                        prob = prob_aa_given_n_a_reads(depth, freq)
+                    if genotypic_freqs_method in PROB_AA_FUNCS:
+                        prob_aa_func = PROB_AA_FUNCS[genotypic_freqs_method]
+                        if genotypic_freqs_method == HW:
+                            kwargs['freq_a_in_pop'] = allele_freqs[allele]
+                        kwargs['num_a_reads'] = depth
+                        prob = prob_aa_func(**kwargs)
                     else:
                         msg = 'Method not implemented for genotypic freqs: '
                         msg += genotypic_freqs_method
@@ -86,13 +127,3 @@ class LowEvidenceAlleleFilter(object):
                                                         return_pyvcf_call=True)
             calls.append(filtered_call)
         return snv.copy_mapping_calls(calls)
-
-
-def prob_aa_given_n_a_reads(num_a_reads, freq_a_in_pop):
-    'It assumes HW'
-    # TODO fix for Backcross
-    proba = freq_a_in_pop
-    res = proba
-    res /= proba + 0.5 ** (num_a_reads - 1) * (1 - proba)
-    return res
-
