@@ -583,7 +583,7 @@ def draw_missing_data(vcf_stats, out_dir):
         missing_for_depth = vcf_stats.sample_dp_coincidence[depth]
         counters.append(missing_for_depth)
         titles.append(title.format(depth))
-        missing_calcs[depth] = missing_for_depth.values()
+        missing_calcs[depth] = missing_for_depth
 
     draw_histograms(counters, fhand=fhand, xlabel='Num. samples',
                     plots_per_chart=1, num_cols=1, ylabel='Num. SNPs',
@@ -592,16 +592,16 @@ def draw_missing_data(vcf_stats, out_dir):
     t_fhand = open(join(out_dir, 'missing_values_per_sample.txt'), 'w')
     t_fhand.write('MISSING VALUES\n--------------\n')
 
-    n_samples = len(missing_calcs.values()[0])
-    sample_numbers = ['0'] + [str(i + 1) for i in range(n_samples)]
-    t_fhand.write('dp/n_sm\t' + '\t'.join(sample_numbers) + '\n')
+    n_samples = len(vcf_stats.samples)
+    sample_numbers = range(0, n_samples + 1)
+    t_fhand.write('dp/n_sm\t' + '\t'.join([str(i) for i in sample_numbers])
+                  + '\n')
 
-    for depth, values in missing_calcs.items():
-        line = [depth]
-        if depth == 1:
-            line += [0]
-        line += values
-        t_fhand.write('\t'.join([str(item) for item in line]) + '\n')
+    for depth, counter in missing_calcs.items():
+        line = [str(depth)]
+        for n_sample in sample_numbers:
+            line.append(str(counter[n_sample]))
+        t_fhand.write('\t'.join(line) + '\n')
     t_fhand.close()
 
 
