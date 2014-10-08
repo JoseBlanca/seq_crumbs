@@ -17,8 +17,10 @@ def print_log(log):
     keys = sorted(log.keys())
     for key in keys:
         val = log[key]
+        percent = val / tot * 100
         stdout.write(key.replace('_', ' ').capitalize() + ': ')
-        stdout.write(str(val) + '\n')
+        stdout.write(str(val))
+        stdout.write(' (%.1f%%)\n' % percent)
     
 
 def main():
