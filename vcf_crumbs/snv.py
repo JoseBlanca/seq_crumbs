@@ -137,7 +137,7 @@ class VCFReader(object):
                           min_calls_for_pop_stats=min_calls_for_pop_stats)
                 last_snp = snp
                 yield snp
-        except BaseException:
+        except Exception:
             from traceback import print_exception
             exc_type, exc_value, exc_traceback = sys.exc_info()
 
