@@ -221,7 +221,7 @@ class MateSplitterTest(unittest.TestCase):
         seq_names = [get_name(seq) for seq in new_seqs]
         assert 'G109AZL01BJHT8\\1' in seq_names
         assert 'G109AZL01BJHT8\\2' in seq_names
-        assert len(new_seqs) == 20
+        assert len(new_seqs) == 19
 
         # test with process_seq_packet
         seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads.fastq')
@@ -236,7 +236,7 @@ class MateSplitterTest(unittest.TestCase):
         seq_names = [get_name(seq) for seq in new_seqs]
         assert 'G109AZL01BJHT8\\1' in seq_names
         assert 'G109AZL01BJHT8\\2' in seq_names
-        assert len(new_seqs) == 20
+        assert len(new_seqs) == 19
 
         # reads 2
         seq_fpath = os.path.join(TEST_DATA_DIR, '454_reads2.fastq')
