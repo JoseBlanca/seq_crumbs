@@ -7,10 +7,6 @@ Files: *
 Copyright: 2012 Universidad Politecnica de Valencia
 License: GPL-3+
 
-Files: crumbs/third_party/*/*blast*
-Copyright: National Center for Biotechnology Information
-License: Public Domain
-
 Files: crumbs/third_party/cgitb.py
 Copyright: Python Software Foundation
 License: PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
@@ -19,14 +15,6 @@ License: PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
 Files: crumbs/third_party/index.py
 Copyright: 2009-2011 by Peter Cock.  All rights reserved.
 License: Biopython License Agreement
-
-Files: crumbs/third_party/*/samtools
-Copyright: Genome Research Ltd
-License: The MIT License
-
-Files: crumbs/third_party/*/*bowtie*
-Copyright: Ben Langmead <langmea@cs.jhu.edu>
-License: GPL-3+
 
 Files: crumbs/third_party/java/picard-tools/*
 Copyright: © 2009–2010 The Broad Institute
