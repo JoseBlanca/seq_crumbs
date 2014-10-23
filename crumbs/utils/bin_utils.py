@@ -202,14 +202,16 @@ def create_get_binary_path(module_path, get_setting):
         Fails if there is not binary for that architecture
         '''
         if get_setting('USE_EXTERNAL_BIN_PREFIX'):
-            binary_name = get_setting('EXTERNAL_BIN_PREFIX') + binary_name
+            ext_binary_name = get_setting('EXTERNAL_BIN_PREFIX') + binary_name
+            if os.path.exists(ext_binary_name):
+                return ext_binary_name
 
         if not get_setting('ADD_PATH_TO_EXT_BIN'):
             # I have to check if the binary is on my current directory.
             # If it is there use it, else assumes that it is on the path
-            if os.path.exists(os.path.join(os.getcwd(), binary_name)):
-                return os.path.join(os.getcwd(), binary_name)
-            return binary_name
+            if os.path.exists(os.path.join(os.getcwd(), ext_binary_name)):
+                return os.path.join(os.getcwd(), ext_binary_name)
+            #return binary_name
 
         system = platform.system().lower()
         if system == 'windows':
@@ -238,9 +240,9 @@ def create_get_binary_path(module_path, get_setting):
         if which(binary_name):
             return binary_name
 
-        msg = '{} not available for this platform: {}'.format(binary_name,
-                                                              system)
-        raise MissingBinaryError(msg)
+        msg = '{} not found in the path. Please install it to use seq_crumbs'
+        raise MissingBinaryError(msg.format(binary_name))
+
     return _get_binary_path
 
 get_binary_path = create_get_binary_path(os.path.split(__file__)[0],
