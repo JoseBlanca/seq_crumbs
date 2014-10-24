@@ -4,6 +4,25 @@ Download
 
 The recommended method to get seq_crumbs is to download one of the releases, but if you want to access to the latest code you can do it at github_.
 
+seq_crumbs 0.1.9
+----------------
+
+Changelog:
+
+  * Remove third party binaries. (blast, bwa, bowtie2, samtools)
+  * Pair_matcher now works with orphans
+  * Filter sequences composed only by Ns implemented(filter_all_ns)
+  * classify_chimeras binary added
+  * draw_pair_distance_distribution binary added
+  * trim_mp_chimeras binary added
+  * filter by blast short implemented
+  * Tons of bugfixes
+
+
+Released on 24-11-2014
+
+  * `Source distribution <http://bioinf.comav.upv.es/downloads/seq_crumbs-0.1.9.tar.gz>`_.
+
 seq_crumbs 0.1.8
 ----------------
 
