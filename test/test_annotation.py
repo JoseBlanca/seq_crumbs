@@ -9,7 +9,8 @@ from StringIO import StringIO
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 from vcf_crumbs.annotation import (CloseToSnv, HighVariableRegion,
                                    CloseToLimit, MafDepthLimit, CapEnzyme,
-                                   AminoChangeAnnotator, IsVariableAnnotator,
+                                   AminoChangeAnnotator,
+                                   IsVariableDepthAnnotator,
                                    AminoSeverityChangeAnnotator,
                                    HeterozigoteInSamples)
 from vcf_crumbs.snv import VCFReader
@@ -245,22 +246,26 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = records[0]
-        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg1'],
-                                        in_union=False,
-                                        in_all_groups=True,
-                                        reference_free=True,
-                                        min_reads=None,
-                                        min_reads_per_allele=1,
-                                        filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=None,
+                                             samples=['rg1'],
+                                             in_union=False,
+                                             in_all_groups=True,
+                                             reference_free=True,
+                                             min_reads=None,
+                                             min_reads_per_allele=1,
+                                             filter_id=1)
         snv = annotator(snv)
         info_id = annotator.info_id
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg1'],
-                                        in_union=True, in_all_groups=True,
-                                        reference_free=True,
-                                        min_reads=None, min_reads_per_allele=1,
-                                        filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=None,
+                                             samples=['rg1'],
+                                             in_union=True,
+                                             in_all_groups=True,
+                                             reference_free=True,
+                                             min_reads=None,
+                                             min_reads_per_allele=1,
+                                             filter_id=1)
 
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
@@ -268,130 +273,161 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
         snv = annotator(snv)
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg1'],
-                                        in_union=True, in_all_groups=True,
-                                        reference_free=True, min_reads=None,
-                                        min_reads_per_allele=2, filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=None,
+                                             samples=['rg1'],
+                                             in_union=True,
+                                             in_all_groups=True,
+                                             reference_free=True,
+                                             min_reads=None,
+                                             min_reads_per_allele=2,
+                                             filter_id=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = records[0]
         snv = annotator(snv)
         assert snv.infos[info_id] == 'None'
 
-        annotator = IsVariableAnnotator(max_maf_depth=None,
-                                        samples=['rg2', 'rg4'],
-                                        in_union=True, in_all_groups=True,
-                                        reference_free=True, min_reads=None,
-                                        min_reads_per_allele=1, filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=None,
+                                             samples=['rg2', 'rg4'],
+                                             in_union=True,
+                                             in_all_groups=True,
+                                             reference_free=True,
+                                             min_reads=None,
+                                             min_reads_per_allele=1,
+                                             filter_id=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = records[0]
         snv = annotator(snv)
         assert snv.infos[info_id] == 'False'
 
-        annotator = IsVariableAnnotator(max_maf_depth=None,
-                                        samples=['rg2', 'rg3'],
-                                        in_union=True, in_all_groups=True,
-                                        reference_free=True, min_reads=None,
-                                        min_reads_per_allele=1, filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=None,
+                                             samples=['rg2', 'rg3'],
+                                             in_union=True,
+                                             in_all_groups=True,
+                                             reference_free=True,
+                                             min_reads=None,
+                                             min_reads_per_allele=1,
+                                             filter_id=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg2'],
-                                        in_union=True, in_all_groups=True,
-                                        reference_free=False, min_reads=None,
-                                        min_reads_per_allele=1, filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=None,
+                                             samples=['rg2'],
+                                             in_union=True,
+                                             in_all_groups=True,
+                                             reference_free=False,
+                                             min_reads=None,
+                                             min_reads_per_allele=1,
+                                             filter_id=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(max_maf_depth=None, samples=['rg2'],
-                                        in_union=True, in_all_groups=True,
-                                        reference_free=True, min_reads=None,
-                                        min_reads_per_allele=1, filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=None,
+                                             samples=['rg2'],
+                                             in_union=True,
+                                             in_all_groups=True,
+                                             reference_free=True,
+                                             min_reads=None,
+                                             min_reads_per_allele=1,
+                                             filter_id=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'False'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=None, min_reads=1,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg1'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=None, min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=True, reference_free=False,
-                                        max_maf_depth=None, min_reads=1,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg1'],
+                                             in_union=True,
+                                             reference_free=False,
+                                             max_maf_depth=None, min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=False, max_maf_depth=None,
-                                        reference_free=False,
-                                        min_reads=1, min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg1'],
+                                             in_union=False,
+                                             max_maf_depth=None,
+                                             reference_free=False,
+                                             min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg2', 'rg4'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=None, min_reads=1,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1,
+                                             samples=['rg2', 'rg4'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=None, min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'False'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg3', 'rg4'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=None, min_reads=1,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1,
+                                             samples=['rg3', 'rg4'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=None, min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg3', 'rg4'],
-                                        in_union=False, reference_free=True,
-                                        max_maf_depth=None, min_reads=1,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1,
+                                             samples=['rg3', 'rg4'],
+                                             in_union=False,
+                                             reference_free=True,
+                                             max_maf_depth=None, min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'False'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg2'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=None, min_reads=1,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg2'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=None, min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[1])
         assert snv.infos[info_id] == 'None'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg2', 'rg4'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=None, min_reads=1,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1,
+                                             samples=['rg2', 'rg4'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=None, min_reads=1,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[1])
         assert snv.infos[info_id] == 'None'
 
-        annotator = IsVariableAnnotator(max_maf_depth=0.7,
-                                        samples=['mu16', 'upv196'],
-                                        filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=0.7,
+                                             samples=['mu16', 'upv196'],
+                                             filter_id=1)
         records = list(VCFReader(open(FREEBAYES5_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
@@ -399,9 +435,9 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
         assert snv.infos[info_id] == 'True'
 
         # in union False
-        annotator = IsVariableAnnotator(max_maf_depth=0.7,
-                                        samples=['mu16', 'upv196'],
-                                        in_union=False, filter_id=1)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=0.7,
+                                             samples=['mu16', 'upv196'],
+                                             in_union=False, filter_id=1)
         records = list(VCFReader(open(FREEBAYES5_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
@@ -409,61 +445,69 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
         assert snv.infos[info_id] == 'False'
 
         # in all_groups False
-        annotator = IsVariableAnnotator(max_maf_depth=0.7, filter_id=1,
-                                        samples=['mu16', 'upv196'],
-                                        in_union=False, in_all_groups=False)
+        annotator = IsVariableDepthAnnotator(max_maf_depth=0.7, filter_id=1,
+                                             samples=['mu16', 'upv196'],
+                                             in_union=False,
+                                             in_all_groups=False)
         records = list(VCFReader(open(FREEBAYES5_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         info_id = annotator.info_id
         assert snv.infos[info_id] == 'False'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=0.95, min_reads=50,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg1'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=0.95, min_reads=50,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[2])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=0.6, min_reads=50,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg1'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=0.6, min_reads=50,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[2])
         assert snv.infos[info_id] == 'False'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=0.95, min_reads=200,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg1'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=0.95, min_reads=200,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[2])
         assert snv.infos[info_id] == 'None'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['rg1'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=0.6, min_reads=200,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1, samples=['rg1'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=0.6, min_reads=200,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[2])
         assert snv.infos[info_id] == 'None'
 
-        annotator = IsVariableAnnotator(filter_id=1, samples=['sample01_gbs'],
-                                        in_union=True, reference_free=True,
-                                        max_maf_depth=0.6, min_reads=3,
-                                        min_reads_per_allele=1)
+        annotator = IsVariableDepthAnnotator(filter_id=1,
+                                             samples=['sample01_gbs'],
+                                             in_union=True,
+                                             reference_free=True,
+                                             max_maf_depth=0.6, min_reads=3,
+                                             min_reads_per_allele=1)
         records = list(VCFReader(open(FREEBAYES2_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
         assert snv.infos[info_id] == 'True'
 
-        annotator = IsVariableAnnotator(filter_id=2, samples=['sample06_gbs'])
+        annotator = IsVariableDepthAnnotator(filter_id=2,
+                                             samples=['sample06_gbs'])
         records = list(VCFReader(open(FREEBAYES_MULTI_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = annotator(records[0])
@@ -547,7 +591,7 @@ class BinaryTest(unittest.TestCase):
     [[HeterozigoteInSamples]]
         filter_id = 1
 [5]
-    [[IsVariableAnnotator]]
+    [[IsVariableDepthAnnotator]]
         filter_id = 1
         samples = ['pep']
 '''

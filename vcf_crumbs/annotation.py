@@ -360,8 +360,8 @@ class Kind(BaseAnnotator):
         return 'It is not an {} :: {}'.format(self.kind, self.encode_conf)
 
 
-class IsVariableAnnotator(BaseAnnotator):
-    'Variable in readgroup'
+class IsVariableDepthAnnotator(BaseAnnotator):
+    'Variable in readgroup using depths and not genotypes'
 
     def __init__(self, filter_id, samples, max_maf_depth=None, min_reads=MIN_READS,
                  min_reads_per_allele=MIN_READS_PER_ALLELE, in_union=True,
@@ -381,10 +381,13 @@ class IsVariableAnnotator(BaseAnnotator):
                      'reference_free': reference_free}
 
     def __call__(self, snv):
-        is_variable = variable_in_samples(snv, self.samples, self.in_union,
-                                          self.max_maf, self.in_all_groups,
-                                          self.reference_free, self.min_reads,
-                                          self.min_reads_per_allele)
+        is_variable = variable_in_samples_depth(snv, self.samples,
+                                                self.in_union,
+                                                self.max_maf,
+                                                self.in_all_groups,
+                                                self.reference_free,
+                                                self.min_reads,
+                                                self.min_reads_per_allele)
 
         snv.add_info(info=self.info_id, value=str(is_variable))
         return snv
@@ -405,9 +408,9 @@ class IsVariableAnnotator(BaseAnnotator):
         return False
 
 
-def variable_in_samples(snv, samples, in_union=True, maf_depth=None,
-                        in_all_groups=True, reference_free=True,
-                        min_reads=6, min_reads_per_allele=3):
+def variable_in_samples_depth(snv, samples, in_union=True, maf_depth=None,
+                              in_all_groups=True, reference_free=True,
+                              min_reads=6, min_reads_per_allele=3):
     allele_counts = {s: snv.get_call(s).allele_depths for s in samples}
 
     if in_union:
@@ -419,9 +422,9 @@ def variable_in_samples(snv, samples, in_union=True, maf_depth=None,
 
     variable_in_samples = []
     for sample_counts in allele_counts.values():
-        variable_in_sample = _is_variable_in_sample(sample_counts,
-                                                    maf=maf_depth,
-                                                    min_reads=min_reads,
+        variable_in_sample = _is_variable_in_sample_depth(sample_counts,
+                                                maf=maf_depth,
+                                                min_reads=min_reads,
                                                 reference_free=reference_free,
                                      min_reads_per_allele=min_reads_per_allele)
 
@@ -436,8 +439,8 @@ def variable_in_samples(snv, samples, in_union=True, maf_depth=None,
         return any(variable_in_samples)
 
 
-def _is_variable_in_sample(allele_counts, reference_free, maf,
-                           min_reads, min_reads_per_allele):
+def _is_variable_in_sample_depth(allele_counts, reference_free, maf,
+                                 min_reads, min_reads_per_allele):
     'It checks if the allele is variable'
     num_reads = sum(allele_counts.values())
     if min_reads > num_reads:
