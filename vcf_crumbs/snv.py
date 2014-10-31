@@ -460,6 +460,9 @@ class SNV(object):
                   min_calls_for_pop_stats=self.min_calls_for_pop_stats)
         return snv
 
+    def copy(self):
+        return self.copy_mapping_calls(lambda x: x.copy(return_pyvcf_call=True))
+
     def remove_gt_from_het_calls(self):
         def call_mapper(call):
             if call.is_het:
@@ -695,28 +698,20 @@ class Call(object):
     def __repr__(self):
         return repr(self.call)
 
-    def copy_setting_gt(self, gt, return_pyvcf_call=False):
-        snv = self.snv
-        calldata_class = snv.calldata_class
-        call = self.call
-        # Access to a protected member. In this case namedtuple _fields
-        # is not a protected member
-        # pylint: disable=W0212
-        sampdat = [gt if field == 'GT' else getattr(call.data, field) for field in calldata_class._fields]
+    def copy(self, return_pyvcf_call=False):
+        return self.copy_calldata({}, return_pyvcf_call)
 
-        pyvcf_call = pyvcfCall(self.snv.record, self.call.sample,
-                               calldata_class(*sampdat))
-        if return_pyvcf_call:
-            call = pyvcf_call
-        else:
-            call = Call(pyvcf_call, snv)
-        return call
+    def copy_setting_gt(self, gt, return_pyvcf_call=False):
+        return self.copy_calldata({'GT': gt}, return_pyvcf_call)
 
     def copy_calldata(self, dict_with_data, return_pyvcf_call=False):
         snv = self.snv
         calldata_class = snv.calldata_class
         call = self.call
         sampdat = []
+        # Access to a protected member. In this case namedtuple _fields
+        # is not a protected member
+        # pylint: disable=W0212
         for field in calldata_class._fields:
             if field in dict_with_data:
                 value = dict_with_data[field]

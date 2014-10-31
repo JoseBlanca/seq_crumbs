@@ -9,7 +9,7 @@ from StringIO import StringIO
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 from vcf_crumbs.annotation import (CloseToSnv, HighVariableRegion,
                                    CloseToLimit, MafDepthLimit, CapEnzyme,
-                                   AminoChangeAnnotator,
+                                   AminoChangeAnnotator, IsVariableAnnotator,
                                    IsVariableDepthAnnotator,
                                    AminoSeverityChangeAnnotator,
                                    HeterozigoteInSamples)
@@ -37,6 +37,25 @@ FREEBAYES3_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_sample3.vcf.gz')
 FREEBAYES5_VCF_PATH = join(TEST_DATA_DIR, 'freebayes5.vcf.gz')
 FREEBAYES6_VCF_PATH = join(TEST_DATA_DIR, 'freebayes6.vcf.gz')
 REF_FREEBAYES = join(TEST_DATA_DIR, 'calabaza_selection.fasta')
+VCF_HEADER = '''##fileformat=VCFv4.1
+##fileDate=20090805
+##source=myImputationProgramV3.1
+##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
+##contig=<ID=20,length=62435964,assembly=B36>
+##phasing=partial
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">
+##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">
+##FILTER=<ID=q10,Description="Quality below 10">
+##FILTER=<ID=s50,Description="Less than 50% of samples have data">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+'''
 
 
 class FakeClass(object):
@@ -242,7 +261,7 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
         record = f(record)
         assert f.name in record.filters
 
-    def test_is_variable_annotator(self):
+    def test_is_variable_dp_annotator(self):
         records = list(VCFReader(open(FREEBAYES6_VCF_PATH),
                                  min_calls_for_pop_stats=1).parse_snvs())
         snv = records[0]
@@ -514,6 +533,51 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
         info_id = annotator.info_id
         assert snv.infos[info_id] == 'False'
 
+    def test_is_variable_annotator(self):
+        
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7
+20\t14\t.\tA\tA\t29\tPASS\t.\tGT\t./.\t./.\t1/1\t0/0\t1/.\t1/1\t1/1'''
+        vcf = VCF_HEADER + vcf
+        fhand = StringIO(vcf)
+        snvs = list(VCFReader(fhand).parse_snvs())
+        snv = snvs[0]
+
+        annotator = IsVariableAnnotator(samples=['1', '2'])
+
+        snvc = snv.copy()
+        annotator(snvc)
+        assert snvc.infos['IV0'] == 'None'
+
+        snvc = snv.copy()
+        annotator = IsVariableAnnotator(filter_id=0)
+        annotator(snvc)
+        assert snvc.infos['IV0'] == 'True'
+
+        snvc = snv.copy()
+        annotator = IsVariableAnnotator(filter_id=0, samples=['6', '7'])
+        annotator(snvc)
+        assert snvc.infos['IV0'] == 'False'
+
+        # min num samples for not variable
+        snvc = snv.copy()
+        annotator = IsVariableAnnotator(filter_id=0, samples=['6', '7'],
+                                        min_samples_for_non_var=3)
+        annotator(snvc)
+        assert snvc.infos['IV0'] == 'None'
+
+        # with reference as one allele
+        snvc = snv.copy()
+        annotator = IsVariableAnnotator(filter_id=0, samples=['6', '7'],
+                                        consider_reference=True)
+        annotator(snvc)
+        assert snvc.infos['IV0'] == 'True'
+
+        snvc = snv.copy()
+        annotator = IsVariableAnnotator(filter_id=0, samples=['1', '2'],
+                                        consider_reference=True)
+        annotator(snvc)
+        assert snvc.infos['IV0'] == 'None'
+
 
 class TestInfoMappers(unittest.TestCase):
 
@@ -609,5 +673,5 @@ class BinaryTest(unittest.TestCase):
         assert '\tPASS\t' in result
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'TestInfoMappers']
+    # import sys;sys.argv = ['', 'AnnotatorsTest.test_is_variable_annotator']
     unittest.main()

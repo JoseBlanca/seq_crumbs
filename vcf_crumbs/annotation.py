@@ -3,6 +3,7 @@ from __future__ import division
 import json
 from os.path import join
 from collections import Counter
+from itertools import count
 
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
@@ -360,11 +361,72 @@ class Kind(BaseAnnotator):
         return 'It is not an {} :: {}'.format(self.kind, self.encode_conf)
 
 
+class IsVariableAnnotator(BaseAnnotator):
+    _ids = count(0)
+
+    def __init__(self, samples=None, consider_reference=False, filter_id=None,
+                 min_samples_for_non_var=1):
+        if filter_id is None:
+            filter_id = self._ids.next()
+        self.min_samples_for_non_var = min_samples_for_non_var
+        self.filter_id = filter_id
+        self.samples = samples
+        self.consider_reference = consider_reference
+        self.conf = {'samples': samples,
+                     'consider_reference': consider_reference}
+
+    def __call__(self, snv):
+        samples = self.samples
+        if samples is None:
+            calls = snv.calls
+        else:
+            calls = [snv.get_call(sample) for sample in samples]
+
+        alleles = set()
+        if self.consider_reference:
+            alleles.add(0)
+
+        n_samples_called = 0
+        for call in calls:
+            int_alleles = call.int_alleles
+            if int_alleles:
+                n_samples_called += 1
+            alleles.update(int_alleles)
+
+        if not n_samples_called:
+            is_variable = None
+        elif len(alleles) == 1:
+            if len(samples) >= self.min_samples_for_non_var:
+                is_variable = False
+            else:
+                is_variable = None
+        else:
+            is_variable = True
+
+        snv.add_info(info=self.info_id, value=str(is_variable))
+        return snv
+
+    @property
+    def info(self):
+        if self.samples is None:
+            samples = 'all'
+        else:
+            samples = ','.join(self.samples)
+        desc = 'True if the genotypes are variable. False if they are not. '
+        desc += 'None if there is not enough data in the samples: {samples}'
+        desc += ' :: {conf}'
+        desc = desc.format(samples=samples, conf=self.encode_conf)
+
+        return {'id': 'IV{}'.format(self.filter_id), 'num': 1,
+                'type': 'String', 'desc': desc}
+
+
 class IsVariableDepthAnnotator(BaseAnnotator):
     'Variable in readgroup using depths and not genotypes'
 
-    def __init__(self, filter_id, samples, max_maf_depth=None, min_reads=MIN_READS,
-                 min_reads_per_allele=MIN_READS_PER_ALLELE, in_union=True,
+    def __init__(self, filter_id, samples, max_maf_depth=None,
+                 min_reads=MIN_READS, in_union=True,
+                 min_reads_per_allele=MIN_READS_PER_ALLELE,
                  in_all_groups=True, reference_free=True):
         self.max_maf = max_maf_depth
         self.samples = samples
@@ -400,7 +462,7 @@ class IsVariableDepthAnnotator(BaseAnnotator):
         desc += ' :: {conf}'
         desc = desc.format(samples=samples, conf=self.encode_conf)
 
-        return {'id': 'IV{}'.format(self.filter_id), 'num': 1,
+        return {'id': 'IVD{}'.format(self.filter_id), 'num': 1,
                 'type': 'String', 'desc': desc}
 
     @property
