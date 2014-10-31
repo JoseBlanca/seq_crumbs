@@ -416,11 +416,15 @@ class IsVariableAnnotator(BaseAnnotator):
 
 class IsVariableDepthAnnotator(BaseAnnotator):
     'Variable in readgroup using depths and not genotypes'
+    _ids = count(0)
 
-    def __init__(self, filter_id, samples, max_maf_depth=None,
+    def __init__(self, samples, filter_id=None, max_maf_depth=None,
                  min_reads=MIN_READS, in_union=True,
                  min_reads_per_allele=MIN_READS_PER_ALLELE,
                  in_all_groups=True, reference_free=True):
+        if filter_id is None:
+            filter_id = self._ids.next()
+        self.filter_id = filter_id
         self.max_maf = max_maf_depth
         self.samples = samples
         self.min_reads = min_reads
@@ -428,7 +432,6 @@ class IsVariableDepthAnnotator(BaseAnnotator):
         self.in_union = in_union
         self.in_all_groups = in_all_groups
         self.reference_free = reference_free
-        self.filter_id = filter_id
         self.conf = {'max_maf': max_maf_depth, 'samples': samples,
                      'min_reads': min_reads, 'in_union': in_union,
                      'min_reads_per_allele': min_reads_per_allele,
@@ -536,12 +539,14 @@ def _is_variable_in_sample_depth(allele_counts, reference_free, maf,
 
 class HeterozigoteInSamples(BaseAnnotator):
 
-    def __init__(self, filter_id, samples=None, min_percent_het_gt=0,
+    def __init__(self, samples=None, filter_id=None, min_percent_het_gt=0,
                  gq_threshold=0, min_num_called=0):
         self._samples = samples
         self._min_percent_het_gt = min_percent_het_gt
         self._gq_threshold = gq_threshold
         self._min_num_called = min_num_called
+        if filter_id is None:
+            filter_id = self._ids.next()
         self.filter_id = filter_id
         self.conf = {'samples': samples,
                      'min_percent_het_get': min_percent_het_gt,
