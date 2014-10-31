@@ -81,7 +81,6 @@ def _manage_mappers(reader, filters_in_conf):
             else:
                 mappers_to_use.append(mapper)
 
-    # se anyaden la metadata de FILTERS e INFO al reader. Tambien se
     for mapper in mappers_to_use:
         if mapper.is_filter:
             reader.filters[mapper.name] = _Filter(mapper.name,
@@ -104,7 +103,7 @@ def main():
 
     for snv in reader.parse_snvs():
         for mapper in mappers:
-            snv = mapper(snv)
+            mapper(snv)
         if snv.filters is None:
             snv.filters = []
         writer.write_snv(snv)

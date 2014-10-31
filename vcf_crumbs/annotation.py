@@ -125,7 +125,6 @@ class CloseToSnv(BaseAnnotator):
                     passed_snvs += 1
         if passed_snvs:
             snv.add_filter(self.name)
-        return snv
 
     @property
     def name(self):
@@ -187,7 +186,6 @@ class HighVariableRegion(BaseAnnotator):
 
         if freq > self.max_variability:
             snv.add_filter(self.name)
-        return snv
 
     @property
     def name(self):
@@ -214,7 +212,6 @@ class CloseToLimit(BaseAnnotator):
         seq_len = self._lengths[chrom]
         if pos < self.distance or seq_len - pos < self.distance:
             snv.add_filter(self.name)
-        return snv
 
     @property
     def name(self):
@@ -240,7 +237,6 @@ class MafDepthLimit(BaseAnnotator):
         maf = snv.maf_depth
         if max and maf > self.max_maf:
             snv.add_filter(self.name)
-        return snv
 
     @property
     def name(self):
@@ -288,7 +284,6 @@ class CapEnzyme(BaseAnnotator):
         else:
             enzymes = [str(e) for e in list(enzymes)]
             snv.add_info(info=self.info['id'], value=','.join(enzymes))
-        return snv
 
     @property
     def name(self):
@@ -350,7 +345,6 @@ class Kind(BaseAnnotator):
         rec_type = snv.kind
         if rec_type != self.kind:
             snv.add_filter(self.name)
-        return snv
 
     @property
     def name(self):
@@ -404,7 +398,6 @@ class IsVariableAnnotator(BaseAnnotator):
             is_variable = True
 
         snv.add_info(info=self.info_id, value=str(is_variable))
-        return snv
 
     @property
     def info(self):
@@ -452,7 +445,6 @@ class IsVariableDepthAnnotator(BaseAnnotator):
                                                 self.min_reads_per_allele)
 
         snv.add_info(info=self.info_id, value=str(is_variable))
-        return snv
 
     @property
     def info(self):
@@ -576,7 +568,6 @@ class HeterozigoteInSamples(BaseAnnotator):
                 result = False
 
         record.add_info(info=self.info_id, value=str(result))
-        return record
 
     @property
     def info(self):
@@ -617,7 +608,7 @@ class AminoChangeAnnotator(BaseAnnotator):
         try:
             seq_estscan = self.orf_seq_index[seq_name + self.orf_suffix]
         except KeyError:
-            return snv
+            return
         try:
             aminos = get_amino_change(seq_ref, seq_estscan, snv)
         except IsIndelError:
@@ -628,14 +619,13 @@ class AminoChangeAnnotator(BaseAnnotator):
         except OutsideAlignment:
             pass
         if aminos is None:
-            return snv
+            return
 
         if set(aminos['ref_amino']) != set(aminos['alt_amino']):
             snv.add_filter(self.name)
             info_val = '{}->{}'.format(aminos['ref_amino'],
                                        ','.join(aminos['alt_amino']))
             snv.add_info(info=self.info_id, value=info_val)
-        return snv
 
     @property
     def name(self):
@@ -687,7 +677,7 @@ class AminoSeverityChangeAnnotator(BaseAnnotator):
         try:
             seq_estscan = self.orf_seq_index[seq_name + self.orf_suffix]
         except KeyError:
-            return snv
+            return
         try:
             aminos = get_amino_change(seq_ref, seq_estscan, snv)
         except IsIndelError:
@@ -698,7 +688,7 @@ class AminoSeverityChangeAnnotator(BaseAnnotator):
             pass
 
         if aminos is None:
-            return snv
+            return
 
         ref_aa = aminos['ref_amino']
         alt_aas = aminos['alt_amino']
@@ -706,7 +696,6 @@ class AminoSeverityChangeAnnotator(BaseAnnotator):
             return snv
         if any([self._is_severe(ref_aa, alt_aa) for alt_aa in alt_aas]):
             snv.add_filter(self.name)
-        return snv
 
     @property
     def name(self):
