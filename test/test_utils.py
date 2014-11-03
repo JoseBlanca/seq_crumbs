@@ -32,6 +32,7 @@ from crumbs.seqio import guess_seq_type
 from crumbs.settings import get_setting
 from crumbs.utils.file_formats import get_format, FILEFORMAT_INVENTORY,\
     set_format
+from crumbs.utils.sqlite_utils import SqliteCache
 
 
 
@@ -190,7 +191,24 @@ class SettingsTest(unittest.TestCase):
         assert out == '1\n'
 
 
+class SqliteTest(unittest.TestCase):
+    def test_init(self):
+        fhand = NamedTemporaryFile()
+        with SqliteCache(fhand.name) as sqlitecache:
+            assert sqlitecache.get('seq1') is None
+            sqlitecache.set('seq1', 23)
+            assert sqlitecache.get('seq1') == 23
 
+            #reopen the same cache file
+            sqlitecache2 = SqliteCache(fhand.name)
+            assert sqlitecache.get('seq1') == 23
+            sqlitecache2.close()
+
+        fhand = NamedTemporaryFile()
+        with SqliteCache(fhand.name) as sqlitecache:
+            assert sqlitecache.get('seq1') is None
+            sqlitecache.set('seq1', {'1': 23, '3': 2})
+            assert sqlitecache.get('seq1') == {'1': 23, '3': 2}
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'UtilsTest.test_get_format_stringio']
