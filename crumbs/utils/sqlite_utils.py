@@ -36,25 +36,48 @@ class SqliteCache(object):
             c.execute(sql.format(table_name=self._cache_table_name))
         self.connection.commit()
 
-    def get(self, key):
+    def __getitem__(self, key):
         c = self.connection.cursor()
         sql = "select * from {cache_table} where key = '{key}'"
         c.execute(sql.format(key=key, cache_table=self._cache_table_name))
-        result = c.fetchone()
 
-        if result is not None:
-            result = pickle.loads(str(result[1]))
-        return result
+        result = c.fetchall()
+        if not result:
+            return None
+        if len(result) > 1:
+            msg = 'More than one ocurrence of the key:{}'.format(key)
+            raise RuntimeError(msg)
 
-    def set(self, key, value):
+        return pickle.loads(str(result[0][1]))
+
+    def __setitem__(self, key, value):
         c = self.connection.cursor()
+        exists = self[key]
         value = pickle.dumps(value, pickle.HIGHEST_PROTOCOL)
-        sql = "insert into {cache_table} values(?, ?)"
-        sql = sql.format(cache_table=self._cache_table_name)
-        c.execute(sql, [key, sqlite3.Binary(value)])
+        if exists:
+            sql = "update {cache_table} set value = ? where key = ?"
+            sql = sql.format(cache_table=self._cache_table_name, key=key)
+            c.execute(sql, [sqlite3.Binary(value), key])
+        else:
+            sql = "insert into {cache_table} values(?, ?)"
+            sql = sql.format(cache_table=self._cache_table_name)
+            c.execute(sql, [key, sqlite3.Binary(value)])
         self.connection.commit()
 
     def close(self):
         if self._fhand is not None:
             self._fhand.close()
         self.connection.close()
+
+    def __str__(self):
+        c = self.connection.cursor()
+        text = None
+        sql = "select * from {}".format(self._cache_table_name)
+        for key, value in c.execute(sql):
+            value = pickle.loads(str(value))
+            if text is None:
+                key_order = value.keys()
+                text = ['\t'.join(['key'] + key_order)]
+            text.append('\t'.join([key] + [str(value[valkey])
+                                           for valkey in key_order]))
+        return '\n'.join(text)
