@@ -78,6 +78,12 @@ class SqliteCache(object):
             if text is None:
                 key_order = value.keys()
                 text = ['\t'.join(['key'] + key_order)]
-            text.append('\t'.join([key] + [str(value[valkey])
-                                           for valkey in key_order]))
-        return '\n'.join(text)
+            line = [key]
+            for valkey in key_order:
+                try:
+                    v = str(value[valkey]) if value[valkey] else ''
+                except KeyError:
+                    v = ''
+                line.append(v)
+            text.append('\t'.join(line))
+        return '\n'.join(text) + '\n'

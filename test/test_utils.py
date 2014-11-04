@@ -211,7 +211,7 @@ class SqliteTest(unittest.TestCase):
             assert sqlitecache['seq1'] == {'1': 23, '3': 2}
             sqlitecache['seq1'] = {'1': 22, '3': 2}
             result = str(sqlitecache)
-            assert result == "key\t1\t3\nseq1\t22\t2" in result
+            assert result == "key\t1\t3\nseq1\t22\t2\n" in result
 
 if __name__ == '__main__':
     #import sys;sys.argv = ['', 'UtilsTest.test_get_format_stringio']
