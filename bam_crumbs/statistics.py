@@ -8,14 +8,16 @@ from array import array
 from numpy import histogram, zeros, median, sum as np_sum
 
 import pysam
-
+try:
+    from pysam.csamtools import Samfile
+except ImportError:
+    from pysam import Samfile
 from crumbs.statistics import (draw_histogram_ascii, IntCounter, LABELS,
                                BestItemsKeeper)
 
 from bam_crumbs.settings import get_setting
 from bam_crumbs.utils.flag import SAM_FLAG_BINARIES, SAM_FLAGS
 from bam_crumbs.utils.bin import get_binary_path
-from pysam.csamtools import Samfile
 from collections import Counter
 
 # pylint: disable=C0111
