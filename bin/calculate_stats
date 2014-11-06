@@ -20,7 +20,7 @@ import sys
 
 from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
-                                     uncompress_if_required)
+                                     uncompress_if_required, flush_fhand)
 from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.utils.file_formats import get_format, set_format
 from crumbs.seqio import read_seqs
@@ -117,7 +117,7 @@ def run():
     out_fhand.write(stat_strs['qual_boxplot'])
     out_fhand.write(stat_strs['kmer'])
     out_fhand.write(stat_strs['dustscore'])
-    out_fhand.close()
+    flush_fhand(out_fhand)
 
 if __name__ == '__main__':
     #sys.argv.append('-h')
