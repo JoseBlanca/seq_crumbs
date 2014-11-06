@@ -413,6 +413,10 @@ class IsVariableAnnotator(BaseAnnotator):
         return {'id': 'IV{}'.format(self.filter_id), 'num': 1,
                 'type': 'String', 'desc': desc}
 
+    @property
+    def is_filter(self):
+        return False
+
 
 class IsVariableDepthAnnotator(BaseAnnotator):
     'Variable in readgroup using depths and not genotypes'
