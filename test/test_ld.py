@@ -366,14 +366,18 @@ class RecombRateTest(unittest.TestCase):
                                    snps[3].record.samples,
                                    'test_cross')
         assert recomb is None
-        
+
     def test_recomb_rate_along_chrom(self):
         vcf = FREEBAYES_VCF_PATH
-        
-        res = calc_recomb_rates_along_chroms(vcf, pop_type='test_cross')
-        exp = ('Pepper.v.1.55.chr01', 1986373, [(25037, 0.0), (32293, 0.0)])
-        assert exp in list(res)
 
+        res = calc_recomb_rates_along_chroms(vcf, pop_type='test_cross')
+        assert not list(res)
+
+        samples = ['sample05_gbs', 'sample06_gbs', 'sample07_gbs',
+                   'sample08_gbs', 'sample09_gbs']
+        res = calc_recomb_rates_along_chroms(vcf, pop_type='test_cross',
+                                             samples=samples)
+        assert not list(res)
 
 class _LDStatsCacheTest(unittest.TestCase):
     def test_ld_stats(self):

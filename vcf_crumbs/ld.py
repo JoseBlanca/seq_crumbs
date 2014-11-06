@@ -290,8 +290,8 @@ def _write_log(log_fhand, total_snvs, passed_snvs):
     log_fhand.write(msg)
 
 
-def calc_recomb_rates_along_chroms(vcf_fpath, pop_type, min_phys_dist=1000,
-                                   max_phys_dist=50000):
+def calc_recomb_rates_along_chroms(vcf_fpath, pop_type, samples=None,
+                                   min_phys_dist=1000, max_phys_dist=50000):
     reader = pyvcfReader(open(vcf_fpath))
     random_reader = pyvcfReader(open(vcf_fpath))
 
@@ -312,11 +312,22 @@ def calc_recomb_rates_along_chroms(vcf_fpath, pop_type, min_phys_dist=1000,
         end = pos + max_phys_dist
         snvs_after = random_reader.fetch(chrom=chrom, start=start, end=end)
 
+        if samples is None:
+            calls1 = snv.samples
+        else:
+            calls1 = [call for call in snv.samples if call.sample in samples]
         recombs = []
         for snv_2 in chain(snvs_prev, snvs_after):
             dist = abs(pos - snv_2.POS)
-            recomb = _calc_recomb_rate(snv.samples, snv.samples, pop_type)
+
+            if samples is None:
+                calls2 = snv_2.samples
+            else:
+                calls2 = [call for call in snv_2.samples if call.sample in samples]
+
+            recomb = _calc_recomb_rate(calls1, calls2, pop_type)
             if recomb is None:
                 continue
             recombs.append((dist, recomb))
-        yield chrom, pos, recombs
+        if recombs:
+            yield chrom, pos, recombs
