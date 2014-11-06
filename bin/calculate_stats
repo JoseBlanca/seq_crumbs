@@ -20,7 +20,7 @@ import sys
 
 from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
-                                     uncompress_if_required)
+                                     uncompress_if_required, flush_fhand)
 from crumbs.utils.bin_utils import main, build_version_msg
 from crumbs.utils.file_formats import get_format, set_format
 from crumbs.seqio import read_seqs
@@ -111,14 +111,19 @@ def run():
     seqs = read_seqs(in_fhands)
     stat_strs = calculate_sequence_stats(seqs, kmer_size, nxs=[50, 95],
                                          do_dust_stats=do_dust_stats)
-    out_fhand.write(stat_strs['length'])
-    out_fhand.write(stat_strs['quality'])
-    out_fhand.write(stat_strs['nucl_freq'])
-    out_fhand.write(stat_strs['qual_boxplot'])
-    out_fhand.write(stat_strs['kmer'])
-    out_fhand.write(stat_strs['dustscore'])
-    out_fhand.close()
+    try:
+        out_fhand.write(stat_strs['length'])
+        out_fhand.write(stat_strs['quality'])
+        out_fhand.write(stat_strs['nucl_freq'])
+        out_fhand.write(stat_strs['qual_boxplot'])
+        out_fhand.write(stat_strs['kmer'])
+        out_fhand.write(stat_strs['dustscore'])
+    except IOError, error:
+        # The pipe could be already closed
+        if 'Broken pipe' not in str(error):
+            raise
+    flush_fhand(out_fhand)
 
 if __name__ == '__main__':
-    #sys.argv.append('-h')
+    # sys.argv.append('-h')
     sys.exit(main(run))
