@@ -1,10 +1,13 @@
 from __future__ import division
+from itertools import chain
+from collections import Counter, namedtuple
 
 from scipy.stats import fisher_exact as scipy_fisher
 
 from vcf_crumbs.statistics import choose_samples
 from vcf_crumbs.iterutils import RandomAccessIterator
-from collections import Counter, namedtuple
+from vcf import Reader as pyvcfReader
+
 
 # Missing docstring
 # pylint: disable=C0111
@@ -144,6 +147,29 @@ def _count_biallelic_haplotypes(calls1, calls2):
     return HaploCount(count_AB, count_Ab, count_aB, count_ab)
 
 
+
+def _calc_recomb_rate(calls1, calls2, pop_type):
+    haplo_count = _count_biallelic_haplotypes(calls1, calls2)
+
+    if haplo_count is None:
+        return None
+
+    recomb_haplos = haplo_count.aB + haplo_count.Ab
+    tot_haplos = sum(haplo_count)
+
+    if pop_type == 'ril_self':
+        recomb = recomb_haplos * (tot_haplos - recomb_haplos - 1)
+        recomb /= 2 * (tot_haplos - recomb_haplos) ** 2
+    elif pop_type in ('test_cross', 'dihaploid'):
+        recomb = recomb_haplos / tot_haplos
+    else:
+        msg = 'recomb. rate calculation not implemented for pop_type: %s'
+        msg %= pop_type
+        raise NotImplementedError(msg)
+
+    return recomb
+
+
 class _LDStatsCache(object):
     def __init__(self):
         self.cache = {}
@@ -262,3 +288,35 @@ def _write_log(log_fhand, total_snvs, passed_snvs):
     log_fhand.write(msg)
     msg = 'SNVs filtered out: ' + str(total_snvs - passed_snvs) + '\n'
     log_fhand.write(msg)
+
+
+def calc_recomb_rates_along_chroms(vcf_fpath, pop_type, min_phys_dist=1000,
+                                   max_phys_dist=50000):
+    reader = pyvcfReader(open(vcf_fpath))
+    random_reader = pyvcfReader(open(vcf_fpath))
+
+    for snv in reader:
+        pos = snv.POS
+        chrom = snv.CHROM
+        start = pos - max_phys_dist
+        if start < 0:
+            start = 0
+        end = pos - min_phys_dist
+        if end < 0:
+            end = 0
+        if end > 0:
+            snvs_prev = random_reader.fetch(chrom=chrom, start=start, end=end)
+        else:
+            snvs_prev = iter([])
+        start = pos + min_phys_dist
+        end = pos + max_phys_dist
+        snvs_after = random_reader.fetch(chrom=chrom, start=start, end=end)
+
+        recombs = []
+        for snv_2 in chain(snvs_prev, snvs_after):
+            dist = abs(pos - snv_2.POS)
+            recomb = _calc_recomb_rate(snv.samples, snv.samples, pop_type)
+            if recomb is None:
+                continue
+            recombs.append((dist, recomb))
+        yield chrom, pos, recombs

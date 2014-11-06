@@ -7,9 +7,9 @@ from vcf_crumbs.snv import VCFReader
 from vcf_crumbs.ld import (_count_biallelic_haplotypes, calculate_r_sqr,
                            HaploCount, _calculate_r_sqr, _fisher_exact,
                            calculate_ld_stats, filter_snvs_by_ld, fisher_exact,
-                           _LDStatsCache)
-
-from vcf_crumbs.utils.file_utils import BIN_DIR
+                           _LDStatsCache, _calc_recomb_rate,
+                           calc_recomb_rates_along_chroms)
+from vcf_crumbs.utils.file_utils import BIN_DIR, TEST_DATA_DIR
 from subprocess import check_call
 
 # Method could be a function
@@ -39,6 +39,7 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 ##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
 '''
 
+FREEBAYES_VCF_PATH = join(TEST_DATA_DIR, 'freebayes_multisample.vcf.gz')
 
 class LDTests(unittest.TestCase):
     def test_empy_snv(self):
@@ -334,6 +335,44 @@ class FilterTest(unittest.TestCase):
                '-l', log_fhand.name]
         check_call(cmd, stderr=stderr)
         assert 'filtered' in open(log_fhand.name).read()
+
+
+class RecombRateTest(unittest.TestCase):
+    def test_recomb_rate(self):
+        # samples
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t3\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t4\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t1/1\t0/0\t0/0\t1/1\t0/0\t1/1\t
+20\t6\t.\tG\tA\t29\tPASS\tNS=3\tGT\t./.\t./.\t./.\t./.\t./.\t0/1\t0/1\t0/1\t
+21\t4\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t1/1\t0/0\t0/0\t1/1\t0/0\t1/1\t
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf).parse_snvs())
+
+        recomb = _calc_recomb_rate(snps[0].record.samples,
+                                   snps[1].record.samples,
+                                   'ril_self')
+        self.assertAlmostEqual(recomb, 0.0, 3)
+        recomb = _calc_recomb_rate(snps[0].record.samples,
+                                   snps[2].record.samples,
+                                   'ril_self')
+        self.assertAlmostEqual(recomb, 0.375, 3)
+        recomb = _calc_recomb_rate(snps[0].record.samples,
+                                   snps[2].record.samples,
+                                   'test_cross')
+        self.assertAlmostEqual(recomb, 0.5, 3)
+        recomb = _calc_recomb_rate(snps[0].record.samples,
+                                   snps[3].record.samples,
+                                   'test_cross')
+        assert recomb is None
+        
+    def test_recomb_rate_along_chrom(self):
+        vcf = FREEBAYES_VCF_PATH
+        
+        res = calc_recomb_rates_along_chroms(vcf, pop_type='test_cross')
+        exp = ('Pepper.v.1.55.chr01', 1986373, [(25037, 0.0), (32293, 0.0)])
+        assert exp in list(res)
 
 
 class _LDStatsCacheTest(unittest.TestCase):
