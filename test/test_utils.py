@@ -198,6 +198,8 @@ class SqliteTest(unittest.TestCase):
             assert sqlitecache['seq1'] is None
             sqlitecache['seq1'] = 23
             assert sqlitecache['seq1'] == 23
+            assert 'seq1' in sqlitecache
+            assert 'seq2' not in sqlitecache
 
             # reopen the same cache file
             sqlitecache2 = SqliteCache(fhand.name)

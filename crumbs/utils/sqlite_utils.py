@@ -52,9 +52,8 @@ class SqliteCache(object):
 
     def __setitem__(self, key, value):
         c = self.connection.cursor()
-        exists = self[key]
         value = pickle.dumps(value, pickle.HIGHEST_PROTOCOL)
-        if exists:
+        if key in self:
             sql = "update {cache_table} set value = ? where key = ?"
             sql = sql.format(cache_table=self._cache_table_name, key=key)
             c.execute(sql, [sqlite3.Binary(value), key])
@@ -68,6 +67,12 @@ class SqliteCache(object):
         if self._fhand is not None:
             self._fhand.close()
         self.connection.close()
+
+    def __contains__(self, value):
+        c = self.connection.cursor()
+        sql = "select key from {cache_table} where key='{key}'"
+        c.execute(sql.format(cache_table=self._cache_table_name, key=value))
+        return True if c.fetchone() else False
 
     def __str__(self):
         c = self.connection.cursor()
