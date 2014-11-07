@@ -74,6 +74,13 @@ class SqliteCache(object):
         c.execute(sql.format(cache_table=self._cache_table_name, key=value))
         return True if c.fetchone() else False
 
+    def dump(self):
+        c = self.connection.cursor()
+        sql = "select * from {}".format(self._cache_table_name)
+        for key, value in c.execute(sql):
+            value = pickle.loads(str(value))
+            yield key, value
+
     def __str__(self):
         c = self.connection.cursor()
         text = None
