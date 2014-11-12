@@ -2,7 +2,7 @@
 import os.path
 from subprocess import check_call
 import shutil
-from tempfile import NamedTemporaryFile, gettempdir
+from tempfile import NamedTemporaryFile
 
 import pysam
 
@@ -170,3 +170,12 @@ def _calmd_bam(bam_fpath, reference_fpath, out_bam_fpath):
     # out_fhand.write(pysam.calmd(*["-bAr", bam_fpath, reference_fpath]))
     out_fhand.flush()
     out_fhand.close()
+
+
+def merge_sams(in_fpaths, out_fpath):
+    picard_jar = get_setting("PICARD_JAR")
+
+    cmd = ['java', '-jar', picard_jar, 'O={}'.format(out_fpath)]
+    for in_fpath in in_fpaths:
+        cmd.append('I={}'.format(in_fpath))
+    check_call(cmd)

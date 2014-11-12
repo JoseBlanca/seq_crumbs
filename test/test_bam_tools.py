@@ -3,10 +3,12 @@ import os.path
 import unittest
 from subprocess import check_output, check_call
 from tempfile import NamedTemporaryFile
+import pysam
 
 from bam_crumbs.utils.test import TEST_DATA_DIR
 from bam_crumbs.utils.bin import BIN_DIR
-from bam_crumbs.bam_tools import filter_bam, realign_bam, calmd_bam
+from bam_crumbs.bam_tools import (filter_bam, realign_bam, calmd_bam,
+                                  index_bam, merge_sams)
 
 # pylint: disable=C0111
 
@@ -40,6 +42,26 @@ class SortTest(unittest.TestCase):
         assert os.path.exists(fhand.name + '.bai')
         os.remove(fhand.name + '.bai')
 
+
+class ToolsTest(unittest.TestCase):
+    def test_index_bam(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
+        index_bam(bam_fpath)
+        index_bam(bam_fpath)
+
+    def test_merge_sam(self):
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'sample.bam')
+        fhand = NamedTemporaryFile()
+        out_fpath = fhand.name
+        fhand.close()
+        try:
+            merge_sams([bam_fpath, bam_fpath], out_fpath=out_fpath)
+            samfile = pysam.Samfile(out_fpath)
+            assert len(list(samfile)) == 2
+            assert os.stat(bam_fpath) != os.stat(out_fpath)
+        finally:
+            if os.path.exists(out_fpath):
+                os.remove(out_fpath)
 
 class FilterTest(unittest.TestCase):
     def test_filter_mapq(self):
@@ -80,7 +102,7 @@ class CalmdTest(unittest.TestCase):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'sample.bam')
         out_bam = NamedTemporaryFile()
         calmd_bam(bam_fpath, ref_fpath, out_bam.name)
-        assert  open(out_bam.name).read()
+        assert open(out_bam.name).read()
 
     def test_calmd_no_out(self):
         ref_fpath = os.path.join(TEST_DATA_DIR, 'CUUC00007_TC01.fasta')
