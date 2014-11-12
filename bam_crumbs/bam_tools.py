@@ -1,9 +1,9 @@
 
 import os.path
-from subprocess import check_call
+from subprocess import check_call, CalledProcessError
 import shutil
 from tempfile import NamedTemporaryFile
-
+import sys
 import pysam
 
 from bam_crumbs.utils.flag import create_flag
@@ -55,8 +55,8 @@ def sort_bam(in_bam_fpath, out_bam_fpath=None):
     else:
         temp_out_fpath = out_bam_fpath
 
-    picard_tools = get_setting("PICARD_TOOLS_DIR")
-    cmd = ['java', '-jar', os.path.join(picard_tools, 'SortSam.jar'),
+    picard_jar = get_setting("PICARD_JAR")
+    cmd = ['java', '-jar', picard_jar, 'SortSam',
            'INPUT={0}'.format(in_bam_fpath),
            'OUTPUT={0}'.format(temp_out_fpath),
            'SORT_ORDER=coordinate', 'VALIDATION_STRINGENCY=LENIENT']
@@ -85,9 +85,8 @@ def _create_picard_dict(fpath):
     dict_path = os.path.splitext(fpath)[0] + '.dict'
     if os.path.exists(dict_path):
         return
-    picard_dir = get_setting("PICARD_TOOLS_DIR")
-    picard_jar = os.path.join(picard_dir, 'CreateSequenceDictionary.jar')
-    cmd = ['java', '-jar', picard_jar,
+    picard_jar = get_setting("PICARD_JAR")
+    cmd = ['java', '-jar', picard_jar, 'CreateSequenceDictionary',
            'R=%s' % fpath,
            'O=%s' % dict_path]
     stderr = NamedTemporaryFile(suffix='picard.stderr')
@@ -125,8 +124,9 @@ def _realign_bam(bam_fpath, reference_fpath, out_bam_fpath, threads=False):
     index_bam(bam_fpath)
 
     # the intervals to realign
-    gatk_dir = get_setting("GATK_DIR")
-    gatk_jar = os.path.join(gatk_dir, 'GenomeAnalysisTK.jar')
+#     gatk_dir = get_setting("GATK_DIR")
+#     gatk_jar = os.path.join(gatk_dir, 'GenomeAnalysisTK.jar')
+    gatk_jar = get_setting('GATK_JAR')
     intervals_fhand = NamedTemporaryFile(suffix='.intervals')
     stderr = NamedTemporaryFile(suffix='picard.stderr')
     stdout = NamedTemporaryFile(suffix='picard.stdout')
@@ -175,7 +175,14 @@ def _calmd_bam(bam_fpath, reference_fpath, out_bam_fpath):
 def merge_sams(in_fpaths, out_fpath):
     picard_jar = get_setting("PICARD_JAR")
 
-    cmd = ['java', '-jar', picard_jar, 'O={}'.format(out_fpath)]
+    cmd = ['java', '-jar', picard_jar, 'MergeSamFiles',
+           'O={}'.format(out_fpath)]
     for in_fpath in in_fpaths:
         cmd.append('I={}'.format(in_fpath))
-    check_call(cmd)
+    stderr = NamedTemporaryFile(suffix='picard.stderr')
+    stdout = NamedTemporaryFile(suffix='picard.stdout')
+    try:
+        check_call(cmd, stderr=stderr, stdout=stdout)
+    except CalledProcessError:
+        sys.stderr.write(open(stderr.name).read())
+        sys.stdout.write(open(stdout.name).read())

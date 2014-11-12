@@ -1,13 +1,15 @@
 
 import os.path
 import unittest
+import shutil
 from subprocess import check_output, check_call
 from tempfile import NamedTemporaryFile
+
 import pysam
 
 from bam_crumbs.utils.test import TEST_DATA_DIR
 from bam_crumbs.utils.bin import BIN_DIR
-from bam_crumbs.bam_tools import (filter_bam, realign_bam, calmd_bam,
+from bam_crumbs.bam_tools import (filter_bam, calmd_bam, realign_bam,
                                   index_bam, merge_sams)
 
 # pylint: disable=C0111
@@ -51,7 +53,7 @@ class ToolsTest(unittest.TestCase):
 
     def test_merge_sam(self):
         bam_fpath = os.path.join(TEST_DATA_DIR, 'sample.bam')
-        fhand = NamedTemporaryFile()
+        fhand = NamedTemporaryFile(suffix='.bam')
         out_fpath = fhand.name
         fhand.close()
         try:
@@ -62,6 +64,7 @@ class ToolsTest(unittest.TestCase):
         finally:
             if os.path.exists(out_fpath):
                 os.remove(out_fpath)
+
 
 class FilterTest(unittest.TestCase):
     def test_filter_mapq(self):
@@ -107,10 +110,16 @@ class CalmdTest(unittest.TestCase):
     def test_calmd_no_out(self):
         ref_fpath = os.path.join(TEST_DATA_DIR, 'CUUC00007_TC01.fasta')
         bam_fpath = os.path.join(TEST_DATA_DIR, 'sample.bam')
-        orig_stats = os.stat(bam_fpath)
-        calmd_bam(bam_fpath, ref_fpath)
-        calmd_stats = os.stat(bam_fpath)
-        assert calmd_stats != orig_stats
+        copied_fpath = os.path.join(TEST_DATA_DIR, 'sample_copy.bam')
+        try:
+            shutil.copy(bam_fpath, copied_fpath)
+            orig_stats = os.stat(copied_fpath)
+            calmd_bam(copied_fpath, ref_fpath)
+            calmd_stats = os.stat(copied_fpath)
+            assert calmd_stats != orig_stats
+        finally:
+            if os.path.exists(copied_fpath):
+                os.remove(copied_fpath)
 
     def test_calmd_bin(self):
         bin_ = os.path.join(BIN_DIR, 'calmd_bam')

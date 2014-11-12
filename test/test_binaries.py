@@ -15,7 +15,7 @@ from bam_crumbs.utils.test import TEST_DATA_DIR
 
 class BinTests(unittest.TestCase):
     def test_draw_coverage(self):
-        bin_ = os.path.join(BIN_DIR, 'draw_coverage_hist2')
+        bin_ = os.path.join(BIN_DIR, 'draw_coverage_hist')
         bam_fpath = os.path.join(TEST_DATA_DIR, 'seqs.bam')
         fhand = NamedTemporaryFile(suffix='.png')
         out = check_output([bin_, bam_fpath, '-o', fhand.name])
@@ -32,7 +32,7 @@ class BinTests(unittest.TestCase):
         fhand = NamedTemporaryFile(suffix='.png')
         check_call([bin_, bam_fpath, '-o', fhand.name, '-t'], stdout=null)
         res = open(fhand.name).read()
-        assert "[147.00000 , 154.00000[ (3):" in res
+        assert "[147 , 154[ (3):" in res
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
