@@ -151,12 +151,16 @@ def calmd_bam(in_bam_fpath, reference_fpath, out_bam_fpath=None):
         out_bam_fpath = in_bam_fpath
 
     if out_bam_fpath == in_bam_fpath:
-        realigned_fhand = NamedTemporaryFile(suffix='.realigned.bam', delete=False)
+        realigned_fhand = NamedTemporaryFile(suffix='.realigned.bam',
+                                             delete=False)
         temp_out_fpath = realigned_fhand.name
     else:
         temp_out_fpath = out_bam_fpath
 
     _calmd_bam(in_bam_fpath, reference_fpath, temp_out_fpath)
+
+    if temp_out_fpath != out_bam_fpath:
+        shutil.move(temp_out_fpath, out_bam_fpath)
 
 
 def _calmd_bam(bam_fpath, reference_fpath, out_bam_fpath):

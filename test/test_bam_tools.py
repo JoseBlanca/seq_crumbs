@@ -82,6 +82,14 @@ class CalmdTest(unittest.TestCase):
         calmd_bam(bam_fpath, ref_fpath, out_bam.name)
         assert  open(out_bam.name).read()
 
+    def test_calmd_no_out(self):
+        ref_fpath = os.path.join(TEST_DATA_DIR, 'CUUC00007_TC01.fasta')
+        bam_fpath = os.path.join(TEST_DATA_DIR, 'sample.bam')
+        orig_stats = os.stat(bam_fpath)
+        calmd_bam(bam_fpath, ref_fpath)
+        calmd_stats = os.stat(bam_fpath)
+        assert calmd_stats != orig_stats
+
     def test_calmd_bin(self):
         bin_ = os.path.join(BIN_DIR, 'calmd_bam')
         assert 'usage' in check_output([bin_, '-h'])
