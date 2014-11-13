@@ -103,9 +103,13 @@ class CalmdTest(unittest.TestCase):
     def test_calmd_bam(self):
         ref_fpath = os.path.join(TEST_DATA_DIR, 'CUUC00007_TC01.fasta')
         bam_fpath = os.path.join(TEST_DATA_DIR, 'sample.bam')
+        orig_qual = pysam.Samfile(bam_fpath).next().qual
         out_bam = NamedTemporaryFile()
         calmd_bam(bam_fpath, ref_fpath, out_bam.name)
-        assert open(out_bam.name).read()
+        samfile = pysam.Samfile(out_bam.name)
+        calmd_qual = alignment = samfile.next().qual
+        assert orig_qual != calmd_qual
+        assert calmd_qual == 'HHHHHHBHGGH!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 
     def test_calmd_no_out(self):
         ref_fpath = os.path.join(TEST_DATA_DIR, 'CUUC00007_TC01.fasta')
@@ -133,5 +137,5 @@ class CalmdTest(unittest.TestCase):
         assert open(calmd_fhand.name).read()
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'CalmdTest']
+    # import sys;sys.argv = ['', 'CalmdTest']
     unittest.main()
