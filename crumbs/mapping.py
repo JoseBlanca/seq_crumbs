@@ -124,6 +124,60 @@ def map_with_bwamem(index_fpath, unpaired_fpath=None, paired_fpaths=None,
     bwa = popen(cmd, stderr=stderr, stdout=PIPE)
     return bwa
 
+TOPHAT_RG_TRANSLATOR = {'LB': 'library', 'SM': 'sample', 'ID': 'id',
+                        'PL': 'platform'}
+
+
+def map_with_tophat(index_fpath, out_dir, unpaired_fpath=None,
+                    paired_fpaths=None, threads=None, log_fpath=None,
+                    extra_params=None, readgroup=None, mate_inner_dist=None,
+                    mate_std_dev=None):
+    if unpaired_fpath is not None and paired_fpaths is not None:
+        msg = "Tophat devs don't recommend mixing paired and unpaired reads"
+        raise RuntimeError(msg)
+    if extra_params is None:
+        extra_params = []
+
+    standar_params = ['--b2-very-sensitive', '--no-discordant', '--no-mixed',
+                      '--keep-fasta-order']
+    for standar_param in standar_params:
+        if standar_param not in extra_params:
+            extra_params.append(standar_param)
+    if threads is not None:
+        extra_params.extend(['-p', str(get_num_threads(threads))])
+
+    if paired_fpaths:
+        if mate_inner_dist is None or mate_std_dev is None:
+            raise RuntimeError('with paires reads inner-dist is mandatory')
+        extra_params.extend(['-r', str(mate_inner_dist), '--mate-std-dev',
+                             str(mate_std_dev)])
+
+    extra_params.extend(['-o', out_dir])
+    if readgroup is not None:
+        for key, value in readgroup.items():
+            if key not in ('ID', 'LB', 'SM', 'PL'):
+                msg = 'The readgroup header tag is not valid: {}'.format(key)
+                raise RuntimeError(msg)
+            extra_params.extend(['--rg-{}'.format(TOPHAT_RG_TRANSLATOR[key]),
+                                 value])
+    cmd = ['tophat']
+    cmd.extend(extra_params)
+    cmd.append(index_fpath)
+
+    if paired_fpaths:
+        cmd.extend(paired_fpaths)
+
+    if unpaired_fpath:
+        cmd.append(unpaired_fpath)
+
+    if log_fpath is None:
+        stderr = NamedTemporaryFile(suffix='.stderr')
+    else:
+        stderr = open(log_fpath, 'w')
+    # raw_input(' '.join(cmd))
+    tophat = popen(cmd, stderr=stderr, stdout=PIPE)
+    tophat.communicate()
+
 
 def _bowtie2_index_exists(index_path):
     'It checks if a a bowtie2 index exists giving its path'

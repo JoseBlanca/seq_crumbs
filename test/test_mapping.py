@@ -22,7 +22,8 @@ from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.mapping import (get_or_create_bowtie2_index, _bowtie2_index_exists,
                             map_with_bowtie2, get_or_create_bwa_index,
                             _bwa_index_exists, map_with_bwamem,
-                            map_process_to_bam, sort_fastx_files)
+                            map_process_to_bam, sort_fastx_files,
+                            map_with_tophat)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.utils.bin_utils import get_binary_path
 from crumbs.seq import get_name
@@ -131,6 +132,45 @@ class Bowtie2Test(unittest.TestCase):
         samfile = pysam.Samfile(bam_fhand.name)
         #for aligned_read in samfile:
         #    print aligned_read
+
+    def test_tophat(self):
+        reference_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
+        reads_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_reads.fastq')
+        directory = TemporaryDir()
+        index_fpath = get_or_create_bowtie2_index(reference_fpath,
+                                                  directory.name)
+        map_with_tophat(index_fpath, directory.name,
+                        unpaired_fpath=reads_fpath)
+        os.path.exists(os.path.join(directory.name, 'accepted_hits.bam'))
+        directory.close()
+
+    def test_tophat_paired(self):
+        reference_fpath = os.path.join(TEST_DATA_DIR, 'arabidopsis_genes')
+        reads_1_fpath = os.path.join(TEST_DATA_DIR, 'reads_1.fastq')
+        reads_2_fpath = os.path.join(TEST_DATA_DIR, 'reads_2.fastq')
+        try:
+            directory = TemporaryDir()
+            index_fpath = get_or_create_bowtie2_index(reference_fpath,
+                                                      directory.name)
+            map_with_tophat(index_fpath, directory.name,
+                            paired_fpaths=[reads_1_fpath, reads_2_fpath])
+            os.path.exists(os.path.join(directory.name, 'accepted_hits.bam'))
+            self.fail('runtimeError expected')
+        except RuntimeError:
+            pass
+        finally:
+            directory.close()
+
+        try:
+            directory = TemporaryDir()
+            index_fpath = get_or_create_bowtie2_index(reference_fpath,
+                                                      directory.name)
+            map_with_tophat(index_fpath, directory.name,
+                            paired_fpaths=[reads_1_fpath, reads_2_fpath],
+                            mate_inner_dist=350, mate_std_dev=50)
+            os.path.exists(os.path.join(directory.name, 'accepted_hits.bam'))
+        finally:
+            directory.close()
 
 
 class Bwa2Test(unittest.TestCase):
@@ -262,18 +302,18 @@ class SortSeqsFileTest(unittest.TestCase):
         index_fpath = get_or_create_bwa_index(reference_fpath, directory.name)
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         lib_name = 'aa'
+        log_fhand = NamedTemporaryFile()
         readgroup = {'ID': lib_name, 'PL': 'illumina', 'LB': lib_name,
                      'SM': '{0}_illumina_pe'.format(lib_name), 'PU': '0'}
         bwa = map_with_bwamem(index_fpath, unpaired_fpath=reads_fpath,
-                              readgroup=readgroup)
+                              readgroup=readgroup, log_fpath=log_fhand.name)
         map_process_to_bam(bwa, bam_fhand.name)
         out = subprocess.check_output([get_binary_path('samtools'), 'view',
                                        '-h', bam_fhand.name])
-
-        assert 'ID:aa' in out
-        assert  'TTCTGATTCAATCTACTTCAAAGTTGGCTTTATCAATAAG' in out
+        assert '@RG\tID:aa' in out
+        assert 'TTCTGATTCAATCTACTTCAAAGTTGGCTTTATCAATAAG' in out
 
         directory.close()
 if __name__ == '__main__':
-#     import sys;sys.argv = ['', 'Bwa2Test']
+    # import sys;sys.argv = ['', 'SortSeqsFileTest.test_add_rg_to_bam']
     unittest.main()
