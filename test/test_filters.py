@@ -444,8 +444,8 @@ class BlastShortFilterTest(unittest.TestCase):
         oligo_fhand = NamedTemporaryFile()
         oligo_fhand.write('>oligo\nGTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT\n')
         oligo_fhand.flush()
-        result = check_output([filter_bin, '-f', oligo, seq_fhand.name])
-        # print result
+        result = check_output([filter_bin, '-f', oligo_fhand.name,
+                               seq_fhand.name])
         assert '@seq' in result
         assert 'oligo' not in result
 
