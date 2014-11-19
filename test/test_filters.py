@@ -440,6 +440,15 @@ class BlastShortFilterTest(unittest.TestCase):
         assert '@seq' in result
         assert 'oligo' not in result
 
+        # with oligo file
+        oligo_fhand = NamedTemporaryFile()
+        oligo_fhand.write('>oligo\nGTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT\n')
+        oligo_fhand.flush()
+        result = check_output([filter_bin, '-f', oligo, seq_fhand.name])
+        # print result
+        assert '@seq' in result
+        assert 'oligo' not in result
+
 
 class ComplexityFilterTest(unittest.TestCase):
     'It tests the filtering by complexity'

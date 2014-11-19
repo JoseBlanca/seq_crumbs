@@ -16,12 +16,13 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import argparse
 
 from crumbs.utils.bin_utils import (main, parse_filter_args,
                                     create_filter_argparse)
 from crumbs.utils.tags import SEQITEM
 from crumbs.seq import SeqWrapper, SeqItem
-from crumbs.seqio import read_seq_packets, write_filter_packets
+from crumbs.seqio import read_seq_packets, write_filter_packets, read_seqs
 from crumbs.filters import FilterBlastShort, seq_to_filterpackets
 from crumbs.utils.seq_utils import process_seq_packets
 from crumbs.utils.file_utils import flush_fhand
@@ -31,9 +32,15 @@ def _setup_argparse():
     'It prepares the command line argument parsing.'
     description = 'It filters sequences with oligos using blast-short'
     parser = create_filter_argparse(description=description)
-    hlp = 'Oligonucleotide (from 18 to 40 pb) to remove (required)'
-    parser.add_argument('-l', '--oligo', dest='oligos', help=hlp,
-                        action='append', required=True)
+    hlp = 'Oligonucleotide (from 18 to 40 pb) to remove (required '
+    hlp += 'if no fasta file given)'
+    oligo_group = parser.add_mutually_exclusive_group(required=True)
+    oligo_group.add_argument('-l', '--oligo', help=hlp, action='append')
+    hlp = 'Fasta file with oligos (reuired if oligos not provided)'
+    oligo_group.add_argument('-f', '--oligo_file', help=hlp,
+                             type=argparse.FileType('rt'))
+
+    parser
     return parser
 
 
@@ -41,11 +48,16 @@ def _parse_args(parser):
     'It parses the command line and it returns a dict with the arguments.'
     args, parsed_args = parse_filter_args(parser)
 
-    oligos = []
-    for oligo_index, str_seq in enumerate(parsed_args.oligos):
-        name = 'oligo' + str(oligo_index)
-        lines = ['>' + name + '\n', str_seq + '\n']
-        oligos.append(SeqWrapper(SEQITEM, SeqItem(name, lines), 'fasta'))
+    if parsed_args.oligo is not None:
+        oligos = []
+        for oligo_index, str_seq in enumerate(parsed_args.oligo):
+            name = 'oligo' + str(oligo_index)
+            lines = ['>' + name + '\n', str_seq + '\n']
+            oligos.append(SeqWrapper(SEQITEM, SeqItem(name, lines), 'fasta'))
+    elif parsed_args.oligo_file is not None:
+        oligos = list(read_seqs([parsed_args.oligo_file]))
+    else:
+        parser.error('We need oligos or oligo file')
     args['oligos'] = oligos
 
     return args
@@ -65,7 +77,7 @@ def run():
                                        group_paired_reads=args['paired_reads'])
 
     filter_by_blast = FilterBlastShort(oligos=args['oligos'],
-                                     reverse=args['reverse'],
+                                       reverse=args['reverse'],
                                      failed_drags_pair=args['fail_drags_pair'])
 
     filter_packets, workers = process_seq_packets(filter_packets,
