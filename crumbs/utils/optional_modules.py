@@ -113,7 +113,7 @@ except ImportError:
     AlphabetEncoder = create_fake_class(MSG + BIO)
 
 try:
-    from toolz.itertoolz.core import merge_sorted, first
+    from toolz.itertoolz import merge_sorted, first
 except ImportError:
     merge_sorted = create_fake_funct(MSG + 'toolz')
     first = create_fake_funct(MSG + 'toolz')
