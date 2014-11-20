@@ -25,6 +25,7 @@ VCF_HEADER = '''##fileformat=VCFv4.1
 ##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
 ##contig=<ID=20,length=62435964,assembly=B36>
 ##phasing=partial
+##INFO=<ID=IV0,Number=1,Type=String,Description="True">
 ##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
 ##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
 ##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
@@ -367,6 +368,19 @@ class RecombRateTest(unittest.TestCase):
                                    'test_cross')
         assert recomb is None
 
+        vcf = '''#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t1_14_1_gbs\t1_17_1_gbs\t1_18_4_gbs\t1_19_4_gbs\t1_26_1_gbs\t1_27_1_gbs1_2_2_gbs\t1_35_13_gbs\t1_3_2_gbs\t1_50_1_gbs\t1_59_1_gbs\t1_63_4_gbs\t1_6_2_gbs\t1_70_1_gbs\t1_74_1_gbs\t1_79_1_gbs\t1_7_2_gbs\t1_81_10_gbs\t1_86_1_gbs\t1_8_2_gbs\t1_91_2_gbs\t1_94_4_gbs\t2_107_1_gbs\t2_10_2_gbs\t2_116_1_gbs\t2_11_1_gbs\t2_125_2_gbs\t2_13_1_gbs\t2_16_3_gbs\t2_21_1_gbs\t2_22A_1_gbs\t2_24_2_gbs\t2_28_2_gbs\t2_31_2_gbs\t2_33_1_gbs\t2_39_3_gbs\t2_43_1_gbs2_5_1_gbs\t2_64_7_gbs\t2_67_2_gbs\t2_6_4_gbs\t2_84_2_gbs\t2_8_3_gbs\t2_95_2_gbs\t4_100B_4_gbs\t4_108_10_gbs\t4_110_11_gbs\t4_111_6_gbs\t4_115B_2_gbs\t4_11B_3_gbs\t4_123B_2_gbs\t4_127_6_gbs\t4_131_1_gbs\t4_136B_3_gbs\t4_136_10_T1_gbs\t4_138B_2_gbs\t4_26_11_gbs\t4_28_4_gbs\t4_33_2_gbs\t4_35_1_gbs\t4_38_2_gbs\t4_39_2_gbs\t4_41B_2_gbs\t4_42_11_gbs\t4_45_2_gbs\t4_53_2_gbs\t4_5_5_gbs\t4_62_4_gbs\t4_64B_1_gbs\t4_65_5_gbs\t4_66_2_gbs\t4_71_2_gbs\t4_72_1_gbs\t4_77_1_gbs\t4_7B_1_gbs\t4_7_2_gbs\t4_81B_2_gbs\t4_82B_4_gbs\t4_85_1_gbs\t4_95_1_gbs\t4_9_1_gbs\t5_14B_1_gbs\t5_15B_1_gbs\t5_18_1_gbs\t5_22_2_gbs\t5_24_2_gbs\t5_25_2_gbs\t5_32_3_gbs\t5_33B_4_gbs\t5_34B_2_gbs\t5_3_1_gbs\t5_40B_2_gbs\t5_49B_2_T1_gbs\t5_57_1_gbs\t5_58_1_gbs\t5_66_1_gbs\t5_80B_2_gbs\tMU_16_5_gbs\tV_196_2_gbs\t1\t2
+s7\t4039693\tS7_4039693\tT\tG\t.\tPASS\tIV0=F\tGT\t0/0\t0/0\t0/0\t1/1\t0/0\t1/1\t1/1\t1/1\t1/1\t0/0\t0/0\t0/0\t1/1\t0/0\t0/0\t1/1\t0/0\t1/1\t0/0\t0/0\t0/0\t1/1\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t0/0\t0/0\t0/0\t0/0\t1/1\t0/0\t1/1\t0/0\t0/0\t1/1\t1/1\t0/0\t1/1\t1/1\t1/1\t0/0\t1/1\t1/1\t1/1\t0/0\t1/1\t1/1\t0/0\t0/0\t0/0\t0/0\t0/0\t1/1\t0/0\t0/0\t./.\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t1/1\t0/0\t0/0\t1/1\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t1/1\t0/0\t1/1\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t1/1\t0/0\t1/1\t0/0\t0/0\t0/0\t0/0\t1/1
+s7\t4028261\tS7_4028261\tC\tT\t.\tPASS\tIV0=F\tGT\t1/1\t1/1\t./.\t0/0\t1/1\t0/0\t./.\t0/0\t0/0\t1/1\t1/1\t1/1\t0/0\t1/1\t1/1\t0/0\t1/1\t0/0\t1/1\t1/1\t1/1\t0/0\t1/1\t1/1\t1/1\t1/1\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t0/0\t1/1\t0/0\t1/1\t1/1\t0/0\t0/0\t1/1\t0/0\t0/0\t0/0\t1/1\t0/0\t0/0\t0/0\t0/0\t0/0\t./.\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/1\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t0/0\t1/1\t0/0
+'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        reader = VCFReader(vcf)
+        snps = list(reader.parse_snvs())
+
+        recomb = _calc_recomb_rate(snps[0].record.samples,
+                                   snps[1].record.samples,
+                                   'ril_self')
+        self.assertAlmostEqual(recomb, 0.8187, 3)
+
     def test_recomb_rate_along_chrom(self):
         vcf = FREEBAYES_VCF_PATH
 
@@ -393,5 +407,5 @@ class _LDStatsCacheTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys; sys.argv = ['', 'FilterTest.test_cache']
+    # import sys; sys.argv = ['', 'RecombRateTest.test_recomb_rate']
     unittest.main()

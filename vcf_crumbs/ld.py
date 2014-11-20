@@ -101,7 +101,6 @@ def _count_biallelic_haplotypes(calls1, calls2):
     # Invalid name. Due to using uppercases
     # pylint: disable=C0103
     calls1, calls2 = _remove_no_calls_and_hets(calls1, calls2)
-
     freq_alleles = []
     freq_alleles.append(_most_freq_alleles(calls1))
     freq_alleles.append(_most_freq_alleles(calls2))
@@ -118,7 +117,6 @@ def _count_biallelic_haplotypes(calls1, calls2):
 
         haplo = (al_snp_1, al_snp_2)
         haplo_count[haplo] += 1
-
     if not haplo_count:
         return None
 
@@ -150,7 +148,6 @@ def _count_biallelic_haplotypes(calls1, calls2):
 
 def _calc_recomb_rate(calls1, calls2, pop_type):
     haplo_count = _count_biallelic_haplotypes(calls1, calls2)
-
     if haplo_count is None:
         return None
 
@@ -326,6 +323,8 @@ def calc_recomb_rates_along_chroms(vcf_fpath, pop_type, samples=None,
                 calls2 = [call for call in snv_2.samples if call.sample in samples]
 
             recomb = _calc_recomb_rate(calls1, calls2, pop_type)
+            if recomb > 0.5:
+                print recomb, snv, snv_2
             if recomb is None:
                 continue
             recombs.append((dist, recomb))
