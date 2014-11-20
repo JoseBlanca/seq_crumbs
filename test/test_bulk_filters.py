@@ -167,29 +167,29 @@ class FilterDuplicatesTest(unittest.TestCase):
 
     def test_seqitem_pairs_equal(self):
         seq1 = SeqWrapper(SEQITEM, SeqItem('seq1',
-                            ['@seq1\n', 'TAATAC\n', '+\n',
-                             'TTTDFG\n']), 'fastq')
+                                           ['@seq1\n', 'TAATAC\n', '+\n',
+                                            'TTTDFG\n']), 'fastq')
         seq2 = SeqWrapper(SEQITEM, SeqItem('seq2',
-                            ['@seq2\n', 'TCATTA\n', '+\n',
-                             'ABCBEG\n']), 'fastq')
+                                           ['@seq2\n', 'TCATTA\n', '+\n',
+                                            'ABCBEG\n']), 'fastq')
         seq3 = SeqWrapper(SEQITEM, SeqItem('seq3',
-                            ['@seq3\n', 'TAATAC\n', '+\n',
-                             'TTTDFG\n']), 'fastq')
+                                           ['@seq3\n', 'TAATAC\n', '+\n',
+                                            'TTTDFG\n']), 'fastq')
         seq4 = SeqWrapper(SEQITEM, SeqItem('seq4',
-                            ['@seq4\n', 'ACGCGT\n', '+\n',
-                             'ABCBEG\n']), 'fastq')
+                                           ['@seq4\n', 'ACGCGT\n', '+\n',
+                                            'ABCBEG\n']), 'fastq')
         pair1 = (seq1, seq2)
         pair2 = (seq2, seq4)
         pair3 = (seq3, seq2)
         pair4 = (seq2, seq1)
 
         assert _seqitem_pairs_equal(pair1, pair3)
-        assert _seqitem_pairs_equal(pair1, pair2) == False
-        assert _seqitem_pairs_equal(pair1, pair4) == False
+        assert not _seqitem_pairs_equal(pair1, pair2)
+        assert not _seqitem_pairs_equal(pair1, pair4)
         assert _seqitem_pairs_equal([seq1], [seq3])
-        assert _seqitem_pairs_equal([seq1], [seq2]) == False
-        assert _seqitem_pairs_equal([seq1], pair1) == False
-        assert _seqitem_pairs_equal(pair1, seq2) == False
+        assert not _seqitem_pairs_equal([seq1], [seq2])
+        assert not _seqitem_pairs_equal([seq1], pair1)
+        assert not _seqitem_pairs_equal(pair1, seq2)
 
     def test_filter_duplicates(self):
         options1 = [True, False]
@@ -217,16 +217,18 @@ class FilterDuplicatesTest(unittest.TestCase):
         assert'@seq1.f\naaaa\n+\nHHHH\n@seq2.f\naaab\n+\nHHHH\n' in result
         result = check_output([filter_bin, in_fhand.name, '--paired_reads'])
         assert seqs in result
+        result = check_output([filter_bin, in_fhand.name, '-l', '1'])
+        assert result == '@seq1.f\naaaa\n+\nHHHH\n'
 
         return  # TODO Fallo sin arreglar
         in_fhand = open(os.path.join(TEST_DATA_DIR, 'illum_fastq.fastq'))
         try:
             result = check_output([filter_bin], stdin=in_fhand)
-            #print result
+            # print result
             self.fail()
         except UndecidedFastqVersionError:
             pass
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FilterDuplicatesTest.test_dup_bin']
+    # import sys;sys.argv = ['', 'FilterDuplicatesTest.test_dup_bin']
     unittest.main()

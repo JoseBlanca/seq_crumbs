@@ -35,9 +35,11 @@ def create_filter_argparse(add_reverse=True, **kwargs):
     _help += ' to reduce memory requirements'
     parser.add_argument('-m', '--max_seqs_packet',  dest='max_seqs_packet',
                         help=_help, default=None, type=int)
+    parser.add_argument('-l', '--use_length', type=int,
+                        help="Length of the firt nucleotides to check")
     group = parser.add_argument_group('Pairing')
     group.add_argument('--paired_reads', action='store_true',
-                        help='Filter considering interleaved pairs')
+                       help='Filter considering interleaved pairs')
     return parser
 
 
@@ -47,6 +49,7 @@ def parse_filter_args(parser, add_reverse=True):
     args['paired_reads'] = parsed_args.paired_reads
     args['tempdir'] = parsed_args.tempdir
     args['max_seqs_packet'] = parsed_args.max_seqs_packet
+    args['use_length'] = parsed_args.use_length
 
     return args, parsed_args
 
@@ -61,9 +64,11 @@ def run():
     out_fhand = args['out_fhand']
     tempdir = args['tempdir']
     max_seqs_packet = args['max_seqs_packet']
+    use_length = args['use_length']
 
     filter_duplicates(in_fhands, out_fhand, args['paired_reads'],
-                      n_seqs_packet=max_seqs_packet, tempdir=tempdir)
+                      n_seqs_packet=max_seqs_packet, tempdir=tempdir,
+                      use_length=use_length)
     flush_fhand(out_fhand)
 
 if __name__ == '__main__':
