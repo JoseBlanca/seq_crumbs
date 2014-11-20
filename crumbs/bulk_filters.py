@@ -41,23 +41,31 @@ def _read_pairs(in_fhands, paired_reads):
     return pairs
 
 
-def _get_pair_key(pair):
-    key = []
-    for read in pair:
-        key.append(get_str_seq(read))
-    return tuple(key)
+class _PairKeyGetter(object):
+    def __init__(self, use_length=None):
+        self._use_length = use_length
+
+    def __call__(self, pair):
+        key = []
+        for read in pair:
+            seq = get_str_seq(read)
+            if self._use_length is not None:
+                seq = seq[:self._use_length]
+            key.append(seq)
+        return tuple(key)
 
 
-def filter_duplicates(in_fhands, out_fhand, paired_reads,
+def filter_duplicates(in_fhands, out_fhand, paired_reads, use_length=None,
                       n_seqs_packet=None, tempdir=None):
     if not in_fhands:
         raise ValueError('At least one input fhand is required')
     pairs = _read_pairs(in_fhands, paired_reads)
+    get_pair_key = _PairKeyGetter(use_length=use_length)
     if n_seqs_packet is None:
-        unique_pairs = unique_unordered(pairs, key=_get_pair_key)
+        unique_pairs = unique_unordered(pairs, key=get_pair_key)
     else:
-        sorted_pairs = sorted_items(pairs, key=_get_pair_key, tempdir=tempdir,
-                                max_items_in_memory=n_seqs_packet)
-        unique_pairs = unique(sorted_pairs, key=_get_pair_key)
+        sorted_pairs = sorted_items(pairs, key=get_pair_key, tempdir=tempdir,
+                                    max_items_in_memory=n_seqs_packet)
+        unique_pairs = unique(sorted_pairs, key=get_pair_key)
     for pair in unique_pairs:
         write_seqs(pair, out_fhand)

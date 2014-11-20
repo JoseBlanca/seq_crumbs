@@ -134,6 +134,34 @@ def _test_filter_duplicates(paired_reads, n_seqs_packet):
         assert counts == 1
     in_fhand.close()
 
+    # use length
+    in_fhand = NamedTemporaryFile()
+    in_fhand.write(FASTQ_DUPS)
+    in_fhand.flush()
+    in_fhand = open(in_fhand.name)
+
+    out_fhand = NamedTemporaryFile()
+    filter_duplicates([in_fhand], out_fhand, paired_reads=False,
+                      n_seqs_packet=n_seqs_packet, use_length=10)
+    flush_fhand(out_fhand)
+    filtered_pairs = list(_read_pairs([open(out_fhand.name)],
+                                      paired_reads=False))
+    assert len(filtered_pairs) == 2
+
+    # use length
+    in_fhand = NamedTemporaryFile()
+    in_fhand.write(FASTQ_DUPS)
+    in_fhand.flush()
+    in_fhand = open(in_fhand.name)
+
+    out_fhand = NamedTemporaryFile()
+    filter_duplicates([in_fhand], out_fhand, paired_reads=False,
+                      n_seqs_packet=n_seqs_packet, use_length=1)
+    flush_fhand(out_fhand)
+    filtered_pairs = list(_read_pairs([open(out_fhand.name)],
+                                      paired_reads=False))
+    assert len(filtered_pairs) == 1
+
 
 class FilterDuplicatesTest(unittest.TestCase):
 
