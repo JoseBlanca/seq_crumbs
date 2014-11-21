@@ -303,6 +303,22 @@ class SNV(object):
         return self._allele_counts
 
     @property
+    def genotype_counts(self):
+        snp = self.record
+        if snp.num_called < self.min_calls_for_pop_stats:
+            return None
+
+        return Counter([tuple(sorted(call.int_alleles)) for call in self.calls if call.called])
+
+    @property
+    def genotype_freqs(self):
+        counts = self.genotype_counts
+        if counts is None:
+            return None
+        tot_genos = sum(counts.values())
+        return {geno: cnt/tot_genos for geno, cnt in counts.items()}
+
+    @property
     def maf(self):
         'Frequency of the most abundant allele'
         snp = self.record

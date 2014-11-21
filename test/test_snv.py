@@ -84,11 +84,11 @@ class SNVTests(unittest.TestCase):
         assert snps[5].filters is None
 
     def test_allele_freq(self):
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
-20\t14370\trs6054257\tG\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
-20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|0:3:5:65,3\t0/0:41:3
-20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t1|1:49:3:58,50\t1|1:3:5:65,3\t1/1:41:3
-20\t17330\t.\tT\tA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t.\t.\t.
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT N1 N2 N3
+20\t1\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+20\t2\t.\tT\tA\t3\tq10\tNS=3\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|0:3:5:65,3\t0/0:41:3
+20\t3\t.\tT\tA\t3\tq10\tNS=3\tGT:GQ:DP:HQ\t1|1:49:3:58,50\t1|1:3:5:65,3\t1/1:41:3
+20\t4\t.\tT\tA\t3\tq10\tNS=3\tGT:GQ:DP:HQ\t.\t.\t.
 '''
         vcf = StringIO(VCF_HEADER2 + vcf)
         snps = list(VCFReader(vcf, min_calls_for_pop_stats=1).parse_snvs())
@@ -97,6 +97,23 @@ class SNVTests(unittest.TestCase):
         assert snps[1].allele_freqs == {0: 1}
         assert snps[2].allele_freqs == {1: 1}
         assert snps[3].allele_freqs is None
+
+    def test_genotype_freq(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT N1 N2 N3
+20\t1\t.\tG\tA\t2\tq1\tNS=3\tGT\t0|0\t1|0\t1/1
+20\t2\t.\tT\tA\t3\tq1\tNS=3\tGT\t0|0\t0|0\t0/.
+20\t3\t.\tT\tA\t3\tq1\tNS=3\tGT\t1|1\t1|1\t1/1
+20\t4\t.\tT\tA\t3\tq1\tNS=3\tGT\t.\t.\t.
+'''
+        vcf = StringIO(VCF_HEADER2 + vcf)
+        snps = list(VCFReader(vcf, min_calls_for_pop_stats=1).parse_snvs())
+
+        assert snps[0].genotype_counts == {(0, 0): 1, (0, 1): 1, (1, 1): 1}
+        assert snps[1].genotype_counts == {(0, 0): 2, (None, 0): 1}
+        assert snps[2].genotype_counts == {(1, 1): 3}
+        assert snps[3].genotype_counts is None
+
+        self.assertAlmostEqual(snps[0].genotype_freqs[(0, 0)], 0.33333, 4)
 
     def test_is_polymorphic(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
