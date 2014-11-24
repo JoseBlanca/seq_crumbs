@@ -102,18 +102,28 @@ class SNVTests(unittest.TestCase):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT N1 N2 N3
 20\t1\t.\tG\tA\t2\tq1\tNS=3\tGT\t0|0\t1|0\t1/1
 20\t2\t.\tT\tA\t3\tq1\tNS=3\tGT\t0|0\t0|0\t0/.
-20\t3\t.\tT\tA\t3\tq1\tNS=3\tGT\t1|1\t1|1\t1/1
+20\t3\t.\tT\tA\t3\tq1\tNS=3\tGT\t1|1\t1|1\t./.
 20\t4\t.\tT\tA\t3\tq1\tNS=3\tGT\t.\t.\t.
+20\t5\t.\tT\tA\t3\tq1\tNS=3\tGT\t0|2\t1|1\t1/.
+20\t5\t.\tT\tA\t3\tq1\tNS=3\tGT\t0|1\t1|0\t1/.
+20\t5\t.\tT\tA\t3\tq1\tNS=3\tGT\t0|0\t0|0\t1/.
+20\t5\t.\tT\tA\t3\tq1\tNS=3\tGT\t1|1\t0|0\t1/0
 '''
         vcf = StringIO(VCF_HEADER2 + vcf)
         snps = list(VCFReader(vcf, min_calls_for_pop_stats=1).parse_snvs())
 
         assert snps[0].genotype_counts == {(0, 0): 1, (0, 1): 1, (1, 1): 1}
         assert snps[1].genotype_counts == {(0, 0): 2, (None, 0): 1}
-        assert snps[2].genotype_counts == {(1, 1): 3}
+        assert snps[2].genotype_counts == {(1, 1): 2}
         assert snps[3].genotype_counts is None
 
         self.assertAlmostEqual(snps[0].genotype_freqs[(0, 0)], 0.33333, 4)
+
+        assert snps[4].biallelic_genotype_counts == (1, 0, 1)
+        assert snps[5].biallelic_genotype_counts == (0, 2, 0)
+        assert snps[6].biallelic_genotype_counts == (2, 0, 0)
+        assert snps[7].biallelic_genotype_counts == (1, 1, 1)
+        self.assertAlmostEqual(snps[7].biallelic_genotype_freqs[0], 0.33333, 4)
 
     def test_is_polymorphic(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003

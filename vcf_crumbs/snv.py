@@ -1,8 +1,9 @@
 from __future__ import division
 
 import sys
-from collections import Counter, OrderedDict
+from collections import Counter, OrderedDict, namedtuple
 import gzip
+from operator import itemgetter
 
 from vcf import Reader as pyvcfReader
 from vcf import Writer as pyvcfWriter
@@ -217,6 +218,9 @@ class VCFWriter(pyvcfWriter):
         super(VCFWriter, self).write_record(snv.record)
 
 
+BiallelicGts = namedtuple('BiallelicGts', ['AA', 'Aa', 'aa'])
+
+
 class SNV(object):
     '''A proxy around the pyvcf _Record with some additional functionality'''
     def __init__(self, record, reader, ploidy=2,
@@ -307,7 +311,6 @@ class SNV(object):
         snp = self.record
         if snp.num_called < self.min_calls_for_pop_stats:
             return None
-
         return Counter([tuple(sorted(call.int_alleles)) for call in self.calls if call.called])
 
     @property
@@ -317,6 +320,38 @@ class SNV(object):
             return None
         tot_genos = sum(counts.values())
         return {geno: cnt/tot_genos for geno, cnt in counts.items()}
+
+    @property
+    def biallelic_genotype_counts(self):
+        gt_cnts = self.genotype_counts
+        if gt_cnts is None:
+            return
+
+        gt_cnts = {gt: cnt for gt, cnt in gt_cnts.items() if None not in gt}
+        al_cnts = Counter()
+        for genotype, cnt in gt_cnts.items():
+            for allele in genotype:
+                al_cnts[allele] += cnt
+        sorted_als = list(sorted(al_cnts.items(), key=itemgetter(1),
+                                 reverse=True))
+        al_A = sorted_als[0][0]
+
+        gt_cnts_aa = {}
+        for genotype, cnt in gt_cnts.items():
+            genotype = tuple(sorted(('A' if allele == al_A else 'a' for allele in genotype)))
+            gt_cnts_aa[genotype] = cnt
+
+        return BiallelicGts(gt_cnts_aa.get(('A', 'A'), 0),
+                            gt_cnts_aa.get(('A', 'a'), 0),
+                            gt_cnts_aa.get(('a', 'a'), 0))
+
+    @property
+    def biallelic_genotype_freqs(self):
+        gt_cnts = self.biallelic_genotype_counts
+        if gt_cnts is None:
+            return
+        tot = sum(gt_cnts)
+        return BiallelicGts(*[cnt / tot for cnt in gt_cnts])
 
     @property
     def maf(self):
