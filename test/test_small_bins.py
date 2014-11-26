@@ -60,7 +60,6 @@ class CatTest(unittest.TestCase):
         fhand.flush()
         result = check_output([cat_bin, fhand.name])
         assert result == '@seq1\nACTA\n+\nqqqq\n'
-
         # No input
         fhand = NamedTemporaryFile()
         fhand.write('')
@@ -69,8 +68,10 @@ class CatTest(unittest.TestCase):
             stderr = NamedTemporaryFile()
             result = check_output([cat_bin, fhand.name], stderr=stderr)
             self.fail()
+
         except CalledProcessError:
-            assert 'The file is empty'  in open(stderr.name).read()
+            assert 'The file is empty' in open(stderr.name).read()
+            os.remove('cat_seqs.error')
 
         # No format
         in_fhand1 = self.make_fasta()
