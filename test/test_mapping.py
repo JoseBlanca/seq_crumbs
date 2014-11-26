@@ -309,7 +309,7 @@ class SortSeqsFileTest(unittest.TestCase):
                               readgroup=readgroup, log_fpath=log_fhand.name)
         map_process_to_bam(bwa, bam_fhand.name)
         out = subprocess.check_output([get_binary_path('samtools'), 'view',
-                                       '-h', bam_fhand.name])
+                                       '-h', bam_fhand.name], stderr=log_fhand)
         assert '@RG\tID:aa' in out
         assert 'TTCTGATTCAATCTACTTCAAAGTTGGCTTTATCAATAAG' in out
 
