@@ -78,17 +78,6 @@ class CatTest(unittest.TestCase):
         result = check_output([cat_bin, in_fhand1.name, in_fhand2.name])
         assert '>seq3\nACTATCATGGCAGATA\n>seq4\nACTATCATGGCAGATA' in result
 
-        # bad input format
-        in_fhand1 = self.make_fasta()
-        try:
-            stderr = NamedTemporaryFile()
-            result = check_output([cat_bin, '-t', 'fastq', in_fhand1.name],
-                                  stderr=stderr)
-            self.fail()
-        except CalledProcessError:
-            stderr_str = open(stderr.name).read()
-            assert 'given input format does not correspond' in stderr_str
-
         in_fhand1 = self.make_fasta()
         in_fhand2 = NamedTemporaryFile()
         in_fhand2.write('@seq\nATAT\n+\n????\n')

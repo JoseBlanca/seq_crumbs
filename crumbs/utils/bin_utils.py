@@ -377,19 +377,8 @@ def parse_basic_args(parser):
         for wrapped_fhand in wrapped_fhands:
             get_format(wrapped_fhand)
     else:
-        if in_format != get_format(wrapped_fhands[0]):
-            msg = 'The given input format does not correspond to the input'
-            msg += ' file'
-            raise WrongFormatError(msg)
-
-        if 'fastq' in in_format:
-            for wrapped_fhand in wrapped_fhands:
-                get_format(wrapped_fhand)
-        else:
-            # we dont set the first one because already did in the previous
-            # checking
-            for wrapped_fhand in wrapped_fhands[1:]:
-                set_format(wrapped_fhand, in_format)
+        for wrapped_fhand in wrapped_fhands:
+            set_format(wrapped_fhand, in_format)
 
     out_fhand = getattr(parsed_args, OUTFILE)
 
