@@ -319,7 +319,7 @@ def calculate_distance_distribution(interleave_fhand, index_fpath,
     bam_fhand = NamedTemporaryFile(suffix='.bam')
     extra_params = ['-a', '-M']
     bwa = map_with_bwamem(index_fpath, interleave_fpath=interleave_fhand.name,
-                          extra_params=extra_params)
+                          extra_params=extra_params, threads=threads)
     map_process_to_sortedbam(bwa, bam_fhand.name, key='queryname',
                              tempdir=tempdir)
     bamfile = Samfile(bam_fhand.name)
