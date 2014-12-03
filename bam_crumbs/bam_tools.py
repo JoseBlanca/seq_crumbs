@@ -93,14 +93,14 @@ def _create_picard_dict(fpath):
     check_call(cmd, stderr=stderr)
 
 
-def realign_bam(in_bam_fpath, reference_fpath, out_bam_fpath=None,
-                threads=False):
+def realign_bam(in_bam_fpath, reference_fpath, out_bam_fpath=None):
 
     if out_bam_fpath is None:
         out_bam_fpath = in_bam_fpath
 
     if out_bam_fpath == in_bam_fpath:
-        realigned_fhand = NamedTemporaryFile(suffix='.realigned.bam', delete=False)
+        realigned_fhand = NamedTemporaryFile(suffix='.realigned.bam',
+                                             delete=False)
         temp_out_fpath = realigned_fhand.name
     else:
         temp_out_fpath = out_bam_fpath
