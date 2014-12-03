@@ -173,7 +173,6 @@ function calls leading up to the error, in the order they occurred.</p>'''
             value = pydoc.html.repr(getattr(evalue, name))
             exception.append('\n<br>%s%s&nbsp;=\n%s' % (indent, name, value))
 
-    import traceback
     return head + ''.join(frames) + ''.join(exception) + '''
 
 
@@ -245,7 +244,6 @@ function calls leading up to the error, in the order they occurred.
             value = pydoc.text.repr(getattr(evalue, name))
             exception.append('\n%s%s = %s' % (" "*4, name, value))
 
-    import traceback
     return head + ''.join(frames) + ''.join(exception) + '''
 
 The above is a description of an error in a Python program.  Here is

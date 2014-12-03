@@ -119,7 +119,7 @@ def index(filename, format, alphabet=None, key_function=None):
 
     See also: Bio.SeqIO.index_db() and Bio.SeqIO.to_dict()
     """
-    #Try and give helpful error messages:
+    # Try and give helpful error messages:
     if not isinstance(filename, basestring):
         raise TypeError("Need a filename (not a handle)")
     if not isinstance(format, basestring):
@@ -128,11 +128,11 @@ def index(filename, format, alphabet=None, key_function=None):
         raise ValueError("Format required (lower case string)")
     if format != format.lower():
         raise ValueError("Format string '%s' should be lower case" % format)
-    if alphabet is not None and not (isinstance(alphabet, Alphabet) or \
+    if alphabet is not None and not (isinstance(alphabet, Alphabet) or
                                      isinstance(alphabet, AlphabetEncoder)):
         raise ValueError("Invalid alphabet, %s" % repr(alphabet))
 
-    #Map the file format to a sequence iterator:
+    # Map the file format to a sequence iterator:
     return _IndexedSeqFileDict(filename, format, alphabet, key_function)
 
 
@@ -159,7 +159,7 @@ class _IndexedSeqFileDict(_dict_base):
     add or change values, pop values, nor clear the dictionary.
     """
     def __init__(self, filename, format, alphabet, key_function):
-        #Use key_function=None for default value
+        # Use key_function=None for default value
         try:
             proxy_class = _FormatToRandomAccess[format]
         except KeyError:
@@ -173,13 +173,13 @@ class _IndexedSeqFileDict(_dict_base):
             offset_iter = random_access_proxy
         offsets = {}
         for key, offset, length in offset_iter:
-            #Note - we don't store the length because I want to minimise the
-            #memory requirements. With the SQLite backend the length is kept
-            #and is used to speed up the get_raw method (by about 3 times).
-            #The length should be provided by all the current backends except
-            #SFF where there is an existing Roche index we can reuse (very fast
-            #but lacks the record lengths)
-            #assert length or format in ["sff", "sff-trim"], \
+            # Note - we don't store the length because I want to minimise the
+            # memory requirements. With the SQLite backend the length is kept
+            # and is used to speed up the get_raw method (by about 3 times).
+            # The length should be provided by all the current backends except
+            # SFF where there is an existing Roche index we can reuse (very fast
+            # but lacks the record lengths)
+            # assert length or format in ["sff", "sff-trim"], \
             #       "%s at offset %i given length %r (%s format %s)" \
             #       % (key, offset, length, filename, format)
             if key in offsets:
@@ -200,7 +200,7 @@ class _IndexedSeqFileDict(_dict_base):
         else:
             return "{}"
 
-    def __contains__(self, key) :
+    def __contains__(self, key):
         return key in self._offsets
 
     def __len__(self):
@@ -208,7 +208,7 @@ class _IndexedSeqFileDict(_dict_base):
         return len(self._offsets)
 
     if hasattr(dict, "iteritems"):
-        #Python 2, use iteritems but not items etc
+        # Python 2, use iteritems but not items etc
         def values(self):
             """Would be a list of the SeqRecord objects, but not implemented.
 
@@ -235,7 +235,7 @@ class _IndexedSeqFileDict(_dict_base):
 
         def keys(self) :
             """Return a list of all the keys (SeqRecord identifiers)."""
-            #TODO - Stick a warning in here for large lists? Or just refuse?
+            # TODO - Stick a warning in here for large lists? Or just refuse?
             return self._offsets.keys()
 
         def itervalues(self):
@@ -253,7 +253,7 @@ class _IndexedSeqFileDict(_dict_base):
             return self.__iter__()
 
     else:
-        #Python 3 - define items and values as iterators
+        # Python 3 - define items and values as iterators
         def items(self):
             """Iterate over the (key, SeqRecord) items."""
             for key in self.__iter__():
@@ -274,12 +274,12 @@ class _IndexedSeqFileDict(_dict_base):
 
     def __getitem__(self, key):
         """x.__getitem__(y) <==> x[y]"""
-        #Pass the offset to the proxy
+        # Pass the offset to the proxy
         record = self._proxy.get(self._offsets[key])
         if self._key_function:
             key2 = self._key_function(record.id + ' ' + record.description)
         else:
-            #key2 = record.id + ' ' + record.description
+            # key2 = record.id + ' ' + record.description
             key2 = record.description
         if key != key2:
             raise ValueError("Key did not match (%s vs %s)" % (key, key2))
@@ -302,7 +302,7 @@ class _IndexedSeqFileDict(_dict_base):
 
         NOTE - This functionality is not supported for every file format.
         """
-        #Pass the offset to the proxy
+        # Pass the offset to the proxy
         return self._proxy.get_raw(self._offsets[key])
 
     def __setitem__(self, key, value):
@@ -349,17 +349,17 @@ class FastqRandomAccess(SeqFileRandomAccess):
         start_offset = handle.tell()
         line = handle.readline()
         if not line:
-            #Empty file!
+            # Empty file!
             return
         at_char = _as_bytes("@")
         plus_char = _as_bytes("+")
         if line[0:1] != at_char:
             raise ValueError("Problem with FASTQ @ line:\n%s" % repr(line))
         while line:
-            #assert line[0]=="@"
-            #This record seems OK (so far)
+            # assert line[0]=="@"
+            # This record seems OK (so far)
             id = line[1:].rstrip()
-            #Find the seq line(s)
+            # Find the seq line(s)
             seq_len = 0
             length = len(line)
             while line:
@@ -369,12 +369,12 @@ class FastqRandomAccess(SeqFileRandomAccess):
                 seq_len += len(line.strip())
             if not line:
                 raise ValueError("Premature end of file in seq section")
-            #assert line[0]=="+"
-            #Find the qual line(s)
+            # assert line[0]=="+"
+            # Find the qual line(s)
             qual_len = 0
             while line:
                 if seq_len == qual_len:
-                    #Should be end of record...
+                    # Should be end of record...
                     end_offset = handle.tell()
                     line = handle.readline()
                     if line and line[0:1] != at_char:
@@ -388,11 +388,13 @@ class FastqRandomAccess(SeqFileRandomAccess):
                 raise ValueError("Problem with quality section")
             yield _bytes_to_string(id), start_offset, length
             start_offset = end_offset
-        #print "EOF"
+        # print "EOF"
 
     def get_raw(self, offset):
-        """Similar to the get method, but returns the record as a raw string."""
-        #TODO - Refactor this and the __init__ method to reduce code duplication?
+        """Similar to the get method, but returns the record as a raw
+        string."""
+        # TODO - Refactor this and the __init__ method to reduce code
+        # duplication?
         handle = self._handle
         handle.seek(offset)
         line = handle.readline()
@@ -401,22 +403,22 @@ class FastqRandomAccess(SeqFileRandomAccess):
         plus_char = _as_bytes("+")
         if line[0:1] != at_char:
             raise ValueError("Problem with FASTQ @ line:\n%s" % repr(line))
-        identifier = line[1:].rstrip()
-        #Find the seq line(s)
+        # Find the seq line(s)
         seq_len = 0
         while line:
             line = handle.readline()
             data += line
-            if line.startswith(plus_char) : break
+            if line.startswith(plus_char):
+                break
             seq_len += len(line.strip())
         if not line:
             raise ValueError("Premature end of file in seq section")
         assert line[0:1] == plus_char
-        #Find the qual line(s)
+        # Find the qual line(s)
         qual_len = 0
         while line:
             if seq_len == qual_len:
-                #Should be end of record...
+                # Should be end of record...
                 pos = handle.tell()
                 line = handle.readline()
                 if line and line[0:1] != at_char:

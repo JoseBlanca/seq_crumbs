@@ -211,10 +211,10 @@ class TextBlastParser(object):
         return self._gen.next()
 
 
-DEFAULT_TABBLAST_FORMAT = ['query', 'subject', 'identity', 'alignment_length',
+DEFAULT_TABBLAST_FORMAT = ('query', 'subject', 'identity', 'alignment_length',
                            'mismatches', 'gap_open', 'query_start',
                            'query_end', 'subject_start', 'subject_end',
-                           'expect', 'score']
+                           'expect', 'score')
 
 
 def _lines_for_every_tab_blast(fhand, line_format):
