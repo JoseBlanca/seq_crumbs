@@ -458,8 +458,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
 
     #now we perform a second fit but only with those markers that are a
     #distance that results in a recombination fraction lower than max_recomb
-    # TODO use the numpy comparison
-    close_markers = [idx for idx, est_recomb in enumerate(est_recombs) if est_recomb < max_recomb]
+    close_markers = est_recombs < max_recomb
     close_recombs = recombs[close_markers]
     close_dists = dists[close_markers]
     if len(close_dists) < 1:
