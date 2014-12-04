@@ -1,15 +1,17 @@
 from os.path import join
 import unittest
 from tempfile import NamedTemporaryFile
-from subprocess import check_output, Popen, PIPE
+from subprocess import check_output, Popen, PIPE, check_call
 from StringIO import StringIO
+import os
 
 from vcf_crumbs.snv import VCFReader
 
 from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
                                 SnvQualFilter, ObsHetFilter, MafFilter,
-                                filter_snvs, MonomorphicFilter)
+                                filter_snvs, MonomorphicFilter,
+                                filter_snvs_by_non_consistent_segregation)
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
 # Method could be a function
@@ -374,6 +376,36 @@ class BinaryFilterTest(unittest.TestCase):
         assert "passsed: 2" in open(log_fhand.name).read()
         assert 'fileDate' in stdout
 
+
+def _create_vcf_file(vcf_string):
+    vcf_fhand = NamedTemporaryFile(suffix='.vcf', delete=False)
+    vcf_fhand.write(vcf_string)
+    vcf_fhand.flush()
+    compress_cmd = ['bgzip', vcf_fhand.name]
+    check_call(compress_cmd)
+    vcf_fpath = vcf_fhand.name + '.gz'
+    tabix_cmd = ['tabix', '-p', 'vcf', vcf_fpath]
+    tabix_index_fpath = vcf_fpath + '.tbi'
+    return vcf_fpath, tabix_index_fpath
+
+class ConsistentSegregationTest(unittest.TestCase):
+    def test_consistent_segregation(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
+20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
+'''
+        vcf_fpath, tabix_index_fpath = _create_vcf_file(vcf)
+        try:
+            vcf = open(vcf_fpath)
+            snps = VCFReader(vcf, min_calls_for_pop_stats=4).parse_snvs()
+            snps = filter_snvs_by_non_consistent_segregation(snps,
+                                                   max_test_failures=6,
+                                                   min_num_snvs_check_in_win=2)
+        except:
+            os.remove(vcf_fpath)
+            os.remove(tabix_index_fpath)
+
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'BinaryFilterTest.test_biallelic_binary']
+    # import sys;sys.argv = ['', 'ConsistentSegregationTest']
     unittest.main()

@@ -4,17 +4,18 @@ from collections import Counter, namedtuple
 
 from scipy.stats import fisher_exact as scipy_fisher
 
+from vcf import Reader as pyvcfReader
+
 from vcf_crumbs.statistics import choose_samples
 from vcf_crumbs.iterutils import RandomAccessIterator
-from vcf import Reader as pyvcfReader
 
 
 # Missing docstring
 # pylint: disable=C0111
 
+DEF_SNV_WIN = 101
 DEF_R_SQR_THRESHOLD = 0.01
 DEF_P_VAL = 0.01
-DEF_SNV_WIN = 101
 MIN_PHYS_DIST = 700  # it should be double of the read length
 
 HaploCount = namedtuple('HaploCount', ['AB', 'Ab', 'aB', 'ab'])
@@ -163,8 +164,7 @@ def _calc_recomb_rate(calls1, calls2, pop_type):
         msg = 'recomb. rate calculation not implemented for pop_type: %s'
         msg %= pop_type
         raise NotImplementedError(msg)
-
-    return recomb
+    return recomb, haplo_count
 
 
 class _LDStatsCache(object):
@@ -292,6 +292,17 @@ def calc_recomb_rates_along_chroms(vcf_fpath, pop_type, samples=None,
     reader = pyvcfReader(open(vcf_fpath))
     random_reader = pyvcfReader(open(vcf_fpath))
 
+    diffs_from_r_expected = []
+    diffs_distort =[]
+    recomb_rates = []
+    diffs_xs = []
+    diffs_ys = []
+    to_return = []
+    r_xs = []
+    r_ys = []
+    r_dist_color = []
+    #samples = reader.samples
+    #samples = [sample for sample in samples if sample[0] == '4']
     for snv in reader:
         pos = snv.POS
         chrom = snv.CHROM
@@ -322,11 +333,78 @@ def calc_recomb_rates_along_chroms(vcf_fpath, pop_type, samples=None,
             else:
                 calls2 = [call for call in snv_2.samples if call.sample in samples]
 
-            recomb = _calc_recomb_rate(calls1, calls2, pop_type)
-            if recomb > 0.5:
-                print recomb, snv, snv_2
+            result = _calc_recomb_rate(calls1, calls2, pop_type)
+            if result:
+                recomb, haplo_count = result
+            else:
+                recomb, haplo_count = None, None
+            if haplo_count:
+                diff_from_r_expected = ((abs(haplo_count.AB - haplo_count.ab) +
+                                         abs(haplo_count.Ab - haplo_count.aB)) /
+                                         sum(haplo_count))
+                diff_distort = ((abs((haplo_count.Ab + haplo_count.AB) - (haplo_count.ab + haplo_count.aB)) +
+                                abs((haplo_count.AB + haplo_count.aB) - (haplo_count.ab + haplo_count.Ab))) /
+                                sum(haplo_count))
+                diffs_xs.append(diff_from_r_expected)
+                diffs_ys.append(diff_distort)
+                diffs_from_r_expected.append(diff_from_r_expected)
+                diffs_distort.append(diff_distort)
+            if recomb is not None:
+                recomb_rates.append(recomb)
+                r_xs.append(recomb)
+                r_ys.append(diff_from_r_expected)
+                r_dist_color.append(diff_distort)
+                #if 0.6 > recomb > 0.2 and  diff_from_r_expected > 0.9:
+                #    print 'pau->', haplo_count, recomb, diff_from_r_expected
+            #if recomb > 0.5:
             if recomb is None:
                 continue
+            print snv.CHROM, snv.POS, snv_2.CHROM, snv_2.POS, recomb, diff_from_r_expected, diff_distort
             recombs.append((dist, recomb))
         if recombs:
-            yield chrom, pos, recombs
+            to_return.append([chrom, pos, recombs])
+    from crumbs.plot import build_histogram, draw_density_plot
+    print 'hola'
+    from os.path import join as pjoin
+
+    dir_ = '/home/jose/tmp/rils/results/'
+    fpath = pjoin(dir_, 'diffs_from_r.png')
+    build_histogram(diffs_from_r_expected, open(fpath, 'w'), bins=30)
+    fpath = pjoin(dir_, 'diffs_distort.png')
+    build_histogram(diffs_distort, open(fpath, 'w'), bins=30)
+    fpath = pjoin(dir_, 'recomb_rates.png')
+    build_histogram(recomb_rates, open(fpath, 'w'), bins=30, log=True)
+    fpath = pjoin(dir_, 'diffs_density.png')
+    draw_density_plot(diffs_xs, diffs_ys, open(fpath, 'w'))
+    fpath = pjoin(dir_, 'diffs_scatter.png')
+    draw_scatter(diffs_xs, diffs_ys, open(fpath, 'w'))
+
+    fpath = pjoin(dir_, 'r_vs_diff_r_scatter.png')
+    print len(r_xs), len(r_ys)
+    draw_scatter(r_xs, r_ys, open(fpath, 'w'), color=r_dist_color)
+    fpath = pjoin(dir_, 'r_vs_diff_r_density.png')
+    draw_density_plot(r_xs, r_ys, open(fpath, 'w'))
+
+    return to_return
+
+
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+import numpy
+from scipy.stats import gaussian_kde
+
+def draw_scatter(xs, ys, fhand, color=None, density_color=True):
+    fig = Figure()
+    axes = fig.add_subplot(111)
+
+    if color:
+        color = color
+    elif density_color:
+        xys = numpy.vstack([xs, ys])
+        density = gaussian_kde(xys)(xys)
+        color = density
+    else:
+        color = None
+    axes.scatter(xs, ys, c=color, edgecolor='')
+    canvas = FigureCanvas(fig)
+    canvas.print_figure(fhand)

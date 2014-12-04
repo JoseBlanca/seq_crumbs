@@ -158,6 +158,8 @@ class VCFReader(object):
             snvs = self.pyvcf_reader.fetch(chrom, start + 1, end=end)
         except KeyError:
             snvs = []
+        if snvs is None:
+            snvs = []
 
         for snp in snvs:
             snp = SNV(snp, reader=self,

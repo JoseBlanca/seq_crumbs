@@ -1,10 +1,12 @@
 from __future__ import division
 
+import random
 from collections import OrderedDict
 
 from crumbs.iterutils import group_in_packets
 
-from vcf_crumbs.snv import VCFReader, VCFWriter
+from vcf_crumbs.snv import VCFReader, VCFWriter, DEF_MIN_CALLS_FOR_POP_STATS
+from vcf_crumbs.ld import _calc_recomb_rate
 
 # Missing docstring
 # pylint: disable=C0111
@@ -15,6 +17,12 @@ PASSED = 'passed'
 FILTERED_OUT = 'filtered_out'
 
 SNPS_PER_FILTER_PACKET = 50
+DEF_SNV_WIN = 101
+DEF_MIN_NUM_CHECK_SNPS_IN_WIN = 50
+DEF_MAX_TEST_FAILURES = 5
+DEF_MAX_FAILED_FREQ = DEF_MAX_TEST_FAILURES / DEF_SNV_WIN
+DEF_MAX_DIST = 1000000
+DEF_MIN_DIST = 125000
 
 
 def group_in_filter_packets(items, items_per_packet):
@@ -236,3 +244,119 @@ class MafFilter(_BaseFilter):
         if max_maf is not None and maf > max_maf:
             return False
         return True
+
+FISHER_CACHE = {}
+
+
+def _fisher_extact_rxc(counts_obs, counts_exp):
+    if (counts_obs, counts_exp) in FISHER_CACHE:
+        return FISHER_CACHE[(counts_obs, counts_exp)]
+    import rpy2.robjects as robjects
+    env = robjects.r.baseenv()
+    env['obs'] = robjects.IntVector(counts_obs)
+    env['expected'] = robjects.IntVector(counts_exp)
+    pvalue = robjects.r('fisher.test(cbind(obs, expected))$p.value')[0]
+
+    FISHER_CACHE[(counts_obs, counts_exp)] = pvalue
+    return pvalue
+
+
+def filter_snvs_by_non_consistent_segregation(vcf_fpath, alpha=0.01,
+                       yield_complete_info=False, num_snvs_check=DEF_SNV_WIN,
+                       max_failed_freq=DEF_MAX_FAILED_FREQ,
+                       max_test_failures=DEF_MAX_TEST_FAILURES,
+                       win_width=DEF_MAX_DIST, win_mask_width=DEF_MIN_DIST,
+                       min_num_snvs_check_in_win=DEF_MIN_NUM_CHECK_SNPS_IN_WIN,
+                       min_samples=DEF_MIN_CALLS_FOR_POP_STATS):
+
+    # We're assuming that most snps are ok and that a few have a weird
+    # segregation
+    if win_mask_width < 1:
+        msg = 'You should mask at least a window of 3 bp to avoid the '
+        msg += 'comparison with itself'
+        raise ValueError(msg)
+    reader = VCFReader(open(vcf_fpath), min_calls_for_pop_stats=min_samples)
+    snvs = reader.parse_snvs()
+    random_reader = VCFReader(open(vcf_fpath))
+    if yield_complete_info:
+        max_test_failures = None
+
+    for snv_1 in snvs:
+        loc = snv_1.pos
+        win_1_start = loc - (win_width / 2)
+        if win_1_start < 0:
+            win_1_start = 0
+        win_1_end = loc - (win_mask_width / 2)
+        if win_1_end < 0:
+            win_1_end = 0
+        if win_1_end != 0:
+            snvs_win_1 = random_reader.fetch_snvs(snv_1.chrom,
+                                                  start=int(win_1_start),
+                                                  end=int(win_1_end))
+        else:
+            snvs_win_1 = []
+
+        win_2_start = loc + (win_mask_width / 2)
+        win_2_end =  loc + (win_width / 2)
+        snvs_win_2 = random_reader.fetch_snvs(snv_1.chrom,
+                                              start=win_2_start,
+                                              end=win_2_end)
+        snvs_in_win = list(snvs_win_1) + list(snvs_win_2)
+        if len(snvs_in_win) > num_snvs_check:
+            snvs_in_win = random.sample(snvs_in_win, num_snvs_check)
+        if len(snvs_in_win) < min_num_snvs_check_in_win:
+            # Not enough snps to check
+            continue
+
+        exp_cnts = snv_1.biallelic_genotype_counts
+        if exp_cnts is None:
+            continue
+
+        results = {'left': [], 'right':[]}
+        values = {'left': [], 'right':[]}
+        provisional_failures = 0
+        failed = False
+        for snv_2 in snvs_in_win:
+            location = 'left' if snv_2.pos - loc < 0 else 'right'
+            obs_cnts = snv_2.biallelic_genotype_counts
+            if obs_cnts is None:
+                continue
+            value = _fisher_extact_rxc(obs_cnts, exp_cnts)
+            result = False if value is None else value > alpha
+            results[location].append(result)
+            values[location].append((snv_2.pos, value))
+
+            if result:
+                provisional_failures += 1
+                if (max_test_failures and
+                    provisional_failures >= max_test_failures):
+                    failed = True
+                    break
+        if failed:
+            # too many snps are rejected even without bonferroni correction
+            continue
+        if (len(results['left']) + len(results['right']) <
+                min_num_snvs_check_in_win):
+            # few snps can be tested for segregation
+            continue
+
+        n_failed_left = results['left'].count(False)
+        n_failed_right = results['right'].count(False)
+        tot_checked = len(results['left']) + len(results['right'])
+        if tot_checked > 0:
+            failed_freq = (n_failed_left + n_failed_right) / tot_checked
+            passed = max_failed_freq > failed_freq
+        else:
+            failed_freq = None
+            passed = False
+        if yield_complete_info:
+            yield snv_1, {'results': results, 'values': values,
+                          'failed_freq': failed_freq,
+                          'n_failed': {'left': n_failed_left,
+                                       'right': n_failed_right},
+                          'checked': {'left': len(results['left']),
+                                      'right': len(results['right'])},
+                          'passed': passed}
+        else:
+            if passed:
+                yield snv_1
