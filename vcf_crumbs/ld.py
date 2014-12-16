@@ -82,7 +82,7 @@ def _calculate_r_sqr(haplo_counts):
 
 def _most_freq_alleles(calls):
     gts_counts = Counter()
-    gts_counts.update([al for call in calls for al in call.gt_alleles])
+    gts_counts.update([al for call in calls for al in call.call.gt_alleles])
     return [al for al, count in gts_counts.most_common(2)]
 
 
@@ -108,11 +108,11 @@ def _count_biallelic_haplotypes(calls1, calls2):
 
     haplo_count = Counter()
     for call1, call2 in zip(calls1, calls2):
-        al_snp_1 = call1.gt_alleles[0]
+        al_snp_1 = call1.call.gt_alleles[0]
         # We're transforming all markers in biallelic
         if al_snp_1 != freq_alleles[0][0]:
             al_snp_1 = freq_alleles[0][1]
-        al_snp_2 = call2.gt_alleles[0]
+        al_snp_2 = call2.call.gt_alleles[0]
         if al_snp_2 != freq_alleles[1][0]:
             al_snp_2 = freq_alleles[1][1]
 

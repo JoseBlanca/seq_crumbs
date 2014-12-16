@@ -5,6 +5,8 @@ from subprocess import check_output, Popen, PIPE, check_call
 from StringIO import StringIO
 import os
 
+import numpy
+
 from vcf_crumbs.snv import VCFReader
 
 from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
@@ -12,7 +14,7 @@ from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 SnvQualFilter, ObsHetFilter, MafFilter,
                                 filter_snvs, MonomorphicFilter,
                                 filter_snvs_by_non_consistent_segregation,
-                                filter_snps_weird_recomb)
+                                filter_snvs_weird_recomb)
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
 # Method could be a function
@@ -419,16 +421,15 @@ class ConsistentSegregationTest(unittest.TestCase):
             _remove_files([vcf_fpath, tabix_index_fpath])
 
 class ConsistentRecombinationTest(unittest.TestCase):
+
     def test_cons_recomb(self):
         vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
-        out_fhand = NamedTemporaryFile(suffix='.filtered.vcf')
-        filter_snps_weird_recomb(vcf_fpath, out_fhand.name,
-                                 pop_type='ril_self',
-                                 max_zero_dist_recomb=0.07)
-        snvs = VCFReader(open(out_fhand.name)).parse_snvs()
+        snvs = VCFReader(open(vcf_fpath)).parse_snvs()
+        flt_snvs = filter_snvs_weird_recomb(snvs, pop_type='ril_self',
+                                            snps_in_window=31,
+                                            max_zero_dist_recomb=0.07)
         assert len(list(snvs)) == 282
 
-
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'ConsistentRecombinationTest']
+    # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_cons_recomb']
     unittest.main()

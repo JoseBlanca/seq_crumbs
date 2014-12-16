@@ -4,7 +4,10 @@ import random
 from collections import OrderedDict
 from math import isnan
 from os.path import join as pjoin
+from os.path import exists
+from os import mkdir
 from array import array
+from collections import namedtuple
 
 import numpy
 from pandas import DataFrame
@@ -18,6 +21,7 @@ from vcf import Reader as pyvcfReader
 from vcf import Writer as pyvcfWriter
 
 from crumbs.iterutils import group_in_packets
+from vcf_crumbs.iterutils import RandomAccessIterator
 
 from vcf_crumbs.snv import VCFReader, VCFWriter, DEF_MIN_CALLS_FOR_POP_STATS
 from vcf_crumbs.ld import _calc_recomb_rate
@@ -38,6 +42,7 @@ DEF_MAX_FAILED_FREQ = DEF_MAX_TEST_FAILURES / DEF_SNV_WIN
 DEF_MAX_DIST = 1000000
 DEF_MIN_DIST = 125000
 
+DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB = 51
 
 def group_in_filter_packets(items, items_per_packet):
     for packet in group_in_packets(items, items_per_packet):
@@ -376,53 +381,81 @@ def filter_snvs_by_non_consistent_segregation(vcf_fpath, alpha=0.01,
                 yield snv_1
 
 
-def _get_chrom_lens(vcf_fpath):
-    reader = pyvcfReader(vcf_fpath)
-    chrom_lens = OrderedDict()
-    for line in reader._reader:
-        if line[0] == '#':
-            continue
-        chrom, loc = line.split()[:2]
-        loc = int(loc)
-        if chrom_lens.get(chrom, 0) < loc:
-            chrom_lens[chrom] = loc
-    return chrom_lens
-
-
 def _get_calls(snv, samples):
     if samples is None:
-        calls = snv.samples
+        calls = snv.calls
     else:
-        calls = [call for call in snv.samples if call.sample in samples]
+        calls = [call for call in snv.calls if call.sample in samples]
     return calls
 
 
-def _calculate_segregation_matrices(fpath, pop_type, samples=None,
-                                    max_snps_per_chrom_debug=None):
-    chrom_lens = _get_chrom_lens(open(fpath))
-    
-    reader = pyvcfReader(open(fpath))
+RecombRate = namedtuple('RecombRate', ['index_in_vcf', 'pos', 'recomb_rate'])
 
-    for chrom, length in chrom_lens.items():
-        snvs_in_chrom = list(reader.fetch(chrom, start=0, end=length + 1))
-        if max_snps_per_chrom_debug is not None:
-            snvs_in_chrom = snvs_in_chrom[:max_snps_per_chrom_debug]
-        calls = [_get_calls(snv, samples) for snv in snvs_in_chrom]
-        locs = [snv.POS for snv in snvs_in_chrom]
-        prev_chrom = chrom
+
+def _calculate_segregation_rates(snvs, pop_type, snps_in_window,
+                                 samples=None):
+    recomb_cache = {}
+    half_win = (snps_in_window - 1) // 2
+    for index1, snp1 in enumerate(snvs):
+        calls1 = _get_calls(snp1, samples)
+        start = index1 - half_win
+        if start < 0:
+            start = 0
         rates = []
-        for snv1_calls in calls:
-            snv1_rates = []
-            for snv2_calls in calls:
-                recomb_rate = _calc_recomb_rate(snv1_calls, snv2_calls,
-                                                pop_type)
+        chrom = snp1.chrom
+        for index2 in range(start, index1 + half_win):
+            try:
+                snp2 = snvs[index2]
+            except IndexError:
+                continue
+            if chrom != snp2.chrom:
+                continue
+            calls2 = _get_calls(snp2, samples)
+            index = tuple(sorted([index1, index2]))
+            if index1 == index2:
+                recomb_rate = 0
+            try:
+                recomb_rate = recomb_cache[index]
+            except KeyError:
+                recomb_rate = _calc_recomb_rate(calls1, calls2, pop_type)
                 if recomb_rate is None:
                     recomb_rate = float('nan')
                 else:
                     recomb_rate = recomb_rate[0]
-                snv1_rates.append(recomb_rate)
-            rates.append(snv1_rates)
-        yield chrom, DataFrame(rates, index=locs, columns=locs)
+                recomb_cache[index] = recomb_rate
+            rates.append(RecombRate(index2, snp2.pos, recomb_rate))
+        yield snp1, chrom, snp1.pos, rates
+
+
+def filter_snvs_weird_recomb(snvs, pop_type, max_zero_dist_recomb,
+                             snps_in_window=DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB,
+                             min_num_snps=20, max_recomb_curve_fit=0.25,
+                             debug_plot_dir=None):
+
+    # TODO Add the tests
+    # TODO User 95% confidence interval to see if 0 is reasonable?
+    # http://kitchingroup.cheme.cmu.edu/blog/2013/02/12/Nonlinear-curve-fitting-with-parameter-confidence-intervals/
+
+    snps = RandomAccessIterator(snvs, rnd_access_win=snps_in_window)
+    rates = _calculate_segregation_rates(snps, pop_type, snps_in_window)
+    for snp, chrom, pos, rates in rates:
+        dists, recombs = zip(*[(rate.pos - pos, rate.recomb_rate) for rate in rates])
+        if len(dists) < min_num_snps:
+            continue
+        if debug_plot_dir is None:
+            plot_fhand = None
+        else:
+            chrom_dir = pjoin(debug_plot_dir, chrom)
+            if not exists(chrom_dir):
+                mkdir(chrom_dir)
+            plot_fhand = open(pjoin(chrom_dir, str(pos) + '.png'), 'w')
+        recomb_at_0 = _calc_ajusted_recomb(dists, recombs,
+                                           max_recomb_curve_fit,
+                                           plot_fhand=plot_fhand)
+
+        # TODO find the method to decide the thresholds
+        if recomb_at_0 < max_zero_dist_recomb:
+            yield snp
 
 
 def _kosambi(phys_dist, phys_gen_dist_conversion, recomb_at_origin):
@@ -501,100 +534,3 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
         canvas.print_figure(plot_fhand)
 
     return popt[1]
-
-
-class _WeirdRecombFilter(object):
-    def __init__(self, min_num_snps, max_zero_dist_recomb,
-                 max_recomb_curve_fit, debug_plot_dir):
-
-        self.min_num_snps = min_num_snps
-        self.max_recomb_curve_fit = max_recomb_curve_fit
-        self.max_zero_dist_recomb = max_zero_dist_recomb
-        self.debug_plot_dir = debug_plot_dir        
-        if debug_plot_dir:
-            fpath = pjoin(debug_plot_dir, 'dist_zero_recombs.png')
-            dist_zero_recomb_distrib_fhand = open(fpath, 'w')
-            self.dist_zero_recomb_distrib_fhand = dist_zero_recomb_distrib_fhand
-            self.all_recombs = array('f')
-        else:
-            self.dist_zero_recomb_distrib_fhand = None
-            self.all_recombs = None
-        self.snp_index = 0
-
-    def filter_snps_weird_recom(self, chrom, matrix):
-
-        all_recombs = self.all_recombs
-
-        locations = matrix.columns
-
-        if len(locations) < self.min_num_snps:
-            yield self.snp_index, False
-
-        debug_plot_dir = self.debug_plot_dir
-        max_recomb = self.max_recomb_curve_fit
-        max_zero_dist_recomb = self.max_zero_dist_recomb
-        for pos, recombs in matrix.iteritems():
-            if debug_plot_dir:
-                fpath = pjoin(debug_plot_dir, chrom + str(pos) + '.png')
-                plot_fhand = open(fpath, 'w')
-            else:
-                plot_fhand = None
-
-            dists = [loc - pos for loc in locations]
-            recomb_dist_zero = _calc_ajusted_recomb(dists, recombs, max_recomb,
-                                                    plot_fhand=plot_fhand)
-
-            # TODO find the method to decide the thresholds
-            filter_result = recomb_dist_zero < max_zero_dist_recomb
-
-            yield self.snp_index, filter_result
-
-            if all_recombs is not None and not isnan(recomb_dist_zero):
-                all_recombs.append(recomb_dist_zero)
-
-            self.snp_index += 1
-
-    def plot_recombs_distrib(self, bins=40, log_axis=True):
-        if self.debug_plot_dir:
-            fig = Figure()
-            axes = fig.add_subplot(111)
-            axes.hist(self.all_recombs, bins=bins, log=log_axis)
-                      #range=range(min(all_recombs, max(all_recombs))))
-            canvas = FigureCanvas(fig)
-            canvas.print_figure(self.dist_zero_recomb_distrib_fhand)
-
-
-def filter_snps_weird_recomb(vcf_fpath, out_vcf_fpath, pop_type,
-                             max_zero_dist_recomb, min_num_snps=20,
-                             max_recomb_curve_fit=0.25,
-                             debug_plot_dir=None):
-
-    # TODO max number of markers?
-    # TODO The matrix is symmetric, DUDE!!!
-    # TODO Add the tests
-    # User 95% confidence interval to see if 0 is reasonable?
-    # http://kitchingroup.cheme.cmu.edu/blog/2013/02/12/Nonlinear-curve-fitting-with-parameter-confidence-intervals/
-    recomb_filter = _WeirdRecombFilter(min_num_snps,
-                                     max_zero_dist_recomb=max_zero_dist_recomb,
-                                     max_recomb_curve_fit=max_recomb_curve_fit,
-                                     debug_plot_dir=debug_plot_dir)
-
-    snp_reader = pyvcfReader(open(vcf_fpath))
-    snp_writer = pyvcfWriter(open(out_vcf_fpath, 'w'), template=snp_reader)
-    for chrom, matrix in _calculate_segregation_matrices(vcf_fpath,
-                                                         pop_type=pop_type):
-        for keepit in recomb_filter.filter_snps_weird_recom(chrom, matrix):
-            try:
-                if keepit:
-                    snp = snp_reader.next()
-                else:
-                    # Just the next line, we can skip parsing the snp because
-                    # we don't need it
-                    snp_reader.reader.next()
-            except StopIteration:
-                msg = 'Fixme, we should not be here'
-                raise RuntimeError(msg)
-            if keepit:
-                snp_writer.write_record(snp)
-
-    recomb_filter.plot_recombs_distrib()
