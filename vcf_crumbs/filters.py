@@ -378,7 +378,7 @@ def filter_snvs_by_non_consistent_segregation(vcf_fpath, alpha=0.01,
 
 def _get_chrom_lens(vcf_fpath):
     reader = pyvcfReader(vcf_fpath)
-    chrom_lens = {}
+    chrom_lens = OrderedDict()
     for line in reader._reader:
         if line[0] == '#':
             continue
@@ -400,7 +400,7 @@ def _get_calls(snv, samples):
 def _calculate_segregation_matrices(fpath, pop_type, samples=None,
                                     max_snps_per_chrom_debug=None):
     chrom_lens = _get_chrom_lens(open(fpath))
-
+    
     reader = pyvcfReader(open(fpath))
 
     for chrom, length in chrom_lens.items():
@@ -558,7 +558,7 @@ class _WeirdRecombFilter(object):
         if self.debug_plot_dir:
             fig = Figure()
             axes = fig.add_subplot(111)
-            axes.hist(all_recombs, bins=bins, log=log_axis)
+            axes.hist(self.all_recombs, bins=bins, log=log_axis)
                       #range=range(min(all_recombs, max(all_recombs))))
             canvas = FigureCanvas(fig)
             canvas.print_figure(self.dist_zero_recomb_distrib_fhand)
@@ -572,7 +572,8 @@ def filter_snps_weird_recomb(vcf_fpath, out_vcf_fpath, pop_type,
     # TODO max number of markers?
     # TODO The matrix is symmetric, DUDE!!!
     # TODO Add the tests
-
+    # User 95% confidence interval to see if 0 is reasonable?
+    # http://kitchingroup.cheme.cmu.edu/blog/2013/02/12/Nonlinear-curve-fitting-with-parameter-confidence-intervals/
     recomb_filter = _WeirdRecombFilter(min_num_snps,
                                      max_zero_dist_recomb=max_zero_dist_recomb,
                                      max_recomb_curve_fit=max_recomb_curve_fit,
@@ -595,5 +596,5 @@ def filter_snps_weird_recomb(vcf_fpath, out_vcf_fpath, pop_type,
                 raise RuntimeError(msg)
             if keepit:
                 snp_writer.write_record(snp)
-    
+
     recomb_filter.plot_recombs_distrib()

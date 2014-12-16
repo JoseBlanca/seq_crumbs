@@ -11,7 +11,8 @@ from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
                                 SnvQualFilter, ObsHetFilter, MafFilter,
                                 filter_snvs, MonomorphicFilter,
-                                filter_snvs_by_non_consistent_segregation)
+                                filter_snvs_by_non_consistent_segregation,
+                                filter_snps_weird_recomb)
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
 # Method could be a function
@@ -417,7 +418,17 @@ class ConsistentSegregationTest(unittest.TestCase):
         finally:
             _remove_files([vcf_fpath, tabix_index_fpath])
 
+class ConsistentRecombinationTest(unittest.TestCase):
+    def test_cons_recomb(self):
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        out_fhand = NamedTemporaryFile(suffix='.filtered.vcf')
+        filter_snps_weird_recomb(vcf_fpath, out_fhand.name,
+                                 pop_type='ril_self',
+                                 max_zero_dist_recomb=0.07)
+        snvs = VCFReader(open(out_fhand.name)).parse_snvs()
+        assert len(list(snvs)) == 282
+
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'ConsistentSegregationTest']
+    # import sys;sys.argv = ['', 'ConsistentRecombinationTest']
     unittest.main()
