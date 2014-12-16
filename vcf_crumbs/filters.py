@@ -450,7 +450,7 @@ def filter_snvs_weird_recomb(snvs, pop_type, max_zero_dist_recomb,
                 mkdir(chrom_dir)
             plot_fhand = open(pjoin(chrom_dir, str(pos) + '.png'), 'w')
         recomb_at_0 = _calc_ajusted_recomb(dists, recombs,
-                                           max_recomb_curve_fit,
+                                           max_recomb=max_recomb_curve_fit,
                                            plot_fhand=plot_fhand)
 
         # TODO find the method to decide the thresholds
@@ -490,7 +490,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     if plot_fhand:
         fig = Figure()
         axes = fig.add_subplot(111)
-        axes.scatter(dists, recombs, c='r', label='All recombs')
+        axes.scatter(dists, recombs, c='r', label='For 1st fit')
     else:
         axes = None
         fig = None
@@ -506,14 +506,20 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     est_dists = dists
     est_recombs = _kosambi(est_dists, popt[0], popt[1])
 
-    #now we perform a second fit but only with those markers that are a
-    #distance that results in a recombination fraction lower than max_recomb
+    if fig:
+        axes.plot(est_dists, est_recombs, label='1st fit', c='r')
+
+    # now we perform a second fit but only with those markers that are a
+    # distance that results in a recombination fraction lower than max_recomb
     close_markers = est_recombs < max_recomb
     close_recombs = recombs[close_markers]
     close_dists = dists[close_markers]
 
+    if plot_fhand:
+        axes.scatter(close_dists, close_recombs, c='b', label='For 2nd fit')
+
     if len(close_dists) < 1:
-        # This marker is so bad that their closest markers are at a big
+        # This marker is so bad that their closest markers are at a large
         # distance
         _print_figure(axes, fig, plot_fhand)
         return float('nan')
@@ -527,7 +533,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
 
     residuals = close_recombs - est_close_recombs
     if fig:
-        axes.plot(close_dists, est_close_recombs, label='1st_fit')
+        axes.plot(close_dists, est_close_recombs, c='b' , label='2nd_fit')
 
     # we exclude the markers with a residual outlier
     quartile_25, quartile_75 = numpy.percentile(residuals, [25 ,75])
@@ -539,7 +545,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     ok_dists = close_dists[ok_markers]
 
     if fig:
-        axes.scatter(ok_dists, ok_recombs, c='b', label='OK recombs')
+        axes.scatter(ok_dists, ok_recombs, c='g', label='For 3rd fit')
 
     popt = _fit_kosambi(ok_dists, ok_recombs, init_params=popt)
     if popt is None:
@@ -549,7 +555,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     est2_recombs = _kosambi(ok_dists, popt[0], popt[1])
 
     if fig:
-        axes.plot(ok_dists, est2_recombs, label='2nd_fit')
+        axes.plot(ok_dists, est2_recombs, c='g', label='3rd_fit')
         _print_figure(axes, fig, plot_fhand)
 
     return popt[1]
