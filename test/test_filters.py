@@ -386,7 +386,15 @@ def _create_vcf_file(vcf_string):
     vcf_fpath = vcf_fhand.name + '.gz'
     tabix_cmd = ['tabix', '-p', 'vcf', vcf_fpath]
     tabix_index_fpath = vcf_fpath + '.tbi'
+    check_call(tabix_cmd)
     return vcf_fpath, tabix_index_fpath
+
+
+def _remove_files(fpaths):
+    for fpath in fpaths:
+        if os.path.exists(fpath):
+            os.remove(fpath)
+
 
 class ConsistentSegregationTest(unittest.TestCase):
     def test_consistent_segregation(self):
@@ -395,16 +403,20 @@ class ConsistentSegregationTest(unittest.TestCase):
 20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
 20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
 '''
+        # TODO, add more tests
         vcf_fpath, tabix_index_fpath = _create_vcf_file(vcf)
         try:
-            vcf = open(vcf_fpath)
-            snps = VCFReader(vcf, min_calls_for_pop_stats=4).parse_snvs()
-            snps = filter_snvs_by_non_consistent_segregation(snps,
+            snps = filter_snvs_by_non_consistent_segregation(vcf_fpath,
                                                    max_test_failures=6,
                                                    min_num_snvs_check_in_win=2)
-        except:
-            os.remove(vcf_fpath)
-            os.remove(tabix_index_fpath)
+            assert not list(snps)
+        except Exception as error:
+            msg = 'An error happened: ' + str(error)
+            _remove_files([vcf_fpath, tabix_index_fpath])
+            self.fail(msg)
+        finally:
+            _remove_files([vcf_fpath, tabix_index_fpath])
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'ConsistentSegregationTest']
