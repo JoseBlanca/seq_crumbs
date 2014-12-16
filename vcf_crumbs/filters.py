@@ -472,6 +472,14 @@ def _fit_kosambi(dists, recombs, init_params):
         return
 
 
+def _print_figure(axes, figure, plot_fhand):
+    if figure is None:
+        return
+    axes.legend()
+    canvas = FigureCanvas(figure)
+    canvas.print_figure(plot_fhand)
+
+
 def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     # first rough interpolation
     # we remove the physical distances with high recombination rates because
@@ -479,11 +487,20 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     # between false recombination due to hidden segregation in the parents and
     # true recombination
 
+    if plot_fhand:
+        fig = Figure()
+        axes = fig.add_subplot(111)
+        axes.scatter(dists, recombs, c='r', label='All recombs')
+    else:
+        axes = None
+        fig = None
+
     dists = numpy.array(dists)
     recombs = numpy.array(recombs)
     recomb_rate = 1e-7
     popt = _fit_kosambi(dists, recombs, init_params=[recomb_rate, 0])
     if popt is None:
+        _print_figure(axes, fig, plot_fhand)
         return float('nan')
 
     est_dists = dists
@@ -494,18 +511,23 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     close_markers = est_recombs < max_recomb
     close_recombs = recombs[close_markers]
     close_dists = dists[close_markers]
+
     if len(close_dists) < 1:
         # This marker is so bad that their closest markers are at a big
         # distance
+        _print_figure(axes, fig, plot_fhand)
         return float('nan')
 
     popt = _fit_kosambi(close_dists, close_recombs, init_params=popt)
     if popt is None:
+        _print_figure(axes, fig, plot_fhand)
         return float('nan')
 
     est_close_recombs = _kosambi(close_dists, popt[0], popt[1])
 
     residuals = close_recombs - est_close_recombs
+    if fig:
+        axes.plot(close_dists, est_close_recombs, label='1st_fit')
 
     # we exclude the markers with a residual outlier
     quartile_25, quartile_75 = numpy.percentile(residuals, [25 ,75])
@@ -516,21 +538,18 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     ok_recombs = close_recombs[ok_markers]
     ok_dists = close_dists[ok_markers]
 
+    if fig:
+        axes.scatter(ok_dists, ok_recombs, c='b', label='OK recombs')
+
     popt = _fit_kosambi(ok_dists, ok_recombs, init_params=popt)
     if popt is None:
+        _print_figure(axes, fig, plot_fhand)
         return float('nan')
 
     est2_recombs = _kosambi(ok_dists, popt[0], popt[1])
 
-    if plot_fhand:
-        fig = Figure()
-        axes = fig.add_subplot(111)
-
-        axes.scatter(dists, recombs, c='r')
-        axes.scatter(ok_dists, ok_recombs, c='b')
-        axes.plot(close_dists, est_close_recombs)
-        axes.plot(ok_dists, est2_recombs)
-        canvas = FigureCanvas(fig)
-        canvas.print_figure(plot_fhand)
+    if fig:
+        axes.plot(ok_dists, est2_recombs, label='2nd_fit')
+        _print_figure(axes, fig, plot_fhand)
 
     return popt[1]
