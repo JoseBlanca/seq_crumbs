@@ -428,8 +428,8 @@ class ConsistentRecombinationTest(unittest.TestCase):
         flt_snvs = filter_snvs_weird_recomb(snvs, pop_type='ril_self',
                                             snps_in_window=31,
                                             max_zero_dist_recomb=0.07)
-        assert len(list(snvs)) == 282
+        assert len(list(flt_snvs)) == 254
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_cons_recomb']
+    import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_cons_recomb']
     unittest.main()
