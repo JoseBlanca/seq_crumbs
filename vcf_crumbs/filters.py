@@ -2,7 +2,7 @@ from __future__ import division
 
 import random
 from collections import OrderedDict
-from math import isnan
+from math import isinf
 from os.path import join as pjoin
 from os.path import exists
 from os import mkdir
@@ -13,6 +13,7 @@ import numpy
 from pandas import DataFrame
 
 from scipy.optimize import curve_fit
+from scipy.stats.distributions import  t
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -41,7 +42,8 @@ DEF_MAX_TEST_FAILURES = 5
 DEF_MAX_FAILED_FREQ = DEF_MAX_TEST_FAILURES / DEF_SNV_WIN
 DEF_MAX_DIST = 1000000
 DEF_MIN_DIST = 125000
-
+DEF_ALPHA = 0.05
+DEF_MAX_ZERO_DIST_RECOMB = 0.01
 DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB = 51
 
 def group_in_filter_packets(items, items_per_packet):
@@ -430,7 +432,9 @@ def _calculate_segregation_rates(snvs, pop_type, snps_in_window,
         yield snp1, chrom, snp1.pos, rates
 
 
-def filter_snvs_weird_recomb(snvs, pop_type, max_zero_dist_recomb,
+def filter_snvs_weird_recomb(snvs, pop_type,
+                             max_zero_dist_recomb=DEF_MAX_ZERO_DIST_RECOMB,
+                             alpha_recomb_0=DEF_ALPHA,
                              snps_in_window=DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB,
                              min_num_snps=20, max_recomb_curve_fit=0.25,
                              debug_plot_dir=None):
@@ -438,6 +442,8 @@ def filter_snvs_weird_recomb(snvs, pop_type, max_zero_dist_recomb,
     # TODO Add the tests
     # TODO User 95% confidence interval to see if 0 is reasonable?
     # http://kitchingroup.cheme.cmu.edu/blog/2013/02/12/Nonlinear-curve-fitting-with-parameter-confidence-intervals/
+
+    # TODO hist with recombs, dividev into snps_ok and snps_not_ok
 
     snps = RandomAccessIterator(snvs, rnd_access_win=snps_in_window)
     rates = _calculate_segregation_rates(snps, pop_type, snps_in_window)
@@ -452,12 +458,13 @@ def filter_snvs_weird_recomb(snvs, pop_type, max_zero_dist_recomb,
             if not exists(chrom_dir):
                 mkdir(chrom_dir)
             plot_fhand = open(pjoin(chrom_dir, str(pos) + '.png'), 'w')
-        recomb_at_0 = _calc_ajusted_recomb(dists, recombs,
-                                           max_recomb=max_recomb_curve_fit,
-                                           plot_fhand=plot_fhand)
-
-        # TODO find the method to decide the thresholds
-        if recomb_at_0 < max_zero_dist_recomb:
+        res = _calc_ajusted_recomb(dists, recombs,
+                                   max_recomb=max_recomb_curve_fit,
+                                   max_zero_dist_recomb=max_zero_dist_recomb,
+                                   alpha_recomb_0=alpha_recomb_0,
+                                   plot_fhand=plot_fhand)
+        recomb_at_0, snp_ok = res
+        if snp_ok:
             yield snp
 
 
@@ -470,7 +477,7 @@ def _kosambi(phys_dist, phys_gen_dist_conversion, recomb_at_origin):
 
 def _fit_kosambi(dists, recombs, init_params):
     try:
-        return curve_fit(_kosambi, dists, recombs, p0=init_params)[0]
+        return curve_fit(_kosambi, dists, recombs, p0=init_params)
     except RuntimeError:
         return
 
@@ -483,16 +490,20 @@ def _print_figure(axes, figure, plot_fhand):
     canvas.print_figure(plot_fhand)
 
 
-def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
+def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
+                         alpha_recomb_0, plot_fhand=None):
     # first rough interpolation
     # we remove the physical distances with high recombination rates because
     # they're not very informative. e.g. more than 40 cM will not discriminate
     # between false recombination due to hidden segregation in the parents and
     # true recombination
 
+    # TODO. If the points for one of the fits are the same, do not repeat the
+    # curve_fit
     if plot_fhand:
         fig = Figure()
         axes = fig.add_subplot(111)
+        axes.set_axis_bgcolor((1, 0.6, 0.6))
         axes.scatter(dists, recombs, c='r', label='For 1st fit')
     else:
         axes = None
@@ -501,10 +512,10 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     dists = numpy.array(dists)
     recombs = numpy.array(recombs)
     recomb_rate = 1e-7
-    popt = _fit_kosambi(dists, recombs, init_params=[recomb_rate, 0])
+    popt = _fit_kosambi(dists, recombs, init_params=[recomb_rate, 0])[0]
     if popt is None:
         _print_figure(axes, fig, plot_fhand)
-        return float('nan')
+        return float('nan'), False
 
     est_dists = dists
     est_recombs = _kosambi(est_dists, popt[0], popt[1])
@@ -525,12 +536,12 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
         # This marker is so bad that their closest markers are at a large
         # distance
         _print_figure(axes, fig, plot_fhand)
-        return float('nan')
+        return float('nan'), False
 
-    popt = _fit_kosambi(close_dists, close_recombs, init_params=popt)
+    popt = _fit_kosambi(close_dists, close_recombs, init_params=popt)[0]
     if popt is None:
         _print_figure(axes, fig, plot_fhand)
-        return float('nan')
+        return float('nan'), False
 
     est_close_recombs = _kosambi(close_dists, popt[0], popt[1])
 
@@ -550,7 +561,41 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     if fig:
         axes.scatter(ok_dists, ok_recombs, c='g', label='For 3rd fit')
 
-    popt = _fit_kosambi(ok_dists, ok_recombs, init_params=popt)
+    popt, pcov = _fit_kosambi(ok_dists, ok_recombs, init_params=popt)
+    var_recomb_at_dist_0 = pcov[1, 1]
+    recomb_at_dist_0 = popt[1]
+    ok_color = (0.6, 0.6, 1)
+    if isinf(var_recomb_at_dist_0):
+        var_recomb_at_dist_0 = None
+        if abs(recomb_at_dist_0) < 0.01:
+            # recomb is 0 for all points and the variance is inf
+            snp_ok = True
+        else:
+            snp_ok = False
+    else:
+        num_data_points = len(ok_dists)
+        num_params = len(popt)
+        deg_of_freedom = max(0, num_data_points - num_params)
+        tval = t.ppf(1.0 - alpha_recomb_0 / 2., deg_of_freedom)
+        std_dev = var_recomb_at_dist_0 ** 0.5
+        conf_interval = (recomb_at_dist_0 - std_dev * tval,
+                         recomb_at_dist_0 + std_dev * tval)
+        
+        if  abs(recomb_at_dist_0) <= max_zero_dist_recomb:
+            snp_ok = True
+            ok_color = (0.3, 1, 0.3)
+        elif  conf_interval[0] < 0 < conf_interval[1]:
+            snp_ok = True
+        else:
+            snp_ok = False
+        if plot_fhand:
+            axes.vlines(0, conf_interval[0], conf_interval[1],
+                        label='conf. interval')
+
+    if plot_fhand:
+        color = ok_color if snp_ok else (1, 0.3, 0.3)
+        axes.set_axis_bgcolor(color)
+
     if popt is None:
         _print_figure(axes, fig, plot_fhand)
         return float('nan')
@@ -560,5 +605,4 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, plot_fhand=None):
     if fig:
         axes.plot(ok_dists, est2_recombs, c='g', label='3rd_fit')
         _print_figure(axes, fig, plot_fhand)
-
-    return popt[1]
+    return recomb_at_dist_0, snp_ok

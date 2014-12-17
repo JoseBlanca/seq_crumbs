@@ -426,9 +426,8 @@ class ConsistentRecombinationTest(unittest.TestCase):
         vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
         snvs = VCFReader(open(vcf_fpath)).parse_snvs()
         
-        flt_snvs = filter_snvs_weird_recomb(snvs, pop_type='ril_self',
-                                            max_zero_dist_recomb=0.07)
-        assert len(list(flt_snvs)) == 266
+        flt_snvs = filter_snvs_weird_recomb(snvs, pop_type='ril_self')
+        assert len(list(flt_snvs)) == 258
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_cons_recomb']
