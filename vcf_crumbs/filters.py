@@ -479,7 +479,7 @@ def _fit_kosambi(dists, recombs, init_params):
     try:
         return curve_fit(_kosambi, dists, recombs, p0=init_params)
     except RuntimeError:
-        return
+        return None, None
 
 
 def _print_figure(axes, figure, plot_fhand):
@@ -498,8 +498,6 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
     # between false recombination due to hidden segregation in the parents and
     # true recombination
 
-    # TODO. If the points for one of the fits are the same, do not repeat the
-    # curve_fit
     if plot_fhand:
         fig = Figure()
         axes = fig.add_subplot(111)
@@ -512,7 +510,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
     dists = numpy.array(dists)
     recombs = numpy.array(recombs)
     recomb_rate = 1e-7
-    popt = _fit_kosambi(dists, recombs, init_params=[recomb_rate, 0])[0]
+    popt, pcov = _fit_kosambi(dists, recombs, init_params=[recomb_rate, 0])
     if popt is None:
         _print_figure(axes, fig, plot_fhand)
         return float('nan'), False
@@ -538,7 +536,9 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
         _print_figure(axes, fig, plot_fhand)
         return float('nan'), False
 
-    popt = _fit_kosambi(close_dists, close_recombs, init_params=popt)[0]
+    if len(close_dists) != len(dists):
+        # If we've removed any points we fit again
+        popt, pcov = _fit_kosambi(close_dists, close_recombs, init_params=popt)
     if popt is None:
         _print_figure(axes, fig, plot_fhand)
         return float('nan'), False
@@ -561,7 +561,9 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
     if fig:
         axes.scatter(ok_dists, ok_recombs, c='g', label='For 3rd fit')
 
-    popt, pcov = _fit_kosambi(ok_dists, ok_recombs, init_params=popt)
+    if len(ok_dists) != len(close_dists):
+        # If we've removed any points we fit again
+        popt, pcov = _fit_kosambi(ok_dists, ok_recombs, init_params=popt)
     var_recomb_at_dist_0 = pcov[1, 1]
     recomb_at_dist_0 = popt[1]
     ok_color = (0.6, 0.6, 1)
