@@ -394,8 +394,8 @@ RecombRate = namedtuple('RecombRate', ['index_in_vcf', 'pos', 'recomb_rate'])
 
 def _calculate_segregation_rates(snvs, pop_type, snps_in_window,
                                  samples=None):
-    recomb_cache = {}
     half_win = (snps_in_window - 1) // 2
+    prev_chrom = None
     for index1, snp1 in enumerate(snvs):
         calls1 = _get_calls(snp1, samples)
         start = index1 - half_win
@@ -403,6 +403,9 @@ def _calculate_segregation_rates(snvs, pop_type, snps_in_window,
             start = 0
         rates = []
         chrom = snp1.chrom
+        if chrom != prev_chrom:
+            recomb_cache = {}
+            prev_chrom = chrom
         for index2 in range(start, index1 + half_win):
             try:
                 snp2 = snvs[index2]
