@@ -420,6 +420,7 @@ class ConsistentSegregationTest(unittest.TestCase):
         finally:
             _remove_files([vcf_fpath, tabix_index_fpath])
 
+
 class ConsistentRecombinationTest(unittest.TestCase):
 
     def test_cons_recomb(self):

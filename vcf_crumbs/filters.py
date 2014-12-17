@@ -2,24 +2,19 @@ from __future__ import division
 
 import random
 from collections import OrderedDict
-from math import isinf
+from math import isinf, isnan
 from os.path import join as pjoin
 from os.path import exists
 from os import mkdir
-from array import array
 from collections import namedtuple
 
 import numpy
-from pandas import DataFrame
 
 from scipy.optimize import curve_fit
 from scipy.stats.distributions import  t
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-
-from vcf import Reader as pyvcfReader
-from vcf import Writer as pyvcfWriter
 
 from crumbs.iterutils import group_in_packets
 from vcf_crumbs.iterutils import RandomAccessIterator
@@ -553,8 +548,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
     quartile_25, quartile_75 = numpy.percentile(residuals, [25 ,75])
     iqr = quartile_75 - quartile_25
     outlayer_thrld = [quartile_25 - iqr * 1.5, quartile_75 + iqr * 1.5]
-    ok_markers = ((outlayer_thrld[0] < residuals) &
-                  (residuals < outlayer_thrld[1]))
+    ok_markers = [idx for idx, res in enumerate(residuals) if (not isnan(res) and (outlayer_thrld[0] < res < outlayer_thrld[1]))]
     ok_recombs = close_recombs[ok_markers]
     ok_dists = close_dists[ok_markers]
 
