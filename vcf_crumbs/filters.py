@@ -490,9 +490,14 @@ class WeirdRecombFilter(object):
         axes = fig.add_subplot(111)
         data = [self.recomb_rates['ok'], self.recomb_rates['ok_conf_is_None'],
                 self.recomb_rates['not_ok']]
+        labels = ['OK', 'OK conf. is none', 'Not OK']
+        colors = [(0.3, 1, 0.3),(0.3, 1, 0.6), (1, 0.3, 0.3)]
+        some_data = [bool(dataset) for dataset in data]
+        labels = [label for draw, label in zip(some_data, labels) if draw]
+        colors = [color for draw, color in zip(some_data, colors) if draw]
+        data = [dataset for draw, dataset in zip(some_data, data) if draw]
         axes.hist(data, stacked=True, fill=True, log=True, bins=20,
-                  label=['OK', 'OK conf. is none', 'Not OK'], rwidth=1,
-                  color=[(0.3, 1, 0.3),(0.3, 1, 0.6), (1, 0.3, 0.3)])
+                  label=labels, rwidth=1, color=colors)
         _print_figure(axes, fig, fhand)
 
 
@@ -606,24 +611,32 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
         else:
             snp_ok = False
     else:
-        num_data_points = len(ok_dists)
-        num_params = len(popt)
-        deg_of_freedom = max(0, num_data_points - num_params)
-        tval = t.ppf(1.0 - alpha_recomb_0 / 2., deg_of_freedom)
-        std_dev = var_recomb_at_dist_0 ** 0.5
-        conf_interval = (recomb_at_dist_0 - std_dev * tval,
-                         recomb_at_dist_0 + std_dev * tval)
-
-        if  abs(recomb_at_dist_0) <= max_zero_dist_recomb:
-            snp_ok = True
-            ok_color = (0.3, 1, 0.3)
-        elif  conf_interval[0] < 0 < conf_interval[1]:
-            snp_ok = True
+        if alpha_recomb_0 is None:
+            conf_interval = None
+            if  abs(recomb_at_dist_0) <= max_zero_dist_recomb:
+                snp_ok = True
+                ok_color = (0.3, 1, 0.3)
+            else:
+                snp_ok = False
         else:
-            snp_ok = False
-        if plot_fhand:
-            axes.vlines(0, conf_interval[0], conf_interval[1],
-                        label='conf. interval')
+            num_data_points = len(ok_dists)
+            num_params = len(popt)
+            deg_of_freedom = max(0, num_data_points - num_params)
+            tval = t.ppf(1.0 - alpha_recomb_0 / 2., deg_of_freedom)
+            std_dev = var_recomb_at_dist_0 ** 0.5
+            conf_interval = (recomb_at_dist_0 - std_dev * tval,
+                             recomb_at_dist_0 + std_dev * tval)
+    
+            if  abs(recomb_at_dist_0) <= max_zero_dist_recomb:
+                snp_ok = True
+                ok_color = (0.3, 1, 0.3)
+            elif  conf_interval[0] < 0 < conf_interval[1]:
+                snp_ok = True
+            else:
+                snp_ok = False
+            if plot_fhand:
+                axes.vlines(0, conf_interval[0], conf_interval[1],
+                            label='conf. interval')
 
     if plot_fhand:
         color = ok_color if snp_ok else (1, 0.3, 0.3)

@@ -434,6 +434,19 @@ class ConsistentRecombinationTest(unittest.TestCase):
         assert len(snv_filter.recomb_rates['ok_conf_is_None']) == 13
         assert len(snv_filter.recomb_rates['not_ok']) == 14
 
+        snvs = VCFReader(open(vcf_fpath)).parse_snvs()
+        snv_filter = WeirdRecombFilter(pop_type='ril_self',
+                                       max_zero_dist_recomb=0.07,
+                                       alpha_recomb_0=None)
+        flt_snvs = snv_filter.filter_snvs(snvs)
+        assert len(list(flt_snvs)) == 266
+        assert snv_filter.not_fitted_counter['no close region left'] == 10
+        fhand = NamedTemporaryFile(suffix='.png')
+        flt_snvs = snv_filter.plot_recomb_at_0_dist_hist(fhand)
+        assert len(snv_filter.recomb_rates['ok']) == 0
+        assert len(snv_filter.recomb_rates['ok_conf_is_None']) == 266
+        assert len(snv_filter.recomb_rates['not_ok']) == 6
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_cons_recomb']
