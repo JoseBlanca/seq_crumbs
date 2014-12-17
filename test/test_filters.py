@@ -5,8 +5,6 @@ from subprocess import check_output, Popen, PIPE, check_call
 from StringIO import StringIO
 import os
 
-import numpy
-
 from vcf_crumbs.snv import VCFReader
 
 from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
@@ -14,7 +12,7 @@ from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 SnvQualFilter, ObsHetFilter, MafFilter,
                                 filter_snvs, MonomorphicFilter,
                                 filter_snvs_by_non_consistent_segregation,
-                                filter_snvs_weird_recomb)
+                                WeirdRecombFilter)
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
 # Method could be a function
@@ -426,9 +424,16 @@ class ConsistentRecombinationTest(unittest.TestCase):
     def test_cons_recomb(self):
         vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
         snvs = VCFReader(open(vcf_fpath)).parse_snvs()
-        
-        flt_snvs = filter_snvs_weird_recomb(snvs, pop_type='ril_self')
+        snv_filter = WeirdRecombFilter(pop_type='ril_self')
+        flt_snvs = snv_filter.filter_snvs(snvs)
         assert len(list(flt_snvs)) == 258
+        assert snv_filter.not_fitted_counter['no close region left'] == 10
+        fhand = NamedTemporaryFile(suffix='.png')
+        flt_snvs = snv_filter.plot_recomb_at_0_dist_hist(fhand)
+        assert len(snv_filter.recomb_rates['ok']) == 245
+        assert len(snv_filter.recomb_rates['ok_conf_is_None']) == 13
+        assert len(snv_filter.recomb_rates['not_ok']) == 14
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_cons_recomb']
