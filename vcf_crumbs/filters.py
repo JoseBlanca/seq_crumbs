@@ -458,10 +458,11 @@ class WeirdRecombFilter(object):
             if self.debug_plot_dir is None:
                 plot_fhand = None
             else:
-                chrom_dir = pjoin(self.debug_plot_dir, chrom)
+                chrom_dir = pjoin(self.debug_plot_dir, str(chrom))
                 if not exists(chrom_dir):
                     mkdir(chrom_dir)
-                plot_fhand = open(pjoin(chrom_dir, str(pos) + '.png'), 'w')
+                fname = str(chrom) + '_' + str(pos) + '.png'
+                plot_fhand = open(pjoin(chrom_dir, fname), 'w')
             res = _calc_ajusted_recomb(dists, recombs,
                                        max_recomb=self.max_recomb_curve_fit,
                                        max_zero_dist_recomb=self.max_zero_dist_recomb,
