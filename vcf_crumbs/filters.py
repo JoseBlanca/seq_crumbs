@@ -41,6 +41,9 @@ DEF_MIN_DIST = 125000
 DEF_ALPHA = 0.05
 DEF_MAX_ZERO_DIST_RECOMB = 0.01
 DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB = 51
+DEF_MIN_NUM_SNPS_WEIRD_RECOMB = 20
+DEF_MAX_RECOMB_RATE_WEIRD_RECOMB = 0.25
+
 
 def group_in_filter_packets(items, items_per_packet):
     for packet in group_in_packets(items, items_per_packet):
@@ -432,8 +435,9 @@ class WeirdRecombFilter(object):
     def __init__(self, pop_type, max_zero_dist_recomb=DEF_MAX_ZERO_DIST_RECOMB,
                  alpha_recomb_0=DEF_ALPHA,
                  snps_in_window=DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB,
-                 min_num_snps=20, max_recomb_curve_fit=0.25,
-                 debug_plot_dir=None):
+                 min_num_snps=DEF_MIN_NUM_SNPS_WEIRD_RECOMB,
+                 max_recomb_curve_fit=DEF_MAX_RECOMB_RATE_WEIRD_RECOMB,
+                 debug_plot_dir=None, samples=None):
         self.pop_type = pop_type
         self.max_zero_dist_recomb = max_zero_dist_recomb
         self.alpha_recomb_0 = alpha_recomb_0
@@ -441,6 +445,7 @@ class WeirdRecombFilter(object):
         self.min_num_snps = min_num_snps
         self.max_recomb_curve_fit = max_recomb_curve_fit
         self.debug_plot_dir = debug_plot_dir
+        self.samples = samples
         self.not_fitted_counter = Counter()
         self.recomb_rates = {'ok': array.array('f'),
                              'ok_conf_is_None': array.array('f'),
@@ -450,7 +455,8 @@ class WeirdRecombFilter(object):
 
         snps = RandomAccessIterator(snvs, rnd_access_win=self.snps_in_window)
         rates = _calculate_segregation_rates(snps, self.pop_type,
-                                             self.snps_in_window)
+                                             self.snps_in_window,
+                                             samples=self.samples)
         for snp, chrom, pos, rates in rates:
             dists, recombs = zip(*[(rate.pos - pos, rate.recomb_rate) for rate in rates])
             if len(dists) < self.min_num_snps:

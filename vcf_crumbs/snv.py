@@ -219,6 +219,10 @@ class VCFWriter(pyvcfWriter):
     def write_snv(self, snv):
         super(VCFWriter, self).write_record(snv.record)
 
+    def write_snvs(self, snvs):
+        for snv in snvs:
+            self.write_snv(snv)
+
 
 BiallelicGts = namedtuple('BiallelicGts', ['AA', 'Aa', 'aa'])
 

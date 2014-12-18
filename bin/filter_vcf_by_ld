@@ -24,7 +24,7 @@ def _setup_argparse(**kwargs):
     help_pval = 'P-val Threshold (default {})'.format(DEF_P_VAL)
     parser.add_argument('--p_val', default=DEF_P_VAL,
                         help=help_pval)
-    help_min_phys = 'Minimun distance between snv to calculate DL (default {})'
+    help_min_phys = 'Minimun distance between snv to calculate LD (default {})'
     help_min_phys = help_min_phys.format(MIN_PHYS_DIST)
     parser.add_argument('--min_phys_dist', default=MIN_PHYS_DIST,
                         help=help_min_phys)

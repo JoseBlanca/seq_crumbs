@@ -447,7 +447,27 @@ class ConsistentRecombinationTest(unittest.TestCase):
         assert len(snv_filter.recomb_rates['ok_conf_is_None']) == 266
         assert len(snv_filter.recomb_rates['not_ok']) == 6
 
+    def test_bin(self):
+        binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
+        cmd = [binary, '-h']
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout = process.communicate()[0]
+        assert 'usage' in stdout
+
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
+        cmd = [binary, '--pop_type', 'ril_self', '--window', '60', vcf_fpath]
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout = process.communicate()[0]
+        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 252
+
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
+        cmd = [binary, '--pop_type', 'ril_self', vcf_fpath]
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout = process.communicate()[0]
+        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 258
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_cons_recomb']
+    # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_bin']
     unittest.main()
