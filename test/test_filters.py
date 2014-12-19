@@ -324,12 +324,6 @@ class BinaryFilterTest(unittest.TestCase):
         cmd = [binary, '-f', filtered_fhand.name]
         process = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=stdin)
         stdout, stderr = process.communicate()
-        # fails because there's no template
-        assert 'A template file has ' in stderr
-        stdin = open(in_fhand.name)
-        cmd = [binary, '-f', filtered_fhand.name, '-t', in_fhand.name]
-        process = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=stdin)
-        stdout, stderr = process.communicate()
         assert "passsed: 3" in stderr
         in_fhand.close()
 
@@ -485,5 +479,5 @@ class ConsistentRecombinationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_bin']
+    # import sys;sys.argv = ['', 'BinaryFilterTest']
     unittest.main()

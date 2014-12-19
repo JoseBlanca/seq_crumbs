@@ -17,9 +17,13 @@ def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None,
                          reader_kwargs=None):
     if reader_kwargs is None:
         reader_kwargs = {}
+
+    reader_kwargs['filename'] = 'pyvcf_bug_workaround'
+    reader_kwargs['compressed'] = False
     reader = VCFReader(in_fhand, **reader_kwargs)
 
-    templa_reader = reader if template_fhand is None else VCFReader(template_fhand)
+    templa_reader = VCFReader(template_fhand, compressed=False,
+                              filename='pyvcf_bug_workaround')
     writer = VCFWriter(out_fhand, template_reader=templa_reader)
 
     for snv in reader.parse_snvs():
