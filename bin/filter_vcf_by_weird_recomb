@@ -8,6 +8,7 @@ from vcf_crumbs.filters import (WeirdRecombFilter, DEF_MAX_ZERO_DIST_RECOMB,
                                 DEF_ALPHA, DEF_MIN_NUM_SNPS_WEIRD_RECOMB,
                                 DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB,
                                 DEF_MAX_RECOMB_RATE_WEIRD_RECOMB)
+from vcf_crumbs.utils.file_utils import get_input_fhands
 
 
 def setup_argparse(**kwargs):
@@ -16,14 +17,12 @@ def setup_argparse(**kwargs):
     parser = argparse.ArgumentParser(**kwargs)
     
     in_help = 'Input sorted VCF file (default STDIN)'
-    parser.add_argument('input', help=in_help, nargs='?',
-                        type=argparse.FileType('r'), default=sys.stdin)
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rb'),
+                        default=sys.stdin, nargs='?')
     parser.add_argument('-o', '--output', default=sys.stdout,
                         help='Output VCF file (default STDOUT)',
                         type=argparse.FileType('w'))
     msg = 'Template VCF to get the header (default same as input)'
-    parser.add_argument('-t', '--template', help=msg,
-                        type=argparse.FileType('r'))
 
     parser.add_argument('-p', '--pop_type', help='segregant population type',
                         type=str, required=True)
@@ -62,22 +61,13 @@ def setup_argparse(**kwargs):
                         type=argparse.FileType('r'))
     return parser
 
+    
 
 def parse_args(parser):
     parsed_args = parser.parse_args()
+    in_fhand, template_fhand = get_input_fhands(parsed_args.input, None)
 
-    args = {'in_fhand': parsed_args.input}
-
-    template_fhand = parsed_args.template
-
-    if template_fhand is None:
-        in_fname = args['in_fhand'].name
-        if in_fname == '<stdin>':
-            msg = 'A template file has to be provided when the input is given '
-            msg += 'via STDIN'
-            parser.error(msg)
-        template_fhand = open(in_fname)
-    args['template'] = template_fhand
+    args = {'in_fhand': in_fhand, 'template': template_fhand}
 
     args['out_fhand'] = parsed_args.output
     args['pop_type'] = parsed_args.pop_type
@@ -106,7 +96,6 @@ def parse_args(parser):
 def main():
     description = 'Removes the SNPs with weird recombination patterns'
     parser = setup_argparse(description=description)
-
     args = parse_args(parser)
 
     filter_ = WeirdRecombFilter(pop_type=args['pop_type'],
@@ -117,10 +106,12 @@ def main():
                                 max_recomb_curve_fit=args['max_recomb'],
                                 debug_plot_dir=args['plot_dir'],
                                 samples=args['samples'])
-    snvs = VCFReader(args['in_fhand']).parse_snvs()
+    reader = VCFReader(args['in_fhand'], compressed=False,
+                       filename='pyvcf_bug_workaround')
+    snvs = reader.parse_snvs()
     flt_snvs = filter_.filter_snvs(snvs)
-
-    templa_reader = reader if args['template'] is None else VCFReader(args['template'])
+    templa_reader = VCFReader(args['template'], compressed=False,
+                              filename='pyvcf_bug_workaround')
     writer = VCFWriter(args['out_fhand'], template_reader=templa_reader)
     writer.write_snvs(flt_snvs)
 

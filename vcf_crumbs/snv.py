@@ -120,10 +120,11 @@ class _SNPSlidingWindow(object):
 
 
 class VCFReader(object):
-    def __init__(self, fhand,
+    def __init__(self, fhand, compressed=None, filename=None,
                  min_calls_for_pop_stats=DEF_MIN_CALLS_FOR_POP_STATS):
         self.fhand = fhand
-        self.pyvcf_reader = pyvcfReader(fsock=fhand)
+        self.pyvcf_reader = pyvcfReader(fsock=fhand, compressed=compressed,
+                                        filename=filename)
         self.min_calls_for_pop_stats = min_calls_for_pop_stats
         self._snpcaller = None
 

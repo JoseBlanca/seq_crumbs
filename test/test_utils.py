@@ -16,10 +16,44 @@
 import unittest
 from tempfile import NamedTemporaryFile
 from os.path import exists
+from os.path import join as pjoin
 from os import remove
+from StringIO import StringIO
+import gzip
 
 from vcf_crumbs.utils.file_utils import (compress_with_bgzip, uncompress_gzip,
-                              index_vcf_with_tabix)
+                                         index_vcf_with_tabix, TEST_DATA_DIR,
+                                         _build_template_fhand)
+# Method could be a function
+# pylint: disable=R0201
+# Too many public methods
+# pylint: disable=R0904
+# Missing docstring
+# pylint: disable=C0111
+
+
+VCF = '''##fileformat=VCFv4.1
+##fileDate=20090805
+##source=myImputationProgramV3.1
+##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
+##contig=<ID=20,length=62435964,assembly=B36>
+##phasing=partial
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number_of_Samples_With_Data">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total_Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele_Frequency">
+##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral_Allele">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership,build_129">
+##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2_membership">
+##FILTER=<ID=q10,Description="Quality_below_10">
+##FILTER=<ID=s50,Description="Less_than_50%_of_samples_have_data">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype_Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read_Depth">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype_Quality">
+#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+20 14370 rs6054257 G A 29 PASS NS=3;DP=14;AF=0.5;DB;H2 GT:GQ:DP:HQ 0|0:48:1:51,51 1|0:48:8:51,51 1/1:43:5:.,.
+20 17330 . T A 3 q10 NS=3;DP=11;AF=0.017 GT:GQ:DP:HQ 0|0:49:3:58,50 0|1:3:5:65,3 0/0:41:3
+'''
 
 
 class CompressTest(unittest.TestCase):
@@ -46,29 +80,7 @@ class CompressTest(unittest.TestCase):
         assert uncompressed_fhand.read() == orig
 
     def test_vcf_index(self):
-        vcf = '''##fileformat=VCFv4.1
-##fileDate=20090805
-##source=myImputationProgramV3.1
-##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
-##contig=<ID=20,length=62435964,assembly=B36>
-##phasing=partial
-##INFO=<ID=NS,Number=1,Type=Integer,Description="Number_of_Samples_With_Data">
-##INFO=<ID=DP,Number=1,Type=Integer,Description="Total_Depth">
-##INFO=<ID=AF,Number=A,Type=Float,Description="Allele_Frequency">
-##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral_Allele">
-##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership,build_129">
-##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2_membership">
-##FILTER=<ID=q10,Description="Quality_below_10">
-##FILTER=<ID=s50,Description="Less_than_50%_of_samples_have_data">
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype_Quality">
-##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read_Depth">
-##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype_Quality">
-#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
-20 14370 rs6054257 G A 29 PASS NS=3;DP=14;AF=0.5;DB;H2 GT:GQ:DP:HQ 0|0:48:1:51,51 1|0:48:8:51,51 1/1:43:5:.,.
-20 17330 . T A 3 q10 NS=3;DP=11;AF=0.017 GT:GQ:DP:HQ 0|0:49:3:58,50 0|1:3:5:65,3 0/0:41:3
-'''
-        vcf = vcf.replace(' ', '\t')
+        vcf = VCF.replace(' ', '\t')
         vcf_fhand = NamedTemporaryFile(suffix='.vcf')
         vcf_fhand.write(vcf)
         vcf_fhand.flush()
@@ -79,6 +91,19 @@ class CompressTest(unittest.TestCase):
 
         assert exists(compressed_fhand.name + '.tbi')
         remove(compressed_fhand.name + '.tbi')
+
+
+class BuildTemplateTest(unittest.TestCase):
+    def test_build_template(self):
+        vcf = VCF.replace(' ', '\t')
+        in_fhand = StringIO(vcf)
+        t_fhand = _build_template_fhand(in_fhand)
+        assert 'NA00002\tNA00003\n' in t_fhand.read()
+
+        # compressed file
+        in_fhand = open(pjoin(TEST_DATA_DIR, 'freebayes_multisample.vcf.gz'))
+        t_fhand = _build_template_fhand(in_fhand)
+        assert 'sample12_gbs\n' in t_fhand.read()
 
 if __name__ == "__main__":
 #     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']

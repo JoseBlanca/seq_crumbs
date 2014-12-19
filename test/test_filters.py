@@ -454,19 +454,35 @@ class ConsistentRecombinationTest(unittest.TestCase):
         stdout = process.communicate()[0]
         assert 'usage' in stdout
 
+        # You cannot pipe a compressed file
         vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        cmd1 = ['cat', vcf_fpath]
+        process1 = Popen(cmd1, stdout=PIPE)
         binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
-        cmd = [binary, '--pop_type', 'ril_self', '--window', '60', vcf_fpath]
-        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
-        stdout = process.communicate()[0]
+        cmd = [binary, '--pop_type', 'ril_self', '--window', '60']
+        process2 = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=process1.stdout)
+        stdout, stderr = process2.communicate()
+        assert not stdout
+        assert 'RuntimeError' in stderr
+
+        # You can pipe and not set the template
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        cmd1 = ['zcat', vcf_fpath]
+        process1 = Popen(cmd1, stdout=PIPE)
+        binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
+        cmd = [binary, '--pop_type', 'ril_self', '--window', '60']
+        process2 = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=process1.stdout)
+        stdout = process2.communicate()[0]
         assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 252
 
+        # with a standard file
         vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
         binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
         cmd = [binary, '--pop_type', 'ril_self', vcf_fpath]
         process = Popen(cmd, stderr=PIPE, stdout=PIPE)
-        stdout = process.communicate()[0]
+        stdout, stderr = process.communicate()
         assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 258
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'ConsistentRecombinationTest.test_bin']
