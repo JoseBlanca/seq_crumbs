@@ -461,7 +461,7 @@ def get_num_threads(threads):
     phisical_threads = os.sysconf('SC_NPROCESSORS_ONLN')
     if not threads:
         return 1
-    elif isinstance(threads, int):
-        return threads
-    else:
+    elif isinstance(threads, bool):
         return phisical_threads
+    else:
+        return threads
