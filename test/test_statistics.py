@@ -122,14 +122,13 @@ reference2\t400\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.
         bam_fpath = join(TEST_DATA_DIR, 'seqs.bam')
         sam = pysam.AlignmentFile(bam_fpath)
         stats = calc_snv_read_pos_stats(sam, snvs)
-        assert stats['5_read_pos_counts'].quartiles == (11.0, 26.5, 44.0)
-        assert stats['3_read_pos_counts'].quartiles == (30.0, 47.5, 64.0)
+        assert 'group1+454' in stats['5_read_pos_counts'].keys()
         assert '5_read_pos_boxplot' in stats
         assert '3_read_pos_boxplot' in stats
 
         fhand = NamedTemporaryFile(suffix='.png')
         draw_read_pos_stats(stats, fhand)
-        # raw_input(fhand.name)
+        raw_input(fhand.name)
 
 if __name__ == "__main__":
     import sys;sys.argv = ['', 'ReadPosCoord']

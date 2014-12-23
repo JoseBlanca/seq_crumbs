@@ -542,10 +542,10 @@ class VcfStats(object):
 def calc_snv_read_pos_stats(sam, snvs, max_snps=None, max_pos=None):
 
     pileup_cols = sam.pileup()
-    read_5_pos_cnts = IntCounter()
-    read_3_pos_cnts = IntCounter()
-    read_5_pos_box = IntBoxplot()
-    read_3_pos_box = IntBoxplot()
+    read_5_pos_cnts_rg = {}
+    read_3_pos_cnts_rg = {}
+    read_5_pos_box_rg = {}
+    read_3_pos_box_rg = {}
 
     for index, snv in enumerate(snvs):
         if max_snps and index >= max_snps:
@@ -564,10 +564,24 @@ def calc_snv_read_pos_stats(sam, snvs, max_snps=None, max_pos=None):
                                                                       ref_pos))
 
         for pileup_read in snv_col.pileups:
+            try:
+                read_group = pileup_read.alignment.opt('RG')
+            except KeyError:
+                read_group = None
             read_ref_coord = ReadRefCoord(pileup_read.alignment, sam)
             read_pos = read_ref_coord.get_read_pos((chrom, ref_pos))
             read_pos_end = read_ref_coord.get_read_pos_counting_from_end((chrom,
                                                                           ref_pos))
+            if read_group not in read_5_pos_cnts_rg:
+                read_5_pos_cnts_rg[read_group] = IntCounter()
+                read_3_pos_cnts_rg[read_group] = IntCounter()
+                read_5_pos_box_rg[read_group] = IntBoxplot()
+                read_3_pos_box_rg[read_group] = IntBoxplot()
+            read_5_pos_cnts = read_5_pos_cnts_rg[read_group]
+            read_3_pos_cnts = read_3_pos_cnts_rg[read_group]
+            read_5_pos_box = read_5_pos_box_rg[read_group]
+            read_3_pos_box = read_3_pos_box_rg[read_group]
+
             if (read_pos is not None and
                 (not max_pos or read_pos + 1 <= max_pos)):
                     read_5_pos_cnts[read_pos + 1] += 1
@@ -577,10 +591,10 @@ def calc_snv_read_pos_stats(sam, snvs, max_snps=None, max_pos=None):
                     read_3_pos_cnts[abs(read_pos_end)] += 1
                     read_3_pos_box.append(abs(read_pos_end), snv_qual)
 
-    return {'5_read_pos_counts': read_5_pos_cnts,
-            '3_read_pos_counts': read_3_pos_cnts,
-            '5_read_pos_boxplot': read_5_pos_box,
-            '3_read_pos_boxplot': read_3_pos_box}
+    return {'5_read_pos_counts': read_5_pos_cnts_rg,
+            '3_read_pos_counts': read_3_pos_cnts_rg,
+            '5_read_pos_boxplot': read_5_pos_box_rg,
+            '3_read_pos_boxplot': read_3_pos_box_rg}
 
 
 def _draw_one_read_pos_stats(stats, axes, box_key, count_key, title):
@@ -601,16 +615,31 @@ def _draw_one_read_pos_stats(stats, axes, box_key, count_key, title):
 
 
 def draw_read_pos_stats(stats, plot_fhand):
-    figure, canvas = get_fig_and_canvas(1, 2)
-    axes1 = figure.add_subplot(121)
-    _draw_one_read_pos_stats(stats, axes1, '5_read_pos_boxplot',
-                             '5_read_pos_counts', "Pos. counted from 5'")
-    axes2 = figure.add_subplot(122)
-    _draw_one_read_pos_stats(stats, axes2, '3_read_pos_boxplot',
-                             '3_read_pos_counts', "Pos. counted from 3'")
+    n_read_groups = len(stats['5_read_pos_counts'])
+    figure, canvas = get_fig_and_canvas(n_read_groups, 2)
+    n_plot = 0
+    for read_group in stats['5_read_pos_counts'].keys():
+        rg_stat = {'5_read_pos_counts': stats['5_read_pos_counts'][read_group],
+                   '3_read_pos_counts': stats['3_read_pos_counts'][read_group],
+                   '5_read_pos_boxplot': stats['5_read_pos_boxplot'][read_group],
+                   '3_read_pos_boxplot': stats['3_read_pos_boxplot'][read_group]}
+        n_plot += 1
+        axes1 = figure.add_subplot(n_read_groups, 2, n_plot)
+        if read_group is None:
+            title = "Pos. counted from 5'"
+        else:
+            title = "Pos. counted from 5' (rg: {})".format(read_group)
+        _draw_one_read_pos_stats(rg_stat, axes1, '5_read_pos_boxplot',
+                                 '5_read_pos_counts', title)
+        if read_group is None:
+            title = "Pos. counted from 3'"
+        else:
+            title = "Pos. counted from 3' (rg: {})".format(read_group)
+        n_plot += 1
+        axes2 = figure.add_subplot(n_read_groups, 2, n_plot)
+        _draw_one_read_pos_stats(rg_stat, axes2, '3_read_pos_boxplot',
+                                 '3_read_pos_counts', title)
     canvas.print_figure(plot_fhand)
     plot_fhand.flush()
 
-
     # TODO we should be able to limit the snv qualities
-    # TODO one plot per read_group
