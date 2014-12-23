@@ -568,12 +568,14 @@ def calc_snv_read_pos_stats(sam, snvs, max_snps=None, max_pos=None):
             read_pos = read_ref_coord.get_read_pos((chrom, ref_pos))
             read_pos_end = read_ref_coord.get_read_pos_counting_from_end((chrom,
                                                                           ref_pos))
-            if not max_pos or read_pos + 1 <= max_pos:
-                read_5_pos_cnts[read_pos + 1] += 1
-                read_5_pos_box.append(read_pos + 1, snv_qual)
-            if not max_pos or abs(read_pos_end) <= max_pos:
-                read_3_pos_cnts[abs(read_pos_end)] += 1
-                read_3_pos_box.append(abs(read_pos_end), snv_qual)
+            if (read_pos is not None and
+                (not max_pos or read_pos + 1 <= max_pos)):
+                    read_5_pos_cnts[read_pos + 1] += 1
+                    read_5_pos_box.append(read_pos + 1, snv_qual)
+            if (read_pos_end is not None and (not max_pos or
+                abs(read_pos_end) <= max_pos)):
+                    read_3_pos_cnts[abs(read_pos_end)] += 1
+                    read_3_pos_box.append(abs(read_pos_end), snv_qual)
 
     return {'5_read_pos_counts': read_5_pos_cnts,
             '3_read_pos_counts': read_3_pos_cnts,
