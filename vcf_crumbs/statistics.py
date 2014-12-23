@@ -595,6 +595,10 @@ def _draw_one_read_pos_stats(stats, axes, box_key, count_key, title):
     axes1.set_xlabel('Read position')
     axes1.set_title(title)
 
+    # vertical x labels
+    for label in axes1.xaxis.get_ticklabels():
+        label.set_rotation(90)
+
 
 def draw_read_pos_stats(stats, plot_fhand):
     figure, canvas = get_fig_and_canvas(1, 2)
@@ -606,3 +610,7 @@ def draw_read_pos_stats(stats, plot_fhand):
                              '3_read_pos_counts', "Pos. counted from 3'")
     canvas.print_figure(plot_fhand)
     plot_fhand.flush()
+
+
+    # TODO we should be able to limit the snv qualities
+    # TODO one plot per read_group
