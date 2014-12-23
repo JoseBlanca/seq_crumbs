@@ -2,11 +2,20 @@ import unittest
 from os.path import join
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
+from StringIO import StringIO
+
+try:
+    import pysam
+except ImportError:
+    pass
 
 from vcf import Reader
-from vcf_crumbs.statistics import (VARSCAN, GATK, FREEBAYES, VcfStats,
-                                   HOM_REF, VCFcomparisons, _AlleleCounts2D,
-                                   HOM_ALT, HET, HOM, MAFS)
+
+from vcf_crumbs.snv import VCFReader
+from vcf_crumbs.statistics import (VcfStats, HOM_REF, VCFcomparisons,
+                                   _AlleleCounts2D, HOM_ALT, HOM, HET,
+                                   draw_read_pos_stats,
+                                   calc_snv_read_pos_stats)
 
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
@@ -97,7 +106,31 @@ class VCFcomparisonsTest(unittest.TestCase):
         binary = join(BIN_DIR, 'calculat_vcf_stats')
 
 
+class ReadPosCoord(unittest.TestCase):
+
+    def test_snv_read_pos_distrib(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
+reference1\t187\trs6054257\tAA\tA\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.
+reference1\t210\t.\tA\tAA\t3\tq10\tNS=3;DP=11;AF=0.017\tGT:GQ:DP:HQ\t0|0:49:3:58,50\t0|1:3:5:65,3\t0/0:41:3
+reference1\t215\trs6040355\tA\tG,T\t67\tPASS\tNS=2;DP=10;AF=0.333,0.667;AA=T;DB\tGT:GQ:DP:HQ\t1|2:21:6:23,27\t2|1:2:0:18,2\t2/2:35:4
+reference1\t230\t.\tT\t.\t47\tPASS\tNS=3;DP=13;AA=T\tGT:GQ:DP:HQ\t0|0:54:7:56,60\t0|0:48:4:51,51\t0/0:61:2
+reference2\t350\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t0/1:35:4\t0/2:17:2\t1/1:40:3
+reference2\t400\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.:35:4\t0/2:17:2\t1/1:40:3
+'''
+
+        snvs = VCFReader(StringIO(vcf)).parse_snvs()
+        bam_fpath = join(TEST_DATA_DIR, 'seqs.bam')
+        sam = pysam.AlignmentFile(bam_fpath)
+        stats = calc_snv_read_pos_stats(sam, snvs)
+        assert stats['5_read_pos_counts'].quartiles == (11.0, 26.5, 44.0)
+        assert stats['3_read_pos_counts'].quartiles == (30.0, 47.5, 64.0)
+        assert '5_read_pos_boxplot' in stats
+        assert '3_read_pos_boxplot' in stats
+
+        fhand = NamedTemporaryFile(suffix='.png')
+        draw_read_pos_stats(stats, fhand)
+
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'TestVcfStats.test_only_gt_vcf']
+    #import sys;sys.argv = ['', 'ReadPosCoord']
     unittest.main()

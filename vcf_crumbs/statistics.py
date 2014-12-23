@@ -1,13 +1,19 @@
 from __future__ import division
+from operator import itemgetter
 
 from vcf import Reader
 
 from crumbs.seq import get_name, get_length
 from crumbs.seqio import read_seqs
 from crumbs.statistics import IntCounter, IntBoxplot
+from crumbs.plot import get_fig_and_canvas, draw_int_boxplot
 from vcf_crumbs.snv import (VARSCAN, GATK, FREEBAYES, HOM_REF, HET, HOM_ALT,
                             HOM, DEF_MIN_CALLS_FOR_POP_STATS, VCFReader,
                             pyvcfReader)
+
+# TODO: This must be optional
+from bam_crumbs.coord_transforms import ReadRefCoord
+
 
 # Missing docstring
 # pylint: disable=C0111
@@ -532,3 +538,69 @@ class VcfStats(object):
     def depths(self):
         return self._snv_counters[DEPTHS]
 
+
+def calc_snv_read_pos_stats(sam, snvs, max_snps=None, max_pos=None):
+
+    pileup_cols = sam.pileup()
+    read_5_pos_cnts = IntCounter()
+    read_3_pos_cnts = IntCounter()
+    read_5_pos_box = IntBoxplot()
+    read_3_pos_box = IntBoxplot()
+
+    for index, snv in enumerate(snvs):
+        if max_snps and index >= max_snps:
+            break
+        chrom = snv.chrom
+        ref_pos = snv.pos
+        snv_qual = snv.qual
+        snv_col = None
+        for col in pileup_cols:
+            ref_name = sam.getrname(col.reference_id)
+            if ref_name == chrom and col.reference_pos == ref_pos:
+                snv_col = col
+                break
+        if snv_col is None:
+            raise RuntimeError('No pileup found for snv {}:{}'.format(chrom,
+                                                                      ref_pos))
+
+        for pileup_read in snv_col.pileups:
+            read_ref_coord = ReadRefCoord(pileup_read.alignment, sam)
+            read_pos = read_ref_coord.get_read_pos((chrom, ref_pos))
+            read_pos_end = read_ref_coord.get_read_pos_counting_from_end((chrom,
+                                                                          ref_pos))
+            if not max_pos or read_pos + 1 <= max_pos:
+                read_5_pos_cnts[read_pos + 1] += 1
+                read_5_pos_box.append(read_pos + 1, snv_qual)
+            if not max_pos or abs(read_pos_end) <= max_pos:
+                read_3_pos_cnts[abs(read_pos_end)] += 1
+                read_3_pos_box.append(abs(read_pos_end), snv_qual)
+
+    return {'5_read_pos_counts': read_5_pos_cnts,
+            '3_read_pos_counts': read_3_pos_cnts,
+            '5_read_pos_boxplot': read_5_pos_box,
+            '3_read_pos_boxplot': read_3_pos_box}
+
+
+def _draw_one_read_pos_stats(stats, axes, box_key, count_key, title):
+    axes1 = axes
+    xpos = draw_int_boxplot(stats[box_key], axes=axes1)[1]
+    axes1.set_ylabel('SNV Qualities')
+
+    axes2 = axes1.twinx()
+    ys = zip(*sorted(stats[count_key].items(), key=itemgetter(0)))[1]
+    axes2.plot(xpos, ys, c='b')
+    axes2.set_ylabel('Num. reads', color='b')
+    axes1.set_xlabel('Read position')
+    axes1.set_title(title)
+
+
+def draw_read_pos_stats(stats, plot_fhand):
+    figure, canvas = get_fig_and_canvas(1, 2)
+    axes1 = figure.add_subplot(121)
+    _draw_one_read_pos_stats(stats, axes1, '5_read_pos_boxplot',
+                             '5_read_pos_counts', "Pos. counted from 5'")
+    axes2 = figure.add_subplot(122)
+    _draw_one_read_pos_stats(stats, axes2, '3_read_pos_boxplot',
+                             '3_read_pos_counts', "Pos. counted from 3'")
+    canvas.print_figure(plot_fhand)
+    plot_fhand.flush()
