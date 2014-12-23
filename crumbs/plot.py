@@ -372,7 +372,9 @@ def draw_int_boxplot(boxplot, fhand=None, axes=None, title=None,
 
     xticks_lables = []
     xticks = []
+    xpos = []
     for index, x_val in enumerate(x_vals):
+        xpos.append(index + 0.5)
         if index % xpurge != 0:
             continue
 
@@ -419,3 +421,5 @@ def draw_int_boxplot(boxplot, fhand=None, axes=None, title=None,
     if not using_given_axes:
         canvas.print_figure(fhand)
         fhand.flush()
+    return x_vals, xpos, xticks, xticks_lables
+
