@@ -14,7 +14,7 @@ def setup_basic_argparse(**kwargs):
     parser = argparse.ArgumentParser(**kwargs)
     in_help = 'Input VCF file (default STDIN)'
     parser.add_argument('input', help=in_help, nargs='?',
-                        type=argparse.FileType('r'), default=sys.stdin)
+                        type=argparse.FileType('rb'), default=sys.stdin)
     parser.add_argument('-o', '--output', default=sys.stdout,
                         help='Output VCF file (default STDOUT)',
                         type=argparse.FileType('w'))
@@ -78,4 +78,4 @@ def parse_filter_args(parser):
 
     filter_class_kwargs = {'samples_to_consider': samples if samples else None}
 
-    return filter_snvs_args, filter_class_kwargs, parsed_args 
+    return filter_snvs_args, filter_class_kwargs, parsed_args

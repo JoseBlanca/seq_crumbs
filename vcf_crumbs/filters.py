@@ -12,7 +12,7 @@ import array
 import numpy
 
 from scipy.optimize import curve_fit
-from scipy.stats.distributions import  t
+from scipy.stats.distributions import t
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -66,8 +66,18 @@ def _write_log(log_fhand, tot_snps, passed_snps):
 
 def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
                 template_fhand=None, log_fhand=None, reader_kwargs=None):
+    '''IT filters an input vcf.
+
+    The input fhand has to be uncompressed. The original file could be a
+    gzipped file, but in that case it has to be opened with gzip.open before
+    sending it to this function.
+    '''
     if reader_kwargs is None:
         reader_kwargs = {}
+    # The input fhand to this function cannot be compressed
+    reader_kwargs.update({'compressed': False,
+                         'filename': 'pyvcf_bug_workaround'})
+
     reader = VCFReader(in_fhand, **reader_kwargs)
 
     template_reader = reader if template_fhand is None else VCFReader(template_fhand)
@@ -633,7 +643,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
             std_dev = var_recomb_at_dist_0 ** 0.5
             conf_interval = (recomb_at_dist_0 - std_dev * tval,
                              recomb_at_dist_0 + std_dev * tval)
-    
+
             if  abs(recomb_at_dist_0) <= max_zero_dist_recomb:
                 snp_ok = True
                 ok_color = (0.3, 1, 0.3)

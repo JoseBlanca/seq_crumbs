@@ -371,6 +371,28 @@ class BinaryFilterTest(unittest.TestCase):
         assert "passsed: 2" in open(log_fhand.name).read()
         assert 'fileDate' in stdout
 
+        # You can pipe and not set the template
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        cmd1 = ['zcat', vcf_fpath]
+        process1 = Popen(cmd1, stdout=PIPE)
+        log_fhand = NamedTemporaryFile()
+        binary = join(BIN_DIR, 'filter_vcf_by_maf')
+        cmd = [binary, '-m', '0.7', '-c', '2', '-l', log_fhand.name]
+        process2 = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=process1.stdout)
+        stdout = process2.communicate()[0]
+        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 69
+
+        # You cannot pipe a compressed file
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        cmd1 = ['cat', vcf_fpath]
+        process1 = Popen(cmd1, stdout=PIPE)
+        binary = join(BIN_DIR, 'filter_vcf_by_maf')
+        cmd = [binary,  '-m', '0.7', '-c', '2', '-l', log_fhand.name]
+        process2 = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=process1.stdout)
+        stdout, stderr = process2.communicate()
+        assert not stdout
+        assert 'tell member' in stderr
+
 
 def _create_vcf_file(vcf_string):
     vcf_fhand = NamedTemporaryFile(suffix='.vcf', delete=False)
@@ -479,5 +501,5 @@ class ConsistentRecombinationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'BinaryFilterTest']
+    # import sys; sys.argv = ['', 'BinaryFilterTest.test_maf_bin']
     unittest.main()

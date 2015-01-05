@@ -117,7 +117,7 @@ def get_input_fhands(in_fhand, template_fhand):
 
     in_compressed = _vcf_is_gz(in_fhand)
     if in_compressed and not _fhand_is_tellable(in_fhand):
-        msg = 'The given input has has no tell member and it is compressed. '
+        msg = 'The given input has no tell member and it is compressed. '
         msg += 'You cannot use gzip file through stdin, try to pipe it '
         msg += 'uncompressed with zcat |'
         raise RuntimeError(msg)
