@@ -36,7 +36,8 @@ def wrap_in_buffered_reader(fhand, force_wrap=False):
     if not force_wrap and fhand_is_seekable(fhand):
         return fhand
     else:
-        fhand = io.open(fhand.fileno(), mode='rb')  # with text there's no peek
+        fhand = io.open(fhand.fileno(), mode='rb',
+                        buffering=8192*4)  # with text there's no peek
 
     return fhand
 
