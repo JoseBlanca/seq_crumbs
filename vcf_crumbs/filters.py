@@ -291,105 +291,104 @@ def _fisher_extact_rxc(counts_obs, counts_exp):
     return pvalue
 
 
-def filter_snvs_by_non_consistent_segregation(vcf_fpath, alpha=0.01,
-                       yield_complete_info=False, num_snvs_check=DEF_SNV_WIN,
-                       max_failed_freq=DEF_MAX_FAILED_FREQ,
-                       max_test_failures=DEF_MAX_TEST_FAILURES,
-                       win_width=DEF_MAX_DIST, win_mask_width=DEF_MIN_DIST,
-                       min_num_snvs_check_in_win=DEF_MIN_NUM_CHECK_SNPS_IN_WIN,
-                       min_samples=DEF_MIN_CALLS_FOR_POP_STATS):
+class WeirdSegregationFilter(object):
+    def __init__(self, alpha=0.01, num_snvs_check=DEF_SNV_WIN,
+                 max_failed_freq=DEF_MAX_FAILED_FREQ,
+                 win_width=DEF_MAX_DIST, win_mask_width=DEF_MIN_DIST,
+                 min_num_snvs_check_in_win=DEF_MIN_NUM_CHECK_SNPS_IN_WIN):
+        # We're assuming that most snps are ok and that a few have a weird
+        # segregation
+        self.alpha = alpha
+        self.num_snvs_check = num_snvs_check
+        self.max_failed_freq = max_failed_freq
+        self.win_width = win_width
+        if win_mask_width < 1:
+            msg = 'You should mask at least a window of 3 bp to avoid the '
+            msg += 'comparison with itself'
+            raise ValueError(msg)
+        self.win_mask_width = win_mask_width
+        self.min_num_snvs_check_in_win = min_num_snvs_check_in_win
+        self._failed_freqs = array.array('f')
 
-    # We're assuming that most snps are ok and that a few have a weird
-    # segregation
-    if win_mask_width < 1:
-        msg = 'You should mask at least a window of 3 bp to avoid the '
-        msg += 'comparison with itself'
-        raise ValueError(msg)
-    reader = VCFReader(open(vcf_fpath), min_calls_for_pop_stats=min_samples)
-    snvs = reader.parse_snvs()
-    random_reader = VCFReader(open(vcf_fpath))
-    if yield_complete_info:
-        max_test_failures = None
+    def filter_vcf(self, vcf_fpath, min_samples=DEF_MIN_CALLS_FOR_POP_STATS):
+        reader = VCFReader(open(vcf_fpath),
+                           min_calls_for_pop_stats=min_samples)
+        snvs = reader.parse_snvs()
+        random_reader = VCFReader(open(vcf_fpath))
 
-    for snv_1 in snvs:
-        loc = snv_1.pos
-        win_1_start = loc - (win_width / 2)
-        if win_1_start < 0:
-            win_1_start = 0
-        win_1_end = loc - (win_mask_width / 2)
-        if win_1_end < 0:
-            win_1_end = 0
-        if win_1_end != 0:
-            snvs_win_1 = random_reader.fetch_snvs(snv_1.chrom,
-                                                  start=int(win_1_start),
-                                                  end=int(win_1_end))
-        else:
-            snvs_win_1 = []
+        for snv_1 in snvs:
+            loc = snv_1.pos
+            win_1_start = loc - (self.win_width / 2)
+            if win_1_start < 0:
+                win_1_start = 0
+            win_1_end = loc - (self.win_mask_width / 2)
+            if win_1_end < 0:
+                win_1_end = 0
+            if win_1_end != 0:
+                snvs_win_1 = random_reader.fetch_snvs(snv_1.chrom,
+                                                      start=int(win_1_start),
+                                                      end=int(win_1_end))
+            else:
+                snvs_win_1 = []
 
-        win_2_start = loc + (win_mask_width / 2)
-        win_2_end = loc + (win_width / 2)
-        snvs_win_2 = random_reader.fetch_snvs(snv_1.chrom,
-                                              start=win_2_start,
-                                              end=win_2_end)
-        snvs_in_win = list(snvs_win_1) + list(snvs_win_2)
-        if len(snvs_in_win) > num_snvs_check:
-            snvs_in_win = random.sample(snvs_in_win, num_snvs_check)
-        if len(snvs_in_win) < min_num_snvs_check_in_win:
-            # Not enough snps to check
-            continue
-
-        exp_cnts = snv_1.biallelic_genotype_counts
-        if exp_cnts is None:
-            continue
-
-        results = {'left': [], 'right': []}
-        values = {'left': [], 'right': []}
-        provisional_failures = 0
-        failed = False
-        for snv_2 in snvs_in_win:
-            location = 'left' if snv_2.pos - loc < 0 else 'right'
-            obs_cnts = snv_2.biallelic_genotype_counts
-            if obs_cnts is None:
+            win_2_start = loc + (self.win_mask_width / 2)
+            win_2_end = loc + (self.win_width / 2)
+            snvs_win_2 = random_reader.fetch_snvs(snv_1.chrom,
+                                                  start=win_2_start,
+                                                  end=win_2_end)
+            snvs_in_win = list(snvs_win_1) + list(snvs_win_2)
+            if len(snvs_in_win) > self.num_snvs_check:
+                snvs_in_win = random.sample(snvs_in_win, self.num_snvs_check)
+            if len(snvs_in_win) < self.min_num_snvs_check_in_win:
+                # Not enough snps to check
                 continue
-            value = _fisher_extact_rxc(obs_cnts, exp_cnts)
-            result = False if value is None else value > alpha
-            results[location].append(result)
-            values[location].append((snv_2.pos, value))
 
-            if result:
-                provisional_failures += 1
-                if (max_test_failures and
-                    provisional_failures >= max_test_failures):
-                    failed = True
-                    break
-        if failed:
-            # too many snps are rejected even without bonferroni correction
-            continue
-        if (len(results['left']) + len(results['right']) <
-                min_num_snvs_check_in_win):
-            # few snps can be tested for segregation
-            continue
+            exp_cnts = snv_1.biallelic_genotype_counts
+            if exp_cnts is None:
+                continue
 
-        n_failed_left = results['left'].count(False)
-        n_failed_right = results['right'].count(False)
-        tot_checked = len(results['left']) + len(results['right'])
-        if tot_checked > 0:
-            failed_freq = (n_failed_left + n_failed_right) / tot_checked
-            passed = max_failed_freq > failed_freq
-        else:
-            failed_freq = None
-            passed = False
-        if yield_complete_info:
-            yield snv_1, {'results': results, 'values': values,
-                          'failed_freq': failed_freq,
-                          'n_failed': {'left': n_failed_left,
-                                       'right': n_failed_right},
-                          'checked': {'left': len(results['left']),
-                                      'right': len(results['right'])},
-                          'passed': passed}
-        else:
+            results = {'left': [], 'right': []}
+            values = {'left': [], 'right': []}
+            for snv_2 in snvs_in_win:
+                location = 'left' if snv_2.pos - loc < 0 else 'right'
+                obs_cnts = snv_2.biallelic_genotype_counts
+                if obs_cnts is None:
+                    continue
+                value = _fisher_extact_rxc(obs_cnts, exp_cnts)
+                result = False if value is None else value > self.alpha
+                results[location].append(result)
+                values[location].append((snv_2.pos, value))
+
+            if (len(results['left']) + len(results['right']) <
+               self.min_num_snvs_check_in_win):
+                # few snps can be tested for segregation
+                continue
+
+            n_failed_left = results['left'].count(False)
+            n_failed_right = results['right'].count(False)
+            tot_checked = len(results['left']) + len(results['right'])
+            if tot_checked > 0:
+                failed_freq = (n_failed_left + n_failed_right) / tot_checked
+                passed = self.max_failed_freq > failed_freq
+            else:
+                failed_freq = None
+                passed = False
+            if failed_freq is not None:
+                self._failed_freqs.append(failed_freq)
+
             if passed:
                 yield snv_1
+
+    def plot_failed_freq_dist(self, fhand):
+        fig = Figure()
+        axes = fig.add_subplot(111)
+        axes.hist(self._failed_freqs, fill=True, log=True, bins=20, rwidth=1)
+        axes.axvline(x=self.max_failed_freq)
+        axes.set_xlabel('% SNPs segregating differently')
+        axes.set_ylabel('num. SNPs')
+        _print_figure(axes, fig, fhand)
+
+    # TODO add a log file
 
 
 def _get_calls(snv, samples):

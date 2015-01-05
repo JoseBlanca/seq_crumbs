@@ -11,7 +11,7 @@ from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
                                 SnvQualFilter, ObsHetFilter, MafFilter,
                                 filter_snvs, MonomorphicFilter,
-                                filter_snvs_by_non_consistent_segregation,
+                                WeirdSegregationFilter,
                                 WeirdRecombFilter)
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
 
@@ -422,10 +422,9 @@ class ConsistentSegregationTest(unittest.TestCase):
 '''
         # TODO, add more tests
         vcf_fpath, tabix_index_fpath = _create_vcf_file(vcf)
+        filter_ = WeirdSegregationFilter(min_num_snvs_check_in_win=2)
         try:
-            snps = filter_snvs_by_non_consistent_segregation(vcf_fpath,
-                                                   max_test_failures=6,
-                                                   min_num_snvs_check_in_win=2)
+            snps = filter_.filter_vcf(vcf_fpath)
             assert not list(snps)
         except Exception as error:
             msg = 'An error happened: ' + str(error)
@@ -501,5 +500,5 @@ class ConsistentRecombinationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys; sys.argv = ['', 'BinaryFilterTest.test_maf_bin']
+    import sys; sys.argv = ['', 'ConsistentSegregationTest']
     unittest.main()
