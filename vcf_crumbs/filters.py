@@ -327,7 +327,7 @@ def filter_snvs_by_non_consistent_segregation(vcf_fpath, alpha=0.01,
             snvs_win_1 = []
 
         win_2_start = loc + (win_mask_width / 2)
-        win_2_end =  loc + (win_width / 2)
+        win_2_end = loc + (win_width / 2)
         snvs_win_2 = random_reader.fetch_snvs(snv_1.chrom,
                                               start=win_2_start,
                                               end=win_2_end)
@@ -342,8 +342,8 @@ def filter_snvs_by_non_consistent_segregation(vcf_fpath, alpha=0.01,
         if exp_cnts is None:
             continue
 
-        results = {'left': [], 'right':[]}
-        values = {'left': [], 'right':[]}
+        results = {'left': [], 'right': []}
+        values = {'left': [], 'right': []}
         provisional_failures = 0
         failed = False
         for snv_2 in snvs_in_win:
@@ -508,7 +508,7 @@ class WeirdRecombFilter(object):
         data = [self.recomb_rates['ok'], self.recomb_rates['ok_conf_is_None'],
                 self.recomb_rates['not_ok']]
         labels = ['OK', 'OK conf. is none', 'Not OK']
-        colors = [(0.3, 1, 0.3),(0.3, 1, 0.6), (1, 0.3, 0.3)]
+        colors = [(0.3, 1, 0.3), (0.3, 1, 0.6), (1, 0.3, 0.3)]
         some_data = [bool(dataset) for dataset in data]
         labels = [label for draw, label in zip(some_data, labels) if draw]
         colors = [color for draw, color in zip(some_data, colors) if draw]
@@ -522,7 +522,7 @@ def _kosambi(phys_dist, phys_gen_dist_conversion, recomb_at_origin):
     phys_gen_dist_conversion = abs(phys_gen_dist_conversion)
     # recomb rate should be in morgans per base
     d4 = numpy.absolute(phys_dist) * phys_gen_dist_conversion * 4
-    return 0.5 * (numpy.exp(d4) - 1)/ (numpy.exp(d4) + 1) + recomb_at_origin
+    return 0.5 * (numpy.exp(d4) - 1) / (numpy.exp(d4) + 1) + recomb_at_origin
 
 
 def _fit_kosambi(dists, recombs, init_params):
@@ -630,7 +630,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
     else:
         if alpha_recomb_0 is None:
             conf_interval = None
-            if  abs(recomb_at_dist_0) <= max_zero_dist_recomb:
+            if abs(recomb_at_dist_0) <= max_zero_dist_recomb:
                 snp_ok = True
                 ok_color = (0.3, 1, 0.3)
             else:
@@ -644,10 +644,10 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
             conf_interval = (recomb_at_dist_0 - std_dev * tval,
                              recomb_at_dist_0 + std_dev * tval)
 
-            if  abs(recomb_at_dist_0) <= max_zero_dist_recomb:
+            if abs(recomb_at_dist_0) <= max_zero_dist_recomb:
                 snp_ok = True
                 ok_color = (0.3, 1, 0.3)
-            elif  conf_interval[0] < 0 < conf_interval[1]:
+            elif conf_interval[0] < 0 < conf_interval[1]:
                 snp_ok = True
             else:
                 snp_ok = False
