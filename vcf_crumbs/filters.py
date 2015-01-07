@@ -34,8 +34,7 @@ FILTERED_OUT = 'filtered_out'
 SNPS_PER_FILTER_PACKET = 50
 DEF_SNV_WIN = 101
 DEF_MIN_NUM_CHECK_SNPS_IN_WIN = 50
-DEF_MAX_TEST_FAILURES = 5
-DEF_MAX_FAILED_FREQ = DEF_MAX_TEST_FAILURES / DEF_SNV_WIN
+DEF_MAX_FAILED_FREQ = 0.5
 DEF_MAX_DIST = 1000000
 DEF_MIN_DIST = 125000
 DEF_ALPHA = 0.05
@@ -90,7 +89,7 @@ def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
 
     packets = group_in_filter_packets(reader.parse_snvs(),
                                       SNPS_PER_FILTER_PACKET)
-    tot_snps = 0
+    tot_snps = 00.01
     passed_snps = OrderedDict()
     for packet in packets:
         tot_snps += len(packet[PASSED]) + len(packet[FILTERED_OUT])
@@ -292,7 +291,7 @@ def _fisher_extact_rxc(counts_obs, counts_exp):
 
 
 class WeirdSegregationFilter(object):
-    def __init__(self, alpha=0.01, num_snvs_check=DEF_SNV_WIN,
+    def __init__(self, alpha=DEF_ALPHA, num_snvs_check=DEF_SNV_WIN,
                  max_failed_freq=DEF_MAX_FAILED_FREQ,
                  win_width=DEF_MAX_DIST, win_mask_width=DEF_MIN_DIST,
                  min_num_snvs_check_in_win=DEF_MIN_NUM_CHECK_SNPS_IN_WIN):
@@ -338,6 +337,7 @@ class WeirdSegregationFilter(object):
                                                   end=win_2_end)
             snvs_in_win = list(snvs_win_1) + list(snvs_win_2)
             if len(snvs_in_win) > self.num_snvs_check:
+                print len(snvs_in_win)
                 snvs_in_win = random.sample(snvs_in_win, self.num_snvs_check)
             if len(snvs_in_win) < self.min_num_snvs_check_in_win:
                 # Not enough snps to check
@@ -382,9 +382,10 @@ class WeirdSegregationFilter(object):
     def plot_failed_freq_dist(self, fhand):
         fig = Figure()
         axes = fig.add_subplot(111)
-        axes.hist(self._failed_freqs, fill=True, log=True, bins=20, rwidth=1)
+        axes.hist(self._failed_freqs, fill=True, log=True, bins=20,
+                  rwidth=1)
         axes.axvline(x=self.max_failed_freq)
-        axes.set_xlabel('% SNPs segregating differently')
+        axes.set_xlabel('% of adjacent SNPs segregating differently')
         axes.set_ylabel('num. SNPs')
         _print_figure(axes, fig, fhand)
 

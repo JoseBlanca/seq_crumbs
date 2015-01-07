@@ -407,31 +407,31 @@ def _create_vcf_file(vcf_string):
     return vcf_fpath, tabix_index_fpath
 
 
-def _remove_files(fpaths):
-    for fpath in fpaths:
-        if os.path.exists(fpath):
-            os.remove(fpath)
-
-
 class ConsistentSegregationTest(unittest.TestCase):
+
     def test_consistent_segregation(self):
-        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7 8
-20\t2\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
-20\t703\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
-20\t2003\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t0/0\t0/0\t0/0\t1/1\t1/1\t1/1\t1/1\t
-'''
-        # TODO, add more tests
-        vcf_fpath, tabix_index_fpath = _create_vcf_file(vcf)
-        filter_ = WeirdSegregationFilter(min_num_snvs_check_in_win=2)
-        try:
-            snps = filter_.filter_vcf(vcf_fpath)
-            assert not list(snps)
-        except Exception as error:
-            msg = 'An error happened: ' + str(error)
-            _remove_files([vcf_fpath, tabix_index_fpath])
-            self.fail(msg)
-        finally:
-            _remove_files([vcf_fpath, tabix_index_fpath])
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        snv_filter = WeirdSegregationFilter(min_num_snvs_check_in_win=2,
+                                            num_snvs_check=200)
+        flt_snps = snv_filter.filter_vcf(vcf_fpath)
+        num_flt_snps = len(list(flt_snps))
+        assert num_flt_snps == 261
+        plot_fhand = NamedTemporaryFile(suffix='.png')
+        snv_filter.plot_failed_freq_dist(plot_fhand)
+
+    def test_bin(self):
+        binary = join(BIN_DIR, 'filter_vcf_by_weird_segregation')
+        cmd = [binary, '-h']
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout = process.communicate()[0]
+        assert 'usage' in stdout
+
+        vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
+        binary = join(BIN_DIR, 'filter_vcf_by_weird_segregation')
+        cmd = [binary, '-n', '2', '-m', '200', vcf_fpath]
+        process2 = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout, stderr = process2.communicate()
+        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 261
 
 
 class ConsistentRecombinationTest(unittest.TestCase):

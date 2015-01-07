@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+
+import sys
+import argparse
+
+from vcf_crumbs.snv import VCFReader, VCFWriter
+from vcf_crumbs.filters import (WeirdSegregationFilter, DEF_ALPHA, DEF_SNV_WIN,
+                                DEF_MAX_FAILED_FREQ, DEF_MAX_DIST,
+                                DEF_MIN_DIST, DEF_MIN_NUM_CHECK_SNPS_IN_WIN)
+from vcf_crumbs.utils.file_utils import get_input_fhands
+
+
+def setup_argparse(**kwargs):
+    'It prepares the command line argument parsing.'
+
+    parser = argparse.ArgumentParser(**kwargs)
+
+    in_help = 'Input sorted VCF file'
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rb'))
+    parser.add_argument('-o', '--output', default=sys.stdout,
+                        help='Output VCF file (default STDOUT)',
+                        type=argparse.FileType('w'))
+
+    msg = 'Histogram of frequency of adjacent SNPs segregating differently'
+    parser.add_argument('-r', '--failed_freq_hist', help=msg,
+                        type=argparse.FileType('w'))
+
+    msg = 'Alpha for Fisher test to detect weird segregation (default %.2f)'
+    msg %= DEF_ALPHA
+    parser.add_argument('-a', '--alpha', type=float, help=msg,
+                        default=DEF_ALPHA)
+
+    msg = 'Threshold value for frequency of weird segregating adjacent SNPs'
+    msg = ' (default %.2f)' % DEF_MAX_FAILED_FREQ
+    parser.add_argument('-t', '--failed_freq_threshold', type=float, help=msg,
+                        default=DEF_MAX_FAILED_FREQ)
+
+    msg = 'Max. number of SNPs per window to test segregation (default %d)'
+    msg %= DEF_SNV_WIN
+    parser.add_argument('-m', '--max_num_snvs', type=int, help=msg,
+                        default=DEF_SNV_WIN)
+
+    msg = 'Min. number of SNPs per window to test segregation (default %d)'
+    msg %= DEF_MIN_NUM_CHECK_SNPS_IN_WIN
+    parser.add_argument('-n', '--min_num_snvs', type=int, help=msg,
+                        default=DEF_MIN_NUM_CHECK_SNPS_IN_WIN)
+
+    msg = 'Window around a given SNP (default %d)'
+    msg %= DEF_MAX_DIST
+    parser.add_argument('-w', '--window', type=int, help=msg,
+                        default=DEF_MAX_DIST)
+
+    msg = 'Masked window around a given SNP (default %d)'
+    msg %= DEF_MIN_DIST
+    parser.add_argument('-k', '--masked_window', type=int, help=msg,
+                        default=DEF_MIN_DIST)
+
+    return parser
+
+
+def parse_args(parser):
+    parsed_args = parser.parse_args()
+    in_fhand, template_fhand = get_input_fhands(parsed_args.input, None)
+
+    args = {'in_fhand': in_fhand, 'template': template_fhand}
+
+    args['out_fhand'] = parsed_args.output
+    args['failed_freq_hist'] = parsed_args.failed_freq_hist
+    args['alpha'] = parsed_args.alpha
+    args['failed_freq_threshold'] = parsed_args.failed_freq_threshold
+    args['max_num_snvs'] = parsed_args.max_num_snvs
+    args['min_num_snvs'] = parsed_args.min_num_snvs
+    args['window'] = parsed_args.window
+    args['masked_window'] = parsed_args.masked_window
+
+    return args
+
+
+def main():
+    description = 'Removes SNPs that segregate differently form adjacent SNPs'
+    parser = setup_argparse(description=description)
+    args = parse_args(parser)
+
+    filter_ = WeirdSegregationFilter(alpha=args['alpha'],
+                                     num_snvs_check=args['max_num_snvs'],
+                                     max_failed_freq=args['failed_freq_threshold'],
+                                     win_width=args['window'],
+                                     win_mask_width=args['masked_window'],
+                                     min_num_snvs_check_in_win=args['min_num_snvs'])
+
+    flt_snvs = filter_.filter_vcf(args['in_fhand'].name)
+    templa_reader = VCFReader(args['template'], compressed=False,
+                              filename='pyvcf_bug_workaround')
+    writer = VCFWriter(args['out_fhand'], template_reader=templa_reader)
+    writer.write_snvs(flt_snvs)
+
+    if args['failed_freq_hist']:
+        filter_.plot_failed_freq_dist(args['failed_freq_hist'])
+
+if __name__ == '__main__':
+    main()
