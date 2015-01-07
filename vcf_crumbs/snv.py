@@ -11,10 +11,11 @@ from vcf.model import make_calldata_tuple
 # ouch, _Call is a private class, but we don't know how to modify a Call
 from vcf.model import _Call as pyvcfCall
 from vcf.model import _Record as pyvcfRecord
-
 from vcf_crumbs.iterutils import generate_windows
+
 from crumbs.seqio import read_seqs
 from crumbs.seq import get_name, get_length
+from crumbs.utils.file_utils import flush_fhand
 
 # Missing docstring
 # pylint: disable=C0111
@@ -218,11 +219,26 @@ class VCFWriter(pyvcfWriter):
                                         lineterminator=lineterminator)
 
     def write_snv(self, snv):
-        super(VCFWriter, self).write_record(snv.record)
+        try:
+            super(VCFWriter, self).write_record(snv.record)
+        except IOError, error:
+            # The pipe could be already closed
+            if 'Broken pipe' not in str(error):
+                raise
 
     def write_snvs(self, snvs):
         for snv in snvs:
-            self.write_snv(snv)
+            try:
+                self.write_snv(snv)
+            except IOError, error:
+                # The pipe could be already closed
+                if 'Broken pipe' in str(error):
+                    break
+                else:
+                    raise
+
+    def flush(self):
+        flush_fhand(self.stream)
 
 
 BiallelicGts = namedtuple('BiallelicGts', ['AA', 'Aa', 'aa'])

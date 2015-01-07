@@ -22,6 +22,7 @@ from vcf_crumbs.iterutils import RandomAccessIterator
 
 from vcf_crumbs.snv import VCFReader, VCFWriter, DEF_MIN_CALLS_FOR_POP_STATS
 from vcf_crumbs.ld import _calc_recomb_rate
+from vcf_crumbs import snv
 
 # Missing docstring
 # pylint: disable=C0111
@@ -101,15 +102,24 @@ def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
             passed_snps[filter_name] += len(packet[PASSED])
 
         for snv in packet[PASSED]:
-            writer.write_snv(snv)
+            _safe_write_snv(writer, snv)
         if filtered_writer:
             for snv in packet[FILTERED_OUT]:
-                filtered_writer.write_snv(snv)
+                _safe_write_snv(filtered_writer, snv)
 
     if log_fhand:
         _write_log(log_fhand, tot_snps, passed_snps)
 
     writer.flush()
+
+
+def _safe_write_snv(writer, snv):
+    try:
+        writer.write_snv(snv)
+    except IOError, error:
+        # The pipe could be already closed
+        if 'Broken pipe' not in str(error):
+            raise
 
 
 class _BaseFilter(object):
@@ -337,7 +347,6 @@ class WeirdSegregationFilter(object):
                                                   end=win_2_end)
             snvs_in_win = list(snvs_win_1) + list(snvs_win_2)
             if len(snvs_in_win) > self.num_snvs_check:
-                print len(snvs_in_win)
                 snvs_in_win = random.sample(snvs_in_win, self.num_snvs_check)
             if len(snvs_in_win) < self.min_num_snvs_check_in_win:
                 # Not enough snps to check
