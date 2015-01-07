@@ -642,4 +642,6 @@ def draw_read_pos_stats(stats, plot_fhand):
     canvas.print_figure(plot_fhand)
     plot_fhand.flush()
 
-    # TODO we should be able to limit the snv qualities
+# TODO: we should be able to limit the snv qualities
+# TODO: Y axes must start in 0
+# TODO: implements max snv quality
