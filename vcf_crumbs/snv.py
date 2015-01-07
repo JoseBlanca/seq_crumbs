@@ -219,12 +219,7 @@ class VCFWriter(pyvcfWriter):
                                         lineterminator=lineterminator)
 
     def write_snv(self, snv):
-        try:
-            super(VCFWriter, self).write_record(snv.record)
-        except IOError, error:
-            # The pipe could be already closed
-            if 'Broken pipe' not in str(error):
-                raise
+        super(VCFWriter, self).write_record(snv.record)
 
     def write_snvs(self, snvs):
         for snv in snvs:

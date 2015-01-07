@@ -92,6 +92,7 @@ def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
                                       SNPS_PER_FILTER_PACKET)
     tot_snps = 00.01
     passed_snps = OrderedDict()
+    broken_pipe = False
     for packet in packets:
         tot_snps += len(packet[PASSED]) + len(packet[FILTERED_OUT])
         for filter_ in filters:
@@ -102,10 +103,16 @@ def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
             passed_snps[filter_name] += len(packet[PASSED])
 
         for snv in packet[PASSED]:
-            _safe_write_snv(writer, snv)
+            if not _safe_write_snv(writer, snv):
+                broken_pipe = True
+                break
         if filtered_writer:
             for snv in packet[FILTERED_OUT]:
-                _safe_write_snv(filtered_writer, snv)
+                if not _safe_write_snv(filtered_writer, snv):
+                    broken_pipe = True
+                    break
+        if broken_pipe:
+            break
 
     if log_fhand:
         _write_log(log_fhand, tot_snps, passed_snps)
@@ -116,10 +123,12 @@ def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
 def _safe_write_snv(writer, snv):
     try:
         writer.write_snv(snv)
+        return True
     except IOError, error:
         # The pipe could be already closed
         if 'Broken pipe' not in str(error):
             raise
+    return False
 
 
 class _BaseFilter(object):
@@ -610,10 +619,10 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
 
     residuals = close_recombs - est_close_recombs
     if fig:
-        axes.plot(close_dists, est_close_recombs, c='b' , label='2nd_fit')
+        axes.plot(close_dists, est_close_recombs, c='b', label='2nd_fit')
 
     # we exclude the markers with a residual outlier
-    quartile_25, quartile_75 = numpy.percentile(residuals, [25 ,75])
+    quartile_25, quartile_75 = numpy.percentile(residuals, [25, 75])
     iqr = quartile_75 - quartile_25
     outlayer_thrld = [quartile_25 - iqr * 1.5, quartile_75 + iqr * 1.5]
     ok_markers = [idx for idx, res in enumerate(residuals) if (not isnan(res) and (outlayer_thrld[0] < res < outlayer_thrld[1]))]

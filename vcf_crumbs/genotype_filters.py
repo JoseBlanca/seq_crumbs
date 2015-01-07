@@ -8,7 +8,7 @@ from vcf_crumbs.snv import VCFReader, VCFWriter
 # Too few public methods
 # pylint: disable=R0903
 
-DEF_PROB_AA_THRESHOLD=0.9999
+DEF_PROB_AA_THRESHOLD = 0.9999
 HW = 'hw'
 RIL_SELF = 'ril_self'
 
@@ -29,7 +29,14 @@ def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None,
     for snv in reader.parse_snvs():
         for mapper in gt_filters:
             snv = mapper(snv)
-        writer.write_snv(snv)
+        try:
+            writer.write_snv(snv)
+        except IOError, error:
+            # The pipe could be already closed
+            if 'Broken pipe' in str(error):
+                break
+            else:
+                raise
 
 
 class LowQualityGenotypeFilter(object):
@@ -89,7 +96,7 @@ class LowEvidenceAlleleFilter(object):
 
     def __call__(self, snv):
         genotypic_freqs_method = self.genotypic_freqs_method
-        
+
         if genotypic_freqs_method == HW:
             allele_freqs = snv.allele_freqs
             if not allele_freqs:
