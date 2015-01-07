@@ -500,5 +500,5 @@ class ConsistentRecombinationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys; sys.argv = ['', 'ConsistentSegregationTest']
+    # import sys; sys.argv = ['', 'BinaryFilterTest.test_obs_het_bin']
     unittest.main()

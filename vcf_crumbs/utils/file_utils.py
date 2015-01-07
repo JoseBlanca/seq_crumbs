@@ -18,7 +18,7 @@ from subprocess import check_call, Popen, PIPE
 from tempfile import NamedTemporaryFile
 import gzip
 
-from crumbs.utils.file_utils import wrap_in_buffered_reader
+from crumbs.utils.file_utils import wrap_in_buffered_reader, DEF_FILE_BUFFER
 
 TEST_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '..', '..', 'test', 'test_data'))
@@ -84,10 +84,17 @@ def _build_template_fhand(in_fhand):
     if _vcf_is_gz(in_fhand):
         in_fhand = gzip.GzipFile(fileobj=in_fhand)
 
-    for line in in_fhand:
+    chunk = in_fhand.read(int(DEF_FILE_BUFFER * .5))
+    read_ok = False
+    for line in chunk.splitlines(True):
         if line[0] != '#':
+            read_ok = True
             break
         header += line
+    if not read_ok:
+        msg = "Unable to read the header. We've read:\n"
+        msg += header
+        raise RuntimeError(msg)
     in_fhand.seek(0)
 
     if not header:
@@ -113,7 +120,7 @@ def _fhand_is_tellable(fhand):
 
 
 def get_input_fhands(in_fhand, template_fhand):
-    in_fhand = wrap_in_buffered_reader(in_fhand)
+    in_fhand = wrap_in_buffered_reader(in_fhand, buffering=DEF_FILE_BUFFER)
 
     in_compressed = _vcf_is_gz(in_fhand)
     if in_compressed and not _fhand_is_tellable(in_fhand):

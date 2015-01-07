@@ -51,15 +51,16 @@ def group_in_filter_packets(items, items_per_packet):
 
 
 def _write_log(log_fhand, tot_snps, passed_snps):
+    tot_snps = int(tot_snps)
     log_fhand.write('SNVs processed: ' + str(tot_snps) + '\n')
-    good_snps = sum(passed_snps.values())
+    good_snps = int(sum(passed_snps.values()))
     msg = 'SNVs passsed: ' + str(good_snps) + '\n'
     log_fhand.write(msg)
-    msg = 'SNVs filtered out: ' + str(tot_snps - good_snps) + '\n'
+    msg = 'SNVs filtered out: ' + str(int(tot_snps - good_snps)) + '\n'
     log_fhand.write(msg)
     log_fhand.write('Number of SNVs that passed each filter\n')
     for filter_, count in passed_snps.items():
-        msg = filter_ + ': ' + str(count) + '\n'
+        msg = filter_ + ': ' + str(int(count)) + '\n'
         log_fhand.write(msg)
     log_fhand.flush()
 
