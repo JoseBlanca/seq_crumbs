@@ -179,5 +179,5 @@ def flush_fhand(fhand):
         fhand.flush()
     except IOError, error:
         # The pipe could be already closed
-        if not 'Broken pipe' in str(error):
+        if 'Broken pipe' not in str(error):
             raise
