@@ -28,7 +28,11 @@ except ImportError:
 from crumbs.exceptions import OptionalRequirementError
 
 
-def wrap_in_buffered_reader(fhand, force_wrap=False):
+DEF_FILE_BUFFER = 8192*4
+
+
+def wrap_in_buffered_reader(fhand, force_wrap=False,
+                            buffering=DEF_FILE_BUFFER):
     '''It wraps the given file in a peekable BufferedReader.
 
     If the file is seekable it doesn't do anything.
@@ -37,7 +41,7 @@ def wrap_in_buffered_reader(fhand, force_wrap=False):
         return fhand
     else:
         fhand = io.open(fhand.fileno(), mode='rb',
-                        buffering=8192*4)  # with text there's no peek
+                        buffering=buffering)  # with text there's no peek
 
     return fhand
 
