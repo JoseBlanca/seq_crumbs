@@ -411,7 +411,7 @@ class WeirdSegregationFilter(object):
         axes.axvline(x=self.max_failed_freq)
         axes.set_xlabel('% of adjacent SNPs segregating differently')
         axes.set_ylabel('num. SNPs')
-        _print_figure(axes, fig, fhand)
+        _print_figure(axes, fig, fhand, plot_legend=False)
 
     def write_log(self, fhand):
         _write_log(fhand, self.tot_snps,
@@ -567,10 +567,11 @@ def _fit_kosambi(dists, recombs, init_params):
         return None, None
 
 
-def _print_figure(axes, figure, plot_fhand):
+def _print_figure(axes, figure, plot_fhand, plot_legend=True):
     if figure is None:
         return
-    axes.legend()
+    if plot_legend:
+        axes.legend()
     canvas = FigureCanvas(figure)
     canvas.print_figure(plot_fhand)
     plot_fhand.flush()
