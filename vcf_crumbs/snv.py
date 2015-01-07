@@ -210,6 +210,13 @@ class VCFReader(object):
     def infos(self):
         return self.pyvcf_reader.infos
 
+    @property
+    def header(self):
+        header = '\n'.join(self.pyvcf_reader._header_lines)
+        header += '\n#' + '\t'.join(self.pyvcf_reader._column_headers)
+        header += '\t' + '\t'.join(self.pyvcf_reader.samples)
+        return header
+
 
 class VCFWriter(pyvcfWriter):
 

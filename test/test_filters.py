@@ -265,9 +265,7 @@ class BinaryFilterTest(unittest.TestCase):
     def test_filter_fhand(self):
         in_fhand = StringIO(VCF_HEADER + VCF)
         out_fhand = StringIO()
-        template_fhand = StringIO(VCF_HEADER + VCF)
-        filter_snvs(in_fhand, out_fhand, filters=[],
-                    template_fhand=template_fhand)
+        filter_snvs(in_fhand, out_fhand, filters=[])
         res = self.get_snv_pos(StringIO(out_fhand.getvalue()))
         in_pos = self.get_snv_pos(StringIO(in_fhand.getvalue()))
         assert in_pos == res
@@ -276,9 +274,7 @@ class BinaryFilterTest(unittest.TestCase):
         out_fhand = StringIO()
         filtered_fhand = StringIO()
         log_fhand = StringIO()
-        template_fhand = StringIO(VCF_HEADER + VCF)
         filter_snvs(in_fhand, out_fhand, filters=[BiallelicFilter()],
-                    template_fhand=template_fhand,
                     filtered_fhand=filtered_fhand, log_fhand=log_fhand)
         res = self.get_snv_pos(StringIO(out_fhand.getvalue()))
         filtered = self.get_snv_pos(StringIO(filtered_fhand.getvalue()))
@@ -419,6 +415,10 @@ class ConsistentSegregationTest(unittest.TestCase):
         plot_fhand = NamedTemporaryFile(suffix='.png')
         snv_filter.plot_failed_freq_dist(plot_fhand)
 
+        fhand = StringIO()
+        snv_filter.write_log(fhand)
+        assert 'SNVs passsed: 261' in fhand.getvalue()
+
     def test_bin(self):
         binary = join(BIN_DIR, 'filter_vcf_by_weird_segregation')
         cmd = [binary, '-h']
@@ -432,6 +432,7 @@ class ConsistentSegregationTest(unittest.TestCase):
         process2 = Popen(cmd, stderr=PIPE, stdout=PIPE)
         stdout, stderr = process2.communicate()
         assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 261
+        assert 'SNVs processed:' in stderr
 
 
 class ConsistentRecombinationTest(unittest.TestCase):
@@ -462,6 +463,10 @@ class ConsistentRecombinationTest(unittest.TestCase):
         assert len(snv_filter.recomb_rates['ok_conf_is_None']) == 266
         assert len(snv_filter.recomb_rates['not_ok']) == 6
 
+        fhand = StringIO()
+        snv_filter.write_log(fhand)
+        assert 'SNVs processed: 282' in fhand.getvalue()
+
     def test_bin(self):
         binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
         cmd = [binary, '-h']
@@ -487,8 +492,9 @@ class ConsistentRecombinationTest(unittest.TestCase):
         binary = join(BIN_DIR, 'filter_vcf_by_weird_recomb')
         cmd = [binary, '--pop_type', 'ril_self', '--window', '60']
         process2 = Popen(cmd, stderr=PIPE, stdout=PIPE, stdin=process1.stdout)
-        stdout = process2.communicate()[0]
+        stdout, stderr = process2.communicate()
         assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 252
+        assert 'SNVs processed:' in stderr
 
         # with a standard file
         vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
@@ -500,5 +506,5 @@ class ConsistentRecombinationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys; sys.argv = ['', 'BinaryFilterTest.test_obs_het_bin']
+    # import sys; sys.argv = ['', 'ConsistentSegregationTest.test_bin']
     unittest.main()

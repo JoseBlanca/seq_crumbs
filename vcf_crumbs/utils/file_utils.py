@@ -79,37 +79,6 @@ def _vcf_is_gz(fhand):
         raise RuntimeError(msg)
 
 
-def _build_template_fhand(in_fhand):
-    header = ''
-    if _vcf_is_gz(in_fhand):
-        in_fhand = gzip.GzipFile(fileobj=in_fhand)
-
-    chunk = in_fhand.read(int(DEF_FILE_BUFFER * .5))
-    read_ok = False
-    for line in chunk.splitlines(True):
-        if line[0] != '#':
-            read_ok = True
-            break
-        header += line
-    if not read_ok:
-        msg = "Unable to read the header. We've read:\n"
-        msg += header
-        raise RuntimeError(msg)
-    in_fhand.seek(0)
-
-    if not header:
-        msg = 'We were not able to read the header from the VCF template'
-        msg += ', please provide one'
-        raise RuntimeError(msg)
-
-    in_fhand.seek(0)
-    fhand = NamedTemporaryFile(suffix='.template.vcf')
-    fhand.write(header)
-    fhand.flush()
-    fhand.seek(0)
-    return fhand
-
-
 def _fhand_is_tellable(fhand):
     try:
         fhand.tell()
@@ -119,7 +88,7 @@ def _fhand_is_tellable(fhand):
     return tellable
 
 
-def get_input_fhands(in_fhand, template_fhand):
+def get_input_fhand(in_fhand):
     in_fhand = wrap_in_buffered_reader(in_fhand, buffering=DEF_FILE_BUFFER)
 
     in_compressed = _vcf_is_gz(in_fhand)
@@ -134,7 +103,4 @@ def get_input_fhands(in_fhand, template_fhand):
     else:
         mod_in_fhand = in_fhand
 
-    if template_fhand is None:
-        template_fhand = _build_template_fhand(in_fhand)
-
-    return mod_in_fhand, template_fhand
+    return mod_in_fhand

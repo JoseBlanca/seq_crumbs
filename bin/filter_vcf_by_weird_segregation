@@ -7,7 +7,6 @@ from vcf_crumbs.snv import VCFReader, VCFWriter
 from vcf_crumbs.filters import (WeirdSegregationFilter, DEF_ALPHA, DEF_SNV_WIN,
                                 DEF_MAX_FAILED_FREQ, DEF_MAX_DIST,
                                 DEF_MIN_DIST, DEF_MIN_NUM_CHECK_SNPS_IN_WIN)
-from vcf_crumbs.utils.file_utils import get_input_fhands
 
 
 def setup_argparse(**kwargs):
@@ -55,14 +54,18 @@ def setup_argparse(**kwargs):
     parser.add_argument('-k', '--masked_window', type=int, help=msg,
                         default=DEF_MIN_DIST)
 
+    msg = 'File to print some statistics (default STDERR)'
+    parser.add_argument('-l', '--log', help=msg, type=argparse.FileType('w'),
+                        default=sys.stderr)
+
     return parser
 
 
 def parse_args(parser):
     parsed_args = parser.parse_args()
-    in_fhand, template_fhand = get_input_fhands(parsed_args.input, None)
+    in_fhand = parsed_args.input
 
-    args = {'in_fhand': in_fhand, 'template': template_fhand}
+    args = {'in_fhand': in_fhand}
 
     args['out_fhand'] = parsed_args.output
     args['failed_freq_hist'] = parsed_args.failed_freq_hist
@@ -72,6 +75,7 @@ def parse_args(parser):
     args['min_num_snvs'] = parsed_args.min_num_snvs
     args['window'] = parsed_args.window
     args['masked_window'] = parsed_args.masked_window
+    args['log_fhand'] = parsed_args.log
 
     return args
 
@@ -89,13 +93,15 @@ def main():
                                      min_num_snvs_check_in_win=args['min_num_snvs'])
 
     flt_snvs = filter_.filter_vcf(args['in_fhand'].name)
-    templa_reader = VCFReader(args['template'], compressed=False,
-                              filename='pyvcf_bug_workaround')
+    templa_reader = VCFReader(args['in_fhand'])
     writer = VCFWriter(args['out_fhand'], template_reader=templa_reader)
     writer.write_snvs(flt_snvs)
 
     if args['failed_freq_hist']:
         filter_.plot_failed_freq_dist(args['failed_freq_hist'])
+
+    if args['log_fhand']:
+        filter_.write_log(args['log_fhand'])
 
 if __name__ == '__main__':
     main()

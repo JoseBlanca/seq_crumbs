@@ -1,5 +1,6 @@
 from __future__ import division
 from collections import Counter
+from StringIO import StringIO
 
 from vcf_crumbs.snv import VCFReader, VCFWriter
 
@@ -22,8 +23,7 @@ def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None,
     reader_kwargs['compressed'] = False
     reader = VCFReader(in_fhand, **reader_kwargs)
 
-    templa_reader = VCFReader(template_fhand, compressed=False,
-                              filename='pyvcf_bug_workaround')
+    templa_reader = VCFReader(StringIO(reader.header))
     writer = VCFWriter(out_fhand, template_reader=templa_reader)
 
     for snv in reader.parse_snvs():

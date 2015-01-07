@@ -8,6 +8,7 @@ from os.path import exists
 from os import mkdir
 from collections import namedtuple, Counter
 import array
+from StringIO import StringIO
 
 import numpy
 
@@ -66,7 +67,7 @@ def _write_log(log_fhand, tot_snps, passed_snps):
 
 
 def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
-                template_fhand=None, log_fhand=None, reader_kwargs=None):
+                log_fhand=None, reader_kwargs=None):
     '''IT filters an input vcf.
 
     The input fhand has to be uncompressed. The original file could be a
@@ -81,7 +82,7 @@ def filter_snvs(in_fhand, out_fhand, filters, filtered_fhand=None,
 
     reader = VCFReader(in_fhand, **reader_kwargs)
 
-    template_reader = reader if template_fhand is None else VCFReader(template_fhand)
+    template_reader = VCFReader(StringIO(reader.header))
     writer = VCFWriter(out_fhand, template_reader=template_reader)
     if filtered_fhand:
         filtered_writer = VCFWriter(filtered_fhand,
@@ -328,6 +329,8 @@ class WeirdSegregationFilter(object):
         self.win_mask_width = win_mask_width
         self.min_num_snvs_check_in_win = min_num_snvs_check_in_win
         self._failed_freqs = array.array('f')
+        self.tot_snps = 0
+        self.passed_snps = 0
 
     def filter_vcf(self, vcf_fpath, min_samples=DEF_MIN_CALLS_FOR_POP_STATS):
         reader = VCFReader(open(vcf_fpath),
@@ -336,6 +339,7 @@ class WeirdSegregationFilter(object):
         random_reader = VCFReader(open(vcf_fpath))
 
         for snv_1 in snvs:
+            self.tot_snps += 1
             loc = snv_1.pos
             win_1_start = loc - (self.win_width / 2)
             if win_1_start < 0:
@@ -396,6 +400,7 @@ class WeirdSegregationFilter(object):
                 self._failed_freqs.append(failed_freq)
 
             if passed:
+                self.passed_snps += 1
                 yield snv_1
 
     def plot_failed_freq_dist(self, fhand):
@@ -408,7 +413,9 @@ class WeirdSegregationFilter(object):
         axes.set_ylabel('num. SNPs')
         _print_figure(axes, fig, fhand)
 
-    # TODO add a log file
+    def write_log(self, fhand):
+        _write_log(fhand, self.tot_snps,
+                   {self.__class__.__name__: self.passed_snps})
 
 
 def _get_calls(snv, samples):
@@ -475,6 +482,8 @@ class WeirdRecombFilter(object):
         self.max_recomb_curve_fit = max_recomb_curve_fit
         self.debug_plot_dir = debug_plot_dir
         self.samples = samples
+        self.tot_snps = 0
+        self.passed_snps = 0
         self.not_fitted_counter = Counter()
         self.recomb_rates = {'ok': array.array('f'),
                              'ok_conf_is_None': array.array('f'),
@@ -486,7 +495,9 @@ class WeirdRecombFilter(object):
         rates = _calculate_segregation_rates(snps, self.pop_type,
                                              self.snps_in_window,
                                              samples=self.samples)
+        max_zero_dist = self.max_zero_dist_recomb
         for snp, chrom, pos, rates in rates:
+            self.tot_snps += 1
             dists, recombs = zip(*[(rate.pos - pos, rate.recomb_rate) for rate in rates])
             if len(dists) < self.min_num_snps:
                 continue
@@ -500,14 +511,15 @@ class WeirdRecombFilter(object):
                 plot_fhand = open(pjoin(chrom_dir, fname), 'w')
             res = _calc_ajusted_recomb(dists, recombs,
                                        max_recomb=self.max_recomb_curve_fit,
-                                       max_zero_dist_recomb=self.max_zero_dist_recomb,
+                                       max_zero_dist_recomb=max_zero_dist,
                                        alpha_recomb_0=self.alpha_recomb_0,
                                        plot_fhand=plot_fhand)
-            self._store_debug_info(*res)
+            self._store_log_info(*res)
             if res[1]:
+                self.passed_snps += 1
                 yield snp
 
-    def _store_debug_info(self, recomb_at_0, snp_ok, debug_info):
+    def _store_log_info(self, recomb_at_0, snp_ok, debug_info):
         if 'reason_no_fit' in debug_info:
             self.not_fitted_counter[debug_info['reason_no_fit']] += 1
             return
@@ -535,6 +547,10 @@ class WeirdRecombFilter(object):
         axes.hist(data, stacked=True, fill=True, log=True, bins=20,
                   label=labels, rwidth=1, color=colors)
         _print_figure(axes, fig, fhand)
+
+    def write_log(self, fhand):
+        _write_log(fhand, self.tot_snps,
+                   {self.__class__.__name__: self.passed_snps})
 
 
 def _kosambi(phys_dist, phys_gen_dist_conversion, recomb_at_origin):

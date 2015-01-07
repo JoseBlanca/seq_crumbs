@@ -2,14 +2,15 @@
 
 import sys
 import argparse
+from StringIO import StringIO
 
 from vcf_crumbs.snv import VCFReader, VCFWriter
 from vcf_crumbs.filters import (WeirdRecombFilter, DEF_MAX_ZERO_DIST_RECOMB,
                                 DEF_ALPHA, DEF_MIN_NUM_SNPS_WEIRD_RECOMB,
                                 DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB,
                                 DEF_MAX_RECOMB_RATE_WEIRD_RECOMB)
-from vcf_crumbs.utils.file_utils import get_input_fhands
 from vcf_crumbs.utils.bin_utils import parse_sample_file
+from vcf_crumbs.utils.file_utils import get_input_fhand
 
 
 def setup_argparse(**kwargs):
@@ -58,14 +59,17 @@ def setup_argparse(**kwargs):
     parser.add_argument('-f', '--samples_file',
                         help='File with samples to use. One per line',
                         type=argparse.FileType('r'))
+    msg = 'File to print some statistics (default STDERR)'
+    parser.add_argument('-l', '--log', help=msg, type=argparse.FileType('w'),
+                        default=sys.stderr)
     return parser
 
 
 def parse_args(parser):
     parsed_args = parser.parse_args()
-    in_fhand, template_fhand = get_input_fhands(parsed_args.input, None)
+    in_fhand = get_input_fhand(parsed_args.input)
 
-    args = {'in_fhand': in_fhand, 'template': template_fhand}
+    args = {'in_fhand': in_fhand}
 
     args['out_fhand'] = parsed_args.output
     args['pop_type'] = parsed_args.pop_type
@@ -78,6 +82,7 @@ def parse_args(parser):
         args['window'] += 1     # The num. snps in a window has to be odd
     args['min_snps'] = parsed_args.min_snps
     args['max_recomb'] = parsed_args.max_recomb
+    args['log_fhand'] = parsed_args.log
 
     samples = set()
     if parsed_args.samples is not None:
@@ -108,13 +113,15 @@ def main():
                        filename='pyvcf_bug_workaround')
     snvs = reader.parse_snvs()
     flt_snvs = filter_.filter_snvs(snvs)
-    templa_reader = VCFReader(args['template'], compressed=False,
-                              filename='pyvcf_bug_workaround')
+    templa_reader = VCFReader(StringIO(reader.header))
     writer = VCFWriter(args['out_fhand'], template_reader=templa_reader)
     writer.write_snvs(flt_snvs)
 
     if args['recomb_hist']:
         filter_.plot_recomb_at_0_dist_hist(args['recomb_hist'])
+
+    if args['log_fhand']:
+        filter_.write_log(args['log_fhand'])
 
 if __name__ == '__main__':
     main()

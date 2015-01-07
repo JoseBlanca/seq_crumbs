@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-from vcf_crumbs.utils.file_utils import get_input_fhands
+from vcf_crumbs.utils.file_utils import get_input_fhand
 
 # Missing docstring
 # pylint: disable=C0111
@@ -42,13 +42,13 @@ def setup_filter_argparse(**kwargs):
 def parse_basic_args(parser):
     parsed_args = parser.parse_args()
 
-    in_fhand, template_fhand = get_input_fhands(parsed_args.input, None)
+    in_fhand = get_input_fhand(parsed_args.input)
 
     out_fhand = parsed_args.output
     log_fhand = parsed_args.log
 
-    args = {'in_fhand': in_fhand, 'template_fhand': template_fhand,
-            'log_fhand': log_fhand, 'out_fhand': out_fhand}
+    args = {'in_fhand': in_fhand, 'log_fhand': log_fhand,
+            'out_fhand': out_fhand}
 
     return args, parsed_args
 

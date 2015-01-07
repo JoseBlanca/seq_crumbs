@@ -315,6 +315,13 @@ class ReaderTest(unittest.TestCase):
         freebayes = open(join(TEST_DATA_DIR, 'freebayes_sample.vcf.gz'))
         assert VCFReader(fhand=freebayes).samples == ['pep']
 
+    def test_header(self):
+        varscan = open(join(TEST_DATA_DIR, 'sample.vcf.gz'))
+        header = VCFReader(varscan).header
+        assert '##fileformat=VCFv4.1' in header
+        assert '#CHROM' in header
+        assert len([line for line in header.split('\n')]) == 24
+
     def test_vcf_writer(self):
         varscan = open(join(TEST_DATA_DIR, 'vari_filter.vcf'))
         reader = VCFReader(fhand=varscan)
