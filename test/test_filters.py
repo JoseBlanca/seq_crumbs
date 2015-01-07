@@ -587,7 +587,7 @@ class FilterBowtie2Test(unittest.TestCase):
             out_fhand = NamedTemporaryFile(suffix='.seqs')
             filtered_fhand = NamedTemporaryFile(suffix='.seqs')
             cmd = [filter_bin, '-i', index_fpath, '-o', out_fhand.name,
-                   '-e', filtered_fhand.name, reads_fpath]
+                   '-e', filtered_fhand.name, reads_fpath, '-p', '2']
             check_output(cmd)
             assert 'no_arabi' in open(out_fhand.name).read()
             assert 'read1' in open(filtered_fhand.name).read()

@@ -291,10 +291,11 @@ class FilterBlastMatch(_BaseFilter):
 class FilterBowtie2Match(_BaseFilter):
     'It filters a seq if it maps against a bowtie2 index'
     def __init__(self, index_fpath, reverse=False, min_mapq=None,
-                 failed_drags_pair=True):
+                 failed_drags_pair=True, threads=None):
         self._index_fpath = index_fpath
         self._reverse = reverse
         self.min_mapq = min_mapq
+        self.threads = threads
         super(FilterBowtie2Match, self).__init__(reverse=reverse,
                                           failed_drags_pair=failed_drags_pair)
 
@@ -333,7 +334,8 @@ class FilterBowtie2Match(_BaseFilter):
         bam_fhand = NamedTemporaryFile(suffix='.bam')
         map_process = map_with_bowtie2(index_fpath,
                                        unpaired_fpath=reads_fhand.name,
-                                       extra_params=extra_params)
+                                       extra_params=extra_params,
+                                       threads=self.threads)
         map_process_to_bam(map_process, bam_fhand.name)
 
         self.mapped_reads = _get_mapped_reads(bam_fhand.name, self.min_mapq)

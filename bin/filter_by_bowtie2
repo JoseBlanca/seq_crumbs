@@ -32,7 +32,7 @@ def _setup_argparse():
     description = 'It filters sequences using blast'
     parser = create_filter_argparse(description=description)
     parser.add_argument('-i', '--index', required=True,
-                     help='bowtie index path (required)')
+                        help='bowtie index path (required)')
     hlp = 'min mapq to filter mapped reads (default: %(default)s)'
     parser.add_argument('-m', '--min_mapq',
                         default=get_setting('DEFAULT_MIN_MAPQ'),
@@ -56,19 +56,18 @@ def filter_by_bowtie2():
     'The main function of the binary'
     parser = _setup_argparse()
     args = _parse_args(parser)
-
     in_fhands = args['in_fhands']
     passed_fhand = args['out_fhand']
     filtered_fhand = args['filtered_fhand']
-
-    seq_packets = read_seq_packets(in_fhands,
-                                   size=get_setting('PACKET_SIZE') * 10)
+    packet_size = get_setting('PACKET_SIZE') * 10
+    seq_packets = read_seq_packets(in_fhands, size=packet_size)
 
     filter_packets = seq_to_filterpackets(seq_packets,
                                        group_paired_reads=args['paired_reads'])
     index_ = get_or_create_bowtie2_index(args['index'])
     filter_by_bowtie2 = FilterBowtie2Match(index_, min_mapq=args['min_mapq'],
                                            reverse=args['reverse'],
+                                           threads=args['processes'],
                                      failed_drags_pair=args['fail_drags_pair'])
 
     filter_packets, workers = process_seq_packets(filter_packets,
