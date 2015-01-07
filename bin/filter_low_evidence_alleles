@@ -21,12 +21,12 @@ def print_log(log):
         stdout.write(key.replace('_', ' ').capitalize() + ': ')
         stdout.write(str(val))
         stdout.write(' (%.1f%%)\n' % percent)
-    
+
 
 def main():
     description = 'It removes alleles in homo calls with low depth'
     parser = setup_basic_argparse(description=description)
-    
+
     parser.add_argument('-m', '--min_homo_prob', type=float,
                         default=DEF_PROB_AA_THRESHOLD)
     parser.add_argument('-g', '--geno_freqs_method', type=str,
@@ -37,7 +37,6 @@ def main():
 
     msg = 'Num. generation (F2 would be 1). Used in ril_self.'
     parser.add_argument('-n', '--num_gen', type=int, help=msg)
-
 
     args, parsed_args = parse_basic_args(parser)
     args['min_homo_prob'] = parsed_args.min_homo_prob
@@ -58,10 +57,9 @@ def main():
                 'prob_aa_threshold': args['min_homo_prob']}
     if method == RIL_SELF:
         flt_args['genotypic_freqs_kwargs'] = {'n_generation': args['num_gen']}
-    
+
     flt = LowEvidenceAlleleFilter(**flt_args)
     run_genotype_filters(args['in_fhand'], args['out_fhand'],
-                         template_fhand=args['template_fhand'],
                          gt_filters=[flt], reader_kwargs=reader_args)
     print_log(flt.log)
 

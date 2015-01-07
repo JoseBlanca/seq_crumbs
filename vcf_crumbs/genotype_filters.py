@@ -14,8 +14,7 @@ HW = 'hw'
 RIL_SELF = 'ril_self'
 
 
-def run_genotype_filters(in_fhand, out_fhand, gt_filters, template_fhand=None,
-                         reader_kwargs=None):
+def run_genotype_filters(in_fhand, out_fhand, gt_filters, reader_kwargs=None):
     if reader_kwargs is None:
         reader_kwargs = {}
 

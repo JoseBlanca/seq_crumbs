@@ -13,7 +13,6 @@ def main():
     args = parse_basic_args(parser)[0]
 
     run_genotype_filters(args['in_fhand'], args['out_fhand'],
-                         template_fhand=args['template_fhand'],
                          gt_filters=[HetGenotypeFilter()])
 
 

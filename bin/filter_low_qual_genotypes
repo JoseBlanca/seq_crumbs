@@ -18,7 +18,6 @@ def main():
 
     gt_filters = [LowQualityGenotypeFilter(min_qual=args['min_qual'])]
     run_genotype_filters(args['in_fhand'], args['out_fhand'],
-                         template_fhand=args['template_fhand'],
                          gt_filters=gt_filters)
 
 

@@ -60,6 +60,7 @@ VCF_HEADER2 = '''##fileformat=VCFv4.1
 ##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Read Depth">
 '''
 
+
 class GenotypeFilterTests(unittest.TestCase):
     def test_het_filter(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
@@ -71,7 +72,6 @@ class GenotypeFilterTests(unittest.TestCase):
         assert [call.int_alleles for call in snps[0].calls] == exp
         res = [call.int_alleles for call in snps[0].remove_gt_from_het_calls().calls]
         assert res == [[0, 0], [], [1, 1]]
-        
 
     def test_het_filter_binary(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT NA00001 NA00002 NA00003
@@ -149,7 +149,7 @@ class LowQualAlleleTest(unittest.TestCase):
     def test_filter_low_alle_evidence_ril(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6
 20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT:RO:AO\t0/0:14:0\t1/1:0:15\t1/1:0:1\t0/0:1:0\t0/0:9:0\t0/1:1:1'''
-        
+
         # ril n 7
         vcf_f = StringIO(VCF_HEADER + vcf)
         snps = list(VCFReader(vcf_f).parse_snvs())
