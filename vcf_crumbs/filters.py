@@ -571,6 +571,9 @@ def _fit_kosambi(dists, recombs, init_params):
         return curve_fit(_kosambi, dists, recombs, p0=init_params)
     except RuntimeError:
         return None, None
+    except TypeError:
+        # It happens when recombs is all nan
+        return None, None
 
 
 def _print_figure(axes, figure, plot_fhand, plot_legend=True):
@@ -607,7 +610,7 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
     if popt is None:
         _print_figure(axes, fig, plot_fhand)
         return None, False, {'kosambi_fit_ok': False,
-                             'reason': '1st fit failed'}
+                             'reason_no_fit': '1st fit failed'}
 
     est_dists = dists
     est_recombs = _kosambi(est_dists, popt[0], popt[1])
@@ -659,6 +662,10 @@ def _calc_ajusted_recomb(dists, recombs, max_recomb, max_zero_dist_recomb,
     if len(ok_dists) != len(close_dists):
         # If we've removed any points we fit again
         popt, pcov = _fit_kosambi(ok_dists, ok_recombs, init_params=popt)
+    if popt is None:
+        _print_figure(axes, fig, plot_fhand)
+        return None, False, {'kosambi_fit_ok': False,
+                             'reason_no_fit': '3rd fit failed'}
     var_recomb_at_dist_0 = pcov[1, 1]
     recomb_at_dist_0 = popt[1]
     ok_color = (0.3, 1, 0.6)

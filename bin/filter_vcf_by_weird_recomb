@@ -29,7 +29,7 @@ def setup_argparse(**kwargs):
     parser.add_argument('-d', '--plot_dir', type=str,
                         help='Debug plot dir, recomb rates for each snv')
     parser.add_argument('-r', '--recomb_hist', help='Recomb. rates histogram',
-                        type=str)
+                        type=argparse.FileType('w'))
 
     msg = 'Recomb. rate threshold at phys dist 0 that are OK (default %.2f)'
     msg %= DEF_MAX_ZERO_DIST_RECOMB
