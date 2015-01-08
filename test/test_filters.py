@@ -428,10 +428,20 @@ class ConsistentSegregationTest(unittest.TestCase):
 
         vcf_fpath = os.path.join(TEST_DATA_DIR, 'scaff000025.vcf.gz')
         binary = join(BIN_DIR, 'filter_vcf_by_weird_segregation')
-        cmd = [binary, '-n', '2', '-m', '200', vcf_fpath]
+        cmd = [binary, '-n', '2', '-m', '200', '-s', '1_14_1_gbs', '-s',
+               '1_17_1_gbs', '-s', '1_18_4_gbs', '-s', '1_19_4_gbs', '-s',
+               '1_26_1_gbs', '-s', '1_27_1_gbs', '-s', '1_2_2_gbs', '-s',
+               '1_35_13_gbs', '-s', '1_3_2_gbs', '-s', '1_50_1_gbs', '-s',
+               '1_59_1_gbs', '-s', '1_63_4_gbs', '-s', '1_6_2_gbs', '-s',
+               '1_70_1_gbs', '-s', '1_74_1_gbs', '-s', '1_79_1_gbs', '-s',
+               '1_7_2_gbs', '-s', '1_81_10_gbs', '-s', '1_86_1_gbs', '-s',
+               '1_8_2_gbs', '-s', '1_91_2_gbs', '-s', '1_94_4_gbs', '-s',
+               '2_107_1_gbs', '-s', '2_10_2_gbs', '-s', '2_116_1_gbs', '-s',
+               '2_11_1_gbs', '-s', '2_125_2_gbs', '-s', '2_13_1_gbs',
+               vcf_fpath]
         process2 = Popen(cmd, stderr=PIPE, stdout=PIPE)
         stdout, stderr = process2.communicate()
-        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 261
+        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 253
         assert 'SNVs processed:' in stderr
 
 
@@ -506,5 +516,5 @@ class ConsistentRecombinationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import sys; sys.argv = ['', 'ConsistentRecombinationTest']
+    # import sys; sys.argv = ['', 'ConsistentSegregationTest']
     unittest.main()

@@ -7,6 +7,7 @@ from vcf_crumbs.snv import VCFReader, VCFWriter
 from vcf_crumbs.filters import (WeirdSegregationFilter, DEF_ALPHA, DEF_SNV_WIN,
                                 DEF_MAX_FAILED_FREQ, DEF_MAX_DIST,
                                 DEF_MIN_DIST, DEF_MIN_NUM_CHECK_SNPS_IN_WIN)
+from vcf_crumbs.utils.bin_utils import parse_sample_file
 
 
 def setup_argparse(**kwargs):
@@ -58,6 +59,12 @@ def setup_argparse(**kwargs):
     parser.add_argument('-l', '--log', help=msg, type=argparse.FileType('w'),
                         default=sys.stderr)
 
+    parser.add_argument('-s', '--samples', action='append',
+                        help='samples to use')
+    parser.add_argument('-f', '--samples_file',
+                        help='File with samples to use. One per line',
+                        type=argparse.FileType('r'))
+
     return parser
 
 
@@ -77,6 +84,15 @@ def parse_args(parser):
     args['masked_window'] = parsed_args.masked_window
     args['log_fhand'] = parsed_args.log
 
+    samples = set()
+    if parsed_args.samples is not None:
+        samples.update(parsed_args.samples)
+    if parsed_args.samples_file is not None:
+        samples.update(parse_sample_file(parsed_args.samples_file))
+    if not samples:
+        samples = None
+    args['samples'] = samples
+
     return args
 
 
@@ -90,7 +106,8 @@ def main():
                                      max_failed_freq=args['failed_freq_threshold'],
                                      win_width=args['window'],
                                      win_mask_width=args['masked_window'],
-                                     min_num_snvs_check_in_win=args['min_num_snvs'])
+                                     min_num_snvs_check_in_win=args['min_num_snvs'],
+                                     samples=args['samples'])
 
     flt_snvs = filter_.filter_vcf(args['in_fhand'].name)
     templa_reader = VCFReader(args['in_fhand'])

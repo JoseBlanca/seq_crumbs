@@ -313,7 +313,7 @@ def _fisher_extact_rxc(counts_obs, counts_exp):
 
 class WeirdSegregationFilter(object):
     def __init__(self, alpha=DEF_ALPHA, num_snvs_check=DEF_SNV_WIN,
-                 max_failed_freq=DEF_MAX_FAILED_FREQ,
+                 max_failed_freq=DEF_MAX_FAILED_FREQ, samples=None,
                  win_width=DEF_MAX_DIST, win_mask_width=DEF_MIN_DIST,
                  min_num_snvs_check_in_win=DEF_MIN_NUM_CHECK_SNPS_IN_WIN):
         # We're assuming that most snps are ok and that a few have a weird
@@ -331,6 +331,7 @@ class WeirdSegregationFilter(object):
         self._failed_freqs = array.array('f')
         self.tot_snps = 0
         self.passed_snps = 0
+        self.samples = samples
 
     def filter_vcf(self, vcf_fpath, min_samples=DEF_MIN_CALLS_FOR_POP_STATS):
         reader = VCFReader(open(vcf_fpath),
@@ -366,6 +367,9 @@ class WeirdSegregationFilter(object):
                 # Not enough snps to check
                 continue
 
+            if self.samples is not None:
+                snv_1 = snv_1.filter_calls_by_sample(self.samples)
+
             exp_cnts = snv_1.biallelic_genotype_counts
             if exp_cnts is None:
                 continue
@@ -374,6 +378,8 @@ class WeirdSegregationFilter(object):
             values = {'left': [], 'right': []}
             for snv_2 in snvs_in_win:
                 location = 'left' if snv_2.pos - loc < 0 else 'right'
+                if self.samples is not None:
+                    snv_2 = snv_2.filter_calls_by_sample(self.samples)
                 obs_cnts = snv_2.biallelic_genotype_counts
                 if obs_cnts is None:
                     continue
