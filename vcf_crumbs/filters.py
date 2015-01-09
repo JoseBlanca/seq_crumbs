@@ -9,6 +9,8 @@ from os import mkdir
 from collections import namedtuple, Counter
 import array
 from StringIO import StringIO
+from operator import itemgetter
+from itertools import chain
 
 import numpy
 
@@ -24,6 +26,7 @@ from vcf_crumbs.iterutils import RandomAccessIterator
 from vcf_crumbs.snv import VCFReader, VCFWriter, DEF_MIN_CALLS_FOR_POP_STATS
 from vcf_crumbs.ld import _calc_recomb_rate
 from vcf_crumbs import snv
+
 
 # Missing docstring
 # pylint: disable=C0111
@@ -315,7 +318,8 @@ class WeirdSegregationFilter(object):
     def __init__(self, alpha=DEF_ALPHA, num_snvs_check=DEF_SNV_WIN,
                  max_failed_freq=DEF_MAX_FAILED_FREQ, samples=None,
                  win_width=DEF_MAX_DIST, win_mask_width=DEF_MIN_DIST,
-                 min_num_snvs_check_in_win=DEF_MIN_NUM_CHECK_SNPS_IN_WIN):
+                 min_num_snvs_check_in_win=DEF_MIN_NUM_CHECK_SNPS_IN_WIN,
+                 debug_plot_dir=None):
         # We're assuming that most snps are ok and that a few have a weird
         # segregation
         self.alpha = alpha
@@ -332,6 +336,9 @@ class WeirdSegregationFilter(object):
         self.tot_snps = 0
         self.passed_snps = 0
         self.samples = samples
+        if debug_plot_dir is not None and not exists(debug_plot_dir):
+            mkdir(debug_plot_dir)
+        self.plot_dir = debug_plot_dir
 
     def filter_vcf(self, vcf_fpath, min_samples=DEF_MIN_CALLS_FOR_POP_STATS):
         reader = VCFReader(open(vcf_fpath),
@@ -342,6 +349,18 @@ class WeirdSegregationFilter(object):
         for snv_1 in snvs:
             self.tot_snps += 1
             loc = snv_1.pos
+
+            if self.plot_dir:
+                chrom = str(snv_1.chrom)
+                fname = chrom + '_' + str(loc) + '.png'
+                chrom_dir = pjoin(self.plot_dir, chrom)
+                if not exists(chrom_dir):
+                    mkdir(chrom_dir)
+                plot_fhand = open(pjoin(chrom_dir, fname), 'w')
+                debug_plot_info = []
+            else:
+                plot_fhand = None
+
             win_1_start = loc - (self.win_width / 2)
             if win_1_start < 0:
                 win_1_start = 0
@@ -360,7 +379,7 @@ class WeirdSegregationFilter(object):
             snvs_win_2 = random_reader.fetch_snvs(snv_1.chrom,
                                                   start=win_2_start,
                                                   end=win_2_end)
-            snvs_in_win = list(snvs_win_1) + list(snvs_win_2)
+            snvs_in_win = list(chain(snvs_win_1, snvs_win_2))
             if len(snvs_in_win) > self.num_snvs_check:
                 snvs_in_win = random.sample(snvs_in_win, self.num_snvs_check)
             if len(snvs_in_win) < self.min_num_snvs_check_in_win:
@@ -371,33 +390,41 @@ class WeirdSegregationFilter(object):
                 snv_1 = snv_1.filter_calls_by_sample(self.samples)
 
             exp_cnts = snv_1.biallelic_genotype_counts
+
             if exp_cnts is None:
                 continue
 
-            results = {'left': [], 'right': []}
-            values = {'left': [], 'right': []}
+            test_values = []
             for snv_2 in snvs_in_win:
-                location = 'left' if snv_2.pos - loc < 0 else 'right'
                 if self.samples is not None:
                     snv_2 = snv_2.filter_calls_by_sample(self.samples)
                 obs_cnts = snv_2.biallelic_genotype_counts
                 if obs_cnts is None:
                     continue
-                value = _fisher_extact_rxc(obs_cnts, exp_cnts)
-                result = False if value is None else value > self.alpha
-                results[location].append(result)
-                values[location].append((snv_2.pos, value))
+                test_values.append(_fisher_extact_rxc(obs_cnts, exp_cnts))
 
-            if (len(results['left']) + len(results['right']) <
-               self.min_num_snvs_check_in_win):
+                if plot_fhand:
+                    debug_plot_info.append({'pos': snv_2.pos,
+                                            'AA': obs_cnts[0],
+                                            'Aa': obs_cnts[1],
+                                            'aa': obs_cnts[2],
+                                            'close_snp': True})
+            alpha2 = self.alpha/len(test_values)
+            results = []
+            for idx, val in enumerate(test_values):
+                result = False if val is None else val > alpha2
+                results.append(result)
+
+                if plot_fhand:
+                    debug_plot_info[idx]['result'] = result
+
+            if len(test_values) < self.min_num_snvs_check_in_win:
                 # few snps can be tested for segregation
                 continue
 
-            n_failed_left = results['left'].count(False)
-            n_failed_right = results['right'].count(False)
-            tot_checked = len(results['left']) + len(results['right'])
+            tot_checked = len(test_values)
             if tot_checked > 0:
-                failed_freq = (n_failed_left + n_failed_right) / tot_checked
+                failed_freq = results.count(False) / tot_checked
                 passed = self.max_failed_freq > failed_freq
             else:
                 failed_freq = None
@@ -405,9 +432,60 @@ class WeirdSegregationFilter(object):
             if failed_freq is not None:
                 self._failed_freqs.append(failed_freq)
 
+            if plot_fhand:
+                debug_plot_info.append({'pos': snv_1.pos,
+                                        'AA': exp_cnts[0],
+                                        'Aa': exp_cnts[1],
+                                        'aa': exp_cnts[2],
+                                        'result': passed,
+                                        'close_snp': False})
+                self._plot_segregation_debug(debug_plot_info, plot_fhand)
             if passed:
                 self.passed_snps += 1
                 yield snv_1
+
+    @staticmethod
+    def _plot_segregation_debug(plot_info, fhand):
+        greens = ['#2d6e12', '#76b75b', '#164900']
+        reds = ['#8f0007', '#fb1f2a', '#b90009']
+        grays = ['0.5', '0.25', '0.75']
+        fig = Figure(figsize=(10, 4))
+        axes1 = fig.add_subplot(211)
+        axes2 = fig.add_subplot(212)
+        plot_info.sort(key=itemgetter('pos'))
+
+        is_close_snp = [geno_info['close_snp'] for geno_info in plot_info]
+        tested_snp_idx = is_close_snp.index(False)
+        passed = [geno_info['result'] for geno_info in plot_info]
+        total_cnts = [geno_info['AA'] + geno_info['Aa'] + geno_info['aa'] for geno_info in plot_info]
+
+        num_snvs = len(passed)
+        bottoms = [0] * num_snvs
+        freq_bottoms = [0] * num_snvs
+        lefts = range(num_snvs)
+        for idx, geno in enumerate(('AA', 'Aa', 'aa')):
+            cnts = [geno_info[geno] for geno_info in plot_info]
+            backcolors = [greens[idx] if pss else reds[idx] for pss in passed]
+            edgecolors = [grays[idx] for pss in passed]
+            backcolors[tested_snp_idx], edgecolors[tested_snp_idx] = \
+                edgecolors[tested_snp_idx], backcolors[tested_snp_idx]
+            heights = cnts
+            axes1.bar(lefts, heights, bottom=bottoms, color=backcolors,
+                      edgecolor=edgecolors)
+
+            freq_heights = [height/total_cnt for height, total_cnt in zip(heights, total_cnts)]
+            axes2.bar(lefts, freq_heights, bottom=freq_bottoms,
+                      color=backcolors, edgecolor=edgecolors)
+
+            bottoms = [bot + heig for bot, heig in zip(bottoms, heights)]
+            freq_bottoms = [bot + heig for bot, heig in zip(freq_bottoms, freq_heights)]
+
+        axes1.tick_params(axis='y', which='both', left='off', right='off')
+        axes2.tick_params(axis='y', which='both', left='off', right='off')
+
+        canvas = FigureCanvas(fig)
+        canvas.print_figure(fhand)
+        fhand.flush()
 
     def plot_failed_freq_dist(self, fhand):
         fig = Figure()

@@ -14,6 +14,7 @@ from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 WeirdSegregationFilter,
                                 WeirdRecombFilter)
 from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
+from crumbs.utils.file_utils import TemporaryDir
 
 # Method could be a function
 # pylint: disable=R0201
@@ -411,13 +412,21 @@ class ConsistentSegregationTest(unittest.TestCase):
                                             num_snvs_check=200)
         flt_snps = snv_filter.filter_vcf(vcf_fpath)
         num_flt_snps = len(list(flt_snps))
-        assert num_flt_snps == 261
+        assert num_flt_snps == 281
         plot_fhand = NamedTemporaryFile(suffix='.png')
         snv_filter.plot_failed_freq_dist(plot_fhand)
 
         fhand = StringIO()
         snv_filter.write_log(fhand)
-        assert 'SNVs passsed: 261' in fhand.getvalue()
+        assert 'SNVs passsed: 281' in fhand.getvalue()
+
+#         plot_dir = TemporaryDir()
+#         snv_filter = WeirdSegregationFilter(min_num_snvs_check_in_win=2,
+#                                             num_snvs_check=200,
+#                                             debug_plot_dir=plot_dir.name)
+#         flt_snps = snv_filter.filter_vcf(vcf_fpath)
+#         list(flt_snps)
+#         plot_dir.close()
 
     def test_bin(self):
         binary = join(BIN_DIR, 'filter_vcf_by_weird_segregation')
@@ -441,7 +450,7 @@ class ConsistentSegregationTest(unittest.TestCase):
                vcf_fpath]
         process2 = Popen(cmd, stderr=PIPE, stdout=PIPE)
         stdout, stderr = process2.communicate()
-        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 253
+        assert len(list(VCFReader(StringIO(stdout)).parse_snvs())) == 273
         assert 'SNVs processed:' in stderr
 
 
@@ -516,5 +525,5 @@ class ConsistentRecombinationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys; sys.argv = ['', 'ConsistentSegregationTest']
+    # import sys; sys.argv = ['', 'ConsistentSegregationTest.test_bin']
     unittest.main()
