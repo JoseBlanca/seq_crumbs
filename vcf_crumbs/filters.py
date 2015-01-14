@@ -11,6 +11,7 @@ import array
 from StringIO import StringIO
 from operator import itemgetter
 from itertools import chain
+import warnings
 
 import numpy
 
@@ -641,7 +642,13 @@ def _kosambi(phys_dist, phys_gen_dist_conversion, recomb_at_origin):
     phys_gen_dist_conversion = abs(phys_gen_dist_conversion)
     # recomb rate should be in morgans per base
     d4 = numpy.absolute(phys_dist) * phys_gen_dist_conversion * 4
-    return 0.5 * (numpy.exp(d4) - 1) / (numpy.exp(d4) + 1) + recomb_at_origin
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            ed4 = numpy.exp(d4)
+        except Warning:
+            raise RuntimeError('Numpy raised a warning calculating exp')
+    return 0.5 * (ed4 - 1) / (ed4 + 1) + recomb_at_origin
 
 
 def _fit_kosambi(dists, recombs, init_params):
