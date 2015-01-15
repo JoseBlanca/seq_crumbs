@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import argparse
+
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args)
+from crumbs.seqio import read_seqs
+from crumbs.utils.tags import OUTFILE
+from crumbs.pairs import deinterleave_pairs
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It splits a ordered file of paired reads into two files.'
+    parent = create_basic_argparse(description=description)
+    parser = argparse.ArgumentParser(parents=[parent],
+                                     conflict_handler='resolve')
+    parser.add_argument('-o', '--outfile', dest=OUTFILE, required=True,
+                       help='Sequence output file to process (default STDOUT)',
+                       nargs=2, type=argparse.FileType('wt'))
+    return parser
+
+
+def run():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = parse_basic_args(parser)[0]
+
+    seqs = read_seqs(args['in_fhands'])
+
+    deinterleave_pairs(seqs, args['out_fhand'][0], args['out_fhand'][1],
+                       out_format=args['out_format'])
+
+
+if __name__ == '__main__':
+    sys.exit(main(run))

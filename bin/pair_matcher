@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import argparse
+import tempfile
+
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args,
+                                    get_requested_compression)
+from crumbs.utils.file_utils import compress_fhand
+from crumbs.pairs import match_pairs
+from crumbs.seqio import read_seqs
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It matches paired reads and splits orphaned reads in other'
+    description += ' file'
+    parser = create_basic_argparse(description=description)
+
+    #orphan
+    parser.add_argument('-p', '--orphan', dest='orphan', required=True,
+                       help='Output orphan file (required)',
+                       type=argparse.FileType('wt'))
+    unor_help = 'Paired reads are unordered and not just interleaved'
+    parser.add_argument('-u', '--unordered', help=unor_help,
+                        action='store_true', default=False)
+
+    ordered_group = parser.add_argument_group('Ordered pairs')
+    bufs_help = 'Buffer size for checking if reads are ordered. '
+    bufs_help += 'Raises an error if not'
+    ordered_group.add_argument('--buffer_size', help=bufs_help,
+                               default=100000, type=int)
+
+    unordered_group = parser.add_argument_group('Unordered pairs')
+
+    lowmem_help = 'If the binary uses all memory and does not finish'
+    lowmem_help += ', use this option (default False)'
+    unordered_group.add_argument('--low_memory', action='store_true',
+                                 default=False, help=lowmem_help)
+
+    dir_help = 'Directory to save temporary files for sorting(default {})'
+    dir_help = dir_help.format(tempfile.gettempdir())
+    unordered_group.add_argument('--tempdir', dest='tempdir', help=dir_help,
+                                 default=None)
+    hlp = 'Maximum number of reads in memory (default: 1000000)'
+    unordered_group.add_argument('--limit', help=hlp, type=int,
+                                 default=1000000)
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    orphan = parsed_args.orphan
+    comp_kind = get_requested_compression(parsed_args)
+    args['orphan'] = compress_fhand(orphan, compression_kind=comp_kind)
+    args['max_reads_memory'] = parsed_args.limit
+    args['tempdir'] = parsed_args.tempdir
+    args['check_order_buffer_size'] = parsed_args.buffer_size
+    args['unordered'] = parsed_args.unordered
+    args['low_memory'] = parsed_args.low_memory
+
+    return args
+
+
+def run():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    # read seqs
+    seqs = read_seqs(args['in_fhands'])
+    match_pairs(seqs, out_fhand=args['out_fhand'],
+                orphan_out_fhand=args['orphan'], temp_dir=args['tempdir'],
+                out_format=args['out_format'], ordered=not args['unordered'],
+                check_order_buffer_size=args['check_order_buffer_size'],
+                max_reads_memory=args['max_reads_memory'])
+
+if __name__ == '__main__':
+    #sys.argv.append('-h')
+    sys.exit(main(run))

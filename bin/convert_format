@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args)
+from crumbs.seqio import seqio
+from crumbs.settings import get_setting
+
+
+def main_seqio():
+    'The main function of the seqio binary'
+    description = 'Convert between sequence file formats'
+    parser = create_basic_argparse(description=description)
+    supported_out_formats = get_setting('SUPPORTED_OUTPUT_FORMATS')
+    parser.add_argument('-f', '--out_format', required=True,
+                        help='Output file format',
+                        choices=supported_out_formats)
+
+    args, parsed_args = parse_basic_args(parser)
+    args['out_format'] = parsed_args.out_format
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    out_format = args['out_format']
+
+    seqio(in_fhands, out_fhand, out_format)
+
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(main_seqio))

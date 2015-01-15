@@ -1,0 +1,9 @@
+.pydevproject
+.project
+*.pyc
+build/*
+dist/*
+seq_crumbs.egg-info/*
+*.error
+doc/downloads/*
+doc/_build

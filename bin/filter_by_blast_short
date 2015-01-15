@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+
+# Copyright 2012-2013 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Polite. Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import argparse
+
+from crumbs.utils.bin_utils import (main, parse_filter_args,
+                                    create_filter_argparse)
+from crumbs.utils.tags import SEQITEM
+from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.seqio import read_seq_packets, write_filter_packets, read_seqs
+from crumbs.filters import FilterBlastShort, seq_to_filterpackets
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.file_utils import flush_fhand
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It filters sequences with oligos using blast-short'
+    parser = create_filter_argparse(description=description)
+    hlp = 'Oligonucleotide (from 18 to 40 pb) to remove (required '
+    hlp += 'if no fasta file given)'
+    oligo_group = parser.add_mutually_exclusive_group(required=True)
+    oligo_group.add_argument('-l', '--oligo', help=hlp, action='append')
+    hlp = 'Fasta file with oligos (reuired if oligos not provided)'
+    oligo_group.add_argument('-f', '--oligo_file', help=hlp,
+                             type=argparse.FileType('rt'))
+
+    parser
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_filter_args(parser)
+
+    if parsed_args.oligo is not None:
+        oligos = []
+        for oligo_index, str_seq in enumerate(parsed_args.oligo):
+            name = 'oligo' + str(oligo_index)
+            lines = ['>' + name + '\n', str_seq + '\n']
+            oligos.append(SeqWrapper(SEQITEM, SeqItem(name, lines), 'fasta'))
+    elif parsed_args.oligo_file is not None:
+        oligos = list(read_seqs([parsed_args.oligo_file]))
+    else:
+        parser.error('We need oligos or oligo file')
+    args['oligos'] = oligos
+
+    return args
+
+
+def run():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    passed_fhand = args['out_fhand']
+    filtered_fhand = args['filtered_fhand']
+
+    seq_packets = read_seq_packets(in_fhands)
+    filter_packets = seq_to_filterpackets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
+
+    filter_by_blast = FilterBlastShort(oligos=args['oligos'],
+                                       reverse=args['reverse'],
+                                     failed_drags_pair=args['fail_drags_pair'])
+
+    filter_packets, workers = process_seq_packets(filter_packets,
+                                                  [filter_by_blast],
+                                                  processes=args['processes'])
+
+    write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
+                         args['out_format'], workers=workers)
+    flush_fhand(passed_fhand)
+    if filtered_fhand is not None:
+        filtered_fhand.flush()
+
+if __name__ == '__main__':
+    sys.exit(main(run))

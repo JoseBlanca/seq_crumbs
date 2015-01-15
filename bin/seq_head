@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args)
+from crumbs.seqio import write_seqs, get_format, read_seqs
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Get first seqs from file[s]'
+    parser = create_basic_argparse(description=description)
+    hlp = 'Number of sequences to print (default: %(default)s)'
+    parser.add_argument('-n', '--num_seqs', default=10, type=int,
+                        dest='num_seqs', help=hlp)
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['num_seqs'] = parsed_args.num_seqs
+    return args
+
+
+def _get_first_seqs(fhands, num_seqs):
+    'It gets the first num_seqs sequences from the file'
+    counter = 0
+    for seq in read_seqs(fhands):
+        yield seq
+        counter += 1
+        if counter >= num_seqs:
+            break
+
+
+def get_seqs():
+    'The main function of the head binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    num_seqs = args['num_seqs']
+
+    seqs = _get_first_seqs(in_fhands, num_seqs)
+
+    write_seqs(seqs, out_fhand, get_format(in_fhands[0]))
+    flush_fhand(out_fhand)
+
+if __name__ == '__main__':
+    sys.exit(main(get_seqs))

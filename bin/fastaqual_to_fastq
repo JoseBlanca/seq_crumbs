@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import argparse
+
+from crumbs.utils.bin_utils import main, build_version_msg
+from crumbs.utils.tags import OUTFILE
+from crumbs.seqio import fastaqual_to_fasta
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'Convert between sequence file formats'
+    parser = argparse.ArgumentParser(description=description)
+
+    parser.add_argument('input', nargs=2,
+                        help='Sequence and qual input files to process',
+                        type=argparse.FileType('rt'))
+
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+                        help='Sequence output file (default STDOUT)',
+                        type=argparse.FileType('wt'))
+
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+    seq_fhand, qual_fhand = parsed_args.input
+    out_fhand = getattr(parsed_args, OUTFILE)
+    args = {'out_fhand': out_fhand, 'in_seq_fhand': seq_fhand,
+            'in_qual_fhand': qual_fhand}
+    return args
+
+
+def main_convert():
+    'The main function of the seqio binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_seq_fhand = args['in_seq_fhand']
+    in_qual_fhand = args['in_qual_fhand']
+    out_fhand = args['out_fhand']
+
+    fastaqual_to_fasta(in_seq_fhand, in_qual_fhand, out_fhand)
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(main_convert))

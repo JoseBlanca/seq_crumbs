@@ -1,0 +1,129 @@
+{#
+    comav/layout.html
+    ~~~~~~~~~~~~~~~~~
+    Modified from Sphinx layout template for the agogo theme, originally written
+    by Andi Albrecht.
+
+    :copyright: Copyright 2007-2010 by the Sphinx team, see AUTHORS.
+    :license: BSD, see LICENSE for details.
+#}
+{% extends "basic_layout.html" %}
+{% block global_nav %}
+    <nav class="global_navigation">
+        <ul>
+            <li class="current_site_item" ><a href="http://bioinf.comav.upv.es">bioinf</a></li>
+            <li><a href="http://cucurbigene.net">cucurbigene</a></li>
+            <li><a href="http://melogene.net">melogene</a></li>
+        </ul>
+    </nav>
+{% endblock %}
+
+{% block header %}
+    <header>
+        <h1><a href="index.html">Bioinformatics at COMAV</a></h1>
+    </header>
+{% endblock %}
+
+{% block nav_bar %}
+    
+    <nav class="horizontal_nav page_nav">
+        <ul>
+            <li><a href="/index.html">Bioinformatics & genomics</a>
+                <ul>
+                    <li><a href="/services.html">Services</a></li>
+                    <li><a href="/people.html">People</a></li>
+                    <li><a href="/publications.html">Publications</a></li>
+                    <li><a href="/getting_here.html">Getting here</a></li>
+<!--                    <li><a href="http://bioinf.comav.upv.es/notes/">Wiki</a></li>-->
+               </ul>
+            </li>
+            <li><a href="/software.html">Software</a>
+                <ul>
+                    <li><a href="/seq_crumbs/index.html">seq_crumbs</a></li>
+                    <li><a href="https://github.com/JoseBlanca/">Git</a></li><!--
+                    <li><a href="/ngs_backbone/index.html">ngs_backbone</a></li>
+                    <li><a href="/clean_reads/index.html">clean_reads</a></li>
+                    <li><a href="/sff_extract/index.html">sff_extract</a></li>
+                    <li><a href="/psubprocess/index.html">psubprocess</a></li>-->
+               </ul>
+            </li>
+            <li><a href="/databases.html">Databases</a>
+                <ul>
+                    <li><a href="http://www.melogene.net/">Melogene</a></li>
+                    <li><a href="http://www.cucurbigene.net/">Cucurbigene</a></li>
+               </ul>
+            </li>
+            <li><a href="/courses.html">Courses</a>
+                <ul>
+                    <li><a href="/courses/intro_bioinf/index.html">Bionformática básica</a></li>
+                    <li><a href="/courses/sequence_analysis/index.html">NGS sequence analysis</a></li>
+                    <li><a href="/courses/linux/index.html">Linux y Python</a></li>
+               </ul>
+        </ul>
+    </nav>
+{% endblock %}
+{% block content %}
+    <main>
+        {%- block main %}
+            {%- if theme_verticalmenu in 'True' %}
+                <nav class="vertical_nav page_nav">
+                    {{ toctree() }}
+                </nav>
+            {%- endif %}
+            
+            {%- block document %}
+                {{ super() }}
+            {%- endblock %}
+            
+        {% endblock %}
+        
+    </main>
+    {%- if theme_prevnext in 'True' %}
+        {%- if not pagename in theme_indexpage %}
+            <div class="prevnext">
+                {%- if next %}
+                    <!--<a class="prev" href="{{ prev.link|e }}">{{ prev.title|striptags }}</a>-->
+                    <a class="prev" href="{{ prev.link|e }}" title="{{ prev.title|striptags }}">previous</a>
+                    |
+                {%- endif %}
+                
+                {%- if prev %}
+                    <!--<a class="next" href="{{ next.link|e }}">{{ next.title|striptags }}</a>-->
+                    <a class="next" href="{{ next.link|e }}" title="{{ next.title|striptags }}">next</a>
+                    |
+                {%- endif %}
+                
+                <a class="index" href="{{ theme_indexpage }}" title="Index">index</a>
+                
+            </div>
+        {%- endif %}
+    {%- endif %}
+{% endblock %}
+
+
+{% block footer2 %}
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          {%- for rellink in rellinks %}
+          <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags }}"
+             {{ accesskey(rellink[2]) }}>{{ rellink[3] }}</a>
+          {%- if not loop.last %}{{ reldelim2 }}{% endif %}
+          {%- endfor %}
+          {%- if show_source and has_source and sourcename %}
+            <br/>
+            <a href="{{ pathto('_sources/' + sourcename, true)|e }}"
+               rel="nofollow">{{ _('Show Source') }}</a>
+          {%- endif %}
+        </div>
+
+        <div class="right">
+          {{ super() }}
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block relbar1 %}{% endblock %}
+{% block relbar2 %}{% endblock %}

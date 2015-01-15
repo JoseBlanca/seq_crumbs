@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import argparse
+import sys
+
+from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE)
+from crumbs.utils.file_utils import (wrap_in_buffered_reader,
+                                     uncompress_if_required, flush_fhand)
+from crumbs.utils.bin_utils import main, build_version_msg
+from crumbs.utils.file_formats import get_format, set_format
+from crumbs.seqio import read_seqs
+from crumbs.statistics import calculate_sequence_stats
+from crumbs.settings import get_setting
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Calculate statistics of the given files'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', default=sys.stdin, nargs='*',
+                        help='Sequence input files to process (default STDIN)',
+                        type=argparse.FileType('rt'))
+    parser.add_argument('-t', '--in_format', default=GUESS_FORMAT,
+                       help='Format of the input files (default: %(default)s)')
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+                        help='Sequence output file (default STDOUT)',
+                        type=argparse.FileType('wt'))
+    help_kmer_size = 'kmer size to calculate (default: %(default)s)'
+    parser.add_argument('-k', '--kmer_size', type=int, help=help_kmer_size,
+                        default=get_setting('DEFAULT_KMER_SIZE'),
+                        dest='kmer_size')
+    parser.add_argument('-c', '--complexity', action='store_true',
+                        help='Do complexity (kmer) stats, (default False)',
+                        dest='complex_stats')
+    parser.add_argument('-d', '--dust', action='store_true',
+                        help='Do dustscore stats, (default False)')
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args = sys.argv
+    if (('-k' in args or '--kmer_size' in args) and
+        not ('-c' in args or '--complexity_stats' in args)):
+        # if we ask for a kmer we want the stats done
+        sys.argv.insert(1, '-c')
+        print sys.argv
+
+    parsed_args = parser.parse_args()
+    # we have to wrap the file in a BufferedReader to allow peeking into stdin
+    wrapped_fhands = []
+    # if input is stdin it will be a fhand not a list of fhands.
+    # we have to convert to a list
+    in_fhands = parsed_args.input
+    if not isinstance(in_fhands, list):
+        in_fhands = [in_fhands]
+    for fhand in in_fhands:
+        fhand = wrap_in_buffered_reader(fhand)
+        fhand = uncompress_if_required(fhand)
+        wrapped_fhands.append(fhand)
+
+    in_format = parsed_args.in_format
+    if in_format == GUESS_FORMAT:
+        for wrapped_fhand in wrapped_fhands:
+            get_format(wrapped_fhand)
+    else:
+        for wrapped_fhand in wrapped_fhands:
+            set_format(wrapped_fhand, in_format)
+
+    out_fhand = getattr(parsed_args, OUTFILE)
+    kmer_size = parsed_args.kmer_size
+    complexity_stats = parsed_args.complex_stats
+    do_dust_stats = parsed_args.dust
+
+    if not complexity_stats:
+        kmer_size = None
+
+    args = {'out_fhand': out_fhand, 'in_fhands': wrapped_fhands,
+            'original_in_fhands': in_fhands, 'kmer_size': kmer_size,
+            'do_dust_stats': do_dust_stats}
+    return args, parsed_args
+
+
+def run():
+    'It makes the actual job'
+    parser = _setup_argparse()
+    args = _parse_args(parser)[0]
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    kmer_size = args['kmer_size']
+    do_dust_stats = args['do_dust_stats']
+
+    seqs = read_seqs(in_fhands)
+    stat_strs = calculate_sequence_stats(seqs, kmer_size, nxs=[50, 95],
+                                         do_dust_stats=do_dust_stats)
+    try:
+        out_fhand.write(stat_strs['length'])
+        out_fhand.write(stat_strs['quality'])
+        out_fhand.write(stat_strs['nucl_freq'])
+        out_fhand.write(stat_strs['qual_boxplot'])
+        out_fhand.write(stat_strs['kmer'])
+        out_fhand.write(stat_strs['dustscore'])
+    except IOError, error:
+        # The pipe could be already closed
+        if 'Broken pipe' not in str(error):
+            raise
+    flush_fhand(out_fhand)
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(run))

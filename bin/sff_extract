@@ -1,0 +1,131 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import division
+
+import sys
+import os.path
+import argparse
+
+from crumbs.sff_extract import SffExtractor, write_xml_traceinfo
+from crumbs.seqio import write_seqs
+from crumbs.exceptions import FileNotFoundError
+from crumbs.utils.bin_utils import main, build_version_msg
+from crumbs.utils.tags import SEQRECORD
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.seq import assing_kind_to_seqs
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'SFF binary file reads extractor.'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', help="SFF input files to process", nargs='*')
+
+    parser.add_argument('-o', '--output', dest='output',
+                        help='output file (default STDOUT)', default='stdout')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-c', '--clip', action="store_true", dest='clip',
+                        help='Do recommended trims')
+    group.add_argument('-x', '--mira_xml_info', dest='xml_info',
+                       help='Path to the file to write the xml traceinfo',
+                       type=argparse.FileType('wt'))
+
+    msg = 'Clip at least this number of nucleotides (default: %(default)s)'
+    parser.add_argument('--min_left_clip', dest='min_left_clip', type=int,
+                        help=msg, default=0)
+    msg = 'nucleotide abundance to consider a SFF file as "strange"'
+    msg += ' (default: %(default)s)'
+    parser.add_argument('--max_percentage', dest='max_percent', type=float,
+                     help=msg, default=50.0)
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    in_fpaths = parsed_args.input
+    in_fhands = []
+    for in_fpath in in_fpaths:
+        if os.path.exists(in_fpath):
+            in_fhand = open(in_fpath, 'rb')
+        else:
+            raise FileNotFoundError('A file was not found: ' + in_fpath)
+        in_fhands.append(in_fhand)
+    args = {'sff_fhands': in_fhands}
+
+    if parsed_args.output == 'stdout':
+        out_fhand = sys.stdout
+    else:
+        out_fhand = open(parsed_args.output, 'w')
+    args['out_fhand'] = out_fhand
+
+    args['clip'] = parsed_args.clip
+    args['min_left_clip'] = parsed_args.min_left_clip
+    args['max_percent'] = parsed_args.max_percent / 100
+    args['xml_info_fhand'] = parsed_args.xml_info
+
+    return args
+
+
+def extract_sff():
+    'The main function of the sff_extract binary.'
+    if len(sys.argv) == 1:
+        sys.argv.append('-h')
+
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    extractor = SffExtractor(sff_fhands=args['sff_fhands'], trim=args['clip'],
+                             min_left_clip=args['min_left_clip'],
+                             max_nucl_freq_threshold=args['max_percent'])
+    seqrecords = extractor.seqs
+    seqs = assing_kind_to_seqs(SEQRECORD, seqrecords, None)
+    if args['xml_info_fhand']:
+        seqs = write_xml_traceinfo(seqs, fhand=args['xml_info_fhand'])
+    write_seqs(seqs, args['out_fhand'], file_format='fastq')
+    flush_fhand(args['out_fhand'])
+
+    stderr = sys.stderr
+    an_error_apeared = 0
+    for fpath, advice in extractor.clip_advice.items():
+        if advice:
+            msg = "\n" + "*" * 80
+            msg += "\nWARNING: "
+            msg += "weird sequences in file " + fpath + "\n\n"
+            msg += "After applying left clips too many reads start with:\n"
+            msg += advice[1]
+            msg += "\n\nThis does not look sane.\n\n"
+            msg += "Countermeasures you *probably* must take:\n"
+            msg += "1) Make your sequence provider aware of that problem and "
+            msg += "ask whether this can be\n    corrected in the SFF.\n"
+            msg += "2) If you decide that this is not normal and your sequence"
+            msg += " provider does not\n"
+            msg += "    react, use the --min_left_clip of sff_extract.\n"
+            msg += "    (Probably '--min_left_clip " + str(advice[0])
+            msg += "' but you should cross-check that)\n"
+            msg += "*" * 80 + "\n"
+            stderr.write(msg)
+            an_error_apeared = 1
+    return an_error_apeared
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(extract_sff))

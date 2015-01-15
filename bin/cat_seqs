@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.utils.bin_utils import (main, create_basic_argparse,
+                                    parse_basic_args)
+from crumbs.seqio import write_seqs, get_format, read_seqs
+from crumbs.exceptions import IncompatibleFormatError
+
+
+def check_format_incompatibilities(in_fhands, out_format):
+    'It checks for incompatible formats when doing a cat'
+    if out_format == 'fasta' or out_format is None:
+        return
+
+    in_formats = set([get_format(in_fhand) for in_fhand in in_fhands])
+    msg = 'output format taken from first given file, is incompatible with'
+    msg += 'input file formats'
+
+    has_fastq = any(['fastq' in in_format for in_format in in_formats])
+
+    if 'fasta' in in_formats and has_fastq:
+        raise IncompatibleFormatError(msg)
+
+
+def cat_seqs():
+    'it cats the sequences of all input files in one file'
+    dsc = 'concatenate seqs from various files to one file'
+    parser = create_basic_argparse(description=dsc)
+    args = parse_basic_args(parser)[0]
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    out_format = args['out_format']
+    check_format_incompatibilities(in_fhands, out_format)
+
+    seqs = read_seqs(in_fhands)
+    write_seqs(seqs, out_fhand, out_format)
+    flush_fhand(out_fhand)
+
+if __name__ == '__main__':
+    sys.exit(main(cat_seqs))

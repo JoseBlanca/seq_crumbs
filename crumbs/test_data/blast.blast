@@ -1,0 +1,201 @@
+BLASTN 2.2.24+
+
+
+Query=  seq_with_primer
+Length=301
+
+Subject=  seq_with_primer
+Length=301
+
+
+ Score =  544 bits (602),  Expect = 1e-159
+ Identities = 301/301 (100%), Gaps = 0/301 (0%)
+ Strand=Plus/Plus
+
+Query  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+
+Query  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+
+Query  121  ATCGACTGATCGATATGCATCAGATCGCGATCgggggggggggggggggggggggggggg  180
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  121  ATCGACTGATCGATATGCATCAGATCGCGATCGGGGGGGGGGGGGGGGGGGGGGGGGGGG  180
+
+Query  181  gATAGCATCGTATATCGATCTAATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATA  240
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  181  GATAGCATCGTATATCGATCTAATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATA  240
+
+Query  241  GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAAAGCATCGTATATCGATGT  300
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  241  GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAAAGCATCGTATATCGATGT  300
+
+Query  301  A  301
+            |
+Sbjct  301  A  301
+
+
+
+Lambda     K      H
+   0.634    0.408    0.912 
+
+Gapped
+Lambda     K      H
+   0.625    0.410    0.780 
+
+Effective search space used: 72790
+
+
+Query=  seq_with_primer
+Length=301
+
+Subject=  seq_with_primer2
+Length=262
+
+
+ Score =  432 bits (478),  Expect = 5e-126
+ Identities = 262/282 (92%), Gaps = 20/282 (7%)
+ Strand=Plus/Plus
+
+Query  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+
+Query  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+
+Query  121  ATCGACTGATCGATATGCATCAGATCGCGATCgggggggggggggggggggggggggggg  180
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  121  ATCGACTGATCGATATGCATCAGATCGCGATCGGGGGGGGGGGGGGGGGGGGGGGGGGGG  180
+
+Query  181  gATAGCATCGTATATCGATCTAATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATA  240
+            |                    |||||||||||||||||||||||||||||||||||||||
+Sbjct  181  G--------------------AATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATA  220
+
+Query  241  GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAA  282
+            ||||||||||||||||||||||||||||||||||||||||||
+Sbjct  221  GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAA  262
+
+
+ Score = 30.1 bits (32),  Expect = 6e-05
+ Identities = 18/19 (94%), Gaps = 0/19 (0%)
+ Strand=Plus/Plus
+
+Query  283  AGCATCGTATATCGATGTA  301
+            |||||||||||||||| ||
+Sbjct  19   AGCATCGTATATCGATCTA  37
+
+
+
+Lambda     K      H
+   0.634    0.408    0.912 
+
+Gapped
+Lambda     K      H
+   0.625    0.410    0.780 
+
+Effective search space used: 72790
+
+
+Query=  seq_with_primer2
+Length=262
+
+Subject=  seq_with_primer
+Length=301
+
+
+ Score =  432 bits (478),  Expect = 5e-126
+ Identities = 262/282 (92%), Gaps = 20/282 (7%)
+ Strand=Plus/Plus
+
+Query  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+
+Query  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+
+Query  121  ATCGACTGATCGATATGCATCAGATCGCGATCgggggggggggggggggggggggggggg  180
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  121  ATCGACTGATCGATATGCATCAGATCGCGATCGGGGGGGGGGGGGGGGGGGGGGGGGGGG  180
+
+Query  181  g--------------------AATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATA  220
+            |                    |||||||||||||||||||||||||||||||||||||||
+Sbjct  181  GATAGCATCGTATATCGATCTAATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATA  240
+
+Query  221  GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAA  262
+            ||||||||||||||||||||||||||||||||||||||||||
+Sbjct  241  GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAA  282
+
+
+ Score = 30.1 bits (32),  Expect = 6e-05
+ Identities = 18/19 (94%), Gaps = 0/19 (0%)
+ Strand=Plus/Plus
+
+Query  19   AGCATCGTATATCGATCTA  37
+            |||||||||||||||| ||
+Sbjct  283  AGCATCGTATATCGATGTA  301
+
+
+
+Lambda     K      H
+   0.634    0.408    0.912 
+
+Gapped
+Lambda     K      H
+   0.625    0.410    0.780 
+
+Effective search space used: 63001
+
+
+Query=  seq_with_primer2
+Length=262
+
+Subject=  seq_with_primer2
+Length=262
+
+
+ Score =  473 bits (524),  Expect = 2e-138
+ Identities = 262/262 (100%), Gaps = 0/262 (0%)
+ Strand=Plus/Plus
+
+Query  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  1    ATCGATCTGATCTAGTCTAGCATCGTATATCGATCTATCGATGTCTAGCTGAGCTACATA  60
+
+Query  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  61   GCTAACGATCTAGTCTAGTCTATGATGCATCAGATGCATGAATCGCATCGATCATCGCAG  120
+
+Query  121  ATCGACTGATCGATATGCATCAGATCGCGATCgggggggggggggggggggggggggggg  180
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  121  ATCGACTGATCGATATGCATCAGATCGCGATCGGGGGGGGGGGGGGGGGGGGGGGGGGGG  180
+
+Query  181  gAATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATAGCTAACGATCTAGTCTAGTC  240
+            ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  181  GAATCGATCTGATCTAGTCGATGTCTAGCTGAGCTACATAGCTAACGATCTAGTCTAGTC  240
+
+Query  241  TATGATGCATCAGATGCATGAA  262
+            ||||||||||||||||||||||
+Sbjct  241  TATGATGCATCAGATGCATGAA  262
+
+
+
+Lambda     K      H
+   0.634    0.408    0.912 
+
+Gapped
+Lambda     K      H
+   0.625    0.410    0.780 
+
+Effective search space used: 63001
+
+
+
+
+Matrix: blastn matrix 2 -3
+Gap Penalties: Existence: 5, Extension: 2

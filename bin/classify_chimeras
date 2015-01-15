@@ -1,0 +1,134 @@
+#!/usr/bin/env python
+
+# Copyright 2013 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import tempfile
+
+from crumbs.utils.bin_utils import (main, argparse, parse_basic_args,
+                                    build_version_msg)
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.settings import get_setting
+from crumbs.mate_chimeras import classify_chimeras
+from crumbs.utils.tags import GUESS_FORMAT, OUTFILE
+
+
+def _setup_argparse(add_reverse=True, **kwargs):
+    'It returns a cmd parser for the filter executables'
+    parser = argparse.ArgumentParser(**kwargs)
+    parser.add_argument('input', type=argparse.FileType('rt'),
+                        help='Interleaved sequence input file')
+    parser.add_argument('-r', '--bwa_index_path', default=None,
+                        help='Path to bwa index')
+    hlp_fmt = 'Format of the input files (default: %(default)s)'
+    parser.add_argument('-t', '--in_format', default=GUESS_FORMAT,
+                        help=hlp_fmt)
+
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest=OUTFILE,
+                        help='Sequence output file (default: STDOUT)',
+                        type=argparse.FileType('wt'))
+    parser.add_argument('-s', '--insert_size', default=None, type=int,
+                        help='Insert size of mate pair library', required=True)
+
+    parser.add_argument('-c', '--chimeras', default=None,
+                        help='File for chimeric sequences',
+                        type=argparse.FileType('wt'))
+    parser.add_argument('-u', '--unknown', default=None,
+                        help='File for unknown sequences',
+                        type=argparse.FileType('wt'))
+    tempdir = tempfile.gettempdir()
+    help_tmp = 'Path for temporary files (default {})'
+    parser.add_argument('--tempdir', default=tempdir,
+                        help=help_tmp.format(tempdir))
+    parser.add_argument('--threads', default=None, type=int,
+                        help='number of threads for mapping (default 1)')
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-z ', '--gzip', action='store_true',
+                       help='Compress the output in gzip format')
+    group.add_argument('-Z ', '--bgzf', action='store_true',
+                       help='Compress the output in bgzf format')
+    group.add_argument('-B ', '--bzip2', action='store_true',
+                       help='Compress the output in bzip2 format')
+    parent = argparse.ArgumentParser(parents=[parser], add_help=False)
+    parser = argparse.ArgumentParser(parents=[parent],
+                                     conflict_handler='resolve')
+
+    settings = get_setting('CHIMERAS_SETTINGS')
+    settings_group = parser.add_argument_group('Settings')
+
+    help4 = 'Max distance between pair ends sequences. One chimera fragment'
+    help4 += 'should be this close to the mate'
+    help4 += '(default: {})'.format(settings['MAX_PE_LEN'])
+    settings_group.add_argument('--max_pe_len', default=settings['MAX_PE_LEN'],
+                                help=help4, type=int)
+    help5 = 'Max variation allowed from the mean size of mate pair library'
+    help5 += '(default: {})'.format(settings['MATE_DISTANCE_VARIATION'])
+    settings_group.add_argument('--max_dist_var', help=help5, type=int,
+                                default=settings['MATE_DISTANCE_VARIATION'])
+    help6 = 'Proportion of mapping positions required to consider a read '
+    help6 += 'as fully mapped'
+    help6 += '(default: {})'.format(settings['MAX_CLIPPING'])
+    settings_group.add_argument('--max_clipping', help=help6, type=float,
+                                default=settings['MAX_CLIPPING'])
+
+    parser.add_argument('--version', action='version',
+                        version=build_version_msg())
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['chimeras_fhand'] = parsed_args.chimeras
+    args['unknown_fhand'] = parsed_args.unknown
+    args['in_format'] = parsed_args.in_format
+    args['index_fpath'] = parsed_args.bwa_index_path
+    args['insert_size'] = parsed_args.insert_size
+    args['tempdir'] = parsed_args.tempdir
+    args['threads'] = parsed_args.threads
+    args['chimeras_settings'] = {'MAX_CLIPPING': parsed_args.max_clipping,
+                                 'MAX_PE_LEN': parsed_args.max_pe_len,
+                           'MATE_DISTANCE_VARIATION': parsed_args.max_dist_var}
+
+    return args, parsed_args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It filters chimeric sequences from illumina mate pairs seqs'
+    parser = _setup_argparse(description=description)
+    args = _parse_args(parser)[0]
+    index_fpath = args['index_fpath']
+    chimeras_fhand = args['chimeras_fhand']
+    out_fhand = args['out_fhand']
+    unknown_fhand = args['unknown_fhand']
+    chimeras_settings = args['chimeras_settings']
+    in_fhand = args['in_fhands'][0]
+    mate_distance = args['insert_size']
+    tempdir = args['tempdir']
+    threads = args['threads']
+
+    classify_chimeras(in_fhand, index_fpath, mate_distance=mate_distance,
+                      out_fhand=out_fhand, chimeras_fhand=chimeras_fhand,
+                      unknown_fhand=unknown_fhand, settings=chimeras_settings,
+                      tempdir=tempdir, threads=threads)
+    flush_fhand(out_fhand)
+    flush_fhand(chimeras_fhand)
+    flush_fhand(unknown_fhand)
+
+if __name__ == '__main__':
+    sys.exit(main(run))

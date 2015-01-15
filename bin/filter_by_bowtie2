@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.bin_utils import (main, parse_filter_args,
+                                    create_filter_argparse)
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.seqio import write_filter_packets, read_seq_packets
+from crumbs.filters import seq_to_filterpackets, FilterBowtie2Match
+from crumbs.mapping import get_or_create_bowtie2_index
+from crumbs.settings import get_setting
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It filters sequences using blast'
+    parser = create_filter_argparse(description=description)
+    parser.add_argument('-i', '--index', required=True,
+                        help='bowtie index path (required)')
+    hlp = 'min mapq to filter mapped reads (default: %(default)s)'
+    parser.add_argument('-m', '--min_mapq',
+                        default=get_setting('DEFAULT_MIN_MAPQ'),
+                        help=hlp)
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the arguments'
+    args, parsed_args = parse_filter_args(parser)
+    if parsed_args.index is None:
+        return parser.error('Path to bowtie2 index is mandatory')
+    else:
+        args['index'] = parsed_args.index
+    args['min_mapq'] = parsed_args.min_mapq
+
+    return args
+
+
+def filter_by_bowtie2():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+    in_fhands = args['in_fhands']
+    passed_fhand = args['out_fhand']
+    filtered_fhand = args['filtered_fhand']
+    packet_size = get_setting('PACKET_SIZE') * 10
+    seq_packets = read_seq_packets(in_fhands, size=packet_size)
+
+    filter_packets = seq_to_filterpackets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
+    index_ = get_or_create_bowtie2_index(args['index'])
+    filter_by_bowtie2 = FilterBowtie2Match(index_, min_mapq=args['min_mapq'],
+                                           reverse=args['reverse'],
+                                           threads=args['processes'],
+                                     failed_drags_pair=args['fail_drags_pair'])
+
+    filter_packets, workers = process_seq_packets(filter_packets,
+                                                  [filter_by_bowtie2],
+                                                  processes=args['processes'])
+
+    write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
+                         args['out_format'], workers=workers)
+    flush_fhand(passed_fhand)
+    if filtered_fhand is not None:
+        filtered_fhand.flush()
+
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(filter_by_bowtie2))

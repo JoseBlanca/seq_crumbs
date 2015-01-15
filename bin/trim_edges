@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.bin_utils import (main, parse_trimmer_args,
+                                    create_trimmer_argparse)
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.trim import TrimEdges, TrimOrMask, seq_to_trim_packets
+from crumbs.seqio import read_seq_packets, write_trim_packets
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It trims a fixed number of bases.'
+    parser = create_trimmer_argparse(description=description)
+
+    hlp_ = 'Number of bases to trim on the left side (default: %(default)s)'
+    parser.add_argument('-l', '--left', dest='left', help=hlp_, default=0,
+                        type=int)
+    hlp_ = 'Number of bases to trim on the right side (default: %(default)s)'
+    parser.add_argument('-r', '--right', dest='right', help=hlp_, default=0,
+                        type=int)
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_trimmer_args(parser)
+    args['right'] = parsed_args.right
+    args['left'] = parsed_args.left
+    return args
+
+
+def trim_edges():
+    'The main function of the trim_edges binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    orphan_fhand = args['orphan_fhand']
+
+    seq_packets = read_seq_packets(in_fhands)
+    trim_packets = seq_to_trim_packets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
+
+    trim_edges = TrimEdges(right=args['right'], left=args['left'])
+    trim_and_mask = TrimOrMask(mask=args['mask'])
+    trim_packets, workers = process_seq_packets(trim_packets,
+                                               [trim_edges, trim_and_mask],
+                                               processes=args['processes'])
+
+    write_trim_packets(out_fhand, orphan_fhand, trim_packets,
+                         args['out_format'], workers=workers)
+
+    flush_fhand(out_fhand)
+    if orphan_fhand is not None:
+        orphan_fhand.flush()
+
+
+if __name__ == '__main__':
+    sys.exit(main(trim_edges))

@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from crumbs.utils.bin_utils import (main, parse_filter_args, argparse,
+                                    create_basic_argparse, parse_basic_args)
+from crumbs.bulk_filters import filter_duplicates
+from crumbs.utils.file_utils import flush_fhand
+
+
+def create_filter_argparse(add_reverse=True, **kwargs):
+    'It returns a cmd parser for the filter executables'
+    parser = create_basic_argparse(**kwargs)
+    parser = argparse.ArgumentParser(parents=[parser], add_help=False)
+    parser.add_argument('-e', '--filtered_file',
+                        help='Filtered out sequences output file',
+                        type=argparse.FileType('wt'))
+    parser.add_argument('-d', '--tempdir',
+                        help='Directory to store temporary files for sorting')
+    _help = 'Sorting is done in packets with this number of sequences'
+    _help += ' to reduce memory requirements'
+    parser.add_argument('-m', '--max_seqs_packet',  dest='max_seqs_packet',
+                        help=_help, default=None, type=int)
+    parser.add_argument('-l', '--use_length', type=int,
+                        help="Length of the firt nucleotides to check")
+    group = parser.add_argument_group('Pairing')
+    group.add_argument('--paired_reads', action='store_true',
+                       help='Filter considering interleaved pairs')
+    return parser
+
+
+def parse_filter_args(parser, add_reverse=True):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_args(parser)
+    args['paired_reads'] = parsed_args.paired_reads
+    args['tempdir'] = parsed_args.tempdir
+    args['max_seqs_packet'] = parsed_args.max_seqs_packet
+    args['use_length'] = parsed_args.use_length
+
+    return args, parsed_args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It filters the duplicated sequences'
+    parser = create_filter_argparse(description=description)
+    args = parse_filter_args(parser)[0]
+
+    in_fhands = args['in_fhands']
+    out_fhand = args['out_fhand']
+    tempdir = args['tempdir']
+    max_seqs_packet = args['max_seqs_packet']
+    use_length = args['use_length']
+
+    filter_duplicates(in_fhands, out_fhand, args['paired_reads'],
+                      n_seqs_packet=max_seqs_packet, tempdir=tempdir,
+                      use_length=use_length)
+    flush_fhand(out_fhand)
+
+if __name__ == '__main__':
+    sys.exit(main(run))

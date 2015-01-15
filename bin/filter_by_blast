@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.utils.bin_utils import (main, parse_filter_args,
+                                    create_filter_argparse)
+from crumbs.seqio import read_seq_packets, write_filter_packets
+from crumbs.filters import FilterBlastMatch, seq_to_filterpackets
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It filters sequences using blast'
+    parser = create_filter_argparse(description=description)
+    parser.add_argument('-b', '--blastdb', dest='blastdb', required=True,
+                     help='Blast database or path to sequence file (required)')
+    default_blast_program = 'blastn'
+    hlp = 'blast program to use (default: %(default)s)'
+    parser.add_argument('-g', '--blast_program', dest='blast_program',
+                        help=hlp, default=default_blast_program)
+    parser.add_argument('-x', '--expected', dest='expected',
+                        help='Maximum e-value', type=float)
+    parser.add_argument('-s', '--similarity', dest='similarity', type=float,
+                        help='Minimum percentage of similarity')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-l', '--min_len', dest='min_len', type=float,
+                        help='Percentage of the length that should match')
+    group.add_argument('-a', '--abs_len', dest='abs_len', type=int,
+                        help='Length of the query that should match')
+
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the arguments'
+    args, parsed_args = parse_filter_args(parser)
+    if parsed_args.blastdb is None:
+        return parser.error('path to blast parser is mandatory')
+    else:
+        args['blastdb'] = parsed_args.blastdb
+    args['blast_program'] = parsed_args.blast_program
+    args['expected'] = parsed_args.expected
+    args['similarity'] = parsed_args.similarity
+    args['min_len'] = parsed_args.min_len
+    args['abs_len'] = parsed_args.abs_len
+
+    is_none = lambda x: True if x is None else False
+    if all([is_none(arg) for arg in args['expected'], args['similarity'],
+            args['min_len'], args['abs_len']]):
+        parser.error('At least a filter must be Used')
+
+    return args
+
+
+def _prepare_filters(args):
+    'it prepares the filters to use'
+    filters = []
+    if args['expected'] is not None:
+        filters.append({'kind': 'score_threshold', 'score_key': 'expect',
+                        'max_score': args['expected']})
+    if args['similarity'] is not None:
+        filters.append({'kind': 'score_threshold', 'score_key': 'identity',
+                        'min_score': args['similarity']})
+    if args['min_len'] is not None:
+        filters.append({'kind': 'min_length',
+                        'min_percentage': args['min_len'],
+                        'length_in_query': True})
+    if args['abs_len'] is not None:
+        filters.append({'kind': 'min_length',
+                        'min_num_residues': args['abs_len'],
+                        'length_in_query': True})
+    return filters
+
+
+def filter_by_blast():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    passed_fhand = args['out_fhand']
+    filtered_fhand = args['filtered_fhand']
+
+    seq_packets = read_seq_packets(in_fhands)
+    filter_packets = seq_to_filterpackets(seq_packets,
+                                       group_paired_reads=args['paired_reads'])
+
+    database = args['blastdb']
+    program = args['blast_program']
+    filters = _prepare_filters(args)
+    filter_by_blast = FilterBlastMatch(database, program, filters,
+                                     reverse=args['reverse'],
+                                     failed_drags_pair=args['fail_drags_pair'])
+
+    filter_packets, workers = process_seq_packets(filter_packets,
+                                                  [filter_by_blast],
+                                                  processes=args['processes'])
+
+    write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
+                         args['out_format'], workers=workers)
+    flush_fhand(passed_fhand)
+    if filtered_fhand is not None:
+        filtered_fhand.flush()
+
+
+if __name__ == '__main__':
+    # sys.argv.append('-h')
+    sys.exit(main(filter_by_blast))

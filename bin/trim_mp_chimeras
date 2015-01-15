@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+
+# Copyright 2013 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
+                                    create_basic_parallel_argparse)
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.trim import TrimMatePairChimeras, seq_to_trim_packets, TrimOrMask
+from crumbs.settings import get_setting
+from crumbs.seqio import read_seq_packets, write_trim_packets
+from crumbs.utils.seq_utils import process_seq_packets
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'It trims chimeric regions from illumina mate pairs seqs'
+    parser = create_basic_parallel_argparse(description=description)
+    parser.add_argument('-r', '--bwa_index', required=True,
+                        help='Fpath with reference bwa index')
+    parser.add_argument('--tempdir', default='/tmp',
+                        help='Path for temporary files (default /tmp)')
+    help1 = 'Max clipping positions percentage allowed to consider that 5 end'
+    help1 += 'is mapped'
+    parser.add_argument('--max_clipping',
+                      default=get_setting('CHIMERAS_SETTINGS')['MAX_CLIPPING'],
+                        help=help1)
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    args, parsed_args = parse_basic_parallel_args(parser)
+    args['bwa_index'] = parsed_args.bwa_index
+    args['tempdir'] = parsed_args.tempdir
+    args['max_clipping'] = parsed_args.max_clipping
+
+    return args, parsed_args
+
+
+def run():
+    'The main function of the binary'
+    parser = _setup_argparse()
+    args = _parse_args(parser)[0]
+    index_fpath = args['bwa_index']
+    out_fhand = args['out_fhand']
+    in_fhands = args['in_fhands']
+    max_clipping = args['max_clipping']
+    tempdir = args['tempdir']
+    seq_packets = read_seq_packets(in_fhands,
+                                   size=get_setting('PACKET_SIZE') * 10)
+    trim_packets = seq_to_trim_packets(seq_packets, group_paired_reads=True)
+    prep_trim = TrimMatePairChimeras(index_fpath, max_clipping=max_clipping,
+                                     tempdir=tempdir)
+    trim_or_mask = TrimOrMask()
+    trim_packets, workers = process_seq_packets(trim_packets,
+                                                [prep_trim, trim_or_mask],
+                                                processes=args['processes'])
+
+    write_trim_packets(out_fhand, orphan_fhand=None, trim_packets=trim_packets,
+                       file_format=args['out_format'], workers=workers)
+
+    flush_fhand(out_fhand)
+
+if __name__ == '__main__':
+    sys.exit(main(run))

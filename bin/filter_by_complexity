@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+
+# Copyright 2012 Jose Blanca, Peio Ziarsolo, COMAV-Univ. Politecnica Valencia
+# This file is part of seq_crumbs.
+# seq_crumbs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# seq_crumbs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from crumbs.utils.bin_utils import (main, parse_filter_args,
+                                    create_filter_argparse)
+from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.file_utils import flush_fhand
+from crumbs.seqio import read_seq_packets, write_filter_packets
+from crumbs.filters import FilterDustComplexity, seq_to_filterpackets
+from crumbs.settings import get_setting
+
+
+def _setup_argparse(description):
+    'It returns the argument parser'
+    parser = create_filter_argparse(description=description)
+    hlp = 'Dust score (0-100) (default: %(default)s), if lower will be kept'
+    parser.add_argument('-c', '--threshold', type=float, help=hlp,
+                        default=get_setting('DEFATULT_DUST_THRESHOLD'))
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the arguments'
+    args, parsed_args = parse_filter_args(parser)
+    args['threshold'] = parsed_args.threshold
+    return args
+
+
+def run():
+    'The main function of the binary'
+    description = 'It filters the sequences according to its complexity.'
+    parser = _setup_argparse(description=description)
+    args = _parse_args(parser)
+
+    in_fhands = args['in_fhands']
+    passed_fhand = args['out_fhand']
+    filtered_fhand = args['filtered_fhand']
+
+    seqrecord_packets = read_seq_packets(in_fhands)
+    filter_packets = seq_to_filterpackets(seqrecord_packets,
+                                       group_paired_reads=args['paired_reads'])
+    filter_ = FilterDustComplexity(threshold=args['threshold'],
+                                   reverse=args['reverse'],
+                                     failed_drags_pair=args['fail_drags_pair'])
+    filter_packets, workers = process_seq_packets(filter_packets, [filter_],
+                                               processes=args['processes'])
+
+    write_filter_packets(passed_fhand, filtered_fhand, filter_packets,
+                         args['out_format'], workers=workers)
+    flush_fhand(passed_fhand)
+    if filtered_fhand is not None:
+        filtered_fhand.flush()
+
+
+if __name__ == '__main__':
+    sys.exit(main(run))
