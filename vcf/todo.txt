@@ -1,0 +1,18 @@
+Statistics of the total coverage for SNP
+
+Text for the statistic results
+
+Filtros SNPs para evitar falsos snps debidos a parálogos
+
+- Coverage filter. A false snp due to a paralog sequence should have more total
+coverage. We could draw the total coverage distribution and remove the ones
+with to much coverage
+- Not linked with the snps close to the studied snp in a small window (See Tassel
+recomendations).
+
+Módulos relacionados con ld en tassel (puede haber más):
+
+src/net/maizegenetics/pal/popgen/DiversityAnalyses.java
+src/net/maizegenetics/pal/popgen/LinkageDisequilibrium.java
+La clave está en la función getLDForSitePair
+

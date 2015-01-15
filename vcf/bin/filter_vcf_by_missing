@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+
+from vcf_crumbs.filters import CallRateFilter, filter_snvs
+from vcf_crumbs.utils.bin_utils import setup_filter_argparse, parse_filter_args
+
+
+def _setup_argparse(**kwargs):
+    'It prepares the command line argument parsing.'
+    parser = setup_filter_argparse(**kwargs)
+
+    parser.add_argument('-m', '--min_calls', type=int,
+                        help='The SNV should have at least these genotypes')
+    msg = 'The SNV should have at least this call/total genotypes'
+    parser.add_argument('-r', '--min_call_rate', type=float, help=msg)
+
+    return parser
+
+
+def _parse_args(parser):
+    filter_snvs_kwargs, filter_class_kwargs, parsed_args = parse_filter_args(parser)
+
+    min_calls = parsed_args.min_calls
+    min_call_rate = parsed_args.min_call_rate
+    if min_calls is not None and min_call_rate is not None:
+        msg = 'min_calls and min_call_rate can not be given simultaneously'
+        parser.error(msg)
+    elif min_calls is None and min_call_rate is None:
+        msg = 'min_calls or min_call_rate has to be given'
+        parser.error(msg)
+
+    if min_calls is not None:
+        filter_class_kwargs['min_calls'] = min_calls
+    if min_call_rate is not None:
+        filter_class_kwargs['min_call_rate'] = min_call_rate
+
+    return filter_snvs_kwargs, filter_class_kwargs
+
+
+def main():
+    description = 'Removes the SNVs with too much missing data from a VCF file'
+    parser = _setup_argparse(description=description)
+    kwargs, filter_kwargs = _parse_args(parser)
+
+    filter_ = CallRateFilter(**filter_kwargs)
+    kwargs['filters'] = [filter_]
+    filter_snvs(**kwargs)
+
+
+if __name__ == '__main__':
+    main()

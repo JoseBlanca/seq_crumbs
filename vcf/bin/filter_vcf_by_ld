@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+
+import argparse
+
+from vcf_crumbs.utils.bin_utils import (setup_basic_argparse, parse_basic_args,
+                                        parse_sample_file)
+from vcf_crumbs.snv import VCFReader, VCFWriter
+from vcf_crumbs.ld import (filter_snvs_by_ld, DEF_SNV_WIN, DEF_R_SQR_THRESHOLD,
+                           DEF_P_VAL, MIN_PHYS_DIST)
+
+
+def _setup_argparse(**kwargs):
+    parser = setup_basic_argparse(**kwargs)
+    parser.add_argument('-s', '--samples', action='append',
+                        help='samples to use')
+    parser.add_argument('-p', '--samples_file',
+                        help='File with samples to use. One per line',
+                        type=argparse.FileType('r'))
+    hlp_win = 'Snv windows size to check ld (default {})'.format(DEF_SNV_WIN)
+    parser.add_argument('--snv_win', default=DEF_SNV_WIN, help=hlp_win)
+    help_r_sqr = 'R_sqr threslhold (default {})'.format(DEF_R_SQR_THRESHOLD)
+    parser.add_argument('--r_sqr', default=DEF_R_SQR_THRESHOLD,
+                        help=help_r_sqr)
+    help_pval = 'P-val Threshold (default {})'.format(DEF_P_VAL)
+    parser.add_argument('--p_val', default=DEF_P_VAL,
+                        help=help_pval)
+    help_min_phys = 'Minimun distance between snv to calculate LD (default {})'
+    help_min_phys = help_min_phys.format(MIN_PHYS_DIST)
+    parser.add_argument('--min_phys_dist', default=MIN_PHYS_DIST,
+                        help=help_min_phys)
+    help_bonferroni = "Don't do bonferroni correction (default True)"
+    parser.add_argument('--no_bonferroni_correction', default=True,
+                        action='store_false', help=help_bonferroni)
+
+    return parser
+
+
+def _parse_args(parser):
+    args, parsed_args = parse_basic_args(parser)
+    samples = set()
+    if parsed_args.samples is not None:
+        samples.update(parsed_args.samples)
+    if parsed_args.samples_file is not None:
+        samples.update(parse_sample_file(parsed_args.samples_file))
+    if not samples:
+        samples = None
+
+    filter_kwargs = {}
+    filter_kwargs['samples'] = samples
+    filter_kwargs['snv_win'] = parsed_args.snv_win
+    filter_kwargs['r_sqr'] = parsed_args.r_sqr
+    filter_kwargs['bonferroni'] = parsed_args.no_bonferroni_correction
+    filter_kwargs['p_val'] = parsed_args.p_val
+    filter_kwargs['min_phys_dist'] = parsed_args.min_phys_dist
+    filter_kwargs['log_fhand'] = args['log_fhand']
+    return args, filter_kwargs
+
+
+def main():
+    description = 'Filter snvs by Linkage disequilibrium with it neigthbour '
+    description += 'snvs from a VCF file'
+    parser = _setup_argparse(description=description)
+    kwargs, filter_kwargs = _parse_args(parser)
+    in_fhand = kwargs['in_fhand']
+    out_fhand = kwargs['out_fhand']
+    template_fhand = kwargs['template_fhand']
+
+    reader = VCFReader(in_fhand)
+    template = reader if template_fhand is None else VCFReader(template_fhand)
+    writer = VCFWriter(out_fhand, template_reader=template)
+
+    snvs = reader.parse_snvs()
+    for snv in filter_snvs_by_ld(snvs, **filter_kwargs):
+        writer.write_snv(snv)
+
+if __name__ == '__main__':
+    main()

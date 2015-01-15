@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+
+from sys import stdout
+
+from vcf_crumbs.utils.bin_utils import (setup_basic_argparse,
+                                        parse_basic_args)
+from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter,
+                                         run_genotype_filters,
+                                         DEF_PROB_AA_THRESHOLD, HW, RIL_SELF)
+from vcf_crumbs.snv import DEF_MIN_CALLS_FOR_POP_STATS
+
+
+def print_log(log):
+    tot = log.pop('tot')
+    stdout.write('Tot. SNVs: %i\n' % tot)
+
+    keys = sorted(log.keys())
+    for key in keys:
+        val = log[key]
+        percent = val / tot * 100
+        stdout.write(key.replace('_', ' ').capitalize() + ': ')
+        stdout.write(str(val))
+        stdout.write(' (%.1f%%)\n' % percent)
+
+
+def main():
+    description = 'It removes alleles in homo calls with low depth'
+    parser = setup_basic_argparse(description=description)
+
+    parser.add_argument('-m', '--min_homo_prob', type=float,
+                        default=DEF_PROB_AA_THRESHOLD)
+    parser.add_argument('-g', '--geno_freqs_method', type=str,
+                        default=HW)
+    msg = 'Min. num. of called genotypes to consider the SNV. Used in hw.'
+    parser.add_argument('-c', '--min_calls', type=int, help=msg,
+                        default=DEF_MIN_CALLS_FOR_POP_STATS)
+
+    msg = 'Num. generation (F2 would be 1). Used in ril_self.'
+    parser.add_argument('-n', '--num_gen', type=int, help=msg)
+
+    args, parsed_args = parse_basic_args(parser)
+    args['min_homo_prob'] = parsed_args.min_homo_prob
+    args['geno_freqs_method'] = parsed_args.geno_freqs_method
+    if args['geno_freqs_method'] == RIL_SELF:
+        args['num_gen'] = parsed_args.num_gen
+        if args['num_gen'] is None:
+            msg = 'For the ril_self method the num_gen param is mandatory'
+            parser.error(msg)
+
+    reader_args = {}
+    min_calls = parsed_args.min_calls
+    if min_calls:
+        reader_args['min_calls_for_pop_stats'] = min_calls
+
+    method = args['geno_freqs_method']
+    flt_args = {'genotypic_freqs_method': method,
+                'prob_aa_threshold': args['min_homo_prob']}
+    if method == RIL_SELF:
+        flt_args['genotypic_freqs_kwargs'] = {'n_generation': args['num_gen']}
+
+    flt = LowEvidenceAlleleFilter(**flt_args)
+    run_genotype_filters(args['in_fhand'], args['out_fhand'],
+                         gt_filters=[flt], reader_kwargs=reader_args)
+    print_log(flt.log)
+
+if __name__ == '__main__':
+    main()

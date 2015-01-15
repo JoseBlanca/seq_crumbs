@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+import sys
+import argparse
+import json
+import os.path
+
+from configobj import ConfigObj
+
+from vcf.parser import _Filter, _Info
+from vcf_crumbs.snv import VCFReader, VCFWriter
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'Filter the snvs in an indexed vcf'
+    parser = argparse.ArgumentParser(description=description)
+    in_help = 'Indexed vcf file'
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rt'))
+    parser.add_argument('-o', '--output',
+                        help='output vcf file', type=argparse.FileType('wt'))
+    parser.add_argument('-f', '--filter_conf', required=True,
+                        type=argparse.FileType('rt'),
+                        help='File with the filter configuration')
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    args = {}
+    args['in_fhand'] = parsed_args.input
+    if parsed_args.output is not None:
+        args['out_fhand'] = parsed_args.output
+    else:
+        args['out_fhand'] = sys.stdout
+    args['filter_fhand'] = parsed_args.filter_conf
+    return args
+
+
+def _parse_filters_conf(fpath, snv_in_fpath):
+    config = ConfigObj(fpath, unrepr=True)
+    filters = []
+    for filter_confs in config.values():
+        filter_class_name = filter_confs.keys()[0]
+        args = filter_confs.values()[0]
+        mod = __import__('vcf_crumbs.annotation',
+                         fromlist=[filter_class_name])
+        filter_class = getattr(mod, filter_class_name)
+        filter_ = filter_class(**args)
+        filters.append(filter_)
+    return filters
+
+
+def _manage_mappers(reader, filters_in_conf):
+    mappers_to_use = []
+    for mapper in filters_in_conf:
+        # we add the snp caller to the mapper
+        if mapper.is_filter:
+            if mapper.name in reader.filters:
+                new_conf = mapper.conf
+                conf_in_vcf = reader.filters[mapper.name].desc.split('::')[1]
+                conf_in_vcf = conf_in_vcf.replace("'", "\"")
+                conf_in_vcf = json.loads(conf_in_vcf)
+                if new_conf == conf_in_vcf:  # no need to run again
+                    continue
+                else:
+                    mappers_to_use.append(mapper)
+            else:
+                mappers_to_use.append(mapper)
+        else:
+            if mapper.info_id in reader.infos:
+                new_conf = mapper.conf
+                conf_in_vcf = reader.infos[mapper.info_id].desc.split('::')[1]
+                conf_in_vcf = conf_in_vcf.replace("'", "\"")
+                conf_in_vcf = json.loads(conf_in_vcf)
+                if new_conf == conf_in_vcf:  # no need to run again
+                    continue
+                else:
+                    mappers_to_use.append(mapper)
+            else:
+                mappers_to_use.append(mapper)
+
+    for mapper in mappers_to_use:
+        if mapper.is_filter:
+            reader.filters[mapper.name] = _Filter(mapper.name,
+                                                  mapper.description)
+        if mapper.info:
+            info = mapper.info
+            reader.infos[info['id']] = _Info(**info)
+    return mappers_to_use
+
+
+def main():
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    reader = VCFReader(args['in_fhand'])
+    filters_in_conf = _parse_filters_conf(args['filter_fhand'],
+                                          args['in_fhand'].name)
+    mappers = _manage_mappers(reader, filters_in_conf)
+    writer = VCFWriter(args['out_fhand'], reader)
+
+    for snv in reader.parse_snvs():
+        for mapper in mappers:
+            mapper(snv)
+        if snv.filters is None:
+            snv.filters = []
+        writer.write_snv(snv)
+    writer.close()
+if __name__ == '__main__':
+    main()

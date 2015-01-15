@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+'''
+Calculate genotyping related statistics by sample
+'''
+import sys
+import argparse
+import vcf
+from crumbs.statistics import IntCounter
+from vcf_crumbs.statistics import get_call_data, get_snpcaller_name, GQ
+
+
+def _setup_argparse():
+    'It prepares the command line argument parsing.'
+    description = 'Filter the snvs in an indexed vcf'
+    parser = argparse.ArgumentParser(description=description)
+    in_help = 'Indexed vcf file'
+    parser.add_argument('input', help=in_help, type=argparse.FileType('rt'))
+
+    parser.add_argument('-o', '--output',
+                        help='output tabbed file (default STDOUT)',
+                        type=argparse.FileType('wt'))
+    parser.add_argument('-q', '--gq_threshold', default=0, type=int,
+                        help='Quality threslholt to take a genotype as valid')
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    args = {}
+    args['in_fhand'] = parsed_args.input
+    if parsed_args.output is not None:
+        args['out_fhand'] = parsed_args.output
+    else:
+        args['out_fhand'] = sys.stdout
+    args['gq_threshold'] = parsed_args.gq_threshold
+    return args
+
+
+def main():
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+    reader = vcf.Reader(args['in_fhand'])
+    vcf_variant = get_snpcaller_name(reader)
+    gq_threshold = args['gq_threshold']
+    geno_stats_by_sample = IntCounter()
+    called_stats = IntCounter()
+    for record in reader:
+
+        num_called = 0
+        for call in record.samples:
+            gq = get_call_data(call, vcf_variant=vcf_variant)[GQ]
+            if gq > gq_threshold and call.called:
+                geno_stats_by_sample[call.sample] += 1
+                num_called += 1
+        called_stats[num_called] += 1
+
+    out_fhand = args['out_fhand']
+    out_fhand.write('Genotypes filtered using quality threshold: {}\n'.format(gq_threshold))
+    out_fhand.write('Num snps in which each sample is involved:\n')
+    out_fhand.write('------------------------------------------\n')
+    for sample in sorted(geno_stats_by_sample.keys()):
+        out_fhand.write('{}\t{}\n'.format(sample,
+                                          geno_stats_by_sample[sample]))
+
+    out_fhand.write('Num of snps with these number of genotypes called:\n')
+    out_fhand.write('--------------------------------------------------\n')
+    for num_samples, num_snvs in called_stats.items():
+        out_fhand.write('{}\t{}\n'.format(num_samples, num_snvs))
+
+
+if __name__ == '__main__':
+    main()
