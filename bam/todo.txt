@@ -1,7 +1,0 @@
-Distribucion con los EDIT distances
-Distribuciones de coverage por sample
-Calcular y hacer todos las estadistaicas juntas con un solo
-Calcular la distribucion de la covertura para las secuencias con (mapq > lista_de_calidades=
-
-input can be one or more bam file
-

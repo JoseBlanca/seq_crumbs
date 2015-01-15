@@ -1,0 +1,163 @@
+TODO
+-----
+
+Remove the option to give fasta files when a bwa or bowtie2 index is required:
+	- add to bam_crumbs a crumb to create indexes in the designated direcotry
+	(by default the directory in which the fasta file is)?
+	- Remove the option and check that the index exists. Raise an error if a 
+	fasta is given with no index.
+
+Create functions to reverse and complement sequence objects:
+	- check that there are no functions already in place
+	- create the functions in seq.py
+	- remove the _reverse and _complementary functions from mapping.py
+
+Take a look at kraken: http://www.ebi.ac.uk/research/enright/software/kraken
+Reaper + Tally + Minion
+Reaper is a program for demultiplexing, trimming and filtering short read sequencing data. It can handle barcodes, trim adapter sequences, strip low quality bases and low complexity sequence, and has many more features. It is fast (written in C) and uses very little memory (one read at-a-time).
+Tally removes redundancy from sequence files by collapsing identicle reads to a single entry while recording the number of instances of each. It can also tally paired-end data or re-pair independently processed paired-end files.
+Minion is a small utility program to infer or test the presence of 3' adapter sequence in sequencing data.
+
+Nextera preprocessing: http://pathogenomics.bham.ac.uk/blog/2013/04/adaptor-trim-or-die-experiences-with-nextera-libraries/
+
+Why  write_trim_packets duplicates write_filter_packets?
+
+Write the manual
+
+Add a binary to remove Ns
+
+Add filter to remove Illumina pair end chimeras
+
+Add a binary named seq_crumbs that list of the crumbs available.
+
+Could the following post modernize the error logging? http://blog.ionelmc.ro/2013/12/10/adding-stacktraces-to-log-messages/
+
+The cleaners should be able to work with the pairs. For instance, the quality
+cleaner could end up removing a read. In that case the pair should go to the
+orphan. To do that the cleaners should deal with a stream of pair list, like
+the filters and not with a stream of reads.
+What happens when all the quality is trimmed from a seq? Is the seq filtered out? Is the seq None?
+How to do it:
+  2. What happens when a sequence is lost?
+  3. The sequences should be trimmed in pairs.
+    3.1 Trimming functions should work with pair generators
+    3.2 Triming binaries should have an orphan option
+
+Performance
+	1. compare with prinseq
+	2. Is one fat cleaner (qual + length trimming) faster than two piped crumbs?
+
+Add fast fastq parsing:
+There's code for fast parsing in:
+https://github.com/ged-lab/khmer/blob/bleeding-edge/lib/read_parsers.cc
+> Nuestro lector:
+> - Debería estar escrito en C o C++ y ser importado con cffi.
+> - Debe leer pairs no lecturas sueltas.
+> - Todos los threads deben alimentar un mismo iterador como lo hace el del khmer. Así es muy fácil de enlazar a cualquier otra parte del código como si no fuese paralelo.
+
+
+
+calculate stats might use SeqItems. The stats could be done with chars instead of quality integers.
+Before changing that it should be considered if it is worth it.
+
+file_format should be a property of seqItem not of SeqWrapper
+
+rename prefered_seq_classes to preferred_seq_classes
+
+Add a test for sample, head or cat with different input formats, it should fail.
+
+Take a look at python bedtools for the segments
+
+SeqWrapper and SeqItem should be in a module with all the seq methods, like get_str_seq
+
+Add Mira traceinfo.xml to sff_extract.
+
+Add crumb sort_by_mid. It should divide the reads, mainly 454, into sets according to their forward and reverse MIDs given a list of MIDs.
+The mids can be located with cutadapt.calign.pyx or with difflib.get_close_matches.
+The second algorithm could be something like:
+  - Look for exact mid matches and store the reads with no exact match.
+  - From the exact ones record the position for the mids in forward and reverse.
+  - Given the position look in the reads with no exact match using get_close_matches.
+
+trim_blast_contanimant
+----------------------
+
+It trims the regions that match with a given fasta file or blast database.
+for instance the vector (Univec)
+
+Enmascara las regiones que tienen un match_part contra una base de datos.
+
+trim_with_cutadapt
+------------------
+
+with cutadapt
+
+mask con el lucy vectores
+----------------
+
+mask con el lucy calidad
+----------------
+
+mask quality by n
+------------------
+
+mask poli A
+-----------
+
+mask low complexity
+--------------------
+with blast dust
+
+
+
+filter with re en título
+------------------------
+grep en el nombre y la descripción
+
+
+trim longest fragemnt trim all fragments
+----------------------------------------
+
+a lo mejor el mismo ejecutable con una opción de método
+
+
+separar flags
+-------------
+
+
+crumbs_catalog
+--------------
+
+lista los que hay disponibles
+
+########################################
+BAM
+---
+Distribucion con los EDIT distances
+Distribuciones de coverage por sample
+Calcular y hacer todos las estadistaicas juntas con un solo
+Calcular la distribucion de la covertura para las secuencias con (mapq > lista_de_calidades=
+
+input can be one or more bam file
+
+######################################
+VCF
+---
+Statistics of the total coverage for SNP
+
+Text for the statistic results
+
+Filtros SNPs para evitar falsos snps debidos a parálogos
+
+- Coverage filter. A false snp due to a paralog sequence should have more total
+coverage. We could draw the total coverage distribution and remove the ones
+with to much coverage
+- Not linked with the snps close to the studied snp in a small window (See Tassel
+recomendations).
+
+Módulos relacionados con ld en tassel (puede haber más):
+
+src/net/maizegenetics/pal/popgen/DiversityAnalyses.java
+src/net/maizegenetics/pal/popgen/LinkageDisequilibrium.java
+La clave está en la función getLDForSitePair
+

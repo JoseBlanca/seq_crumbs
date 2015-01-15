@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+'''
+Created on 2014 ots 11
+
+@author: peio
+'''
+from __future__ import division
+
+import sys
+import argparse
+from crumbs.bam.statistics import mapped_count_by_rg
+
+
+def _setup_argparse():
+    'It returns the argument parser'
+    description = 'Calculate statistics of the given files'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input', help='BAM or SAM file to process',
+                        nargs='*')
+    parser.add_argument('-o', '--outfile', default=sys.stdout, dest='outfile',
+                        help='Sequence output file (default STDOUT)',
+                        type=argparse.FileType('wt'))
+    parser.add_argument('-m', '--mapq', type=int,
+                        help='Percentaje of reads with percent bigger than X')
+
+    return parser
+
+
+def _parse_args(parser):
+    'It parses the command line and it returns a dict with the arguments.'
+    parsed_args = parser.parse_args()
+    in_fpaths = parsed_args.input
+    mapq = parsed_args.mapq
+    out_fhand = getattr(parsed_args, 'outfile')
+
+    return in_fpaths, out_fhand, mapq
+
+
+def main():
+    parser = _setup_argparse()
+    in_fpaths, out_fhand, mapq = _parse_args(parser)
+    counts = mapped_count_by_rg(in_fpaths, mapq)
+    out_fhand.write('Readgroup\tMapped\tUnmapped\t% mapped')
+    if mapq:
+        out_fhand.write('\t% mapq >{}\n'.format(mapq))
+    else:
+        out_fhand.write('\n')
+
+    total_mapped = 0
+    total_unmapped = 0
+    total_mapqx = 0
+    mapqx = None
+    for rg, map_counts in counts.items():
+        mapped = map_counts['mapped']
+        unmapped = map_counts['unmapped']
+        num_reads = mapped + unmapped
+        total_mapped += mapped
+        total_unmapped += unmapped
+        out_fhand.write('{}\t{}\t{}\t{:.2%}'.format(rg, mapped, unmapped,
+                                                      mapped / num_reads))
+        if mapq is not None:
+            mapqx = map_counts['bigger_mapqx']
+            total_mapqx += mapqx
+            out_fhand.write('\t{:.2%}\n'.format(mapqx / num_reads))
+        else:
+            out_fhand.write('\n')
+
+    out_fhand.write('--------------------------\n')
+    out_fhand.write('Total:\t{}\t{}\t{:.2%}'.format(total_mapped,
+                                                      total_unmapped,
+                               total_mapped / (total_mapped + total_unmapped)))
+    if mapqx is not None:
+        out_fhand.write('\t{:.2%}\n'.format(total_mapqx / (total_mapped +
+                                                           total_unmapped)))
+    else:
+        out_fhand.write('\n')
+
+
+if __name__ == '__main__':
+    main()
