@@ -6,15 +6,15 @@ from subprocess import check_output
 from StringIO import StringIO
 
 
-from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
-from vcf_crumbs.annotation import (CloseToSnv, HighVariableRegion,
+from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.vcf.annotation import (CloseToSnv, HighVariableRegion,
                                    CloseToLimit, MafDepthLimit, CapEnzyme,
                                    AminoChangeAnnotator, IsVariableAnnotator,
                                    IsVariableDepthAnnotator,
                                    AminoSeverityChangeAnnotator,
                                    HeterozigoteInSamples)
-from vcf_crumbs.snv import VCFReader
-from test.test_snv import VCF_HEADER
+from crumbs.vcf.snv import VCFReader
 
 # Method could be a function
 # pylint: disable=R0201
@@ -514,7 +514,7 @@ SEUC00016_TC01\t112\trs6054257\tT\tC\t29\tPASS\tNS=3;DP=14;AF=0.5;DB;H2\tGT:GQ:D
         assert snv.infos[info_id] == 'False'
 
     def test_is_variable_annotator(self):
-        
+
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT 1 2 3 4 5 6 7
 20\t14\t.\tA\tA\t29\tPASS\t.\tGT\t./.\t./.\t1/1\t0/0\t1/.\t1/1\t1/1'''
         vcf = VCF_HEADER + vcf

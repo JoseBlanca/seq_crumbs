@@ -11,13 +11,14 @@ except ImportError:
 
 from vcf import Reader
 
-from vcf_crumbs.snv import VCFReader
-from vcf_crumbs.statistics import (VcfStats, HOM_REF, VCFcomparisons,
+from crumbs.vcf.snv import VCFReader
+from crumbs.vcf.statistics import (VcfStats, HOM_REF, VCFcomparisons,
                                    _AlleleCounts2D, HOM_ALT, HOM, HET,
                                    draw_read_pos_stats,
                                    calc_snv_read_pos_stats)
 
-from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
 
 VARSCAN_VCF_PATH = join(TEST_DATA_DIR, 'sample.vcf.gz')
 REF_PATH = join(TEST_DATA_DIR, 'sample_ref.fasta')

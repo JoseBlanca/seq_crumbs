@@ -2,8 +2,8 @@
 import sys
 import argparse
 
-from vcf_crumbs.snv import VCFReader
-from vcf_crumbs.writers import DEF_PHYS_TO_GENET_DIST, RQTLWriter
+from crumbs.vcf.snv import VCFReader
+from crumbs.vcf.writers import DEF_PHYS_TO_GENET_DIST, RQTLWriter
 
 
 def _setup_argparse():
@@ -17,8 +17,8 @@ def _setup_argparse():
     hlp = 'output RQTL csvr file (default STDOUT)'
     parser.add_argument('-o', '--output', help=hlp,
                         type=argparse.FileType('wt'))
-    
-    hlp = 'physical to genetic distance ratio (DEF.' 
+
+    hlp = 'physical to genetic distance ratio (DEF.'
     hlp += str(DEF_PHYS_TO_GENET_DIST) + '\n'
     parser.add_argument('-d', '--phys_to_genet', type=int,
                         default=DEF_PHYS_TO_GENET_DIST)

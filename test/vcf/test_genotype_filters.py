@@ -5,9 +5,9 @@ from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 from subprocess import check_call, CalledProcessError, check_output
 
-from vcf_crumbs.utils.file_utils import BIN_DIR
-from vcf_crumbs.snv import VCFReader
-from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter, RIL_SELF,
+from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.vcf.snv import VCFReader
+from crumbs.vcf.genotype_filters import (LowEvidenceAlleleFilter, RIL_SELF,
                                          prob_aa_given_n_a_reads_hw)
 
 # Method could be a function

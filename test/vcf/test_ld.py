@@ -3,13 +3,14 @@ from os.path import join
 from StringIO import StringIO
 from tempfile import NamedTemporaryFile
 
-from vcf_crumbs.snv import VCFReader
-from vcf_crumbs.ld import (_count_biallelic_haplotypes, calculate_r_sqr,
+from crumbs.vcf.snv import VCFReader
+from crumbs.vcf.ld import (_count_biallelic_haplotypes, calculate_r_sqr,
                            HaploCount, _calculate_r_sqr, _fisher_exact,
                            calculate_ld_stats, filter_snvs_by_ld, fisher_exact,
                            _LDStatsCache, _calc_recomb_rate,
                            calc_recomb_rates_along_chroms)
-from vcf_crumbs.utils.file_utils import BIN_DIR, TEST_DATA_DIR
+from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
 from subprocess import check_call
 
 # Method could be a function

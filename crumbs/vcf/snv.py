@@ -11,10 +11,10 @@ from vcf.model import make_calldata_tuple
 # ouch, _Call is a private class, but we don't know how to modify a Call
 from vcf.model import _Call as pyvcfCall
 from vcf.model import _Record as pyvcfRecord
-from vcf_crumbs.iterutils import generate_windows
+from crumbs.vcf.iterutils import generate_windows
 
-from crumbs.seqio import read_seqs
-from crumbs.seq import get_name, get_length
+from crumbs.seq.seqio import read_seqs
+from crumbs.seq.seq import get_name, get_length
 from crumbs.utils.file_utils import flush_fhand
 
 # Missing docstring

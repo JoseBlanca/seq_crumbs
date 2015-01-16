@@ -2,10 +2,10 @@
 
 import argparse
 
-from vcf_crumbs.utils.bin_utils import (setup_basic_argparse, parse_basic_args,
+from crumbs.vcf.utils.bin_utils import (setup_basic_argparse, parse_basic_args,
                                         parse_sample_file)
-from vcf_crumbs.snv import VCFReader, VCFWriter
-from vcf_crumbs.ld import (filter_snvs_by_ld, DEF_SNV_WIN, DEF_R_SQR_THRESHOLD,
+from crumbs.vcf.snv import VCFReader, VCFWriter
+from crumbs.vcf.ld import (filter_snvs_by_ld, DEF_SNV_WIN, DEF_R_SQR_THRESHOLD,
                            DEF_P_VAL, MIN_PHYS_DIST)
 
 

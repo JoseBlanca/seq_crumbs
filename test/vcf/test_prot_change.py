@@ -5,7 +5,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from vcf_crumbs.prot_change import (SeqCoords, IsIndelError, OutsideAlignment,
+from crumbs.vcf.prot_change import (SeqCoords, IsIndelError, OutsideAlignment,
                                     BetweenSegments, get_amino_change)
 
 

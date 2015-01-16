@@ -1,7 +1,6 @@
 
 import unittest
 from os.path import join as pjoin
-from os.path import dirname
 from io import StringIO
 from os import remove
 from tempfile import NamedTemporaryFile
@@ -9,12 +8,12 @@ from subprocess import check_output
 
 from vcf import Reader
 
-from vcf_crumbs.snv import VCFReader
-from vcf_crumbs.utils.file_utils import (TEST_DATA_DIR, compress_with_bgzip,
-                                         index_vcf_with_tabix)
-from vcf_crumbs.writers import (IlluminaWriter, _replace_snvs_with_iupac,
+from crumbs.vcf.snv import VCFReader
+from crumbs.utils.file_utils import compress_with_bgzip, index_vcf_with_tabix
+from crumbs.vcf.writers import (IlluminaWriter, _replace_snvs_with_iupac,
                                 RQTLWriter, DEF_PHYS_TO_GENET_DIST)
-from vcf_crumbs.utils.file_utils import BIN_DIR
+from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
 
 # Method could be a function
 # pylint: disable=R0201

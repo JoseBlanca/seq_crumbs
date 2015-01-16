@@ -1,7 +1,7 @@
 
 import unittest
 
-from vcf_crumbs.iterutils import (generate_windows, PeekableIterator,
+from crumbs.vcf.iterutils import (generate_windows, PeekableIterator,
                                   RandomAccessIterator)
 
 # Method could be a function

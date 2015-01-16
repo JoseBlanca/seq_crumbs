@@ -6,8 +6,8 @@ from scipy.stats import fisher_exact as scipy_fisher
 
 from vcf import Reader as pyvcfReader
 
-from vcf_crumbs.statistics import choose_samples
-from vcf_crumbs.iterutils import RandomAccessIterator
+from crumbs.vcf.statistics import choose_samples
+from crumbs.vcf.iterutils import RandomAccessIterator
 
 
 # Missing docstring

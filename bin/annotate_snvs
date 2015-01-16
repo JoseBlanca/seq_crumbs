@@ -7,7 +7,7 @@ import os.path
 from configobj import ConfigObj
 
 from vcf.parser import _Filter, _Info
-from vcf_crumbs.snv import VCFReader, VCFWriter
+from crumbs.vcf.snv import VCFReader, VCFWriter
 
 
 def _setup_argparse():
@@ -44,7 +44,7 @@ def _parse_filters_conf(fpath, snv_in_fpath):
     for filter_confs in config.values():
         filter_class_name = filter_confs.keys()[0]
         args = filter_confs.values()[0]
-        mod = __import__('vcf_crumbs.annotation',
+        mod = __import__('crumbs.vcf.annotation',
                          fromlist=[filter_class_name])
         filter_class = getattr(mod, filter_class_name)
         filter_ = filter_class(**args)

@@ -2,11 +2,12 @@
 import unittest
 from StringIO import StringIO
 from os.path import join
-
-from vcf_crumbs.snv import (VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter,
-                            GENERIC)
-from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
 from tempfile import NamedTemporaryFile
+
+from crumbs.vcf.snv import (VCFReader, FREEBAYES, VARSCAN, GATK, VCFWriter,
+                            GENERIC)
+from crumbs.utils.test_utils import TEST_DATA_DIR
+
 
 # Method could be a function
 # pylint: disable=R0201

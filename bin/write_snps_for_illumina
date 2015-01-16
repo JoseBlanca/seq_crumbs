@@ -4,7 +4,7 @@ import argparse
 
 from vcf import Reader
 
-from vcf_crumbs.writers import IlluminaWriter
+from crumbs.vcf.writers import IlluminaWriter
 
 
 def _setup_argparse():

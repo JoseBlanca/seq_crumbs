@@ -3,16 +3,16 @@ from operator import itemgetter
 
 from vcf import Reader
 
-from crumbs.seq import get_name, get_length
-from crumbs.seqio import read_seqs
-from crumbs.statistics import IntCounter, IntBoxplot
+from crumbs.seq.seq import get_name, get_length
+from crumbs.seq.seqio import read_seqs
+from crumbs.seq.statistics import IntCounter, IntBoxplot
 from crumbs.plot import get_fig_and_canvas, draw_int_boxplot
-from vcf_crumbs.snv import (VARSCAN, GATK, FREEBAYES, HOM_REF, HET, HOM_ALT,
+from crumbs.vcf.snv import (VARSCAN, GATK, FREEBAYES, HOM_REF, HET, HOM_ALT,
                             HOM, DEF_MIN_CALLS_FOR_POP_STATS, VCFReader,
                             pyvcfReader)
 
 # TODO: This must be optional
-from bam_crumbs.coord_transforms import ReadRefCoord
+from crumbs.bam.coord_transforms import ReadRefCoord
 
 
 # Missing docstring

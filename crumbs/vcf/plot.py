@@ -1,14 +1,9 @@
 
-import random
-from operator import itemgetter
-from collections import Counter
-
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-from vcf_crumbs.statistics import ADS
 from crumbs.plot import get_fig_and_canvas
-from vcf_crumbs.snv import VCFReader
+from crumbs.vcf.snv import VCFReader
 
 FILTER_ALLELES_GT = None    # it could be an integer, i.e. 1 to keep only the
                             # 2 parental alleles in a F2

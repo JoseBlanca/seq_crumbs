@@ -25,20 +25,20 @@ from crumbs.utils.optional_modules import (FastaIterator, QualPhredIterator,
                                            FastqSolexaIterator,
                                            FastqIlluminaIterator,
                                            parse_into_seqrecs)
-from crumbs.utils.data import (ambiguous_rna_letters, ambiguous_dna_letters,
+from crumbs.seq.utils.data import (ambiguous_rna_letters, ambiguous_dna_letters,
                                extended_protein_letters)
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError,
                                FileIsEmptyError, IsSingleLineFastqError)
-from crumbs.iterutils import group_in_packets, group_in_packets_fill_last
+from crumbs.seq.iterutils import group_in_packets, group_in_packets_fill_last
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
-from crumbs.utils.file_formats import get_format, peek_chunk_from_file
+from crumbs.seq.utils.file_formats import get_format, peek_chunk_from_file
 
 from crumbs.utils.tags import (GUESS_FORMAT, SEQS_PASSED, SEQS_FILTERED_OUT,
                                SEQITEM, SEQRECORD, ORPHAN_SEQS,
                                SANGER_FASTQ_FORMATS, ILLUMINA_FASTQ_FORMATS)
 from crumbs.settings import get_setting
-from crumbs.seq import SeqItem, get_str_seq, assing_kind_to_seqs
+from crumbs.seq.seq import SeqItem, get_str_seq, assing_kind_to_seqs
 
 # pylint: disable=C0111
 

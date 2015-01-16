@@ -2,12 +2,12 @@
 
 from sys import stdout
 
-from vcf_crumbs.utils.bin_utils import (setup_basic_argparse,
+from crumbs.vcf.utils.bin_utils import (setup_basic_argparse,
                                         parse_basic_args)
-from vcf_crumbs.genotype_filters import (LowEvidenceAlleleFilter,
+from crumbs.vcf.genotype_filters import (LowEvidenceAlleleFilter,
                                          run_genotype_filters,
                                          DEF_PROB_AA_THRESHOLD, HW, RIL_SELF)
-from vcf_crumbs.snv import DEF_MIN_CALLS_FOR_POP_STATS
+from crumbs.vcf.snv import DEF_MIN_CALLS_FOR_POP_STATS
 
 
 def print_log(log):

@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-from vcf_crumbs.utils.file_utils import get_input_fhand
+from crumbs.utils.file_utils import get_input_fhand
 
 # Missing docstring
 # pylint: disable=C0111

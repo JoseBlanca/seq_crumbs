@@ -7,17 +7,18 @@ from vcf import Reader
 # pylint: disable=C0111
 
 IUPAC_CODES = {('A', 'C'): 'M',
-              ('A', 'G'): 'R',
-              ('A', 'T'): 'W',
-              ('C', 'G'): 'S',
-              ('C', 'T'): 'Y',
-              ('G', 'T'): 'K',
-              ('A', 'C', 'G'): 'V',
-              ('A', 'C', 'T'): 'H',
-              ('A', 'G', 'T'): 'D',
-              ('C', 'G', 'T'): 'B',
-              ('A', 'C', 'G', 'T'): 'N'}
-IUPAC_CODES = {tuple(sorted(alleles)): code for alleles, code in IUPAC_CODES.items()}
+               ('A', 'G'): 'R',
+               ('A', 'T'): 'W',
+               ('C', 'G'): 'S',
+               ('C', 'T'): 'Y',
+               ('G', 'T'): 'K',
+               ('A', 'C', 'G'): 'V',
+               ('A', 'C', 'T'): 'H',
+               ('A', 'G', 'T'): 'D',
+               ('C', 'G', 'T'): 'B',
+               ('A', 'C', 'G', 'T'): 'N'}
+IUPAC_CODES = {tuple(sorted(alleles)): code
+               for alleles, code in IUPAC_CODES.items()}
 
 
 def _get_unicode_alleles(snv):
@@ -25,7 +26,7 @@ def _get_unicode_alleles(snv):
 
 
 def _replace_snvs_with_iupac(str_seq, snvs, seq_offset):
-    # TODO add parameter that accepts a function to be run fore 
+    # TODO add parameter that accepts a function to be run fore
     # every SNP, to select which ones get put as IUPAC, e.g. maf filter
     seq = list(str_seq)
     for snv in snvs:
@@ -178,7 +179,7 @@ class RQTLWriter(object):
                    ('-', 'B'): 'B-',
                    ('A', 'B'): 'AB',
                    ('B', 'A'): 'AB'}
-    
+
     def __init__(self, out_fhand, phys_to_genet_dist=None):
         self._fhand = out_fhand
         self._snv_count = 0
@@ -196,10 +197,10 @@ class RQTLWriter(object):
         if self._first_snp:
             self._write_header_line(snv)
             self._first_snp = False
-        
+
         genotype = []
         ab_coding = {'.': '-'}
-        
+
         for call in snv.record.samples:
             if not call.called:
                 ab_geno = 'NA'

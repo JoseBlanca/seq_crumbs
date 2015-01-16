@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from vcf_crumbs.filters import ObsHetFilter, filter_snvs
-from vcf_crumbs.utils.bin_utils import setup_filter_argparse, parse_filter_args
-from vcf_crumbs.snv import DEF_MIN_CALLS_FOR_POP_STATS
+from crumbs.vcf.filters import ObsHetFilter, filter_snvs
+from crumbs.vcf.utils.bin_utils import setup_filter_argparse, parse_filter_args
+from crumbs.vcf.snv import DEF_MIN_CALLS_FOR_POP_STATS
 
 
 def _setup_argparse(**kwargs):

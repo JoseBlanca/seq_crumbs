@@ -5,16 +5,16 @@ from subprocess import check_output, Popen, PIPE, check_call
 from StringIO import StringIO
 import os
 
-from vcf_crumbs.snv import VCFReader
+from crumbs.vcf.snv import VCFReader
 
-from vcf_crumbs.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
+from crumbs.vcf.filters import (PASSED, FILTERED_OUT, group_in_filter_packets,
                                 CallRateFilter, BiallelicFilter, IsSNPFilter,
                                 SnvQualFilter, ObsHetFilter, MafFilter,
                                 filter_snvs, MonomorphicFilter,
                                 WeirdSegregationFilter,
                                 WeirdRecombFilter)
-from vcf_crumbs.utils.file_utils import TEST_DATA_DIR, BIN_DIR
-from crumbs.utils.file_utils import TemporaryDir
+from crumbs.utils.bin_utils import BIN_DIR
+from crumbs.utils.test_utils import TEST_DATA_DIR
 
 # Method could be a function
 # pylint: disable=R0201

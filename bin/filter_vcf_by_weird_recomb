@@ -4,13 +4,13 @@ import sys
 import argparse
 from StringIO import StringIO
 
-from vcf_crumbs.snv import VCFReader, VCFWriter
-from vcf_crumbs.filters import (WeirdRecombFilter, DEF_MAX_ZERO_DIST_RECOMB,
+from crumbs.vcf.snv import VCFReader, VCFWriter
+from crumbs.vcf.filters import (WeirdRecombFilter, DEF_MAX_ZERO_DIST_RECOMB,
                                 DEF_ALPHA, DEF_MIN_NUM_SNPS_WEIRD_RECOMB,
                                 DEF_NUM_SNPS_IN_WIN_FOR_WEIRD_RECOMB,
                                 DEF_MAX_RECOMB_RATE_WEIRD_RECOMB)
-from vcf_crumbs.utils.bin_utils import parse_sample_file
-from vcf_crumbs.utils.file_utils import get_input_fhand
+from crumbs.vcf.utils.bin_utils import parse_sample_file
+from crumbs.utils.file_utils import get_input_fhand
 
 
 def setup_argparse(**kwargs):

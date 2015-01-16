@@ -21,12 +21,12 @@ from scipy.stats.distributions import t
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from crumbs.iterutils import group_in_packets
-from vcf_crumbs.iterutils import RandomAccessIterator
+from crumbs.seq.iterutils import group_in_packets
+from crumbs.vcf.iterutils import RandomAccessIterator
 
-from vcf_crumbs.snv import VCFReader, VCFWriter, DEF_MIN_CALLS_FOR_POP_STATS
-from vcf_crumbs.ld import _calc_recomb_rate
-from vcf_crumbs import snv
+from crumbs.vcf.snv import VCFReader, VCFWriter, DEF_MIN_CALLS_FOR_POP_STATS
+from crumbs.vcf.ld import _calc_recomb_rate
+from crumbs.vcf import snv
 
 
 # Missing docstring

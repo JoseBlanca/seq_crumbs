@@ -10,8 +10,8 @@ import unittest
 from collections import OrderedDict
 
 from crumbs.utils.file_utils import TemporaryDir
-from vcf_crumbs.plot import plot_in_genome, plot_haplotypes
-from vcf_crumbs.utils.file_utils import TEST_DATA_DIR
+from crumbs.vcf.plot import plot_in_genome, plot_haplotypes
+from crumbs.utils.test_utils import TEST_DATA_DIR
 from tempfile import NamedTemporaryFile
 
 

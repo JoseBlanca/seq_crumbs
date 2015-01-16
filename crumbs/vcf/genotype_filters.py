@@ -2,7 +2,7 @@ from __future__ import division
 from collections import Counter
 from StringIO import StringIO
 
-from vcf_crumbs.snv import VCFReader, VCFWriter
+from crumbs.vcf.snv import VCFReader, VCFWriter
 
 # Missing docstring
 # pylint: disable=C0111

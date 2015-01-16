@@ -1,18 +1,18 @@
 from __future__ import division
 
 import json
-from os.path import join
+from os.path import join, abspath
 from collections import Counter
 from itertools import count
 
 from Bio import SeqIO
 from Bio.Restriction.Restriction import CommOnly, RestrictionBatch, Analysis
 
-from vcf_crumbs.prot_change import (get_amino_change, IsIndelError,
+from crumbs.vcf.prot_change import (get_amino_change, IsIndelError,
                                     BetweenSegments, OutsideAlignment)
-from vcf_crumbs.utils.file_utils import DATA_DIR
-from vcf_crumbs.snv import VCFReader
+from crumbs.vcf.snv import VCFReader
 
+DATA_DIR = abspath(join(__file__, '..', 'data'))
 # Missing docstring
 # pylint: disable=C0111
 

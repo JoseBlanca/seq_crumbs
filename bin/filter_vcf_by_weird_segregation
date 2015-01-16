@@ -3,11 +3,11 @@
 import sys
 import argparse
 
-from vcf_crumbs.snv import VCFReader, VCFWriter
-from vcf_crumbs.filters import (WeirdSegregationFilter, DEF_ALPHA, DEF_SNV_WIN,
+from crumbs.vcf.snv import VCFReader, VCFWriter
+from crumbs.vcf.filters import (WeirdSegregationFilter, DEF_ALPHA, DEF_SNV_WIN,
                                 DEF_MAX_FAILED_FREQ, DEF_MAX_DIST,
                                 DEF_MIN_DIST, DEF_MIN_NUM_CHECK_SNPS_IN_WIN)
-from vcf_crumbs.utils.bin_utils import parse_sample_file
+from crumbs.vcf.utils.bin_utils import parse_sample_file
 
 
 def setup_argparse(**kwargs):
