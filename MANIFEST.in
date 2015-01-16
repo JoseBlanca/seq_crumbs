@@ -1,6 +1,10 @@
 include LICENSE.txt
 include README.rst
 recursive-include crumbs/third_party *
+recursive-include crumbs/seq *
+recursive-include crumbs/bam *
+recursive-include crumbs/vcf *
+recursive-include crumbs/utils *
 recursive-include doc *.rst
 recursive-include doc *.txt
-recursive-include crumbs/test_data *
+recursive-include test/test_data *
