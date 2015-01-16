@@ -26,10 +26,10 @@ from subprocess import check_output
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 
-from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.seq.seq import SeqWrapper, SeqItem
 from crumbs.utils.tags import SEQITEM
-from crumbs.bulk_filters import (filter_duplicates, _read_pairs,
-                                 _seqitem_pairs_equal)
+from crumbs.seq.bulk_filters import (filter_duplicates, _read_pairs,
+                                     _seqitem_pairs_equal)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.exceptions import UndecidedFastqVersionError

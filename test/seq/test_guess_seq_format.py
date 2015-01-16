@@ -20,7 +20,7 @@ from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.utils.file_formats import get_format, _guess_format
+from crumbs.seq.utils.file_formats import get_format, _guess_format
 from crumbs.exceptions import (UnknownFormatError, FileIsEmptyError,
                                UndecidedFastqVersionError)
 

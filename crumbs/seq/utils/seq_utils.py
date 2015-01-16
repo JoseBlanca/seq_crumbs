@@ -18,7 +18,7 @@ import itertools
 from multiprocessing import Pool
 
 from crumbs.utils.tags import UPPERCASE, LOWERCASE, SWAPCASE
-from crumbs.seq import get_description, get_name, get_str_seq, copy_seq
+from crumbs.seq.seq import get_description, get_name, get_str_seq, copy_seq
 
 
 # pylint: disable=R0903

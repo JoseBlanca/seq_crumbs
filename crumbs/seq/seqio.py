@@ -25,12 +25,13 @@ from crumbs.utils.optional_modules import (FastaIterator, QualPhredIterator,
                                            FastqSolexaIterator,
                                            FastqIlluminaIterator,
                                            parse_into_seqrecs)
-from crumbs.seq.utils.data import (ambiguous_rna_letters, ambiguous_dna_letters,
-                               extended_protein_letters)
+from crumbs.seq.utils.data import (ambiguous_rna_letters,
+                                   ambiguous_dna_letters,
+                                   extended_protein_letters)
 from crumbs.exceptions import (MalformedFile, error_quality_disagree,
                                UnknownFormatError, IncompatibleFormatError,
                                FileIsEmptyError, IsSingleLineFastqError)
-from crumbs.seq.iterutils import group_in_packets, group_in_packets_fill_last
+from crumbs.iterutils import group_in_packets, group_in_packets_fill_last
 from crumbs.utils.file_utils import rel_symlink, flush_fhand
 from crumbs.seq.utils.file_formats import get_format, peek_chunk_from_file
 

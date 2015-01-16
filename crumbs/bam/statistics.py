@@ -12,8 +12,8 @@ try:
     from pysam.csamtools import Samfile
 except ImportError:
     from pysam import Samfile
-from crumbs.seq.statistics import (draw_histogram_ascii, IntCounter, LABELS,
-                                   BestItemsKeeper)
+from crumbs.statistics import (draw_histogram_ascii, IntCounter, LABELS,
+                               BestItemsKeeper)
 
 from crumbs.settings import get_setting
 from crumbs.bam.flag import SAM_FLAG_BINARIES, SAM_FLAGS

@@ -16,10 +16,10 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-
-from crumbs.utils.bin_utils import main, argparse
+import argparse
+from crumbs.utils.bin_utils import main
 from crumbs.settings import get_setting
-from crumbs.mate_chimeras import calculate_distance_distribution
+from crumbs.seq.mate_chimeras import calculate_distance_distribution
 from crumbs.utils.tags import GUESS_FORMAT
 from crumbs.plot import draw_histograms
 

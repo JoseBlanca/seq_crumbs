@@ -21,14 +21,13 @@ from tempfile import NamedTemporaryFile
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.transcript_orientations import TranscriptOrientator
+from crumbs.seq.transcript_orientations import TranscriptOrientator
 from crumbs.settings import get_setting
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import SEQRECORD
-from crumbs.seq import get_str_seq
-from crumbs.seqio import read_seqs
-from crumbs.seq import SeqWrapper
+from crumbs.seq.seq import get_str_seq, SeqWrapper
+from crumbs.seq.seqio import read_seqs
 
 POLYA_ANNOTATOR_MISMATCHES = get_setting('POLYA_ANNOTATOR_MISMATCHES')
 
@@ -125,7 +124,7 @@ class TestTranscriptomeOrientator(unittest.TestCase):
 
         assert get_str_seq(seq1) == get_str_seq(seqs[0])
         rev_str_seq1 = str(seqs[1].object.seq.reverse_complement())
-        assert get_str_seq(seq2) == rev_str_seq1 
+        assert get_str_seq(seq2) == rev_str_seq1
         assert get_str_seq(seq4) == get_str_seq(seqs[3])
         rev_str_seq4 = str(seqs[4].object.seq.reverse_complement())
         assert get_str_seq(seq5) == rev_str_seq4

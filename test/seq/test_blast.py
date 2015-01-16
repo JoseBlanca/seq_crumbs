@@ -26,7 +26,7 @@ from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import get_setting
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NUCL, SEQITEM, SEQRECORD
-from crumbs.seq import SeqWrapper, SeqItem, assing_kind_to_seqs
+from crumbs.seq.seq import SeqWrapper, SeqItem, assing_kind_to_seqs
 
 TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
 FLX_LINKER = get_setting('FLX_LINKER')

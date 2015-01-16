@@ -22,8 +22,8 @@ from crumbs.utils.tags import (GUESS_FORMAT, OUTFILE)
 from crumbs.utils.file_utils import (wrap_in_buffered_reader,
                                      uncompress_if_required, flush_fhand)
 from crumbs.utils.bin_utils import main, build_version_msg
-from crumbs.utils.file_formats import get_format, set_format
-from crumbs.seqio import read_seqs
+from crumbs.seq.utils.file_formats import get_format, set_format
+from crumbs.seq.seqio import read_seqs
 from crumbs.statistics import calculate_sequence_stats
 from crumbs.settings import get_setting
 

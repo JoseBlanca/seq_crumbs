@@ -16,11 +16,11 @@
 from itertools import compress
 import os.path
 
-from crumbs.annotation import (PolyaAnnotator, EstscanOrfAnnotator,
-                               BlastAnnotator)
-from crumbs.utils.seq_utils import append_to_description
+from crumbs.seq.annotation import (PolyaAnnotator, EstscanOrfAnnotator,
+                                   BlastAnnotator)
+from crumbs.seq.utils.seq_utils import append_to_description
 from crumbs.utils.tags import SEQRECORD
-from crumbs.seq import SeqWrapper
+from crumbs.seq.seq import SeqWrapper
 
 
 class TranscriptOrientator(object):

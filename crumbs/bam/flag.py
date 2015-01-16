@@ -26,3 +26,17 @@ SAM_FLAG_BINARIES = list(sorted(SAM_FLAG_BITS.viewvalues()))
 def create_flag(bit_tags):
     'It returns the integer corresponding to the bitwise or of the tags'
     return reduce(or_, [SAM_FLAG_BITS[t] for t in bit_tags])
+
+
+def bit_tags_to_int_flag(bit_tags):
+    'It returns the integer corresponding to the given list of tags'
+    return reduce(or_, bit_tags)
+
+
+def int_flag_to_bit_tags(flag):
+    'It returns a list with the indexes of the bits set to 1 in the given flag'
+    return [num for num in SAM_FLAG_BINARIES if num & flag]
+
+
+def bit_tag_is_in_int_flag(bit_flag, int_flag):
+    return bit_flag in int_flag_to_bit_tags(int_flag)

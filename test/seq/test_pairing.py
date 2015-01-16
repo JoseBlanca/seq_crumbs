@@ -22,20 +22,21 @@ from Bio.bgzf import BgzfReader
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.pairs import (match_pairs, interleave_pairs, deinterleave_pairs,
-                          group_pairs, group_pairs_by_name,
-                          _parse_pair_direction_and_name_from_title,
-                          _parse_pair_direction_and_name)
+from crumbs.seq.pairs import (match_pairs, interleave_pairs,
+                              deinterleave_pairs,
+                              group_pairs, group_pairs_by_name,
+                              _parse_pair_direction_and_name_from_title,
+                              _parse_pair_direction_and_name)
 from crumbs.iterutils import flat_zip_longest
 from crumbs.utils.tags import FWD, SEQRECORD, SEQITEM
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.seq import get_str_seq
-from crumbs.seqio import read_seqs, assing_kind_to_seqs
+from crumbs.seq.seq import get_str_seq
+from crumbs.seq.seqio import read_seqs, assing_kind_to_seqs
 from crumbs.exceptions import (InterleaveError, PairDirectionError,
                                ItemsNotSortedError)
-from crumbs.seq import SeqWrapper, SeqItem
-from crumbs.utils.file_formats import set_format
+from crumbs.seq.seq import SeqWrapper, SeqItem
+from crumbs.seq.utils.file_formats import set_format
 
 # pylint: disable=R0201
 # pylint: disable=R0904

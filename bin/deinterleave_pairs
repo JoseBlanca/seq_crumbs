@@ -18,11 +18,11 @@
 import sys
 import argparse
 
-from crumbs.utils.bin_utils import (main, create_basic_argparse,
-                                    parse_basic_args)
-from crumbs.seqio import read_seqs
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import create_basic_argparse, parse_basic_args
+from crumbs.seq.seqio import read_seqs
 from crumbs.utils.tags import OUTFILE
-from crumbs.pairs import deinterleave_pairs
+from crumbs.seq.pairs import deinterleave_pairs
 
 
 def _setup_argparse():

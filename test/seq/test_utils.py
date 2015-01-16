@@ -28,10 +28,10 @@ from crumbs.utils.bin_utils import check_process_finishes, popen, BIN_DIR
 from crumbs.exceptions import ExternalBinaryError, MissingBinaryError
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import ERROR_ENVIRON_VARIABLE
-from crumbs.seqio import guess_seq_type
+from crumbs.seq.seqio import guess_seq_type
 from crumbs.settings import get_setting
-from crumbs.utils.file_formats import get_format, FILEFORMAT_INVENTORY,\
-    set_format
+from crumbs.seq.utils.file_formats import (get_format, FILEFORMAT_INVENTORY,
+                                           set_format)
 from crumbs.utils.sqlite_utils import SqliteCache
 
 

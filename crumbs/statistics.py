@@ -21,7 +21,7 @@ import operator
 import re
 
 from crumbs.settings import get_setting
-from crumbs.seq.iterutils import rolling_window
+from crumbs.iterutils import rolling_window
 from crumbs.utils import approx_equal
 from crumbs.seq.seq import get_str_seq, get_length, get_int_qualities
 

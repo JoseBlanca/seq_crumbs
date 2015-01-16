@@ -17,12 +17,13 @@
 
 import sys
 import tempfile
+import argparse
 
-from crumbs.utils.bin_utils import (main, argparse, parse_basic_args,
-                                    build_version_msg)
+from crumbs.utils.bin_utils import main, build_version_msg
+from crumbs.seq.utils.bin_utils import parse_basic_args
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.settings import get_setting
-from crumbs.mate_chimeras import classify_chimeras
+from crumbs.seq.mate_chimeras import classify_chimeras
 from crumbs.utils.tags import GUESS_FORMAT, OUTFILE
 
 

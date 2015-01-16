@@ -15,7 +15,6 @@
 
 import cStringIO
 from array import array
-import itertools
 import hashlib
 
 from crumbs.utils.optional_modules import FastqGeneralIterator

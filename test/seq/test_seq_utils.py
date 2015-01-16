@@ -27,47 +27,10 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.utils.file_utils import fhand_is_seekable, wrap_in_buffered_reader
-from crumbs.utils.seq_utils import (uppercase_length, ChangeCase,
-                                    get_uppercase_segments)
+from crumbs.seq.seq import assing_kind_to_seqs, get_str_seq
+from crumbs.seq.utils.seq_utils import (uppercase_length, ChangeCase,
+                                        get_uppercase_segments)
 from crumbs.utils.tags import SWAPCASE, UPPERCASE, LOWERCASE, SEQRECORD
-from crumbs.seq import assing_kind_to_seqs, get_str_seq
-
-
-class SeekableFileTest(unittest.TestCase):
-
-    def test_is_seekable(self):
-        'It tests wether the fhands are seekable or not'
-
-        # StringIO
-        fhand = StringIO('hola')
-        assert fhand_is_seekable(fhand)
-
-        # standard file
-        fhand = NamedTemporaryFile()
-        fhand.seek(0)
-        assert fhand_is_seekable(fhand)
-
-        # a wrapped BufferedReader
-        fhand2 = wrap_in_buffered_reader(fhand)
-        assert fhand_is_seekable(fhand2)
-
-        # pylint: disable=R0903
-        # pylint: disable=C0111
-        class NonSeekable(object):
-            'Just for testing'
-            pass
-
-        assert not fhand_is_seekable(NonSeekable())
-
-        class NonSeekable2(object):
-            def seek(self):
-                pass
-
-            def seekable(self):
-                return False
-
-        assert not fhand_is_seekable(NonSeekable2())
 
 
 class UppercaseLengthTest(unittest.TestCase):

@@ -20,8 +20,10 @@
 
 import unittest
 
-from crumbs.utils.sam import (bit_tags_to_int_flag, int_flag_to_bit_tags,
-                              IS_PAIRED, IS_IN_PROPER_PAIR)
+from crumbs.bam.flag import (bit_tags_to_int_flag, int_flag_to_bit_tags,
+                             SAM_FLAG_BITS)
+IS_PAIRED = SAM_FLAG_BITS['is_paired']
+IS_IN_PROPER_PAIR = SAM_FLAG_BITS['is_in_proper_pair']
 
 
 class FlagTests(unittest.TestCase):

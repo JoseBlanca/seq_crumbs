@@ -16,11 +16,11 @@
 # similar software SffToCA
 
 from crumbs.blast import BlasterForFewSubjects
-from crumbs.seqio import write_seqs
+from crumbs.seq.seqio import write_seqs
 from crumbs.settings import get_setting
 from crumbs.utils.tags import NUCL, SEQITEM
-from crumbs.seq import (assing_kind_to_seqs, get_name, slice_seq, get_length,
-                        copy_seq, SeqItem)
+from crumbs.seq.seq import (assing_kind_to_seqs, get_name, slice_seq, get_length,
+                            copy_seq, SeqItem)
 
 # pylint: disable=R0903
 

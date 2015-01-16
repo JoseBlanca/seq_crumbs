@@ -29,17 +29,17 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
-from crumbs.filters import (FilterByLength, FilterById, FilterByQuality,
-                            FilterBlastMatch, FilterBlastShort,
-                            FilterDustComplexity, seq_to_filterpackets,
-                            FilterByRpkm, FilterByBam, FilterAllNs,
-                            FilterBowtie2Match, FilterByFeatureTypes)
+from crumbs.seq.filters import (FilterByLength, FilterById, FilterByQuality,
+                                FilterBlastMatch, FilterBlastShort,
+                                FilterDustComplexity, seq_to_filterpackets,
+                                FilterByRpkm, FilterByBam, FilterAllNs,
+                                FilterBowtie2Match, FilterByFeatureTypes)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import (NUCL, SEQS_FILTERED_OUT, SEQS_PASSED, SEQITEM,
                                SEQRECORD)
-from crumbs.seq import get_name, get_str_seq, SeqWrapper
-from crumbs.seqio import read_seq_packets
+from crumbs.seq.seq import get_name, get_str_seq, SeqWrapper
+from crumbs.seq.seqio import read_seq_packets
 
 
 _seqs_to_names = lambda seqs: [get_name(s) for pair in seqs for s in pair]

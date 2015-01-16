@@ -18,8 +18,8 @@ from crumbs.statistics import IntCounter
 from crumbs.settings import get_setting
 from crumbs.mapping import (map_process_to_sortedbam, map_with_bwamem,
                             alignedread_to_seqitem)
-from crumbs.seqio import write_seqs
-from crumbs.pairs import group_pairs, group_pairs_by_name
+from crumbs.seq.seqio import write_seqs
+from crumbs.seq.pairs import group_pairs, group_pairs_by_name
 
 
 def seq_to_filterpackets(seq_packets, group_paired_reads=False):

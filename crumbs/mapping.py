@@ -25,11 +25,11 @@ from crumbs.utils.bin_utils import (check_process_finishes, get_binary_path,
 from crumbs.settings import get_setting
 from crumbs.utils.file_utils import TemporaryDir
 
-from crumbs.utils.file_formats import get_format
-from crumbs.seq import SeqItem, SeqWrapper, get_str_seq, get_name
+from crumbs.seq.utils.file_formats import get_format
+from crumbs.seq.seq import SeqItem, SeqWrapper, get_str_seq, get_name
 from crumbs.utils.tags import SEQITEM
 from crumbs.iterutils import sorted_items
-from crumbs.seqio import read_seqs
+from crumbs.seq.seqio import read_seqs
 
 
 def _bwa_index_exists(index_path):
@@ -273,9 +273,8 @@ def map_process_to_sortedbam(map_process, out_fpath, key='coordinate',
 
     if tempdir is None:
         tempdir = tempfile.gettempdir()
-    picard_tools = get_setting("PICARD_TOOLS_DIR")
-    fpath = os.path.join(picard_tools, 'SortSam.jar')
-    cmd = ['java', '-jar', fpath, 'I=/dev/stdin',
+    picard_jar = get_setting("PICARD_JAR")
+    cmd = ['java', '-jar', picard_jar, 'SortSam', 'I=/dev/stdin',
            'O=' + out_fpath, 'SO=' + key, 'TMP_DIR=' + tempdir,
            'VALIDATION_STRINGENCY=LENIENT']
     sort = popen(cmd, stdin=map_process.stdout, stderr=stderr)

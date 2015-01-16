@@ -26,7 +26,7 @@ from crumbs.mapping import (get_or_create_bowtie2_index, _bowtie2_index_exists,
                             map_with_tophat)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.utils.bin_utils import get_binary_path
-from crumbs.seq import get_name
+from crumbs.seq.seq import get_name
 import pysam
 
 

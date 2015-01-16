@@ -9,12 +9,12 @@ from subprocess import check_output
 from tempfile import NamedTemporaryFile
 
 
-from crumbs.mate_chimeras import (classify_mapped_reads, classify_chimeras,
-                                  calculate_distance_distribution)
+from crumbs.seq.mate_chimeras import (classify_mapped_reads, classify_chimeras,
+                                      calculate_distance_distribution)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.tags import NON_CHIMERIC, CHIMERA, UNKNOWN
-from crumbs.seq import get_name
+from crumbs.seq.seq import get_name
 from crumbs.mapping import map_with_bwamem, map_process_to_sortedbam
 
 

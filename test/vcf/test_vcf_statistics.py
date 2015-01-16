@@ -129,7 +129,7 @@ reference2\t400\tmicrosat1\tGTC\tG,GTCT\t50\tPASS\tNS=3;DP=9;AA=G\tGT:GQ:DP\t./.
 
         fhand = NamedTemporaryFile(suffix='.png')
         draw_read_pos_stats(stats, fhand)
-        raw_input(fhand.name)
+        #raw_input(fhand.name)
 
 if __name__ == "__main__":
     import sys;sys.argv = ['', 'ReadPosCoord']

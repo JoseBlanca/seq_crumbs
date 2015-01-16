@@ -19,7 +19,7 @@
 
 import os
 import unittest
-from  cStringIO import StringIO
+from cStringIO import StringIO
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
 
@@ -28,9 +28,9 @@ from Bio.Seq import Seq
 
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import (guess_seq_type, fastaqual_to_fasta, seqio,
-                          _write_seqrecords, _read_seqrecords,
-                          _itemize_fastx, read_seqs, write_seqs)
+from crumbs.seq.seqio import (guess_seq_type, fastaqual_to_fasta, seqio,
+                              _write_seqrecords, _read_seqrecords,
+                              _itemize_fastx, read_seqs, write_seqs)
 from crumbs.utils.tags import SEQITEM, SEQRECORD
 from crumbs.exceptions import IncompatibleFormatError, MalformedFile
 

@@ -27,12 +27,13 @@ from tempfile import NamedTemporaryFile
 import math
 
 
-from crumbs.alignment_result import (BlastParser, TabularBlastParser,
-                                     alignment_results_scores, ExonerateParser,
-                                     filter_alignments,
-                                     covered_segments_from_match_parts,
-                                     elongate_match_parts_till_global,
-                                     TextBlastParser, QUERY, SUBJECT)
+from crumbs.seq.alignment_result import (BlastParser, TabularBlastParser,
+                                         alignment_results_scores,
+                                         ExonerateParser,
+                                         filter_alignments,
+                                         covered_segments_from_match_parts,
+                                         elongate_match_parts_till_global,
+                                         TextBlastParser, QUERY, SUBJECT)
 
 
 from crumbs.utils.test_utils import TEST_DATA_DIR

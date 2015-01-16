@@ -17,14 +17,15 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_trimmer_args,
-                                    create_trimmer_argparse)
-from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (parse_trimmer_args,
+                                        create_trimmer_argparse)
+from crumbs.seq.utils.seq_utils import process_seq_packets
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.utils.tags import SEQITEM
-from crumbs.trim import TrimWithBlastShort, TrimOrMask, seq_to_trim_packets
-from crumbs.seqio import read_seq_packets, write_trim_packets
-from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.seq.trim import TrimWithBlastShort, TrimOrMask, seq_to_trim_packets
+from crumbs.seq.seqio import read_seq_packets, write_trim_packets
+from crumbs.seq.seq import SeqWrapper, SeqItem
 
 
 def _setup_argparse():
@@ -67,10 +68,10 @@ def run():
     trim_or_mask = TrimOrMask(mask=args['mask'])
 
     trim_packets, workers = process_seq_packets(trim_packets,
-                                               [prep_trim, trim_or_mask],
-                                               processes=args['processes'])
+                                                [prep_trim, trim_or_mask],
+                                                processes=args['processes'])
     write_trim_packets(out_fhand, orphan_fhand, trim_packets,
-                         args['out_format'], workers=workers)
+                       args['out_format'], workers=workers)
 
     flush_fhand(out_fhand)
     if orphan_fhand is not None:

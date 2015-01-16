@@ -12,7 +12,7 @@ import pysam
 from crumbs.utils.bin_utils import main, build_version_msg
 
 from crumbs.bam.statistics import ReadStats
-from crumbs.seq.statistics import draw_histogram_ascii
+from crumbs.statistics import draw_histogram_ascii
 from crumbs.plot import draw_histogram_in_fhand
 
 

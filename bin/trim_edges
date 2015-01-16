@@ -17,12 +17,13 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_trimmer_args,
-                                    create_trimmer_argparse)
-from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (parse_trimmer_args,
+                                        create_trimmer_argparse)
+from crumbs.seq.utils.seq_utils import process_seq_packets
 from crumbs.utils.file_utils import flush_fhand
-from crumbs.trim import TrimEdges, TrimOrMask, seq_to_trim_packets
-from crumbs.seqio import read_seq_packets, write_trim_packets
+from crumbs.seq.trim import TrimEdges, TrimOrMask, seq_to_trim_packets
+from crumbs.seq.seqio import read_seq_packets, write_trim_packets
 
 
 def _setup_argparse():

@@ -18,14 +18,14 @@ import subprocess
 import tempfile
 
 from crumbs.utils.optional_modules import NCBIWWW
-from crumbs.seqio import seqio, guess_seq_type, write_seqs
+from crumbs.seq.seqio import seqio, guess_seq_type, write_seqs
 from crumbs.utils.bin_utils import (check_process_finishes, popen,
                                     get_binary_path)
 from crumbs.utils.tags import NUCL, PROT
-from crumbs.alignment_result import (filter_alignments, ELONGATED, QUERY,
-                                     covered_segments_from_match_parts,
-                                     elongate_match_parts_till_global,
-                                     TabularBlastParser, BlastParser)
+from crumbs.seq.alignment_result import (filter_alignments, ELONGATED, QUERY,
+                                         covered_segments_from_match_parts,
+                                         elongate_match_parts_till_global,
+                                         TabularBlastParser, BlastParser)
 from crumbs.utils.file_utils import TemporaryDir
 from crumbs.settings import get_setting
 

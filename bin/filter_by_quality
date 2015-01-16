@@ -17,12 +17,13 @@
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_filter_args,
-                                    create_filter_argparse)
-from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (parse_filter_args,
+                                        create_filter_argparse)
+from crumbs.seq.utils.seq_utils import process_seq_packets
 from crumbs.utils.file_utils import flush_fhand
-from crumbs.seqio import read_seq_packets, write_filter_packets
-from crumbs.filters import FilterByQuality, seq_to_filterpackets
+from crumbs.seq.seqio import read_seq_packets, write_filter_packets
+from crumbs.seq.filters import FilterByQuality, seq_to_filterpackets
 from crumbs.utils.tags import SEQRECORD
 
 

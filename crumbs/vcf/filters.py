@@ -21,7 +21,7 @@ from scipy.stats.distributions import t
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from crumbs.seq.iterutils import group_in_packets
+from crumbs.iterutils import group_in_packets
 from crumbs.vcf.iterutils import RandomAccessIterator
 
 from crumbs.vcf.snv import VCFReader, VCFWriter, DEF_MIN_CALLS_FOR_POP_STATS

@@ -26,15 +26,15 @@ except ImportError:
 
 from crumbs.utils.tags import (SEQS_PASSED, SEQS_FILTERED_OUT, SEQITEM,
                                SEQRECORD)
-from crumbs.utils.seq_utils import uppercase_length, get_uppercase_segments
-from crumbs.seq import get_name, get_file_format, get_str_seq, get_length
+from crumbs.seq.utils.seq_utils import uppercase_length, get_uppercase_segments
+from crumbs.seq.seq import get_name, get_file_format, get_str_seq, get_length
 from crumbs.exceptions import WrongFormatError
 from crumbs.blast import Blaster, BlasterForFewSubjects
 from crumbs.statistics import calculate_dust_score
 from crumbs.settings import get_setting
 from crumbs.mapping import map_with_bowtie2, map_process_to_bam
-from crumbs.seqio import write_seqs
-from crumbs.pairs import group_pairs, group_pairs_by_name
+from crumbs.seq.seqio import write_seqs
+from crumbs.seq.pairs import group_pairs, group_pairs_by_name
 
 
 def seq_to_filterpackets(seq_packets, group_paired_reads=False):

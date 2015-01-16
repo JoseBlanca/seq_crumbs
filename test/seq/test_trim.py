@@ -22,16 +22,16 @@ from cStringIO import StringIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from crumbs.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
-                         TrimByQuality, TrimWithBlastShort,
-                         seq_to_trim_packets, TrimMatePairChimeras)
+from crumbs.seq.trim import (TrimLowercasedLetters, TrimEdges, TrimOrMask,
+                             TrimByQuality, TrimWithBlastShort,
+                             seq_to_trim_packets, TrimMatePairChimeras)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.tags import (SEQRECORD, SEQITEM, TRIMMING_RECOMMENDATIONS,
                                VECTOR, ORPHAN_SEQS, SEQS_PASSED, OTHER)
-from crumbs.seq import (get_str_seq, get_annotations, get_int_qualities,
-                        get_name)
-from crumbs.seqio import read_seq_packets, read_seqs
-from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.seq.seq import (get_str_seq, get_annotations, get_int_qualities,
+                            get_name)
+from crumbs.seq.seqio import read_seq_packets, read_seqs
+from crumbs.seq.seq import SeqWrapper, SeqItem
 from crumbs.utils.test_utils import TEST_DATA_DIR
 
 FASTQ = '@seq1\naTCgt\n+\n?????\n@seq2\natcGT\n+\n?????\n'

@@ -16,16 +16,21 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from crumbs.utils.bin_utils import (main, argparse, create_trimmer_argparse,
-                                    parse_trimmer_args)
-from crumbs.utils.file_utils import flush_fhand
-from tempfile import NamedTemporaryFile
 import os
-from crumbs.trim import trim_with_cutadapt, _3END, seq_to_trim_packets,\
-    TrimNexteraAdapters, TrimOrMask
-from crumbs.seqio import read_seq_packets, write_trim_packets
-from crumbs.utils.seq_utils import process_seq_packets
-from crumbs.seq import SeqWrapper, SeqItem
+import argparse
+from tempfile import NamedTemporaryFile
+
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (parse_trimmer_args,
+                                        create_trimmer_argparse)
+
+from crumbs.utils.file_utils import flush_fhand
+
+from crumbs.seq.trim import (trim_with_cutadapt, _3END, seq_to_trim_packets,
+                             TrimNexteraAdapters, TrimOrMask)
+from crumbs.seq.seqio import read_seq_packets, write_trim_packets
+from crumbs.seq.utils.seq_utils import process_seq_packets
+from crumbs.seq.seq import SeqWrapper, SeqItem
 from crumbs.utils.tags import SEQITEM
 
 
@@ -41,9 +46,9 @@ def create_argparse(add_reverse=True, **kwargs):
                         action='store_true', help=help1)
     cutadapt_group = parser.add_argument_group('Trim with cutadapt')
     cutadapt_group.add_argument('--error_rate', default=None,
-                        help='Max error rate for adapter finding (0.1)')
+                               help='Max error rate for adapter finding (0.1)')
     cutadapt_group.add_argument('-s', '--summary_file', default=None,
-                        help='File to write cutadapt summary (stdout)')
+                                help='File to write cutadapt summary (stdout)')
     return parser
 
 
@@ -98,15 +103,15 @@ def run():
 
         seq_packets = read_seq_packets(in_fhands)
         trim_packets = seq_to_trim_packets(seq_packets,
-                                    group_paired_reads=args['paired_reads'])
+                                        group_paired_reads=args['paired_reads'])
         prep_trim = TrimNexteraAdapters(oligos=oligos)
         trim_or_mask = TrimOrMask(mask=args['mask'])
 
         trim_packets, workers = process_seq_packets(trim_packets,
-                                                   [prep_trim, trim_or_mask],
+                                                    [prep_trim, trim_or_mask],
                                                    processes=args['processes'])
         write_trim_packets(out_fhand, orphan_fhand, trim_packets,
-                             args['out_format'], workers=workers)
+                           args['out_format'], workers=workers)
 
         flush_fhand(out_fhand)
         if orphan_fhand is not None:

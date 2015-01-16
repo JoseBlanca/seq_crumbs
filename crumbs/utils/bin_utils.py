@@ -1,6 +1,7 @@
 import sys
 import os.path
 import platform
+from subprocess import Popen
 
 from crumbs.settings import get_setting
 from crumbs.third_party import cgitb
@@ -13,8 +14,7 @@ from crumbs.exceptions import (UnknownFormatError, FileNotFoundError,
                                PairDirectionError, InterleaveError,
                                OptionalRequirementError)
 
-from crumbs.utils.tags import (OUTFILE, GUESS_FORMAT, BGZF, GZIP, BZIP2,
-                               ERROR_ENVIRON_VARIABLE)
+from crumbs.utils.tags import BGZF, GZIP, BZIP2, ERROR_ENVIRON_VARIABLE
 
 from crumbs import __version__ as version
 
@@ -171,15 +171,14 @@ def get_binary_path(binary_name):
 
     third_party_path = get_setting('THIRD_PARTY_DIR')
 
-    binary_path = os.path.abspath(join(third_party_path, system, arch,
+    binary_path = os.path.abspath(join(third_party_path, 'bin', system, arch,
                                        binary_name))
-
     if os.path.exists(binary_path):
         return binary_path
     elif arch == '64bit':
         arch = '32bit'
-        binary_path = os.path.abspath(join(third_party_path, system, arch,
-                                           binary_name))
+        binary_path = os.path.abspath(join(third_party_path, 'bin', system,
+                                           arch, binary_name))
         if os.path.exists(binary_path):
             return binary_path
 
@@ -206,3 +205,55 @@ def get_num_threads(threads):
         return phisical_threads
     else:
         return threads
+
+
+def get_requested_compression(parsed_args):
+    'It looks in the selected options and return the selected compression kind'
+    comp_kind = None
+    bgzf = getattr(parsed_args, 'bgzf', False)
+    gzip = getattr(parsed_args, 'gzip', False)
+    bzip2 = getattr(parsed_args, 'bzip2', False)
+    if bgzf:
+        comp_kind = BGZF
+    elif gzip:
+        comp_kind = GZIP
+    elif bzip2:
+        comp_kind = BZIP2
+    return comp_kind
+
+
+def check_process_finishes(process, binary, stdout=None, stderr=None):
+    'It checks that the given process finishes OK, otherwise raises an Error'
+
+    stdout_msg, stderr_msg = process.communicate()
+
+    returncode = process.returncode
+    if returncode == 0:
+        return
+    elif returncode is None:
+        msg = 'The process for {:s} is still running with PID'
+        msg = msg.format(binary, process.PID)
+        raise RuntimeError(msg)
+
+    if stdout and not stdout_msg:
+        stdout.flush()
+        stdout_msg = open(stdout.name).read()
+    if stderr and not stderr_msg:
+        stderr.flush()
+        stderr_msg = open(stderr.name).read()
+    msg = '{:s} had a problem running\n'.format(binary)
+    if stdout_msg:
+        msg += 'stdout:\n{:s}\n'.format(stdout_msg)
+    if stderr_msg:
+        msg += 'stderr:\n{:s}\n'.format(stderr_msg)
+    raise ExternalBinaryError(msg)
+
+
+def popen(*args, **kwargs):
+    'It spawns a process with subprocess.Popen'
+    try:
+        return Popen(*args, **kwargs)
+    except OSError, error:
+        msg = 'The binary "%s" is not in the path.' % args[0][0]
+        if 'No such file' in str(error):
+            raise MissingBinaryError(msg)

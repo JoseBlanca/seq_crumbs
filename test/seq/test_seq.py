@@ -19,8 +19,9 @@
 
 import unittest
 
-from crumbs.seq import (get_length, get_str_seq, get_int_qualities,
-        get_str_qualities, slice_seq, copy_seq, SeqItem, SeqWrapper)
+from crumbs.seq.seq import (get_length, get_str_seq, get_int_qualities,
+                            get_str_qualities, slice_seq, copy_seq, SeqItem,
+                            SeqWrapper)
 from crumbs.utils.tags import SEQITEM, ILLUMINA_QUALITY
 
 

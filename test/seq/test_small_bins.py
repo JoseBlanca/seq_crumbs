@@ -23,7 +23,7 @@ from gzip import GzipFile
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.statistics import count_seqs
 from crumbs.utils import BZ2File
-from crumbs.seqio import read_seqs
+from crumbs.seq.seqio import read_seqs
 
 # pylint: disable=R0201
 # pylint: disable=R0904

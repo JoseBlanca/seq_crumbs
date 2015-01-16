@@ -27,14 +27,14 @@ from random import choice
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from crumbs.split_mates import MatePairSplitter
+from crumbs.seq.split_mates import MatePairSplitter
 from crumbs.settings import get_setting
-from crumbs.seqio import read_seq_packets, write_seq_packets, read_seqs
+from crumbs.seq.seqio import read_seq_packets, write_seq_packets, read_seqs
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
-from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.seq.utils.seq_utils import process_seq_packets
 from crumbs.utils.tags import SEQRECORD
-from crumbs.seq import get_name, SeqWrapper, get_str_seq
+from crumbs.seq.seq import get_name, SeqWrapper, get_str_seq
 
 TITANIUM_LINKER = get_setting('TITANIUM_LINKER')
 FLX_LINKER = get_setting('FLX_LINKER')

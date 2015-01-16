@@ -33,8 +33,8 @@ from crumbs.statistics import (IntCounter, draw_histogram_ascii, IntBoxplot,
                                count_seqs)
 from crumbs.utils.test_utils import TEST_DATA_DIR
 from crumbs.utils.bin_utils import BIN_DIR
-from crumbs.seqio import read_seqs
-from crumbs.seq import SeqWrapper
+from crumbs.seq.seqio import read_seqs
+from crumbs.seq.seq import SeqWrapper
 from crumbs.utils.tags import SEQRECORD, SEQITEM
 
 
@@ -43,7 +43,7 @@ class HistogramTest(unittest.TestCase):
     def test_ascii_histogram(self):
         'It plots an ASCII histogram'
         hist = draw_histogram_ascii(bin_limits=[-2, -1, 0, 1, 2],
-                              counts=[9, 20, 30, 40])
+                                    counts=[9, 20, 30, 40])
         assert '[-2 , -1[ ( 9): ****************' in hist
 
 

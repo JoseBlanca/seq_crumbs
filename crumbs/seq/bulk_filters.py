@@ -15,9 +15,9 @@
 
 # pylint: disable=C0111
 
-from crumbs.seq import get_str_seq
-from crumbs.pairs import group_pairs_by_name, group_pairs
-from crumbs.seqio import read_seqs, write_seqs
+from crumbs.seq.seq import get_str_seq
+from crumbs.seq.pairs import group_pairs_by_name, group_pairs
+from crumbs.seq.seqio import read_seqs, write_seqs
 from crumbs.utils.tags import SEQITEM
 from crumbs.iterutils import sorted_items, unique, unique_unordered
 

@@ -19,15 +19,16 @@ from __future__ import division
 
 import sys
 
-from crumbs.utils.bin_utils import (main, parse_basic_parallel_args,
-                                    create_basic_parallel_argparse)
-from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (parse_basic_parallel_args,
+                                        create_basic_parallel_argparse)
+from crumbs.seq.utils.seq_utils import process_seq_packets
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.utils.tags import SEQITEM
 from crumbs.settings import get_setting
-from crumbs.split_mates import MatePairSplitter
-from crumbs.seqio import read_seq_packets, write_seq_packets
-from crumbs.seq import SeqWrapper, SeqItem
+from crumbs.seq.split_mates import MatePairSplitter
+from crumbs.seq.seqio import read_seq_packets, write_seq_packets
+from crumbs.seq.seq import SeqWrapper, SeqItem
 
 
 def _setup_argparse():

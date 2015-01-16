@@ -16,13 +16,14 @@
 # along with seq_crumbs. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from crumbs.utils.bin_utils import (main, create_basic_parallel_argparse,
-                                    parse_basic_parallel_args)
-from crumbs.transcript_orientations import TranscriptOrientator
-from crumbs.utils.seq_utils import process_seq_packets
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (create_basic_parallel_argparse,
+                                        parse_basic_parallel_args)
+from crumbs.seq.transcript_orientations import TranscriptOrientator
+from crumbs.seq.utils.seq_utils import process_seq_packets
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.utils.tags import SEQRECORD
-from crumbs.seqio import write_seq_packets, read_seq_packets
+from crumbs.seq.seqio import write_seq_packets, read_seq_packets
 from crumbs.settings import get_setting
 
 

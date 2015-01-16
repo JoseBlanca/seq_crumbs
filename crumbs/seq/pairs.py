@@ -19,8 +19,8 @@ from toolz import first
 
 from crumbs.exceptions import (PairDirectionError, InterleaveError,
                                ItemsNotSortedError)
-from crumbs.seqio import write_seqs
-from crumbs.seq import get_title, get_name
+from crumbs.seq.seqio import write_seqs
+from crumbs.seq.seq import get_title, get_name
 from crumbs.utils.tags import FWD, REV
 from crumbs.utils.file_utils import flush_fhand
 from crumbs.iterutils import sorted_items, group_in_packets_fill_last

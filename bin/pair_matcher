@@ -18,13 +18,13 @@
 import sys
 import argparse
 import tempfile
-
-from crumbs.utils.bin_utils import (main, create_basic_argparse,
-                                    parse_basic_args,
-                                    get_requested_compression)
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (create_basic_argparse,
+                                        parse_basic_args,
+                                        get_requested_compression)
 from crumbs.utils.file_utils import compress_fhand
-from crumbs.pairs import match_pairs
-from crumbs.seqio import read_seqs
+from crumbs.seq.pairs import match_pairs
+from crumbs.seq.seqio import read_seqs
 
 
 def _setup_argparse():

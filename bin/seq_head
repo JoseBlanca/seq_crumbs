@@ -18,9 +18,10 @@
 import sys
 
 from crumbs.utils.file_utils import flush_fhand
-from crumbs.utils.bin_utils import (main, create_basic_argparse,
-                                    parse_basic_args)
-from crumbs.seqio import write_seqs, get_format, read_seqs
+from crumbs.utils.bin_utils import main
+from crumbs.seq.utils.bin_utils import (create_basic_argparse,
+                                        parse_basic_args)
+from crumbs.seq.seqio import write_seqs, get_format, read_seqs
 
 
 def _setup_argparse():

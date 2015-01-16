@@ -21,9 +21,12 @@ from os import remove
 from StringIO import StringIO
 import gzip
 
-from vcf_crumbs.utils.file_utils import (compress_with_bgzip, uncompress_gzip,
-                                         index_vcf_with_tabix, TEST_DATA_DIR,
-                                         _build_template_fhand)
+from crumbs.utils.test_utils import TEST_DATA_DIR
+from crumbs.utils.file_utils import (compress_with_bgzip, uncompress_gzip,
+                                     fhand_is_seekable,
+                                     wrap_in_buffered_reader,
+                                     index_vcf_with_tabix)
+#                                          _build_template_fhand)
 # Method could be a function
 # pylint: disable=R0201
 # Too many public methods
@@ -54,6 +57,42 @@ VCF = '''##fileformat=VCFv4.1
 20 14370 rs6054257 G A 29 PASS NS=3;DP=14;AF=0.5;DB;H2 GT:GQ:DP:HQ 0|0:48:1:51,51 1|0:48:8:51,51 1/1:43:5:.,.
 20 17330 . T A 3 q10 NS=3;DP=11;AF=0.017 GT:GQ:DP:HQ 0|0:49:3:58,50 0|1:3:5:65,3 0/0:41:3
 '''
+
+
+class SeekableFileTest(unittest.TestCase):
+
+    def test_is_seekable(self):
+        'It tests wether the fhands are seekable or not'
+
+        # StringIO
+        fhand = StringIO('hola')
+        assert fhand_is_seekable(fhand)
+
+        # standard file
+        fhand = NamedTemporaryFile()
+        fhand.seek(0)
+        assert fhand_is_seekable(fhand)
+
+        # a wrapped BufferedReader
+        fhand2 = wrap_in_buffered_reader(fhand)
+        assert fhand_is_seekable(fhand2)
+
+        # pylint: disable=R0903
+        # pylint: disable=C0111
+        class NonSeekable(object):
+            'Just for testing'
+            pass
+
+        assert not fhand_is_seekable(NonSeekable())
+
+        class NonSeekable2(object):
+            def seek(self):
+                pass
+
+            def seekable(self):
+                return False
+
+        assert not fhand_is_seekable(NonSeekable2())
 
 
 class CompressTest(unittest.TestCase):
@@ -91,19 +130,6 @@ class CompressTest(unittest.TestCase):
 
         assert exists(compressed_fhand.name + '.tbi')
         remove(compressed_fhand.name + '.tbi')
-
-
-class BuildTemplateTest(unittest.TestCase):
-    def test_build_template(self):
-        vcf = VCF.replace(' ', '\t')
-        in_fhand = StringIO(vcf)
-        t_fhand = _build_template_fhand(in_fhand)
-        assert 'NA00002\tNA00003\n' in t_fhand.read()
-
-        # compressed file
-        in_fhand = open(pjoin(TEST_DATA_DIR, 'freebayes_multisample.vcf.gz'))
-        t_fhand = _build_template_fhand(in_fhand)
-        assert 'sample12_gbs\n' in t_fhand.read()
 
 if __name__ == "__main__":
 #     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']
