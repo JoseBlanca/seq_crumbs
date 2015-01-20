@@ -257,13 +257,20 @@ class CapEnzyme(BaseAnnotator):
         self.all_enzymes = all_enzymes
         self.ref_index = SeqIO.index(ref_fpath, 'fasta')
         self.conf = {'all_enzymes': all_enzymes}
+        self._last_chrom = None
 
     def __call__(self, snv):
         self._clean_filter(snv)
         alleles = snv.alleles
         enzymes = set()
         # we have to make all the posible conbinations
-        ref = self.ref_index[snv.chrom]
+        chrom = snv.chrom
+        last_chrom = self._last_chrom
+        if last_chrom is not None and chrom == self._last_chrom[0]:
+            ref = last_chrom[1]
+        else:
+            ref = self.ref_index[snv.chrom]
+            self._last_chrom = chrom, ref
         used_combinations = []
         for i_index in range(len(alleles)):
             for j_index in range(len(alleles)):
