@@ -277,6 +277,10 @@ def write_parent_checker(vcf_fhand, parents_a, parents_b, genos_fhand,
     snp_ids = []
     snp_genos = []
     coding = 'ascii'
+
+    if phys_map_fhand is not None:
+        phys_map_fhand.write('marker\tposition\tChromosome\n')
+
     for snp, genos in coder.recode_genotypes(samples):
         snp_id = get_or_create_id(snp).encode(coding)
         snp_ids.append(snp_id)

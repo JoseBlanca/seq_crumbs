@@ -300,7 +300,8 @@ S5\tB\tB\tB
 S6\tB\tB\tB
 '''
 
-    expected_map ='''20_11\t11\t20
+    expected_map ='''marker\tposition\tChromosome
+20_11\t11\t20
 20_16\t16\t20
 20_17\t17\t20
 '''
@@ -336,5 +337,5 @@ S6\tB\tB\tB
 
 
 if __name__ == "__main__":
-    import sys; sys.argv = ['', 'ParentCheckerWriterTest.test_parentChecker']
+#     import sys; sys.argv = ['', 'ParentCheckerWriterTest.test_parentChecker']
     unittest.main()
