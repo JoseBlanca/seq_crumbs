@@ -108,7 +108,7 @@ class ABCoder(object):
             recomb_rate = (haplo_cnt.aB + haplo_cnt.Ab) / sum(haplo_cnt)
             weight = 2 * (0.5 - recomb_rate) if recomb_rate < 0.5 else 0
             votes[voted_coding1] += weight
-        if not votes:
+        if not votes or sum(votes.values()) == 0:
             deduced_coding1 = None
             self.log[NO_INFO] += 1
         elif len(votes) > 2:
