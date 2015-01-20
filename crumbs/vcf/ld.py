@@ -7,7 +7,7 @@ from scipy.stats import fisher_exact as scipy_fisher
 from vcf import Reader as pyvcfReader
 
 from crumbs.vcf.statistics import choose_samples
-from crumbs.vcf.iterutils import RandomAccessIterator
+from crumbs.iterutils import RandomAccessIterator
 
 
 # Missing docstring
@@ -19,6 +19,7 @@ DEF_P_VAL = 0.01
 MIN_PHYS_DIST = 700  # it should be double of the read length
 
 HaploCount = namedtuple('HaploCount', ['AB', 'Ab', 'aB', 'ab'])
+Alleles = namedtuple('Alleles', ['A', 'B', 'a', 'b'])
 LDStats = namedtuple('LDStats', ['fisher', 'r_sqr'])
 
 
@@ -82,7 +83,11 @@ def _calculate_r_sqr(haplo_counts):
 
 def _most_freq_alleles(calls):
     gts_counts = Counter()
-    gts_counts.update([al for call in calls for al in call.call.gt_alleles])
+    if hasattr(calls, 'chrom'):
+        alleles = [al for call in calls for al in call.call.gt_alleles]
+    else:
+        alleles = [al for call in calls for al in call.gt_alleles]
+    gts_counts.update(alleles)
     return [al for al, count in gts_counts.most_common(2)]
 
 
@@ -98,7 +103,7 @@ def _remove_no_calls_and_hets(calls1, calls2):
     return filtered_calls1, filtered_calls2
 
 
-def _count_biallelic_haplotypes(calls1, calls2):
+def _count_biallelic_haplotypes(calls1, calls2, return_alleles=False):
     # Invalid name. Due to using uppercases
     # pylint: disable=C0103
     calls1, calls2 = _remove_no_calls_and_hets(calls1, calls2)
@@ -107,12 +112,21 @@ def _count_biallelic_haplotypes(calls1, calls2):
     freq_alleles.append(_most_freq_alleles(calls2))
 
     haplo_count = Counter()
+    pyvcf = None
     for call1, call2 in zip(calls1, calls2):
-        al_snp_1 = call1.call.gt_alleles[0]
+        if pyvcf is None:
+            pyvcf = False if hasattr(call1, 'chrom') else True
+        if pyvcf:
+            al_snp_1 = call1.gt_alleles[0]
+        else:
+            al_snp_1 = call1.call.gt_alleles[0]
         # We're transforming all markers in biallelic
         if al_snp_1 != freq_alleles[0][0]:
             al_snp_1 = freq_alleles[0][1]
-        al_snp_2 = call2.call.gt_alleles[0]
+        if pyvcf:
+            al_snp_2 = call2.gt_alleles[0]
+        else:
+            al_snp_2 = call2.call.gt_alleles[0]
         if al_snp_2 != freq_alleles[1][0]:
             al_snp_2 = freq_alleles[1][1]
 
@@ -143,8 +157,12 @@ def _count_biallelic_haplotypes(calls1, calls2):
     count_aB = haplo_count.get((allele_a, allele_B), 0)
     count_ab = haplo_count.get((allele_a, allele_b), 0)
 
-    return HaploCount(count_AB, count_Ab, count_aB, count_ab)
-
+    counts = HaploCount(count_AB, count_Ab, count_aB, count_ab)
+    if return_alleles:
+        alleles = Alleles(allele_A, allele_B, allele_a, allele_b)
+        return counts, alleles
+    else:
+        return counts
 
 
 def _calc_recomb_rate(calls1, calls2, pop_type):

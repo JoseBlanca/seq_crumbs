@@ -2,6 +2,7 @@
 import unittest
 from os.path import join as pjoin
 from io import StringIO
+from io import BytesIO
 from os import remove
 from tempfile import NamedTemporaryFile
 from subprocess import check_output
@@ -11,7 +12,8 @@ from vcf import Reader
 from crumbs.vcf.snv import VCFReader
 from crumbs.utils.file_utils import compress_with_bgzip, index_vcf_with_tabix
 from crumbs.vcf.writers import (IlluminaWriter, _replace_snvs_with_iupac,
-                                RQTLWriter, DEF_PHYS_TO_GENET_DIST)
+                                RQTLWriter, DEF_PHYS_TO_GENET_DIST,
+                                write_parent_checker)
 from crumbs.utils.bin_utils import BIN_DIR
 from crumbs.utils.test_utils import TEST_DATA_DIR
 
@@ -193,6 +195,7 @@ ref 10 . A C 10 PASS .
         stdout = check_output(cmd)
         assert 'GAAAT[A/C]AA' in stdout
 
+
 class RQTLWriterTest(unittest.TestCase):
     VCF_HEADER = '''##fileformat=VCFv4.1
 ##fileDate=20090805
@@ -258,6 +261,58 @@ class RQTLWriterTest(unittest.TestCase):
 '''
         assert stdout == expected
 
+
+class ParentCheckerWriterTest(unittest.TestCase):
+
+    VCF_HEADER = '''##fileformat=VCFv4.1
+##fileDate=20090805
+##source=mysnpprogram
+##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
+##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species="Homo sapiens",taxonomy=x>
+##phasing=partial
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">
+##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">
+##FILTER=<ID=q10,Description="Quality below 10">
+##FILTER=<ID=s50,Description="Less than 50% of samples have data">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Read Depth">
+'''
+    vcf = '''#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS1\tS2\tS3\tS4\tS5\tS6
+20\t11\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/.\t1/.\t0/0\t0/0\t1/1\t1/1
+20\t14\t.\tG\tA\t29\tPASS\tNS=3\tGT\t./.\t./.\t1/1\t0/1\t0/1\t0/1
+20\t15\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t0/0\t./.\t1/1\t1/1
+20\t16\t.\tG\tA\t29\tPASS\tNS=3\tGT\t1/1\t0/0\t1/1\t1/1\t0/0\t0/0
+20\t17\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t2/2\t2/2\t1/1\t1/1
+20\t18\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t1/1
+'''
+    expected = '''ID\t\20_11\t\20_16\20_17
+S3\tA\tA\tA
+S4\tA\tA\tA
+S5\tB\tB\tB
+S6\tB\tB\tB
+'''
+
+    def test_parentChecker(self):
+        vcf = StringIO(unicode(self.VCF_HEADER + self.vcf))
+
+        results_fhand = BytesIO()
+        phys_fhand = BytesIO()
+
+        write_parent_checker(vcf, parents_a=['S1'], parents_b=['S2'],
+                             genos_fhand=results_fhand,
+                             phys_map_fhand=phys_fhand)
+        print results_fhand.getvalue()
+        print phys_fhand.getvalue()
+
+
 if __name__ == "__main__":
-#     import sys;sys.argv = ['', 'FilterTest.test_close_to_filter']
+    import sys;sys.argv = ['', 'ParentCheckerWriterTest.test_parentChecker']
     unittest.main()

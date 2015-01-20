@@ -1,7 +1,13 @@
 from __future__ import division
 
+from array import array
+
 from Bio import SeqIO
 from vcf import Reader
+
+from crumbs.vcf.ab_coding import ABCoder, DEF_AB_CODER_THRESHOLD
+from crumbs.vcf.snv import get_or_create_id
+
 
 # Missing docstring
 # pylint: disable=C0111
@@ -233,7 +239,7 @@ class RQTLWriter(object):
 
         pos = snv.pos + 1
         if self._phys_to_genet_dist is not None:
-            pos /=  self._phys_to_genet_dist
+            pos /= self._phys_to_genet_dist
         else:
             msg = 'The genetic map availability has not been implemented yet'
             raise NotImplementedError(msg)
@@ -251,3 +257,49 @@ class RQTLWriter(object):
 
     def close(self):
         self._fhand.close()
+
+
+def _code_to_one_letter(geno):
+    if geno is None or None in geno:
+        return '-'
+    if len(set(geno)) == 1:
+        return list(set(geno))[0]
+    else:
+        return 'H'
+
+
+def write_parent_checker(vcf_fhand, parents_a, parents_b, genos_fhand,
+                         phys_map_fhand=None,
+                         coder_threshold=DEF_AB_CODER_THRESHOLD):
+    sep = '\t'
+    coder = ABCoder(vcf_fhand, parents_a, parents_b, threshold=coder_threshold)
+    samples = coder.offspring
+    snp_ids = []
+    snp_genos = []
+    coding = 'ascii'
+    for snp, genos in coder.recode_genotypes(samples):
+        snp_id = get_or_create_id(snp).encode(coding)
+        snp_ids.append(snp_id)
+        geno_array = array('c')
+        for geno in genos.values():
+            geno_array.append(_code_to_one_letter(geno))
+        snp_genos.append(geno_array)
+        if phys_map_fhand is not None:
+            phys_map_fhand.write(snp_id)
+            phys_map_fhand.write(sep)
+            phys_map_fhand.write(str(snp.POS))
+            phys_map_fhand.write(sep)
+            phys_map_fhand.write(snp.CHROM.encode(coding))
+            phys_map_fhand.write('\n')
+
+    genos_fhand.write('ID')
+    genos_fhand.write(sep)
+    genos_fhand.write(sep.join(snp_ids))
+    genos_fhand.write('\n')
+
+    for sample_idx, sample in enumerate(samples):
+        genos_fhand.write(sample.encode(coding))
+        genos_fhand.write(sep)
+        to_write = sep.join(snp_genos[snp_idx][sample_idx] for snp_idx in range(len(snp_ids)))
+        genos_fhand.write(to_write)
+        genos_fhand.write('\n')
