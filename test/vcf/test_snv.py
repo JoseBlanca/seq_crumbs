@@ -84,6 +84,19 @@ class SNVTests(unittest.TestCase):
         snps[5].filters = None
         assert snps[5].filters is None
 
+    def test_id(self):
+        vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT N1
+20\t14370\tid1\tG\tA\t29\tPASS\tH2\tGT:GQ:DP:HQ\t0|0:48:1:51,51
+20\t14371\tid2;id3\tG\tA\t29\tPASS\tH2\tGT:GQ:DP:HQ\t0|0:48:1:51,51
+20\t14372\t.\tG\tA\t29\tPASS\tH2\tGT:GQ:DP:HQ\t0|0:48:1:51,51'''
+        vcf = StringIO(VCF_HEADER + vcf)
+        snps = list(VCFReader(vcf).parse_snvs())
+        assert snps[0].ids == ['id1']
+        assert snps[1].ids == ['id2', 'id3']
+        assert not snps[2].ids
+        assert snps[1].get_or_create_id() == 'id2'
+        assert snps[2].get_or_create_id(prefix='snp_') == 'snp_20_14372'
+
     def test_allele_freq(self):
         vcf = '''#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT N1 N2 N3
 20\t1\t.\tG\tA\t29\tPASS\tNS=3\tGT:GQ:DP:HQ\t0|0:48:1:51,51\t1|0:48:8:51,51\t1/1:43:5:.,.

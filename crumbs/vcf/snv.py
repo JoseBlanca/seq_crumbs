@@ -11,7 +11,7 @@ from vcf.model import make_calldata_tuple
 # ouch, _Call is a private class, but we don't know how to modify a Call
 from vcf.model import _Call as pyvcfCall
 from vcf.model import _Record as pyvcfRecord
-from crumbs.vcf.iterutils import generate_windows
+from crumbs.iterutils import generate_windows
 
 from crumbs.seq.seqio import read_seqs
 from crumbs.seq.seq import get_name, get_length
@@ -246,6 +246,30 @@ class VCFWriter(pyvcfWriter):
 BiallelicGts = namedtuple('BiallelicGts', ['AA', 'Aa', 'aa'])
 
 
+def get_ids(snp):
+    if hasattr(snp, 'calls'):
+        ids = snp.record.ID
+    else:
+        ids = snp.ID
+    if ids is None:
+        return []
+    return ids.split(';')
+
+
+def get_or_create_id(snp, prefix=''):
+    ids = get_ids(snp)
+    if ids:
+        return ids[0]
+    else:
+        if hasattr(snp, 'calls'):
+            chrom = snp.chrom
+            pos = snp.pos
+        else:
+            chrom = snp.CHROM
+            pos = snp.POS - 1
+        return prefix + chrom + '_' + str(pos + 1)
+
+
 class SNV(object):
     '''A proxy around the pyvcf _Record with some additional functionality'''
     def __init__(self, record, reader, ploidy=2,
@@ -265,6 +289,13 @@ class SNV(object):
         self._allele_depths = None
         self._maf_depth = None
         self._depth = None
+
+    @property
+    def ids(self):
+        return get_ids(self)
+
+    def get_or_create_id(self, prefix=''):
+        return get_or_create_id(self, prefix)
 
     @property
     def alleles(self):
@@ -454,10 +485,6 @@ class SNV(object):
     @property
     def qual(self):
         return self.record.QUAL
-
-    @property
-    def id(self):
-        return self.record.ID
 
     @property
     def ref(self):
