@@ -129,7 +129,7 @@ class SmartInstall(install.install):
         self.install_dir = getattr(install_cmd, 'install_lib')
 
         # install the manpages
-        #check we have rst2man
+        # check we have rst2man
         try:
             import docutils
             have_rst2man = True
@@ -162,15 +162,19 @@ class InstallData(distutils.command.install_data.install_data):
         self.install_dir = getattr(install_cmd, 'install_lib')
         return distutils.command.install_data.install_data.run(self)
 
+with open('README.rst') as file_:
+    long_description = file_.read()
 
-setup_args = {
-              'name': 'seq_crumbs',
+
+setup_args = {'name': 'ngs_crumbs',
               'version': __version__,
-              'description': 'Small utilities for sequence files manipulation',
+              'description': 'Small utilities for NGS files manipulation',
+              'long_description': long_description,
               'author': 'Jose Blanca & Peio Ziarsolo',
               'author_email': 'jblanca@upv.es',
-              'url': 'http://bioinf.comav.upv.es/seq_crumbs/',
-              'packages': ['crumbs', 'crumbs.third_party', 'crumbs.utils'],
+              'url': 'http://bioinf.comav.upv.es/ngs_crumbs/',
+              'packages': ['crumbs', 'crumbs.third_party', 'crumbs.utils',
+                           'crumbs.seq', 'crumbs.bam', 'crumbs.vcf'],
               'include_package_data': True,
               'data_files': external_executables,
               'scripts': get_scripts(),
@@ -180,9 +184,11 @@ setup_args = {
               }
 
 if _SETUPTOOLS:
-    setup_args['install_requires'] = ['biopython >= 1.60']
+    setup_args['install_requires'] = ['biopython >= 1.60', 'configobj',
+                                      'toolz', 'pysam>=0.8', 'rpy2',
+                                      'matplotlib']
     if version_info[0] < 3 or (version_info[0] == 3 and version_info[1] < 3):
-        # until python 3.3 the standard file module has no support for 
+        # until python 3.3 the standard file module has no support for
         # wrapping file object and required to open a new file
         # bz2file is a backport of the python 3.3 std library module
         setup_args['install_requires'].append('bz2file')

@@ -1,3 +1,6 @@
+Ngs crumbs is a collection os small ngs file processing utilities.
+
+
 
 Seq Crumbs is a collection of small sequence processing utilities.
 
