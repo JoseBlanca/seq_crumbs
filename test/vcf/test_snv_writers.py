@@ -5,7 +5,7 @@ from io import StringIO
 from io import BytesIO
 from os import remove
 from tempfile import NamedTemporaryFile
-from subprocess import check_output
+from subprocess import check_output, Popen, PIPE
 
 from vcf import Reader
 
@@ -293,11 +293,16 @@ class ParentCheckerWriterTest(unittest.TestCase):
 20\t17\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t2/2\t2/2\t1/1\t1/1
 20\t18\t.\tG\tA\t29\tPASS\tNS=3\tGT\t0/0\t1/1\t1/1\t0/0\t0/0\t1/1
 '''
-    expected = '''ID\t\20_11\t\20_16\20_17
+    expected = '''ID\t20_11\t20_16\t20_17
 S3\tA\tA\tA
 S4\tA\tA\tA
 S5\tB\tB\tB
 S6\tB\tB\tB
+'''
+
+    expected_map ='''20_11\t11\t20
+20_16\t16\t20
+20_17\t17\t20
 '''
 
     def test_parentChecker(self):
@@ -309,10 +314,27 @@ S6\tB\tB\tB
         write_parent_checker(vcf, parents_a=['S1'], parents_b=['S2'],
                              genos_fhand=results_fhand,
                              phys_map_fhand=phys_fhand)
-        print results_fhand.getvalue()
-        print phys_fhand.getvalue()
+        assert results_fhand.getvalue() == self.expected
+        assert phys_fhand.getvalue() == self.expected_map
+
+    def test_bin(self):
+        vcf = self.VCF_HEADER + self.vcf
+        vcf_fhand = NamedTemporaryFile(suffix='.vcf')
+        vcf_fhand.write(vcf)
+        vcf_fhand.flush()
+
+        binary = pjoin(BIN_DIR, 'write_snps_for_parent_checker')
+        process = Popen([binary, '-h'], stderr=PIPE, stdout=PIPE)
+        stdout = process.communicate()[0]
+        assert 'It writes the snps in ParentChecker format' in stdout
+
+        cmd = [binary, vcf_fhand.name, '-a', 'S1', '-b', 'S2']
+        process = Popen(cmd, stderr=PIPE, stdout=PIPE)
+        stdout, stderr = process.communicate()
+        assert 'ID' in stdout
+        assert '6 SNPs ' in stderr
 
 
 if __name__ == "__main__":
-    import sys;sys.argv = ['', 'ParentCheckerWriterTest.test_parentChecker']
+    import sys; sys.argv = ['', 'ParentCheckerWriterTest.test_parentChecker']
     unittest.main()

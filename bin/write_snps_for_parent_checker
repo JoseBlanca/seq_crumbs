@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+import sys
+import argparse
+
+from crumbs.vcf.snv import VCFReader
+from crumbs.vcf.writers import DEF_AB_CODER_THRESHOLD, write_parent_checker
+
+
+def _setup_argparse():
+    description = 'It writes the snps in ParentChecker format'
+    parser = argparse.ArgumentParser(description=description)
+
+    in_help = 'Input VCF file (default STDIN)'
+    parser.add_argument('input', help=in_help, nargs='?',
+                        type=argparse.FileType('r'), default=sys.stdin)
+
+    parser.add_argument('-a', '--parent_A_samples', action='append')
+
+    parser.add_argument('-b', '--parent_B_samples', action='append')
+
+    hlp = 'output ParentChecker file (default STDOUT)'
+    parser.add_argument('-o', '--output', help=hlp,
+                        type=argparse.FileType('wb'), default=sys.stdout)
+
+    hlp = 'output physical map file'
+    parser.add_argument('-m', '--phys_map_output', help=hlp,
+                        type=argparse.FileType('wb'))
+
+    hlp = 'Support threshold for AB recoding. DEF. '
+    hlp += str(DEF_AB_CODER_THRESHOLD) + '\n'
+    parser.add_argument('-t', '--AB_coding_threshold', help=hlp,
+                        type=float, default=DEF_AB_CODER_THRESHOLD)
+
+    hlp = 'output AB coding threshold histogram'
+    parser.add_argument('-p', '--hist_output', help=hlp,
+                        type=argparse.FileType('w'))
+
+    hlp = 'output AB coding log (default STDERR)'
+    parser.add_argument('-l', '--log', help=hlp, type=argparse.FileType('w'),
+                        default=sys.stderr)
+
+    return parser
+
+
+def _parse_args(parser):
+    '''It parses the command line and it returns a dict with the arguments.'''
+    parsed_args = parser.parse_args()
+    args = {}
+    args['in_fhand'] = parsed_args.input
+    args['parents_a'] = parsed_args.parent_A_samples
+    args['parents_b'] = parsed_args.parent_B_samples
+    args['genos_fhand'] = parsed_args.output
+    args['phys_map_fhand'] = parsed_args.phys_map_output
+    args['coder_threshold'] = parsed_args.AB_coding_threshold
+    args['threshold_hist'] = parsed_args.hist_output
+    args['log'] = parsed_args.log
+
+    return args
+
+
+def main():
+    parser = _setup_argparse()
+    args = _parse_args(parser)
+
+    vcf_fhand = args['in_fhand']
+    coder = write_parent_checker(vcf_fhand, args['parents_a'],
+                                 args['parents_b'], args['genos_fhand'],
+                                 phys_map_fhand=args['phys_map_fhand'],
+                                 coder_threshold=args['coder_threshold'])
+
+    if args['threshold_hist'] is not None:
+        coder.plot_index_hist(args['threshold_hist'])
+
+    if args['log'] is not None:
+        coder.write_log(args['log'])
+
+
+if __name__ == '__main__':
+    main()
